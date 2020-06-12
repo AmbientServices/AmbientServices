@@ -154,6 +154,6 @@ This library is licensed under [MIT](https://opensource.org/licenses/MIT).
 The library was written by James Ivie.
 
 ## Language and Tools
-The code is written in C#, using .NET Standard.
+The library is written in C#, using .NET Standard.  The tests are written in .NET Core 3.1.
 
-The code is built using either Microsoft Visual Studio 2017+ or Microsoft Visual Sutdio Code.
+The code is built using either Microsoft Visual Studio 2017+ or Microsoft Visual Studio Code.
