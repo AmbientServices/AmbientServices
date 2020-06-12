@@ -8,9 +8,9 @@ using System.Reflection;
 namespace AmbientServices
 {
     /// <summary>
-    /// An attribute to identify the default implementation types.
+    /// An attribute to identify the ambient service default implementation types.
     /// </summary>
-    class DefaultImplementationAttribute : Attribute
+    public class DefaultImplementationAttribute : Attribute
     {
     }
     /// <summary>
@@ -18,21 +18,42 @@ namespace AmbientServices
     /// </summary>
     static class DefaultImplementations
     {
-        private static readonly Dictionary<Type, Type> _DefaultImplementations = new Dictionary<Type, Type>();
+        private static readonly ConcurrentDictionary<Type, Type> _DefaultImplementations = new ConcurrentDictionary<Type, Type>();
+        private static Assembly _ThisAssembly = Assembly.GetExecutingAssembly();
 
         static DefaultImplementations()
         {
-            foreach (Type type in Assembly.GetExecutingAssembly().GetLoadableTypes())
+            foreach (Type type in AllLoadedReferringTypes())
             {
-                if (type.GetCustomAttribute<DefaultImplementationAttribute>() != null)
+                AddDefaultImplementation(type);
+            }
+            AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
+        }
+
+        private static void AddDefaultImplementation(Type type)
+        {
+            if (type.GetCustomAttribute<DefaultImplementationAttribute>() != null)
+            {
+                foreach (Type iface in type.GetInterfaces())
                 {
-                    foreach (Type iface in type.GetInterfaces())
-                    {
-                        _DefaultImplementations.Add(iface, type);
-                    }
+                    _DefaultImplementations.TryAdd(iface, type);
                 }
             }
         }
+
+        private static void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
+        {
+            Assembly assembly = args.LoadedAssembly;
+            // does this assembly reference us?
+            if (DoesAssemblyReferToAssembly(assembly, _ThisAssembly))
+            {
+                foreach (Type type in assembly.GetLoadableTypes())
+                {
+                    AddDefaultImplementation(type);
+                }
+            }
+        }
+
         /// <summary>
         /// Tries to find the default implementation of the specified interface, if one exists.
         /// </summary>
@@ -65,12 +86,22 @@ namespace AmbientServices
             else return interfaceType.IsAssignableFrom(implementor);
         }
         /// <summary>
+        /// Checks to see if this assembly refers to the specified assembly.
+        /// </summary>
+        /// <param name="assembly">The assembly to check.</param>
+        /// <param name="referredToAssembly">The referred to assembly to look for.</param>
+        /// <returns><b>true</b> if <paramref name="assembly"/> refers to <paramref name="referredToAssembly"/>.</returns>
+        private static bool DoesAssemblyReferToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
+        {
+            return (assembly == referredToAssembly || assembly.GetReferencedAssemblies().FirstOrDefault(a => a.FullName == referredToAssembly.FullName) != null);
+        }
+        /// <summary>
         /// Enumerates loadable types from the assembly.
         /// </summary>
         /// <param name="assembly">The assembly to attempt to enumerate types from.</param>
         /// <returns>An enumeration of <see cref="Type"/>s.</returns>
         [DebuggerNonUserCode]
-        public static IEnumerable<Type> GetLoadableTypes(this System.Reflection.Assembly assembly)
+        private static IEnumerable<Type> GetLoadableTypes(this System.Reflection.Assembly assembly)
         {
             Type[] types = new Type[0];
             try
@@ -86,6 +117,25 @@ namespace AmbientServices
                 yield return type;
             }
         }
+        /// <summary>
+        /// Enuemrates all the types in this assembly and all loaded assemblies that refer to it.
+        /// </summary>
+        /// <returns>An enumeration of <see cref="Type"/>s.</returns>
+        private static IEnumerable<Type> AllLoadedReferringTypes()
+        {
+            // loop through all the assemblies loaded in our AppDomain
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                // is this assembly us or does it reference us?
+                if (assembly == _ThisAssembly || DoesAssemblyReferToAssembly(assembly, _ThisAssembly))
+                {
+                    foreach (Type type in assembly.GetLoadableTypes())
+                    {
+                        yield return type;
+                    }
+                }
+            }
+        }
     }
     /// <summary>
     /// Provides a global registry for the implementation of one specific ambient service implementation.
@@ -93,7 +143,15 @@ namespace AmbientServices
     /// <typeparam name="T">The ambient service interface.</typeparam>
     public static class Registry<T> where T : class
     {
-        private static T _implementation;
+        private static T _implementation = DefaultImplementation();
+
+        private static T DefaultImplementation()
+        {
+            Type impType = DefaultImplementations.TryFind(typeof(T));
+            if (impType == null) return null;
+            T implementation = Activator.CreateInstance(impType) as T;
+            return implementation;
+        }
         /// <summary>
         /// Gets or sets the implementation.  When setting the implementation, overwrites any previous implementation.
         /// </summary>
@@ -101,13 +159,7 @@ namespace AmbientServices
         {
             get
             {
-                T implementation = _implementation;
-                if (implementation == null)
-                {
-                    Type impType = DefaultImplementations.TryFind(typeof(T));
-                    implementation = Activator.CreateInstance(impType) as T;
-                }
-                return implementation;
+                return _implementation;
             }
             set
             {
