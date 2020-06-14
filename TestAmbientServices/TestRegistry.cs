@@ -12,14 +12,14 @@ namespace TestAmbientServices
         [TestMethod]
         public void AmbientServicesRegistry()
         {
-            ICache cache = Registry<ICache>.Implementation;
+            IAmbientCache cache = Registry<IAmbientCache>.Implementation;
             Assert.IsNotNull(cache);
-            ILogger logger = Registry<ILogger>.Implementation;
+            IAmbientLogger logger = Registry<IAmbientLogger>.Implementation;
             Assert.IsNotNull(logger);
             ILogger<TestRegistry> registryLogger = logger.GetLogger<TestRegistry>();
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             Assert.IsNotNull(progressTracker);
-            ISettings settings = Registry<ISettings>.Implementation;
+            IAmbientSettings settings = Registry<IAmbientSettings>.Implementation;
             Assert.IsNotNull(settings);
             IJunk junk = Registry<IJunk>.Implementation;
             Assert.IsNull(junk);
@@ -27,17 +27,17 @@ namespace TestAmbientServices
         [TestMethod]
         public void DisableService()
         {
-            ICache cache = Registry<ICache>.Implementation;
+            IAmbientCache cache = Registry<IAmbientCache>.Implementation;
             Assert.IsNotNull(cache);
 
-            Registry<ICache>.Implementation = null;
+            Registry<IAmbientCache>.Implementation = null;
 
-            ICache disabledCache = Registry<ICache>.Implementation;
+            IAmbientCache disabledCache = Registry<IAmbientCache>.Implementation;
             Assert.IsNull(disabledCache);
 
-            Registry<ICache>.Implementation = cache;
+            Registry<IAmbientCache>.Implementation = cache;
 
-            ICache reenabledCache = Registry<ICache>.Implementation;
+            IAmbientCache reenabledCache = Registry<IAmbientCache>.Implementation;
             Assert.IsNotNull(reenabledCache);
         }
     }

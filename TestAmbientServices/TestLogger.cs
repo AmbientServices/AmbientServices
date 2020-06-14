@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 namespace TestAmbientServices
 {
     /// <summary>
-    /// A class that holds tests for <see cref="ILogger"/>.
+    /// A class that holds tests for <see cref="IAmbientLogger"/>.
     /// </summary>
     [TestClass]
     public class TestLogger
     {
-        private static readonly ILogger _Logger = Registry<ILogger>.Implementation;
+        private static readonly IAmbientLogger _Logger = Registry<IAmbientLogger>.Implementation;
         /// <summary>
-        /// Performs tests on <see cref="ILogger"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public async Task Logger()

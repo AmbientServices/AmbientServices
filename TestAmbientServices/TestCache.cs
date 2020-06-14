@@ -9,35 +9,35 @@ using System.Threading.Tasks;
 namespace TestAmbientServices
 {
     /// <summary>
-    /// A class that holds tests for <see cref="ICache"/>.
+    /// A class that holds tests for <see cref="IAmbientCache"/>.
     /// </summary>
     [TestClass]
     public class TestCache
     {
         /// <summary>
-        /// Performs tests on <see cref="ICache"/>.
+        /// Performs tests on <see cref="IAmbientCache"/>.
         /// </summary>
         [TestMethod]
         public async Task Cache()
         {
             TestCache ret;
-            ICache cache = Registry<ICache>.Implementation;
+            IAmbientCache cache = Registry<IAmbientCache>.Implementation;
             await cache.Set<TestCache>(true, "Test", this);
             ret = await cache.TryGet<TestCache>("Test", null);
             Assert.AreEqual(this, ret);
             await cache.Remove<TestCache>(true, "Test");
             ret = await cache.TryGet<TestCache>("Test", null);
             Assert.IsNull(ret);
-            await cache.Set<TestCache>(true, "Test", this, DateTime.MinValue);
+            await cache.Set<TestCache>(true, "Test", this, null, DateTime.MinValue);
             ret = await cache.TryGet<TestCache>("Test", null);
             Assert.AreEqual(this, ret);
             await TriggerEjection(cache, 1);
             ret = await cache.TryGet<TestCache>("Test", null);
             Assert.IsNull(ret);
-            await cache.Set<TestCache>(true, "Test", this, null, TimeSpan.FromMinutes(-1));
+            await cache.Set<TestCache>(true, "Test", this, TimeSpan.FromMinutes(-1));
             ret = await cache.TryGet<TestCache>("Test", null);
             Assert.IsNull(ret);
-            await cache.Set<TestCache>(true, "Test", this, DateTime.UtcNow.AddMinutes(11), TimeSpan.FromMinutes(10));
+            await cache.Set<TestCache>(true, "Test", this, TimeSpan.FromMinutes(10), DateTime.UtcNow.AddMinutes(11));
             ret = await cache.TryGet<TestCache>("Test", null);
             Assert.AreEqual(this, ret);
             ret = await cache.TryGet<TestCache>("Test", TimeSpan.FromMinutes(10));
@@ -47,7 +47,7 @@ namespace TestAmbientServices
             Assert.IsNull(ret);
         }
         const int CountsToEject = 100;
-        private async Task TriggerEjection(ICache cache, int count)
+        private async Task TriggerEjection(IAmbientCache cache, int count)
         {
             for (int ejection = 0; ejection < count; ++ejection)
             {

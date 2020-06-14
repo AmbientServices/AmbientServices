@@ -8,20 +8,72 @@ using System.Reflection;
 namespace AmbientServices
 {
     /// <summary>
+    /// Provides a global registry for the implementation of one specific ambient service implementation.
+    /// </summary>
+    /// <typeparam name="T">The ambient service interface.</typeparam>
+    public static class Registry<T> where T : class
+    {
+        private static T _implementation = DefaultImplementation();
+
+        private static T DefaultImplementation()
+        {
+            Type impType = DefaultAmbientServices.TryFind(typeof(T));
+            if (impType == null) return null;
+            T implementation = Activator.CreateInstance(impType) as T;
+            return implementation;
+        }
+        /// <summary>
+        /// Gets or sets the implementation.  When setting the implementation, overwrites any previous implementation and triggers the <see cref="ImplementationChanged"/> event.
+        /// </summary>
+        public static T Implementation
+        {
+            get
+            {
+                return _implementation;
+            }
+            set
+            {
+                T oldImplementation = System.Threading.Interlocked.Exchange(ref _implementation, value);
+                ImplementationChanged?.Invoke(typeof(Registry<T>), new ImplementationChangedEventArgs<T> { OldImplementation = oldImplementation, NewImplementation = value });
+            }
+        }
+        /// <summary>
+        /// An event that will notify subscribers when a new implementation is registered.  
+        /// Note that in order to avoid memory leaks, most subscribers will want to subscribe a static method or use the weak event listener pattern when subscribing to this event, as the registry lives forever.
+        /// </summary>
+        public static event EventHandler<ImplementationChangedEventArgs<T>> ImplementationChanged;
+
+        /// <summary>
+        /// An event args class that is sent when a setting value is changed.
+        /// </summary>
+        /// <typeparam name="T">The type for the setting.</typeparam>
+        public class ImplementationChangedEventArgs<ET>
+        {
+            /// <summary>
+            /// The old implementation.
+            /// </summary>
+            public ET OldImplementation { get; set; }
+            /// <summary>
+            /// The new implementation.
+            /// </summary>
+            public ET NewImplementation { get; set; }
+        }
+    }
+    /// <summary>
     /// An attribute to identify the ambient service default implementation types.
     /// </summary>
-    public class DefaultImplementationAttribute : Attribute
+    public class DefaultAmbientServiceAttribute : Attribute
     {
     }
     /// <summary>
     /// A static class that discovers local default implementations and registers them.
     /// </summary>
-    static class DefaultImplementations
+    static class DefaultAmbientServices
     {
         private static readonly ConcurrentDictionary<Type, Type> _DefaultImplementations = new ConcurrentDictionary<Type, Type>();
         private static Assembly _ThisAssembly = Assembly.GetExecutingAssembly();
 
-        static DefaultImplementations()
+        static DefaultAmbientServices()
         {
             foreach (Type type in AllLoadedReferringTypes())
             {
@@ -32,7 +84,7 @@ namespace AmbientServices
 
         private static void AddDefaultImplementation(Type type)
         {
-            if (type.GetCustomAttribute<DefaultImplementationAttribute>() != null)
+            if (type.GetCustomAttribute<DefaultAmbientServiceAttribute>() != null)
             {
                 foreach (Type iface in type.GetInterfaces())
                 {
@@ -134,36 +186,6 @@ namespace AmbientServices
                         yield return type;
                     }
                 }
-            }
-        }
-    }
-    /// <summary>
-    /// Provides a global registry for the implementation of one specific ambient service implementation.
-    /// </summary>
-    /// <typeparam name="T">The ambient service interface.</typeparam>
-    public static class Registry<T> where T : class
-    {
-        private static T _implementation = DefaultImplementation();
-
-        private static T DefaultImplementation()
-        {
-            Type impType = DefaultImplementations.TryFind(typeof(T));
-            if (impType == null) return null;
-            T implementation = Activator.CreateInstance(impType) as T;
-            return implementation;
-        }
-        /// <summary>
-        /// Gets or sets the implementation.  When setting the implementation, overwrites any previous implementation.
-        /// </summary>
-        public static T Implementation
-        {
-            get
-            {
-                return _implementation;
-            }
-            set
-            {
-                System.Threading.Interlocked.Exchange(ref _implementation, value);
             }
         }
     }

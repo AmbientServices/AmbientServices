@@ -9,18 +9,18 @@ using System.Threading.Tasks;
 namespace TestAmbientServices
 {
     /// <summary>
-    /// A class that holds tests for <see cref="IProgressTracker"/>.
+    /// A class that holds tests for <see cref="IAmbientProgress"/>.
     /// </summary>
     [TestClass]
     public class TestProgressTracker
     {
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod]
         public void ProgressTracker()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             progress.Update(0.01f);
             Assert.AreEqual(0.01f, progress.PortionComplete);
@@ -39,12 +39,12 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod]
         public void ProgressPartStack()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (IProgress subprogress = progress.TrackPart(0.05f, 0.10f))
             {
@@ -53,12 +53,12 @@ namespace TestAmbientServices
             Assert.AreEqual(progress, progressTracker.Progress);
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod]
         public void ProgressPart()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (IProgress subprogress = progress.TrackPart(0.05f, 0.05f, "prefix-"))
             {
@@ -72,32 +72,32 @@ namespace TestAmbientServices
             Assert.AreEqual("prefix-subitem", progress.ItemCurrentlyBeingProcessed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionCompleteTooLowError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             progress.Update(-.01f);
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionCompleteTooHighError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             progress.Update(1.01f);
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PartPortionCompleteTooLowError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (progress = progress.TrackPart(0.01f, 0.02f))
             {
@@ -105,12 +105,12 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PartPortionCompleteTooHighError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (progress = progress.TrackPart(0.01f, 0.02f))
             {
@@ -118,72 +118,72 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void StartPortionTooLowError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (progress = progress.TrackPart(-0.01f, 1.0f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void StartPortionTooHighError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (progress = progress.TrackPart(0.0f, 1.01f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionPartTooLowError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (progress = progress.TrackPart(1.0f, -0.01f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionPartTooHighError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (progress = progress.TrackPart(1.0f, 1.01f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionTooLargeError()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             using (progress = progress.TrackPart(0.5f, 0.51f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IProgressTracker"/>.
+        /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(InvalidOperationException))]
         public void PartStackCorruption()
         {
-            IProgressTracker progressTracker = Registry<IProgressTracker>.Implementation;
+            IAmbientProgress progressTracker = Registry<IAmbientProgress>.Implementation;
             IProgress progress = progressTracker.Progress;
             IProgress subProgress1 = progress.TrackPart(0.05f, 0.51f);
             using (IProgress subProgress2 = subProgress1.TrackPart(0.05f, 0.51f))
