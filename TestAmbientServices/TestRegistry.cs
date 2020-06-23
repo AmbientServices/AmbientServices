@@ -1,11 +1,17 @@
 using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace TestAmbientServices
 {
     interface IJunk
     { }
-
+    interface ITest
+    { }
+    [DefaultAmbientService]
+    class DefaultTest : ITest
+    {
+    }
     [TestClass]
     public class TestRegistry
     {
@@ -39,6 +45,11 @@ namespace TestAmbientServices
 
             IAmbientCache reenabledCache = Registry<IAmbientCache>.Implementation;
             Assert.IsNotNull(reenabledCache);
+        }
+        [TestMethod, ExpectedException(typeof(TypeInitializationException))]
+        public void NonInterfaceType()
+        {
+            DefaultTest test = Registry<DefaultTest>.Implementation;
         }
     }
 }

@@ -45,6 +45,7 @@ namespace TestAmbientServices
             await cache.Clear();
             ret = await cache.TryGet<TestCache>("Test", null);
             Assert.IsNull(ret);
+            await TriggerEjection(cache, 50);
         }
         const int CountsToEject = 100;
         private async Task TriggerEjection(IAmbientCache cache, int count)

@@ -73,7 +73,11 @@ namespace TestAmbientServices
         {
             ISetting<string> temporarySetting = AmbientSettings.GetSetting<string>(testSettingKey, s => s, "initialValue");
             string value = temporarySetting.Value;
-            temporarySetting.ValueChanged += (s, e) => value = e.NewValue;
+            temporarySetting.ValueChanged += (s, e) =>
+            {
+                Assert.AreEqual(temporarySetting, e.Setting);
+                value = e.NewValue;
+            };
             AmbientServices.Registry<IAmbientSettings>.Implementation = testSettings;
             Assert.AreEqual("serviceChanged", value);
         }
