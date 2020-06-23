@@ -82,6 +82,7 @@ namespace AmbientServices
         }
         public IProgress TrackPart(float startPortion, float portionPart, string prefix = null, CancellationToken cancel = default(CancellationToken))
         {
+            _portionComplete = startPortion;
             return new SubProgress(_tracker, this, startPortion, portionPart, prefix, cancel);
         }
         public void Dispose()
@@ -97,6 +98,8 @@ namespace AmbientServices
         private readonly string _prefix;
         private float _startPortion;
         private float _portionPart;
+        private float _portionComplete;
+        private string _currentItem;
 
         public SubProgress(BasicAmbientProgress tracker, IProgress parentProgress, float startPortion, float portionPart, string prefix = null, CancellationToken cancel = default(CancellationToken))
         {
@@ -118,19 +121,22 @@ namespace AmbientServices
         }
         public float PortionComplete
         {
-            get => (_parentProgress.PortionComplete - _startPortion) / _portionPart;
+            get => _portionComplete;
         }
         public string ItemCurrentlyBeingProcessed
         {
-            get => _parentProgress.ItemCurrentlyBeingProcessed;
+            get => _currentItem;
         }
         public void Update(float portionComplete, string itemCurrentlyBeingProcessed = null)
         {
             if (portionComplete < 0.0 || portionComplete > 1.0) throw new ArgumentOutOfRangeException("portionComplete", "The portion complete must be between 0.0 and 1.0, inclusive!");
+            System.Threading.Interlocked.Exchange(ref _portionComplete, portionComplete);
+            System.Threading.Interlocked.Exchange(ref _currentItem, itemCurrentlyBeingProcessed);
             _parentProgress.Update(_startPortion + _portionPart * portionComplete, _prefix + itemCurrentlyBeingProcessed);
         }
         public IProgress TrackPart(float startPortion, float portionPart, string prefix = null, CancellationToken cancel = default(CancellationToken))
         {
+            _parentProgress.Update(startPortion);
             return new SubProgress(_tracker, this, startPortion, portionPart, _prefix + prefix, cancel);
         }
         public void Dispose()

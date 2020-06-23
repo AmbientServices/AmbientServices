@@ -13,6 +13,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		SetVersion.ps1 = SetVersion.ps1
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestAmbientServices2", "TestAmbientServices2\TestAmbientServices2.csproj", "{A29BD8BA-524C-4FF4-9578-6C70A7F3122E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{4E916857-F59E-4B5C-988A-FBDBB96717DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E916857-F59E-4B5C-988A-FBDBB96717DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E916857-F59E-4B5C-988A-FBDBB96717DA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A29BD8BA-524C-4FF4-9578-6C70A7F3122E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A29BD8BA-524C-4FF4-9578-6C70A7F3122E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A29BD8BA-524C-4FF4-9578-6C70A7F3122E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A29BD8BA-524C-4FF4-9578-6C70A7F3122E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

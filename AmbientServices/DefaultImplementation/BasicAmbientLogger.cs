@@ -92,6 +92,7 @@ namespace AmbientServices
         {
             Buffer("{0}" + Environment.NewLine, s);
         }
+#if MAYBELATER
         public static void WriteLine(string s, params object[] o)
         {
             Buffer(s + Environment.NewLine, o);
@@ -104,6 +105,7 @@ namespace AmbientServices
         {
             Buffer(s, o);
         }
+#endif
         private static void Buffer(string s, params object[] o)
         {
             // enqueue the string given to us
