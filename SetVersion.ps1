@@ -18,8 +18,6 @@ Function Usage
 Function Update-SourceVersion([string]$version)
 {
   $newVersion = 'Version>' + $version + '<'
-  $newAssemblyVersion = 'AssemblyVersion>' + $version + '<'
-  $newFileVersion = 'FileVersion>' + $version + '<'
 
   ForEach ($o in $input) 
   {
@@ -29,9 +27,7 @@ Function Update-SourceVersion([string]$version)
 #     Get-Content $o.FullName | Write-Output
 
      Get-Content $o.FullName | 
-        %{$_ -Replace 'Version\>[0-9]+(\.([0-9]+|\*)){1,3}\<', $newVersion } |
-        %{$_ -Replace 'AssemblyVersion\>[0-9]+(\.([0-9]+|\*)){1,3}\<', $newAssemblyVersion } |
-        %{$_ -Replace 'FileVersion\>[0-9]+(\.([0-9]+|\*)){1,3}\<', $newFileVersion }  > $tmpFile
+        %{$_ -Replace 'Version\>[0-9]+(\.([0-9]+|\*)){1,3}\<', $newVersion }  > $tmpFile
 
      Move-Item $tmpFile $o.FullName -Force
   }
