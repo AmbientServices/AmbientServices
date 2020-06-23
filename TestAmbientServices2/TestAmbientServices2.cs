@@ -1,5 +1,5 @@
 using AmbientServices;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Diagnostics.CodeAnalysis;
 
 namespace TestAmbientServices2
@@ -13,6 +13,8 @@ namespace TestAmbientServices2
         [ExcludeFromCodeCoverage]
         public static void Load()
         {
+            ITestAmbientService service = Registry<ITestAmbientService>.Implementation;
+            if (!(service is DefaultTestAmbientService)) throw new InvalidOperationException();
         }
     }
 }
