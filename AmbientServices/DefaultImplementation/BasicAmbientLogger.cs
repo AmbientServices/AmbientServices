@@ -13,10 +13,18 @@ namespace AmbientServices
     [DefaultAmbientService]
     class BasicAmbientLogger : IAmbientLogger
     {
-        static readonly IAmbientSettings _Settings = AmbientServices.Registry<IAmbientSettings>.Implementation;
-        static readonly ISetting<LogLevel> LogLevelSetting = _Settings.GetSetting<LogLevel>(nameof(BasicAmbientLogger) + "-LogLevel", s => (LogLevel)Enum.Parse(typeof(LogLevel), s), LogLevel.Information);
-        static readonly ISetting<Regex> TypeFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-TypeFilter", s => new Regex(s, RegexOptions.Compiled));
-        static readonly ISetting<Regex> CategoryFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-CategoruFilter", s => new Regex(s, RegexOptions.Compiled));
+        static readonly IAmbientSettings _Settings;
+        static readonly ISetting<LogLevel> LogLevelSetting;
+        static readonly ISetting<Regex> TypeFilterSetting;
+        static readonly ISetting<Regex> CategoryFilterSetting;
+
+        static BasicAmbientLogger()
+        {
+            _Settings = AmbientServices.Registry<IAmbientSettings>.Implementation;
+            LogLevelSetting = _Settings.GetSetting<LogLevel>(nameof(BasicAmbientLogger) + "-LogLevel", s => (LogLevel)Enum.Parse(typeof(LogLevel), s), LogLevel.Information);
+            TypeFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-TypeFilter", s => new Regex(s, RegexOptions.Compiled));
+            CategoryFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-CategoruFilter", s => new Regex(s, RegexOptions.Compiled));
+        }
 
         class TypeLogger<T> : ILogger<T>
         {
@@ -92,20 +100,6 @@ namespace AmbientServices
         {
             Buffer("{0}" + Environment.NewLine, s);
         }
-#if MAYBELATER
-        public static void WriteLine(string s, params object[] o)
-        {
-            Buffer(s + Environment.NewLine, o);
-        }
-        public static void Write(string s)
-        {
-            Buffer("{0}", s);
-        }
-        public static void Write(string s, params object[] o)
-        {
-            Buffer(s, o);
-        }
-#endif
         private static void Buffer(string s, params object[] o)
         {
             // enqueue the string given to us
