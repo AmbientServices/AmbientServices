@@ -154,6 +154,7 @@ namespace AmbientServices
         /// <summary>
         /// Peeks at all unflushed messages synchronously (for diagnostic purposes only).
         /// </summary>
+        [ExcludeFromCoverage]
         [ExcludeFromCodeCoverage, Obsolete("This property should not be used directly--it's only for debugging!")]
         public static string PeekUnflushed
         {
@@ -220,5 +221,8 @@ namespace AmbientServices
                 }
             }
         }
+    }
+    class ExcludeFromCoverageAttribute : Attribute
+    {
     }
 }

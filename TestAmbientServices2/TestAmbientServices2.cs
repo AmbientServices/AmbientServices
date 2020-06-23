@@ -6,15 +6,18 @@ namespace TestAmbientServices2
 {
     interface ITestAmbientService
     { }
-    [ExcludeFromCodeCoverage]
+    [ExcludeFromCoverage]
     [DefaultAmbientService]
     public class DefaultTestAmbientService : ITestAmbientService
     {
-        [ExcludeFromCodeCoverage]
+        [ExcludeFromCoverage]
         public static void Load()
         {
             ITestAmbientService service = Registry<ITestAmbientService>.Implementation;
             if (!(service is DefaultTestAmbientService)) throw new InvalidOperationException();
         }
+    }
+    class ExcludeFromCoverageAttribute : Attribute
+    {
     }
 }
