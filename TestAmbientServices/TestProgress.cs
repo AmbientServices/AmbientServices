@@ -237,11 +237,23 @@ namespace TestAmbientServices
         {
             IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
+            CancellationToken token = progress.CancellationToken;
+            Assert.IsNotNull(token);
             IProgress subProgress1 = progress.TrackPart(0.05f, 0.51f);
             using (IProgress subProgress2 = subProgress1.TrackPart(0.05f, 0.51f))
             {
-                CancellationToken token = progress.CancellationToken;
+                token = subProgress2.CancellationToken;
                 Assert.IsNotNull(token);
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientProgress"/>.
+        /// </summary>
+        [TestMethod]
+        public void Dispose()
+        {
+            using (Progress progress = new Progress(new BasicAmbientProgress()))
+            {
             }
         }
     }
