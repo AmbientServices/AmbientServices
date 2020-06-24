@@ -13,7 +13,7 @@ namespace TestAmbientServices2
         [ExcludeFromCoverage]
         public static void Load()
         {
-            ITestAmbientService service = Registry<ITestAmbientService>.Implementation;
+            ITestAmbientService service = ServiceBroker<ITestAmbientService>.Implementation;
             if (!(service is DefaultTestAmbientService)) throw new InvalidOperationException();
         }
     }

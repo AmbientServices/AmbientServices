@@ -23,7 +23,7 @@ The ambient cache interface abstracts a simple cache of the type that is univers
 /// </summary>
 class UserManager
 {
-    private static IAmbientCache AmbientCache = Registry<IAmbientCache>.Implementation;
+    private static IAmbientCache AmbientCache = ServiceBroker<IAmbientCache>.Implementation;
 
     /// <summary>
     /// Finds the user with the specified emali address.
@@ -87,7 +87,7 @@ The ambient logger interface abstracts a simple logging system of the type that 
 /// </summary>
 public static class AssemblyLoggingExtensions
 {
-    private static readonly ILogger<Assembly> _Logger = Registry<IAmbientLogger>.Implementation.GetLogger<Assembly>();
+    private static readonly ILogger<Assembly> _Logger = ServiceBroker<IAmbientLogger>.Implementation.GetLogger<Assembly>();
 
     /// <summary>
     /// Log that the assembly was loaded.
@@ -131,7 +131,7 @@ The ambient progress interface abstracts a simple context-following progress tra
 /// </summary>
 class DownloadAndUnzip
 {
-    private static IAmbientProgress AmbientProgress = Registry<IAmbientProgress>.Implementation;
+    private static IAmbientProgress AmbientProgress = ServiceBroker<IAmbientProgress>.Implementation;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -213,7 +213,7 @@ That event may arrive asynchronously on any thread at any time.
 /// </summary>
 class BufferPool
 {
-    private static readonly IAmbientSettings AmbientSettings = AmbientServices.Registry<IAmbientSettings>.Implementation;
+    private static readonly IAmbientSettings AmbientSettings = AmbientServices.ServiceBroker<IAmbientSettings>.Implementation;
     private static readonly ISetting<int> MaxTotalBufferBytes = AmbientSettings.GetSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", s => Int32.Parse(s), 1000 * 1000);
     private static readonly ISetting<int> DefaultBufferBytes = AmbientSettings.GetSetting<int>(nameof(BufferPool) + "-DefaultBufferBytes", s => Int32.Parse(s), 8000);
 
@@ -386,7 +386,7 @@ class Setup
 {
     static Setup()
     {
-        Registry<IAmbientCache>.Implementation = null;
+        ServiceBroker<IAmbientCache>.Implementation = null;
     }
 }
 ```    
@@ -400,7 +400,7 @@ class SetupApplication
 {
     static SetupApplication()
     {
-        Registry<IAmbientSettings>.Implementation = new AppConfigAmbientSettings();
+        ServiceBroker<IAmbientSettings>.Implementation = new AppConfigAmbientSettings();
     }
 }
 /// <summary>

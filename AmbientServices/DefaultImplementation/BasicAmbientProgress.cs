@@ -76,6 +76,7 @@ namespace AmbientServices
         }
         public void Update(float portionComplete, string itemCurrentlyBeingProcessed = null)
         {
+            _cancel.ThrowIfCancellationRequested();
             if (portionComplete < 0.0 || portionComplete > 1.0) throw new ArgumentOutOfRangeException("portionComplete", "The portion complete must be between 0.0 and 1.0, inclusive!");
             System.Threading.Interlocked.Exchange(ref _portionComplete, portionComplete);
             if (itemCurrentlyBeingProcessed != null) System.Threading.Interlocked.Exchange(ref _itemCurrentlyBeingProcessed, itemCurrentlyBeingProcessed);

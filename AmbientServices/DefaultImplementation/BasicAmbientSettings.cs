@@ -51,7 +51,7 @@ namespace AmbientServices
             private readonly Func<string, U> _convertUnderlying;
             private readonly Func<U, T> _convertFromUnderlying;
             private readonly LazyUnsubscribeWeakEventListenerProxy<Setting<T,U>, object, SettingValueChangedEventArgs<U>> _weakValueChanged;
-            private readonly LazyUnsubscribeWeakEventListenerProxy<Setting<T,U>, object, Registry<IAmbientSettings>.ImplementationChangedEventArgs<IAmbientSettings>> _weakAmbientImplementationChanged;
+            private readonly LazyUnsubscribeWeakEventListenerProxy<Setting<T,U>, object, ServiceBroker<IAmbientSettings>.ImplementationChangedEventArgs<IAmbientSettings>> _weakAmbientImplementationChanged;
 
             private ISetting<U> _underlyingSetting;     // interlocked
             private object _currentValue;               // interlocked
@@ -68,16 +68,16 @@ namespace AmbientServices
                 _weakValueChanged  = new LazyUnsubscribeWeakEventListenerProxy<Setting<T,U>, object, SettingValueChangedEventArgs<U>>(
                         this, UnderlyingSettingValueChanged, (luwf) => underlyingSetting.ValueChanged -= luwf.WeakEventHandler);
                 underlyingSetting.ValueChanged += _weakValueChanged.WeakEventHandler;
-                _weakAmbientImplementationChanged = new LazyUnsubscribeWeakEventListenerProxy<Setting<T,U>, object, Registry<IAmbientSettings>.ImplementationChangedEventArgs<IAmbientSettings>>(
-                        this, RegistryImplementationChanged, (luwf) => Registry<IAmbientSettings>.ImplementationChanged -= luwf.WeakEventHandler);
-                Registry<IAmbientSettings>.ImplementationChanged += _weakAmbientImplementationChanged.WeakEventHandler;
+                _weakAmbientImplementationChanged = new LazyUnsubscribeWeakEventListenerProxy<Setting<T,U>, object, ServiceBroker<IAmbientSettings>.ImplementationChangedEventArgs<IAmbientSettings>>(
+                        this, BrokerImplementationChanged, (luwf) => ServiceBroker<IAmbientSettings>.ImplementationChanged -= luwf.WeakEventHandler);
+                ServiceBroker<IAmbientSettings>.ImplementationChanged += _weakAmbientImplementationChanged.WeakEventHandler;
             }
             private static void UnderlyingSettingValueChanged(Setting<T,U> setting, object sender, SettingValueChangedEventArgs<U> e)
             {
                 T newValue = setting._convertFromUnderlying(e.NewValue);
                 setting.ChangeValue(newValue);
             }
-            private static void RegistryImplementationChanged(Setting<T,U> setting, object sender, Registry<IAmbientSettings>.ImplementationChangedEventArgs<IAmbientSettings> e)
+            private static void BrokerImplementationChanged(Setting<T,U> setting, object sender, ServiceBroker<IAmbientSettings>.ImplementationChangedEventArgs<IAmbientSettings> e)
             {
                 // unhook from the old underlying setting
                 setting._underlyingSetting.ValueChanged -= setting._weakValueChanged.WeakEventHandler;

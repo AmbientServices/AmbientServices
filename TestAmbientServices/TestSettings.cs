@@ -16,7 +16,7 @@ namespace TestAmbientServices
     {
         private static object _lock = new object();
 
-        IAmbientSettings AmbientSettings = Registry<IAmbientSettings>.Implementation;
+        IAmbientSettings AmbientSettings = ServiceBroker<IAmbientSettings>.Implementation;
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettings"/>.
         /// </summary>
@@ -46,7 +46,7 @@ namespace TestAmbientServices
                 ISetting<string> temporarySetting = AmbientSettings.GetSetting<string>(testSettingKey, s => s, "initialValue");
                 string value = temporarySetting.Value;
                 temporarySetting.ValueChanged += (s, e) => value = e.NewValue;
-                AmbientServices.Registry<IAmbientSettings>.Implementation = testSettings;
+                AmbientServices.ServiceBroker<IAmbientSettings>.Implementation = testSettings;
                 Assert.AreEqual("serviceChanged", value);
                 testSettings.ChangeSetting(testSettingKey, "valueChanged");
                 Assert.AreEqual("valueChanged", value);
@@ -78,7 +78,7 @@ namespace TestAmbientServices
                 Assert.AreEqual(temporarySetting, e.Setting);
                 value = e.NewValue;
             };
-            AmbientServices.Registry<IAmbientSettings>.Implementation = testSettings;
+            AmbientServices.ServiceBroker<IAmbientSettings>.Implementation = testSettings;
             Assert.AreEqual("serviceChanged", value);
         }
     }

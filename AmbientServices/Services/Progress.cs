@@ -25,6 +25,7 @@ namespace AmbientServices
         string ItemCurrentlyBeingProcessed { get; }
         /// <summary>
         /// Updates the portion complete and optionally the current item being processed.
+        /// Also checks <see cref="CancellationToken"/> and throws the <see cref="OperationCanceledException"/> if the operation should be cancelled.
         /// </summary>
         /// <param name="portionComplete">A number between 0.0 and 1.0 indicating how much of the operation has been completed.</param>
         /// <param name="itemCurrentlyBeingProcessed">The item currently being processed, null to not update the item being processed, <see cref="string.Empty"/> to clear the item.</param>
@@ -45,9 +46,15 @@ namespace AmbientServices
     public interface IAmbientProgress
     {
         /// <summary>
-        /// Gets the most recent <see cref="IProgress"/> on the current execution thread, or the main progress tracker if called from the main logical execution context and no other trackers have yet been registered.
+        /// Gets the most recent <see cref="IProgress"/> for the current execution context.  
         /// </summary>
         /// <returns>An <see cref="IProgress"/> tracker to track the progress of the calling process.</returns>
+        /// <remarks>
+        /// The first time this property is retrieved, a top-level progress is created.
+        /// The <see cref="IProgress"/> that is returned is thread-safe, but since each execution context gets its own progress tracker,
+        /// cross-thread calls should only happen when the executing thread is working on the same operation as the thread whose progress 
+        /// tracker is being called and when the threads are using some external method for coordinating the processing.
+        /// </remarks>
         IProgress Progress { get; }
     }
 }

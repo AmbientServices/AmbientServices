@@ -10,7 +10,7 @@ namespace AmbientServices
     [DefaultAmbientService]
     class BasicAmbientCache : IAmbientCache
     {
-        static readonly IAmbientSettings _Settings = AmbientServices.Registry<IAmbientSettings>.Implementation;
+        static readonly IAmbientSettings _Settings = AmbientServices.ServiceBroker<IAmbientSettings>.Implementation;
         static readonly ISetting<int> CallFrequencyToEject = _Settings.GetSetting<int>(nameof(BasicAmbientCache) + "-EjectFrequency", s => Int32.Parse(s), 100);
         static readonly ISetting<int> CountToEject = _Settings.GetSetting<int>(nameof(BasicAmbientCache) + "-ItemCount", s => Int32.Parse(s), 1000);
 

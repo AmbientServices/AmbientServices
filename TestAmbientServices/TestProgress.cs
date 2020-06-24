@@ -21,7 +21,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void Progress()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             progress.Update(0.01f);
             Assert.AreEqual(0.01f, progress.PortionComplete);
@@ -45,7 +45,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void ProgressPartStack()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (IProgress subprogress = progress.TrackPart(0.05f, 0.10f))
             {
@@ -59,7 +59,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void ProgressPart()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (IProgress subprogress = progress.TrackPart(0.05f, 0.05f, "prefix-"))
             {
@@ -78,10 +78,30 @@ namespace TestAmbientServices
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgress"/>.
         /// </summary>
+        [TestMethod]
+        public void ProgressThread()
+        {
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
+            IProgress progress = ambientProgress.Progress;
+            progress.Update(0.25f, "main");
+            Thread thread = new Thread(new ParameterizedThreadStart(o =>
+                {
+                    // the progress here should be a SEPARATE progress because it's a separate execution thread
+                    IProgress threadProgress = ambientProgress.Progress;
+                    threadProgress.Update(0.75f, "thread");
+                    threadProgress.Update(0.33f, "cross-thread");
+                }));
+            thread.Start();
+            thread.Join();
+            Assert.AreEqual(0.33f, progress.PortionComplete);
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientProgress"/>.
+        /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionCompleteTooLowError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             progress.Update(-.01f);
         }
@@ -91,7 +111,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionCompleteTooHighError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             progress.Update(1.01f);
         }
@@ -101,7 +121,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PartPortionCompleteTooLowError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (progress = progress.TrackPart(0.01f, 0.02f))
             {
@@ -114,7 +134,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PartPortionCompleteTooHighError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (progress = progress.TrackPart(0.01f, 0.02f))
             {
@@ -127,7 +147,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void StartPortionTooLowError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (progress = progress.TrackPart(-0.01f, 1.0f))
             {
@@ -139,7 +159,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void StartPortionTooHighError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (progress = progress.TrackPart(0.0f, 1.01f))
             {
@@ -151,7 +171,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionPartTooLowError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (progress = progress.TrackPart(1.0f, -0.01f))
             {
@@ -163,7 +183,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionPartTooHighError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (progress = progress.TrackPart(1.0f, 1.01f))
             {
@@ -175,7 +195,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionTooLargeError()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             using (progress = progress.TrackPart(0.5f, 0.51f))
             {
@@ -187,7 +207,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(InvalidOperationException))]
         public void PartStackCorruption()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             IProgress subProgress1 = progress.TrackPart(0.05f, 0.51f);
             using (IProgress subProgress2 = subProgress1.TrackPart(0.05f, 0.51f))
@@ -201,7 +221,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void GetCancellationToken()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             CancellationToken token = progress.CancellationToken;
             Assert.IsNotNull(token);
@@ -215,7 +235,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void CancellationToken()
         {
-            IAmbientProgress ambientProgress = Registry<IAmbientProgress>.Implementation;
+            IAmbientProgress ambientProgress = ServiceBroker<IAmbientProgress>.Implementation;
             IProgress progress = ambientProgress.Progress;
             IProgress subProgress1 = progress.TrackPart(0.05f, 0.51f);
             using (IProgress subProgress2 = subProgress1.TrackPart(0.05f, 0.51f))

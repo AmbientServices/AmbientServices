@@ -14,7 +14,7 @@ namespace TestAmbientServices
     [TestClass]
     public class TestLogger
     {
-        private static readonly IAmbientLogger _Logger = Registry<IAmbientLogger>.Implementation;
+        private static readonly IAmbientLogger _Logger = ServiceBroker<IAmbientLogger>.Implementation;
         /// <summary>
         /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
