@@ -62,8 +62,21 @@ namespace TestAmbientServices
             DefaultTest test = ServiceBroker<DefaultTest>.Implementation;
         }
         [TestMethod]
-        public void AssemblyLoad()
+        public void AssemblyLoadAndLateAssignment()
         {
+            // try to get this one now
+            ILateAssignmentTest test = ServiceBroker<ILateAssignmentTest>.Implementation;
+            Assert.IsNull(test);
+
+            LateAssignment();
+
+            // NOW this should be available
+            test = ServiceBroker<ILateAssignmentTest>.Implementation;
+            Assert.IsNotNull(test);
+        }
+        private void LateAssignment()
+        {
+            // NOW load the assembly (this should register the default implementation)
             TestAmbientServices2.DefaultTestAmbientService.Load();
         }
     }

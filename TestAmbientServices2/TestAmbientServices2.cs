@@ -20,4 +20,12 @@ namespace TestAmbientServices2
     class ExcludeFromCoverageAttribute : Attribute
     {
     }
+
+    [DefaultAmbientService]
+    public class DefaultLateAssignmentTest : ILateAssignmentTest
+    {
+        static void Load()
+        {
+        }
+    }
 }

@@ -202,4 +202,6 @@ namespace AmbientServices
             }
         }
     }
+    internal interface ILateAssignmentTest
+    { }
 }
