@@ -1,6 +1,8 @@
 using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Linq;
+using System.Reflection;
 
 namespace TestAmbientServices
 {
@@ -78,6 +80,19 @@ namespace TestAmbientServices
         {
             // NOW load the assembly (this should register the default implementation)
             TestAmbientServices2.DefaultTestAmbientService.Load();
+        }
+        [TestMethod]
+        public void TypesFromException()
+        {
+            ReflectionTypeLoadException ex = new ReflectionTypeLoadException(new Type[] { typeof(string) }, new Exception[0]);
+            Assert.AreEqual(1, DefaultAmbientServices.TypesFromException(ex).Count());
+            ex = new ReflectionTypeLoadException(new Type[] { typeof(string), null }, new Exception[0]);
+            Assert.AreEqual(1, DefaultAmbientServices.TypesFromException(ex).Count());
+        }
+        [TestMethod]
+        public void DoesAssemblyReferToAssembly()
+        {
+            Assert.IsFalse(DefaultAmbientServices.DoesAssemblyReferToAssembly(typeof(System.ValueTuple).Assembly, Assembly.GetExecutingAssembly()));
         }
     }
 }

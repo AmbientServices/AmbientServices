@@ -156,7 +156,7 @@ namespace AmbientServices
         /// <param name="assembly">The assembly to check.</param>
         /// <param name="referredToAssembly">The referred to assembly to look for.</param>
         /// <returns><b>true</b> if <paramref name="assembly"/> refers to <paramref name="referredToAssembly"/>.</returns>
-        private static bool DoesAssemblyReferToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
+        internal static bool DoesAssemblyReferToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
         {
             return (assembly == referredToAssembly || assembly.GetReferencedAssemblies().FirstOrDefault(a => a.FullName == referredToAssembly.FullName) != null);
         }
@@ -165,22 +165,22 @@ namespace AmbientServices
         /// </summary>
         /// <param name="assembly">The assembly to attempt to enumerate types from.</param>
         /// <returns>An enumeration of <see cref="Type"/>s.</returns>
-        [DebuggerNonUserCode]
-        private static IEnumerable<Type> GetLoadableTypes(this System.Reflection.Assembly assembly)
+//        [DebuggerNonUserCode]
+        internal static IEnumerable<Type> GetLoadableTypes(this System.Reflection.Assembly assembly)
         {
-            Type[] types = new Type[0];
             try
             {
-                types = assembly.GetTypes();
+                return assembly.GetTypes();
             }
             catch (ReflectionTypeLoadException ex)
             {
-                types = ex.Types.Where(t => t != null).ToArray();
+                // can't figure out how to force this exception for the moment, but this code is from several popular posts on the internet
+                return TypesFromException(ex);
             }
-            foreach (Type type in types)
-            {
-                yield return type;
-            }
+        }
+        internal static IEnumerable<Type> TypesFromException(ReflectionTypeLoadException ex)
+        {
+            return ex.Types.Where(t => t != null);
         }
         /// <summary>
         /// Enuemrates all the types in this assembly and all loaded assemblies that refer to it.

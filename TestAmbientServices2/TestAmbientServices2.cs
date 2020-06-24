@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace TestAmbientServices2
 {
+    [ExcludeFromCoverage]
     interface ITestAmbientService
     { }
     [ExcludeFromCoverage]
@@ -17,10 +18,13 @@ namespace TestAmbientServices2
             if (!(service is DefaultTestAmbientService)) throw new InvalidOperationException();
         }
     }
+    [ExcludeFromCoverage]
+    [AttributeUsage(AttributeTargets.All)]
     class ExcludeFromCoverageAttribute : Attribute
     {
     }
 
+    [ExcludeFromCoverage]
     [DefaultAmbientService]
     public class DefaultLateAssignmentTest : ILateAssignmentTest
     {
