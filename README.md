@@ -443,14 +443,14 @@ class AppConfigAmbientSettings : IAmbientSettings
 ```    
 # Library Information
 
-## Authors and license
-This library is licensed under [MIT](https://opensource.org/licenses/MIT).
+## Author and License
+AmbientServices is written and maintained by James Ivie.
 
-The library is written and maintained by James Ivie.
+AmbientServices is licensed under [MIT](https://opensource.org/licenses/MIT).
 
 ## Language and Tools
-The library is written in C#, using .NET Standard 2.0.  The tests are written in .NET Core 2.2.
+AmbientServices is written in C#, using .NET Standard 2.0.  The tests are written in .NET Core 2.2.
 
-The code is built using either Microsoft Visual Studio 2017+ or Microsoft Visual Studio Code.
+The code is built using either Microsoft Visual Studio 2017+, Microsoft Visual Studio Code, or .NET Core command-line utilities.
 
 Binaries are available on https://www.nuget.org/packages/AmbientServices.
