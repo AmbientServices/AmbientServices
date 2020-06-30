@@ -7,6 +7,11 @@ using System.Reflection;
 
 namespace AmbientServices
 {
+    class ServiceImplementation<T> where T : class
+    {
+        private static T _Implementation = Activator.CreateInstance<T>();
+        public static T GetImplementation() { return _Implementation; }
+    }
     /// <summary>
     /// Provides a global service broker that callers can use to retrieve (or register) the system-wide implementation of an ambient service interface (indicated using the generic type parameter).
     /// </summary>
@@ -26,7 +31,9 @@ namespace AmbientServices
         {
             Type impType = DefaultAmbientServices.TryFind(typeof(T));
             if (impType == null) return null;       // there is no default implementation (yet)
-            T implementation = Activator.CreateInstance(impType) as T;
+            Type type = typeof(ServiceImplementation<>).MakeGenericType(impType);
+            MethodInfo mi = type.GetMethod("GetImplementation");
+            T implementation = (T)mi.Invoke(null, new object[0]);
             return implementation;
         }
         private static T LateAssignedDefaultImplementation()
