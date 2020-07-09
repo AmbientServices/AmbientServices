@@ -13,28 +13,38 @@ namespace AmbientServices
     [DefaultAmbientService]
     class BasicAmbientLogger : IAmbientLogger
     {
-        static readonly IAmbientSettings _Settings;
-        static readonly ISetting<LogLevel> LogLevelSetting;
-        static readonly ISetting<Regex> TypeFilterSetting;
-        static readonly ISetting<Regex> CategoryFilterSetting;
+        private readonly IAmbientSettings _settings;
+        private readonly ISetting<LogLevel> _logLevelSetting;
+        private readonly ISetting<Regex> _typeFilterSetting;
+        private readonly ISetting<Regex> _categoryFilterSetting;
 
-        static BasicAmbientLogger()
+        public BasicAmbientLogger()
+            : this (null)
         {
-            _Settings = AmbientServices.ServiceBroker<IAmbientSettings>.GlobalImplementation;
-            LogLevelSetting = _Settings.GetSetting<LogLevel>(nameof(BasicAmbientLogger) + "-LogLevel", s => (LogLevel)Enum.Parse(typeof(LogLevel), s), LogLevel.Information);
-            TypeFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-TypeFilter", s => new Regex(s, RegexOptions.Compiled));
-            CategoryFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-CategoryFilter", s => new Regex(s, RegexOptions.Compiled));
+        }
+        internal BasicAmbientLogger(IAmbientSettings settings = null)
+        {
+            _settings = settings ?? AmbientServices.ServiceBroker<IAmbientSettings>.LocalImplementation;
+            _logLevelSetting = _settings.GetSetting<LogLevel>(nameof(BasicAmbientLogger) + "-LogLevel", s => (LogLevel)Enum.Parse(typeof(LogLevel), s), LogLevel.Information);
+            _typeFilterSetting = _settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-TypeFilter", s => new Regex(s, RegexOptions.Compiled));
+            _categoryFilterSetting = _settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-CategoryFilter", s => new Regex(s, RegexOptions.Compiled));
         }
 
         class TypeLogger<T> : ILogger<T>
         {
             private static readonly string TypeName = typeof(T).Name;
+            private BasicAmbientLogger _logger;
+
+            internal TypeLogger(BasicAmbientLogger logger)
+            {
+                _logger = logger;
+            }
 
             private void InnerLog(string message, string category = null, LogLevel level = LogLevel.Information)
             {
-                if (level >= LogLevelSetting.Value &&
-                    (TypeFilterSetting.Value == null || TypeFilterSetting.Value.IsMatch(TypeName)) &&
-                    (CategoryFilterSetting.Value == null || category == null || CategoryFilterSetting.Value.IsMatch(category))
+                if (level >= _logger._logLevelSetting.Value &&
+                    (_logger._typeFilterSetting.Value == null || _logger._typeFilterSetting.Value.IsMatch(TypeName)) &&
+                    (_logger._categoryFilterSetting.Value == null || category == null || _logger._categoryFilterSetting.Value.IsMatch(category))
                     )
                 {
                     category = (category != null) ? category + ": " : "";
@@ -66,7 +76,7 @@ namespace AmbientServices
 
         public ILogger<T> GetLogger<T>()
         {
-            return new TypeLogger<T>();
+            return new TypeLogger<T>(this);
         }
         public Task Flush(CancellationToken cancel = default(CancellationToken))
         {
