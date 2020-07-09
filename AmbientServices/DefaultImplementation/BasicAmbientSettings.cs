@@ -69,8 +69,8 @@ namespace AmbientServices
                         this, UnderlyingSettingValueChanged, (luwf) => underlyingSetting.ValueChanged -= luwf.WeakEventHandler);
                 underlyingSetting.ValueChanged += _weakValueChanged.WeakEventHandler;
                 _weakAmbientImplementationChanged = new LazyUnsubscribeWeakEventListenerProxy<Setting<T,U>, object, ServiceBroker<IAmbientSettings>.ImplementationChangedEventArgs<IAmbientSettings>>(
-                        this, BrokerImplementationChanged, (luwf) => ServiceBroker<IAmbientSettings>.ImplementationChanged -= luwf.WeakEventHandler);
-                ServiceBroker<IAmbientSettings>.ImplementationChanged += _weakAmbientImplementationChanged.WeakEventHandler;
+                        this, BrokerImplementationChanged, (luwf) => ServiceBroker<IAmbientSettings>.GlobalImplementationChanged -= luwf.WeakEventHandler);
+                ServiceBroker<IAmbientSettings>.GlobalImplementationChanged += _weakAmbientImplementationChanged.WeakEventHandler;
             }
             private static void UnderlyingSettingValueChanged(Setting<T,U> setting, object sender, SettingValueChangedEventArgs<U> e)
             {

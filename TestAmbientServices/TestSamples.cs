@@ -27,7 +27,7 @@ namespace TestAmbientServices
 
     class CallStackTest
     {
-        private static IAmbientCallStack _CallStack = ServiceBroker<IAmbientCallStack>.Implementation;
+        private static IAmbientCallStack _CallStack = ServiceBroker<IAmbientCallStack>.GlobalImplementation;
         public static void OuterFunc()
         {
             Debug.WriteLine("Before outer push:");

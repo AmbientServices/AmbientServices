@@ -4,10 +4,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace AmbientServices
 {
-    class ServiceImplementation<T> where T : class
+    /// <summary>
+    /// A generic class used to serialize the instantiation of the default implementation.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    class DefaultServiceImplementation<T> where T : class
     {
         private static T _Implementation = Activator.CreateInstance<T>();
         public static T GetImplementation() { return _Implementation; }
@@ -26,12 +31,16 @@ namespace AmbientServices
         /// The current implementation.  Null if not yet initialized.  <see cref="SuppressedImplementation"/> if the implementation has been explicitly suppressed.
         /// </summary>
         private static object _implementation = DefaultImplementation();
+        /// <summary>
+        /// The call-context-local override (if any).
+        /// </summary>
+        private static AsyncLocal<object> _callContextLocalImplementation = new AsyncLocal<object>();
 
         private static T DefaultImplementation()
         {
             Type impType = DefaultAmbientServices.TryFind(typeof(T));
             if (impType == null) return null;       // there is no default implementation (yet)
-            Type type = typeof(ServiceImplementation<>).MakeGenericType(impType);
+            Type type = typeof(DefaultServiceImplementation<>).MakeGenericType(impType);
             MethodInfo mi = type.GetMethod("GetImplementation");
             T implementation = (T)mi.Invoke(null, new object[0]);
             return implementation;
@@ -47,11 +56,12 @@ namespace AmbientServices
                 : oldDefaultImplementation;
         }
         /// <summary>
-        /// Gets or sets the implementation.  
-        /// When setting the implementation, overwrites any previous implementation and triggers the <see cref="ImplementationChanged"/> event either on this thread or another thread asynchronously.
+        /// Gets or sets the global implementation.
+        /// If set to null, suppresses the default implementation (so that the getter returns null).
+        /// When setting the implementation, overwrites any previous implementation and triggers the <see cref="GlobalImplementationChanged"/> event either on this thread or another thread asynchronously.
         /// Thread-safe.
         /// </summary>
-        public static T Implementation
+        public static T GlobalImplementation
         {
             get
             {
@@ -60,7 +70,25 @@ namespace AmbientServices
             set
             {
                 T oldImplementation = System.Threading.Interlocked.Exchange(ref _implementation, value ?? SuppressedImplementation) as T;
-                ImplementationChanged?.Invoke(typeof(ServiceBroker<T>), new ImplementationChangedEventArgs<T> { OldImplementation = oldImplementation, NewImplementation = value });
+                GlobalImplementationChanged?.Invoke(typeof(ServiceBroker<T>), new ImplementationChangedEventArgs<T> { OldImplementation = oldImplementation, NewImplementation = value });
+            }
+        }
+        /// <summary>
+        /// Gets or sets the call-context-local implementation.
+        /// When setting the implementation, if set to <see cref="GlobalImplementation"/>, reverts to the global implementation (even if it changes later).  
+        /// If set to null, suppresses the implementation in the local call context (so that the getter returns null).
+        /// Otherwise sets to the value specified.
+        /// Thread-safe.
+        /// </summary>
+        public static T LocalImplementation
+        {
+            get
+            {
+                return (_callContextLocalImplementation.Value ?? _implementation ?? LateAssignedDefaultImplementation()) as T;
+            }
+            set
+            {
+                _callContextLocalImplementation.Value = (value == GlobalImplementation) ? null : value ?? SuppressedImplementation;
             }
         }
         /// <summary>
@@ -70,7 +98,7 @@ namespace AmbientServices
         /// because the service broker lives forever.
         /// Thread-safe.
         /// </summary>
-        public static event EventHandler<ImplementationChangedEventArgs<T>> ImplementationChanged;
+        public static event EventHandler<ImplementationChangedEventArgs<T>> GlobalImplementationChanged;
 
         /// <summary>
         /// An event args class that is sent when a setting value is changed.

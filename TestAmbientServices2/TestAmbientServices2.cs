@@ -14,7 +14,7 @@ namespace TestAmbientServices2
         [ExcludeFromCoverage]
         public static void Load()
         {
-            ITestAmbientService service = ServiceBroker<ITestAmbientService>.Implementation;
+            ITestAmbientService service = ServiceBroker<ITestAmbientService>.GlobalImplementation;
             if (!(service is DefaultTestAmbientService)) throw new InvalidOperationException();
         }
     }

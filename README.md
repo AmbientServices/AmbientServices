@@ -1,14 +1,21 @@
 ﻿# Overview
 AmbientServices is a service that provides abstractions for basic services which are both universal and optional, allowing libraries to be used in a variety of systems that provide vastly different implementations (or no implementation) of those basic services.
 
-These basic services include caching, logging, progress/cancellation, and settings, and interfaces for those services are provided here.
-By accessing these services through the interfaces provided by AmbientServices, code integrators can use libraries without having to provide dependencies for systems that they may or may not have implemented yet.
+These basic services include caching, logging, progress/cancellation, and settings.  Interfaces for those services are provided here.
+By accessing these services through the interfaces provided here, code integrators can use libraries without having to provide dependencies for systems that they may or may not have implemented yet.
 If integrators want the added benefits provided by a more complicated implementation of one or more of those services, they can provide a bridge to their own implementations of these basic services and register them with the AmbientServices service.
 With one simple registration, the services will automatically be utilized by every library that uses AmbientServices.
 
-The well known dependency injection pattern is one possible solution to this problem, but dependency injection requires the code consumer to pass the required dependencies to each object constructor, which can be cumbersome, and when the functionality is optional anyway, this can be more work than it's worth, especially when you're just trying to get things up and running.
-Dependency injection becomes even more cumbersome when the library being used adds or removes dependencies, requiring the code user to update every constructor invocation with the new dependencies.
+The well known dependency injection pattern is one possible solution to this problem, but dependency injection requires the code consumer to pass the required dependencies to each object constructor, which can be cumbersome, and when the functionality is optional anyway, this can be more work than it's worth, especially when you're just trying to get things up and running and the same service is injected everywhere.
+Dependency injection becomes even more cumbersome when the library being used adds or removes service dependencies, requiring the code user to update every constructor invocation with the new dependencies.
 Dependency injection still makes sense for services that are required, but when services are optional, AmbientServices is a better option.
+
+# Getting Started
+In Visual Studio, Use Manage Nuget Packages and search nuget.org for AmbientServices to add a package reference for this library.
+
+For .NET Core environments, use:
+`dotnet add package https://www.nuget.org/packages/AmbientServices/`
+
 
 # Built-in Basic Ambient Services
 
@@ -17,13 +24,14 @@ Dependency injection still makes sense for services that are required, but when 
 The ambient cache interface abstracts a simple cache of the type that is universally applicable.  Some items are cached for a specific amount of time, others are cached indefinitely.  Items cached temporarily may have their expiration time extended or shortened each time they are retrieved or updated.  Both types of items may expire from the cache at any time.  Items may be removed from the cache manually at any time.
 
 ### Sample
+[//]: # (AmbientCacheSample)
 ```csharp
 /// <summary>
 /// A user manager class that shows how the caching ambient service might be used.
 /// </summary>
 class UserManager
 {
-    private static IAmbientCache AmbientCache = ServiceBroker<IAmbientCache>.Implementation;
+    private static IAmbientCache AmbientCache = ServiceBroker<IAmbientCache>.GlobalImplementation;
 
     /// <summary>
     /// Finds the user with the specified emali address.
@@ -81,13 +89,14 @@ The default implementation provides a small local-only cache using a very simple
 The ambient logger interface abstracts a simple logging system of the type that is universally applicable.  Log messages are classified by level, an associated class type, and a specified category.  In some implementations, these may be used to filter what is actually logged.
 
 ### Sample
+[//]: # (AmbientLoggerSample)
 ```csharp
 /// <summary>
 /// A static class with extensions methods used to log various assembly events.
 /// </summary>
 public static class AssemblyLoggingExtensions
 {
-    private static readonly ILogger<Assembly> _Logger = ServiceBroker<IAmbientLogger>.Implementation.GetLogger<Assembly>();
+    private static readonly ILogger<Assembly> _Logger = ServiceBroker<IAmbientLogger>.GlobalImplementation.GetLogger<Assembly>();
 
     /// <summary>
     /// Log that the assembly was loaded.
@@ -125,13 +134,14 @@ The default implementation asynchronously buffers the log messages and flushes t
 The ambient progress interface abstracts a simple context-following progress tracker of the type that is universally applicable.  Progress tracking tracks the proportion of an operation that has completed processing and the item currently being processed and provides easy aggregation of subprocess progress.
 
 ### Sample
+[//]: # (AmbientProgressSample)
 ```csharp
 /// <summary>
 /// A class that downloads and unzips
 /// </summary>
 class DownloadAndUnzip
 {
-    private static IAmbientProgress AmbientProgress = ServiceBroker<IAmbientProgress>.Implementation;
+    private static IAmbientProgress AmbientProgress = ServiceBroker<IAmbientProgress>.GlobalImplementation;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -207,13 +217,14 @@ Implementations may or may not provide post-initialization settings value update
 That event may arrive asynchronously on any thread at any time.
 
 ### Sample
+[//]: # (AmbientSettingsSample)
 ```csharp
 /// <summary>
 /// A class that manages a pool of buffers.
 /// </summary>
 class BufferPool
 {
-    private static readonly IAmbientSettings AmbientSettings = AmbientServices.ServiceBroker<IAmbientSettings>.Implementation;
+    private static readonly IAmbientSettings AmbientSettings = AmbientServices.ServiceBroker<IAmbientSettings>.GlobalImplementation;
     private static readonly ISetting<int> MaxTotalBufferBytes = AmbientSettings.GetSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", s => Int32.Parse(s), 1000 * 1000);
     private static readonly ISetting<int> DefaultBufferBytes = AmbientSettings.GetSetting<int>(nameof(BufferPool) + "-DefaultBufferBytes", s => Int32.Parse(s), 8000);
 
@@ -296,6 +307,7 @@ The default implementation simply uses the default value as the initial value.  
 # Customizing Ambient Services
 
 ## Implementing A New Ambient Service
+[//]: # (CustomAmbientServiceSample)
 ```csharp
 /// <summary>
 /// An interface that abstracts a simple ambient call stack tracking service.
@@ -378,6 +390,7 @@ class BasicAmbientCallStack : IAmbientCallStack
 ```    
 
 ## Disabling An Ambient Service
+[//]: # (DisableAmbientServiceSample)
 ```csharp
 /// <summary>
 /// A sample setup class that disables the cache implementation when it is initialized.
@@ -386,12 +399,13 @@ class Setup
 {
     static Setup()
     {
-        ServiceBroker<IAmbientCache>.Implementation = null;
+        ServiceBroker<IAmbientCache>.GlobalImplementation = null;
     }
 }
 ```    
 
-## Overriding An Ambient Service
+## Overriding An Ambient Service Globally
+[//]: # (OverrideAmbientServiceGlobalSample)
 ```csharp
 /// <summary>
 /// An application setup class that registers an implementation of <see cref="IAmbientSettings"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
@@ -400,7 +414,7 @@ class SetupApplication
 {
     static SetupApplication()
     {
-        ServiceBroker<IAmbientSettings>.Implementation = new AppConfigAmbientSettings();
+        ServiceBroker<IAmbientSettings>.GlobalImplementation = new AppConfigAmbientSettings();
     }
 }
 /// <summary>
@@ -415,21 +429,74 @@ class AppConfigAmbientSettings : IAmbientSettings
     class AppConfigSetting<T> : ISetting<T>
     {
         private T _value;
-        private string _name;
-        private T _defaultValue;
-        private Func<string, T> _convert;
         public AppConfigSetting(string name, Func<string, T> convert, T defaultValue = default(T))
         {
-            _name = name;
-            _defaultValue = defaultValue;
-            _convert = convert;
             string valueString = GetValue(name);
-            if (valueString == null) _value = defaultValue;
-            _value = convert(valueString);
+            _value = (valueString == null) ? defaultValue : convert(valueString);
         }
         private static string GetValue(string name)
         {
             return ConfigurationManager.AppSettings[name];
+        }
+
+        public T Value => _value;
+
+        // NOTE: to implement support for settings that change on the fly, see the reference implementation in the BasicAmbientSettings class in AmbientServices on GitHub, as it can be quite complicated
+#pragma warning disable CS0067
+        public event EventHandler<SettingValueChangedEventArgs<T>> ValueChanged;
+#pragma warning restore CS0067
+    }
+}
+```    
+## Overriding An Ambient Service Locally
+[//]: # (OverrideAmbientServiceLocalSample)
+```csharp
+/// <summary>
+/// An implementation of <see cref="IAmbientSettings"/> that overrides specific settings.
+/// </summary>
+class LocalAmbientSettingsOverride : IAmbientSettings, IDisposable
+{
+    private readonly IAmbientSettings _oldSettings;
+    private readonly Dictionary<string, string> _overrides;
+
+    /// <summary>
+    /// For the life of this instance, overrides the settings in the specified dictionary with their corresponding values.
+    /// </summary>
+    /// <param name="overrides">A Dictionary containing the key/value pairs to override.</param>
+    public LocalAmbientSettingsOverride(Dictionary<string, string> overrides)
+    {
+        _oldSettings = ServiceBroker<IAmbientSettings>.LocalImplementation;
+        ServiceBroker<IAmbientSettings>.LocalImplementation = this;
+        _overrides = new Dictionary<string, string>();
+    }
+    /// <summary>
+    /// Disposes of this instance, returning the ambient settings to their former value.
+    /// </summary>
+    public void Dispose()
+    {
+        ServiceBroker<IAmbientSettings>.LocalImplementation = _oldSettings;
+    }
+
+    public ISetting<T> GetSetting<T>(string key, Func<string, T> convert, T defaultValue = default(T))
+    {
+        return new OverrideSetting<T>(this, key, convert, defaultValue);
+    }
+    private string GetOverride(string name)
+    {
+        string value;
+        if (_overrides.TryGetValue(name, out value))
+        {
+            return value;
+        }
+        return null;
+    }
+    class OverrideSetting<T> : ISetting<T>
+    {
+        private T _value;
+        public OverrideSetting(LocalAmbientSettingsOverride overrideSettings, string name, Func<string, T> convert, T defaultValue = default(T))
+        {
+            string valueString = overrideSettings.GetOverride(name);
+            _value = (valueString == null) ? overrideSettings._oldSettings.GetSetting<T>(name, convert, defaultValue).Value : convert(valueString);
         }
 
         public T Value => _value;

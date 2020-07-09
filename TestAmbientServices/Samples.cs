@@ -91,12 +91,13 @@ class User
 
 
 
+#region AmbientCacheSample
 /// <summary>
 /// A user manager class that shows how the caching ambient service might be used.
 /// </summary>
 class UserManager
 {
-    private static IAmbientCache AmbientCache = ServiceBroker<IAmbientCache>.Implementation;
+    private static IAmbientCache AmbientCache = ServiceBroker<IAmbientCache>.GlobalImplementation;
 
     /// <summary>
     /// Finds the user with the specified emali address.
@@ -145,17 +146,16 @@ class UserManager
         await AmbientCache?.Remove<User>(false, userKey);
     }
 }
+#endregion
 
 
-
-
-
+#region AmbientLoggerSample
 /// <summary>
 /// A static class with extensions methods used to log various assembly events.
 /// </summary>
 public static class AssemblyLoggingExtensions
 {
-    private static readonly ILogger<Assembly> _Logger = ServiceBroker<IAmbientLogger>.Implementation.GetLogger<Assembly>();
+    private static readonly ILogger<Assembly> _Logger = ServiceBroker<IAmbientLogger>.GlobalImplementation.GetLogger<Assembly>();
 
     /// <summary>
     /// Log that the assembly was loaded.
@@ -184,19 +184,20 @@ public static class AssemblyLoggingExtensions
         _Logger?.Log("Assembly " + assembly.FullName + " scanned", "Scan", LogLevel.Trace);
     }
 }
+#endregion
 
 
 
 
 
 
-
+#region AmbientProgressSample
 /// <summary>
 /// A class that downloads and unzips
 /// </summary>
 class DownloadAndUnzip
 {
-    private static IAmbientProgress AmbientProgress = ServiceBroker<IAmbientProgress>.Implementation;
+    private static IAmbientProgress AmbientProgress = ServiceBroker<IAmbientProgress>.GlobalImplementation;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -260,19 +261,20 @@ class DownloadAndUnzip
         return Task.CompletedTask;
     }
 }
+#endregion
 
 
 
 
 
 
-
+#region AmbientSettingsSample
 /// <summary>
 /// A class that manages a pool of buffers.
 /// </summary>
 class BufferPool
 {
-    private static readonly IAmbientSettings AmbientSettings = AmbientServices.ServiceBroker<IAmbientSettings>.Implementation;
+    private static readonly IAmbientSettings AmbientSettings = AmbientServices.ServiceBroker<IAmbientSettings>.GlobalImplementation;
     private static readonly ISetting<int> MaxTotalBufferBytes = AmbientSettings.GetSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", s => Int32.Parse(s), 1000 * 1000);
     private static readonly ISetting<int> DefaultBufferBytes = AmbientSettings.GetSetting<int>(nameof(BufferPool) + "-DefaultBufferBytes", s => Int32.Parse(s), 8000);
 
@@ -348,13 +350,13 @@ class BufferPool
         recycler.Recycle(buffer);
     }
 }
+#endregion
 
 
 
 
 
-
-
+#region CustomAmbientServiceSample
 /// <summary>
 /// An interface that abstracts a simple ambient call stack tracking service.
 /// </summary>
@@ -433,10 +435,12 @@ class BasicAmbientCallStack : IAmbientCallStack
         #endregion
     }
 }
+#endregion
 
 
 
 
+#region DisableAmbientServiceSample
 /// <summary>
 /// A sample setup class that disables the cache implementation when it is initialized.
 /// </summary>
@@ -444,16 +448,16 @@ class Setup
 {
     static Setup()
     {
-        ServiceBroker<IAmbientCache>.Implementation = null;
+        ServiceBroker<IAmbientCache>.GlobalImplementation = null;
     }
 }
+#endregion
 
 
 
 
 
-
-
+#region OverrideAmbientServiceGlobalSample
 /// <summary>
 /// An application setup class that registers an implementation of <see cref="IAmbientSettings"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
 /// </summary>
@@ -461,7 +465,7 @@ class SetupApplication
 {
     static SetupApplication()
     {
-        ServiceBroker<IAmbientSettings>.Implementation = new AppConfigAmbientSettings();
+        ServiceBroker<IAmbientSettings>.GlobalImplementation = new AppConfigAmbientSettings();
     }
 }
 /// <summary>
@@ -476,17 +480,10 @@ class AppConfigAmbientSettings : IAmbientSettings
     class AppConfigSetting<T> : ISetting<T>
     {
         private T _value;
-        private string _name;
-        private T _defaultValue;
-        private Func<string, T> _convert;
         public AppConfigSetting(string name, Func<string, T> convert, T defaultValue = default(T))
         {
-            _name = name;
-            _defaultValue = defaultValue;
-            _convert = convert;
             string valueString = GetValue(name);
-            if (valueString == null) _value = defaultValue;
-            _value = convert(valueString);
+            _value = (valueString == null) ? defaultValue : convert(valueString);
         }
         private static string GetValue(string name)
         {
@@ -501,3 +498,68 @@ class AppConfigAmbientSettings : IAmbientSettings
 #pragma warning restore CS0067
     }
 }
+#endregion
+
+
+
+
+
+
+#region OverrideAmbientServiceLocalSample
+/// <summary>
+/// An implementation of <see cref="IAmbientSettings"/> that overrides specific settings.
+/// </summary>
+class LocalAmbientSettingsOverride : IAmbientSettings, IDisposable
+{
+    private readonly IAmbientSettings _oldSettings;
+    private readonly Dictionary<string, string> _overrides;
+
+    /// <summary>
+    /// For the life of this instance, overrides the settings in the specified dictionary with their corresponding values.
+    /// </summary>
+    /// <param name="overrides">A Dictionary containing the key/value pairs to override.</param>
+    public LocalAmbientSettingsOverride(Dictionary<string, string> overrides)
+    {
+        _oldSettings = ServiceBroker<IAmbientSettings>.LocalImplementation;
+        ServiceBroker<IAmbientSettings>.LocalImplementation = this;
+        _overrides = new Dictionary<string, string>();
+    }
+    /// <summary>
+    /// Disposes of this instance, returning the ambient settings to their former value.
+    /// </summary>
+    public void Dispose()
+    {
+        ServiceBroker<IAmbientSettings>.LocalImplementation = _oldSettings;
+    }
+
+    public ISetting<T> GetSetting<T>(string key, Func<string, T> convert, T defaultValue = default(T))
+    {
+        return new OverrideSetting<T>(this, key, convert, defaultValue);
+    }
+    private string GetOverride(string name)
+    {
+        string value;
+        if (_overrides.TryGetValue(name, out value))
+        {
+            return value;
+        }
+        return null;
+    }
+    class OverrideSetting<T> : ISetting<T>
+    {
+        private T _value;
+        public OverrideSetting(LocalAmbientSettingsOverride overrideSettings, string name, Func<string, T> convert, T defaultValue = default(T))
+        {
+            string valueString = overrideSettings.GetOverride(name);
+            _value = (valueString == null) ? overrideSettings._oldSettings.GetSetting<T>(name, convert, defaultValue).Value : convert(valueString);
+        }
+
+        public T Value => _value;
+
+        // NOTE: to implement support for settings that change on the fly, see the reference implementation in the BasicAmbientSettings class in AmbientServices on GitHub, as it can be quite complicated
+#pragma warning disable CS0067
+        public event EventHandler<SettingValueChangedEventArgs<T>> ValueChanged;
+#pragma warning restore CS0067
+    }
+}
+#endregion

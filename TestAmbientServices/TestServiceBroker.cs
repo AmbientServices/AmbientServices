@@ -23,16 +23,16 @@ namespace TestAmbientServices
         [TestMethod]
         public void AmbientServicesBroker()
         {
-            ITest test = ServiceBroker<ITest>.Implementation;
+            ITest test = ServiceBroker<ITest>.GlobalImplementation;
             Assert.IsNotNull(test);
-            IAmbientLogger logger = ServiceBroker<IAmbientLogger>.Implementation;
+            IAmbientLogger logger = ServiceBroker<IAmbientLogger>.GlobalImplementation;
             Assert.IsNotNull(logger);
             ILogger<TestServiceBroker> serviceBrokerLogger = logger.GetLogger<TestServiceBroker>();
-            IAmbientProgress progressTracker = ServiceBroker<IAmbientProgress>.Implementation;
+            IAmbientProgress progressTracker = ServiceBroker<IAmbientProgress>.GlobalImplementation;
             Assert.IsNotNull(progressTracker);
-            IAmbientSettings settings = ServiceBroker<IAmbientSettings>.Implementation;
+            IAmbientSettings settings = ServiceBroker<IAmbientSettings>.GlobalImplementation;
             Assert.IsNotNull(settings);
-            IJunk junk = ServiceBroker<IJunk>.Implementation;
+            IJunk junk = ServiceBroker<IJunk>.GlobalImplementation;
             Assert.IsNull(junk);
 
 
@@ -41,39 +41,39 @@ namespace TestAmbientServices
             Assert.IsNotNull(test);
 
             int changed = 0;
-            ServiceBroker<ITest>.ImplementationChanged += (s, e) => { Assert.AreEqual(e.OldImplementation, compareTest); ++changed; };
+            ServiceBroker<ITest>.GlobalImplementationChanged += (s, e) => { Assert.AreEqual(e.OldImplementation, compareTest); ++changed; };
 
-            ServiceBroker<ITest>.Implementation = null;
+            ServiceBroker<ITest>.GlobalImplementation = null;
             Assert.AreEqual(1, changed);
             compareTest = null;
 
-            ITest disabledTest = ServiceBroker<ITest>.Implementation;
+            ITest disabledTest = ServiceBroker<ITest>.GlobalImplementation;
             Assert.IsNull(disabledTest);
 
-            ServiceBroker<ITest>.Implementation = test;
+            ServiceBroker<ITest>.GlobalImplementation = test;
             Assert.AreEqual(2, changed);
             compareTest = test;
 
-            ITest reenabledTest = ServiceBroker<ITest>.Implementation;
+            ITest reenabledTest = ServiceBroker<ITest>.GlobalImplementation;
             Assert.IsNotNull(reenabledTest);
         }
 
         [TestMethod, ExpectedException(typeof(TypeInitializationException))]
         public void NonInterfaceType()
         {
-            DefaultTest test = ServiceBroker<DefaultTest>.Implementation;
+            DefaultTest test = ServiceBroker<DefaultTest>.GlobalImplementation;
         }
         [TestMethod]
         public void AssemblyLoadAndLateAssignment()
         {
             // try to get this one now
-            ILateAssignmentTest test = ServiceBroker<ILateAssignmentTest>.Implementation;
+            ILateAssignmentTest test = ServiceBroker<ILateAssignmentTest>.GlobalImplementation;
             Assert.IsNull(test);
 
             LateAssignment();
 
             // NOW this should be available
-            test = ServiceBroker<ILateAssignmentTest>.Implementation;
+            test = ServiceBroker<ILateAssignmentTest>.GlobalImplementation;
             Assert.IsNotNull(test);
         }
         private void LateAssignment()
@@ -94,5 +94,70 @@ namespace TestAmbientServices
         {
             Assert.IsFalse(DefaultAmbientServices.DoesAssemblyReferToAssembly(typeof(System.ValueTuple).Assembly, Assembly.GetExecutingAssembly()));
         }
+        [TestMethod]
+        public void TwoInterfacesOneInstance()
+        {
+            ITest1 test1 = ServiceBroker<ITest1>.GlobalImplementation;
+            ITest2 test2 = ServiceBroker<ITest2>.GlobalImplementation;
+            Assert.IsTrue(Object.ReferenceEquals(test1, test2));
+        }
+        [TestMethod]
+        public void Override()
+        {
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.GlobalImplementation, typeof(LocalTest));
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.LocalImplementation, typeof(LocalTest));
+
+            ServiceBroker<ILocalTest>.GlobalImplementation = new LocalTest2();
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.GlobalImplementation, typeof(LocalTest2));
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.LocalImplementation, typeof(LocalTest2));
+
+            ServiceBroker<ILocalTest>.LocalImplementation = null;
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.GlobalImplementation, typeof(LocalTest2));
+            Assert.IsNull(ServiceBroker<ILocalTest>.LocalImplementation);
+
+            ServiceBroker<ILocalTest>.GlobalImplementation = null;
+            Assert.IsNull(ServiceBroker<ILocalTest>.GlobalImplementation);
+            Assert.IsNull(ServiceBroker<ILocalTest>.LocalImplementation);
+
+            ServiceBroker<ILocalTest>.LocalImplementation = new LocalTest3();
+            Assert.IsNull(ServiceBroker<ILocalTest>.GlobalImplementation);
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.LocalImplementation, typeof(LocalTest3));
+
+            ServiceBroker<ILocalTest>.GlobalImplementation = new LocalTest2();
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.GlobalImplementation, typeof(LocalTest2));
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.LocalImplementation, typeof(LocalTest3));
+
+            ServiceBroker<ILocalTest>.LocalImplementation = ServiceBroker<ILocalTest>.GlobalImplementation;
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.GlobalImplementation, typeof(LocalTest2));
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.LocalImplementation, typeof(LocalTest2));
+            Assert.AreEqual(ServiceBroker<ILocalTest>.GlobalImplementation, ServiceBroker<ILocalTest>.LocalImplementation);
+
+            ServiceBroker<ILocalTest>.GlobalImplementation = new LocalTest3();
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.GlobalImplementation, typeof(LocalTest3));
+            Assert.IsInstanceOfType(ServiceBroker<ILocalTest>.LocalImplementation, typeof(LocalTest3));
+            Assert.AreEqual(ServiceBroker<ILocalTest>.GlobalImplementation, ServiceBroker<ILocalTest>.LocalImplementation);
+        }
+    }
+
+    interface ITest1 { }
+    interface ITest2 { }
+
+    [DefaultAmbientService]
+    class MultiInterfaceTest : ITest1, ITest2
+    {
+    }
+
+    interface ILocalTest
+    {
+    }
+    [DefaultAmbientService]
+    class LocalTest : ILocalTest
+    {
+    }
+    class LocalTest2 : ILocalTest
+    {
+    }
+    class LocalTest3 : ILocalTest
+    {
     }
 }
