@@ -23,7 +23,7 @@ namespace AmbientServices
             _Settings = AmbientServices.ServiceBroker<IAmbientSettings>.GlobalImplementation;
             LogLevelSetting = _Settings.GetSetting<LogLevel>(nameof(BasicAmbientLogger) + "-LogLevel", s => (LogLevel)Enum.Parse(typeof(LogLevel), s), LogLevel.Information);
             TypeFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-TypeFilter", s => new Regex(s, RegexOptions.Compiled));
-            CategoryFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-CategoruFilter", s => new Regex(s, RegexOptions.Compiled));
+            CategoryFilterSetting = _Settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-CategoryFilter", s => new Regex(s, RegexOptions.Compiled));
         }
 
         class TypeLogger<T> : ILogger<T>
