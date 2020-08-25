@@ -8,20 +8,20 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     /// <summary>
-    /// An interface that abstracts an ambient caching service.
+    /// An interface that abstracts an ambient caching service provider.
     /// </summary>
-    public interface IAmbientCache
+    public interface IAmbientCacheProvider
     {
         /// <summary>
-        /// Checks to see if the item with the specified key is cached and returns it if it is.
+        /// Retrieves the item with the specified key from the cache (if possible).
         /// </summary>
         /// <typeparam name="T">The type of the cached object.</typeparam>
-        /// <param name="key">The unique key sent when the object was cached.</param>
+        /// <param name="itemKey">The unique key sent when the object was cached.</param>
         /// <param name="refresh">An optoinal <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.</param>
         /// <returns>The cached object, or null if it was not found in the cache.</returns>
-        Task<T> TryGet<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class;
+        Task<T> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class;
         /// <summary>
-        /// Sets the specified item into the cache.
+        /// Stores the specified item into the cache.
         /// </summary>
         /// <typeparam name="T">The type of the item to be cached.</typeparam>
         /// <param name="localOnly">Whether or not this item should only be stored in the local cache (as opposed to a nonlocal shared cache).  When true, only the local cache will be checked.  When false, the local cache will be checked first, followed by the shared cache.</param>
@@ -32,7 +32,7 @@ namespace AmbientServices
         /// <remarks>
         /// If both <paramref name="expiration"/> and <paramref name="maxCacheDuration"/> are both set, the earlier expiration will be used.
         /// </remarks>
-        Task Set<T>(bool localOnly, string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class;
+        Task Store<T>(bool localOnly, string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class;
         /// <summary>
         /// Removes the specified item from the cache.
         /// </summary>
@@ -41,7 +41,7 @@ namespace AmbientServices
         /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
         Task Remove<T>(bool localOnly, string itemKey, CancellationToken cancel = default(CancellationToken));
         /// <summary>
-        /// Flushes the cache.
+        /// Flushes everything from the cache.
         /// </summary>
         /// <param name="localOnly">Whether or not to clear only the local cache.</param>
         Task Clear(bool localOnly = true, CancellationToken cancel = default(CancellationToken));

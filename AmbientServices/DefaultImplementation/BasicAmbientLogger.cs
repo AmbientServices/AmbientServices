@@ -10,73 +10,16 @@ using System.Threading.Tasks;
 
 namespace AmbientServices
 {
-    [DefaultAmbientService]
-    class BasicAmbientLogger : IAmbientLogger
+    [DefaultAmbientServiceProvider]
+    internal class BasicAmbientLogger : IAmbientLoggerProvider
     {
-        private readonly IAmbientSettings _settings;
-        private readonly ISetting<LogLevel> _logLevelSetting;
-        private readonly ISetting<Regex> _typeFilterSetting;
-        private readonly ISetting<Regex> _categoryFilterSetting;
-
         public BasicAmbientLogger()
-            : this (null)
         {
         }
-        internal BasicAmbientLogger(IAmbientSettings settings = null)
+
+        public void Log(string message)
         {
-            _settings = settings ?? AmbientServices.ServiceBroker<IAmbientSettings>.LocalImplementation;
-            _logLevelSetting = _settings.GetSetting<LogLevel>(nameof(BasicAmbientLogger) + "-LogLevel", s => (LogLevel)Enum.Parse(typeof(LogLevel), s), LogLevel.Information);
-            _typeFilterSetting = _settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-TypeFilter", s => new Regex(s, RegexOptions.Compiled));
-            _categoryFilterSetting = _settings.GetSetting<Regex>(nameof(BasicAmbientLogger) + "-CategoryFilter", s => new Regex(s, RegexOptions.Compiled));
-        }
-
-        class TypeLogger<T> : ILogger<T>
-        {
-            private static readonly string TypeName = typeof(T).Name;
-            private BasicAmbientLogger _logger;
-
-            internal TypeLogger(BasicAmbientLogger logger)
-            {
-                _logger = logger;
-            }
-
-            private void InnerLog(string message, string category = null, LogLevel level = LogLevel.Information)
-            {
-                if (level >= _logger._logLevelSetting.Value &&
-                    (_logger._typeFilterSetting.Value == null || _logger._typeFilterSetting.Value.IsMatch(TypeName)) &&
-                    (_logger._categoryFilterSetting.Value == null || category == null || _logger._categoryFilterSetting.Value.IsMatch(category))
-                    )
-                {
-                    category = (category != null) ? category + ": " : "";
-                    message = "[" + level.ToString() + ":" + TypeName + "] " + category + message;
-                    TraceBuffer.BufferLine(message);
-                }
-            }
-            public void Log(string message, string category = null, LogLevel level = LogLevel.Information)
-            {
-                InnerLog(message, category, level);
-            }
-            public void Log(Func<string> message, string category = null, LogLevel level = LogLevel.Information)
-            {
-                InnerLog(message(), category, level);
-            }
-            public void Log(Exception ex, string category = null, LogLevel level = LogLevel.Error)
-            {
-                InnerLog(ex.ToString(), category, level);
-            }
-            public void Log(string message, Exception ex, string category = null, LogLevel level = LogLevel.Error)
-            {
-                InnerLog(message + Environment.NewLine + ex.ToString(), category, level);
-            }
-            public void Log(Func<string> message, Exception ex, string category = null, LogLevel level = LogLevel.Error)
-            {
-                InnerLog(message() + Environment.NewLine + ex.ToString(), category, level);
-            }
-        }
-
-        public ILogger<T> GetLogger<T>()
-        {
-            return new TypeLogger<T>(this);
+            TraceBuffer.BufferLine(message);
         }
         public Task Flush(CancellationToken cancel = default(CancellationToken))
         {
@@ -88,34 +31,31 @@ namespace AmbientServices
     /// </summary>
     static class TraceBuffer
     {
-        static private readonly ConcurrentQueue<string> _Queue;
-        static private readonly SemaphoreSlim _Semaphore;
-        static private readonly Thread _FlusherThread;
-        static private TaskCompletionSource<object> _FlushedEvent;
+        static private readonly string _FlushString = Guid.NewGuid().ToString();
+        static private readonly ConcurrentQueue<string> _Queue = new ConcurrentQueue<string>();
+        static private readonly SemaphoreSlim _Semaphore = new SemaphoreSlim(0, Int16.MaxValue);
+        static private readonly Thread _FlusherThread = FlusherThread();
+        static private readonly SemaphoreSlim _FlusherSemaphore = new SemaphoreSlim(0, Int16.MaxValue);
 
-        static TraceBuffer()
+        private static Thread FlusherThread()
         {
-            _Queue = new ConcurrentQueue<string>();
-            _Semaphore = new SemaphoreSlim(0, Int16.MaxValue);
-            _FlushedEvent = new TaskCompletionSource<object>(null);
-            _FlusherThread = new Thread(new ThreadStart(_BackgroundThread));
-            _FlusherThread.Name = "TraceBuffer";
-            _FlusherThread.Priority = ThreadPriority.BelowNormal;
-            _FlusherThread.IsBackground = true;
-            // fire up a background thread to trace the trace data
-            _FlusherThread.Start();
+            // fire up a background thread to flush the trace data
+            Thread thread = new Thread(new ThreadStart(_BackgroundThread));
+            thread.Name = "TraceBuffer.FlusherThread";
+            thread.Priority = ThreadPriority.BelowNormal;
+            thread.IsBackground = true;
+            thread.Start();
+            return thread;
         }
 
         public static void BufferLine(string s)
         {
-            Buffer("{0}" + Environment.NewLine, s);
+            Buffer(s + Environment.NewLine);
         }
-        private static void Buffer(string s, params object[] o)
+        private static void Buffer(string s)
         {
             // enqueue the string given to us
-            _Queue.Enqueue(String.Format(s, o));
-            // we've queued data, so create a new flushed event
-            System.Threading.Interlocked.Exchange(ref _FlushedEvent, new TaskCompletionSource<object>(null));
+            _Queue.Enqueue(s);
             // release the semaphore so the data gets processed
             Release(false).Wait();
         }
@@ -147,8 +87,8 @@ namespace AmbientServices
                     // boost the priority of the flusher thread for a bit
                     _FlusherThread.Priority = ThreadPriority.AboveNormal;
                     cancel.ThrowIfCancellationRequested();
-                    // wait until we get flushed
-                    await _FlushedEvent.Task;
+                    // wait for the flush to happen
+                    await _FlusherSemaphore.WaitAsync(cancel).ConfigureAwait(false);
                 }
             }
             finally
@@ -157,9 +97,12 @@ namespace AmbientServices
                 if (flush) _FlusherThread.Priority = ThreadPriority.BelowNormal;
             }
         }
-        public static Task Flush(CancellationToken cancel = default(CancellationToken))
+        public static async Task Flush(CancellationToken cancel = default(CancellationToken))
         {
-            return Release(true, cancel);
+            // queue a flush command
+            _Queue.Enqueue(_FlushString);
+            // release the semaphore so the data gets processed
+            await Release(true, cancel).ConfigureAwait(false);
         }
         /// <summary>
         /// Peeks at all unflushed messages synchronously (for diagnostic purposes only).
@@ -197,9 +140,17 @@ namespace AmbientServices
                         if (_Queue.TryDequeue(out s))
                         {
                             System.Diagnostics.Debug.Assert(s != null);
-                            // add this to the trace data
-                            traceData.Append(s);
-                            // is there more data? (timeout immediately if there isn't)
+                            if (s == _FlushString)
+                            {
+                                // release the flusher that told us to flush
+                                _FlusherSemaphore.Release();
+                            }
+                            else
+                            {
+                                // add this to the trace data
+                                traceData.Append(s);
+                            }
+                            // is there more data? (don't wait if there isn't)
                             if (_Semaphore.Wait(0))
                             {
                                 // try to get some more data (up to ten lines)
@@ -208,9 +159,7 @@ namespace AmbientServices
                             // else no data left in queue--no point in waiting before we flush to the output
                         }
                         // else nothing left in the queue
-                        // signal any waiters that we've done what we can to flush and we appear to be done
-                        _FlushedEvent.TrySetResult(null);
-                        break;
+                        else break;
                     }
                     // is there a string to trace?
                     if (traceData.Length > 0)
@@ -221,10 +170,12 @@ namespace AmbientServices
                     else
                     {
                         // wait for more work (ie. stop using CPU until there is more work to do)
-                        _Semaphore.Wait();
+                        _Semaphore.Wait(TimeSpan.FromMinutes(5));   // we shouldn't ever hang here, but just in case, exit *eventually*
                     }
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception ex)
+#pragma warning restore CA1031 // Do not catch general exception types
                 {
                     // trace out this string
                     System.Diagnostics.Trace.Write(ex.ToString());
@@ -232,6 +183,7 @@ namespace AmbientServices
             }
         }
     }
+    [AttributeUsage(AttributeTargets.All)]
     class ExcludeFromCoverageAttribute : Attribute
     {
     }

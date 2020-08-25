@@ -162,3 +162,4 @@ $RECYCLE.BIN/
 /.vs/AmbientServices/v15/Server/sqlite3
 /.vs/AmbientServices/DesignTimeBuild
 /.vs/AmbientServices/v16/TestStore/0
+/coveragereport

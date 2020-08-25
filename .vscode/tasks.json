@@ -11,6 +11,24 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "test",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "test",
+                "${workspaceFolder}/TestAmbientServices/TestAmbientServices.csproj",
+                "--collect:\"XPlat Code Coverage\"",
+                "--logger:\"trx;LogFileName=unit.testresults.trx\"",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
             "problemMatcher": "$msCompile"
         },
         {

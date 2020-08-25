@@ -1,13 +1,17 @@
 ﻿using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
+using System.IO;
+using System.IO.Compression;
+using System.Net;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace TestAmbientServices
+namespace AmbientServicesSamples
 {
     /// <summary>
     /// A class that holds tests for sample code.
@@ -27,7 +31,9 @@ namespace TestAmbientServices
 
     class CallStackTest
     {
-        private static IAmbientCallStack _CallStack = ServiceBroker<IAmbientCallStack>.GlobalImplementation;
+        private static readonly ServiceAccessor<IAmbientCallStack> _CallStackProvider = Service.GetAccessor<IAmbientCallStack>();
+
+        private static IAmbientCallStack _CallStack = _CallStackProvider.GlobalProvider;
         public static void OuterFunc()
         {
             Debug.WriteLine("Before outer push:");

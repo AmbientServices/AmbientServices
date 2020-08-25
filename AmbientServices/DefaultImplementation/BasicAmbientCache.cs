@@ -7,20 +7,27 @@ using System.Threading.Tasks;
 
 namespace AmbientServices
 {
-    [DefaultAmbientService]
-    class BasicAmbientCache : IAmbientCache
+    [DefaultAmbientServiceProvider]
+    internal class BasicAmbientCache : IAmbientCacheProvider
     {
-        static readonly IAmbientSettings _Settings = AmbientServices.ServiceBroker<IAmbientSettings>.GlobalImplementation;
-        static readonly ISetting<int> CallFrequencyToEject = _Settings.GetSetting<int>(nameof(BasicAmbientCache) + "-EjectFrequency", s => Int32.Parse(s), 100);
-        static readonly ISetting<int> CountToEject = _Settings.GetSetting<int>(nameof(BasicAmbientCache) + "-ItemCount", s => Int32.Parse(s), 1000);
+        private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsAccessor = Service.GetAccessor<IAmbientSettingsProvider>();
 
+        private readonly ProviderSetting<int> _callFrequencyToEject;
+        private readonly ProviderSetting<int> _countToEjectCountToEject;
         private int _expireCount = 0;
         private ConcurrentQueue<TimedQueueEntry> _timedQueue = new ConcurrentQueue<TimedQueueEntry>();
         private ConcurrentQueue<string> _untimedQueue = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>();
 
         public BasicAmbientCache()
+            : this(_SettingsAccessor.LocalProvider)
         {
+        }
+
+        public BasicAmbientCache(IAmbientSettingsProvider settings)
+        {
+            _callFrequencyToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-EjectFrequency", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), 100);
+            _countToEjectCountToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-ItemCount", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), 1000);
         }
 
         struct TimedQueueEntry
@@ -34,22 +41,23 @@ namespace AmbientServices
             public DateTime? Expiration;
             public object Entry;
         }
-        public Task<T> TryGet<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public Task<T> Retrieve<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
             CacheEntry entry;
             if (_cache.TryGetValue(key, out entry))
             {
+                DateTime now = AmbientClock.UtcNow;
                 // refresh expiration?
                 if (refresh != null)
                 {
                     // update the expiration time in the cache entry and add a NEW timed queue entry (we'll ignore the other one when we dequeue it)
-                    DateTime newExpiration = DateTime.UtcNow.Add(refresh.Value);
+                    DateTime newExpiration = now.Add(refresh.Value);
                     entry.Expiration = newExpiration;
                     _timedQueue.Enqueue(new TimedQueueEntry { Key = key, Expiration = newExpiration });
                 }
                 EjectIfNeeded();
                 // no expiration or NOT expired?
-                if (entry.Expiration == null || entry.Expiration >= DateTime.UtcNow) return Task.FromResult<T>(entry.Entry as T);
+                if (entry.Expiration == null || entry.Expiration >= now) return Task.FromResult<T>(entry.Entry as T);
             }
             else
             {
@@ -58,10 +66,11 @@ namespace AmbientServices
             return Task.FromResult<T>(null);
         }
 
-        public Task Set<T>(bool localOnly, string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public Task Store<T>(bool localOnly, string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
             DateTime? actualExpiration = null;
-            if (maxCacheDuration != null) actualExpiration = DateTime.UtcNow.Add(maxCacheDuration.Value);
+            DateTime now = AmbientClock.UtcNow;
+            if (maxCacheDuration != null) actualExpiration = now.Add(maxCacheDuration.Value);
             if (expiration != null && expiration.Value.Kind == DateTimeKind.Local) expiration = expiration.Value.ToUniversalTime();
             if (expiration < actualExpiration) actualExpiration = expiration;
             CacheEntry entry = new CacheEntry { Key = itemKey, Expiration = actualExpiration, Entry = item };
@@ -79,8 +88,10 @@ namespace AmbientServices
         }
         void EjectIfNeeded()
         {
+            int callFrequencyToEject = _callFrequencyToEject.Value;
+            int countToEject = _countToEjectCountToEject.Value;
             // time to eject?
-            while ((System.Threading.Interlocked.Increment(ref _expireCount) % CallFrequencyToEject.Value) == 0 || (_untimedQueue.Count + _timedQueue.Count) > CountToEject.Value)
+            while ((System.Threading.Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
             {
                 // removing at least one timed item (and all expired items)
                 TimedQueueEntry qEntry;
@@ -110,7 +121,7 @@ namespace AmbientServices
                     if (_timedQueue.TryPeek(out qEntry))
                     {
                         // has this entry expired?
-                        if (entry.Expiration < DateTime.UtcNow) continue;
+                        if (entry.Expiration < AmbientClock.UtcNow) continue;
                         // else the entry hasn't expired and we either removed an entry above or skipped this code, so we can just fall through and exit the loop
                     }
                     // if we get here, there is no reason to look at another timed entry

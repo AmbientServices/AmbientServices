@@ -1,9 +1,9 @@
 ﻿using AmbientServices;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Configuration;
+using System.Collections.Immutable;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -11,6 +11,17 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
+[assembly: System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+
+/*
+    * 
+    * 
+    * Note that the samples are in a separate assembly because the test assembly has special access to internal classes and functions.
+    * We need to be sure that none of the sample code uses that special access.
+    * 
+    * 
+    * 
+    * */
 /// <summary>
 /// A simple class representing a user for the sample.
 /// </summary>
@@ -80,14 +91,14 @@ class User
 
 
 /*
- * 
- * 
- * 
- * Samples included in README.md begin here
- * 
- * 
- * 
- * */
+    * 
+    * 
+    * 
+    * Samples included in README.md begin here
+    * 
+    * 
+    * 
+    * */
 
 
 
@@ -97,7 +108,7 @@ class User
 /// </summary>
 class UserManager
 {
-    private static IAmbientCache AmbientCache = ServiceBroker<IAmbientCache>.GlobalImplementation;
+    private static readonly AmbientCache<UserManager> Cache = new AmbientCache<UserManager>();
 
     /// <summary>
     /// Finds the user with the specified emali address.
@@ -106,12 +117,12 @@ class UserManager
     /// <returns>The <see cref="User"/>, if one was found, or null if the user was not found.</returns>
     public static async Task<User> FindUser(string email)
     {
-        string userKey = "User-" + email;
-        User user = await AmbientCache?.TryGet<User>(userKey, TimeSpan.FromMinutes(15));
+        string userKey = nameof(User) + "-" + email;
+        User user = await Cache.Retrieve<User>(userKey, TimeSpan.FromMinutes(15));
         if (user != null)
         {
             user = User.Find(email);
-            await AmbientCache?.Set<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+            await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
         }
         return user;
     }
@@ -121,9 +132,9 @@ class UserManager
     /// <param name="user">The updated <see cref="User"/>.</param>
     public static async Task CreateUser(User user)
     {
-        string userKey = "User-" + user.Email;
+        string userKey = nameof(User) + "-" + user.Email;
         user.Create();
-        await AmbientCache?.Set<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Updates the specified user. (Presumably with a new password)
@@ -131,9 +142,9 @@ class UserManager
     /// <param name="user">The updated <see cref="User"/>.</param>
     public static async Task UpdateUser(User user)
     {
-        string userKey = "User-" + user.Email;
+        string userKey = nameof(User) + "-" + user.Email;
         user.Update();
-        await AmbientCache?.Set<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Deletes the specified user.
@@ -141,12 +152,16 @@ class UserManager
     /// <param name="email">The email of the user to be deleted.</param>
     public static async Task DeleteUser(string email)
     {
-        string userKey = "User-" + email;
+        string userKey = nameof(User) + "-" + email;
         User.Delete(email);
-        await AmbientCache?.Remove<User>(false, userKey);
+        await Cache.Remove<User>(false, userKey);
     }
 }
 #endregion
+
+
+
+
 
 
 #region AmbientLoggerSample
@@ -155,7 +170,7 @@ class UserManager
 /// </summary>
 public static class AssemblyLoggingExtensions
 {
-    private static readonly ILogger<Assembly> _Logger = ServiceBroker<IAmbientLogger>.GlobalImplementation.GetLogger<Assembly>();
+    private static readonly AmbientLogger<Assembly> Logger = new AmbientLogger<Assembly>();
 
     /// <summary>
     /// Log that the assembly was loaded.
@@ -163,7 +178,7 @@ public static class AssemblyLoggingExtensions
     /// <param name="assembly">The assembly that was loaded.</param>
     public static void LogLoaded(this Assembly assembly)
     {
-        _Logger?.Log("AssemblyLoaded: " + assembly.FullName, "Lifetime", LogLevel.Trace);
+        Logger.Log("AssemblyLoaded: " + assembly.FullName, "Lifetime", AmbientLogLevel.Trace);
     }
     /// <summary>
     /// Logs that there was an assembly load exception.
@@ -173,7 +188,7 @@ public static class AssemblyLoggingExtensions
     /// <param name="operation">The operation that needed the assembly.</param>
     public static void LogLoadException(this AssemblyName assemblyName, Exception ex, string operation)
     {
-        _Logger?.Log("Error loading assembly " + assemblyName.FullName + " while attempting to perform operation " + operation, ex, "Lifetime");
+        Logger.Log("Error loading assembly " + assemblyName.FullName + " while attempting to perform operation " + operation, ex, "Lifetime");
     }
     /// <summary>
     /// Logs that an assembly was scanned.
@@ -181,7 +196,7 @@ public static class AssemblyLoggingExtensions
     /// <param name="assembly">The <see cref="Assembly"/> that was scanned.</param>
     public static void LogScanned(this Assembly assembly)
     {
-        _Logger?.Log("Assembly " + assembly.FullName + " scanned", "Scan", LogLevel.Trace);
+        Logger.Log("Assembly " + assembly.FullName + " scanned", "Scan", AmbientLogLevel.Trace);
     }
 }
 #endregion
@@ -193,11 +208,11 @@ public static class AssemblyLoggingExtensions
 
 #region AmbientProgressSample
 /// <summary>
-/// A class that downloads and unzips
+/// A class that downloads and unzips a zip package.
 /// </summary>
 class DownloadAndUnzip
 {
-    private static IAmbientProgress AmbientProgress = ServiceBroker<IAmbientProgress>.GlobalImplementation;
+    private static readonly IAmbientProgressProvider AmbientProgress = Service.GetAccessor<IAmbientProgressProvider>().GlobalProvider;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -212,20 +227,20 @@ class DownloadAndUnzip
 
     public async Task MainOperation(CancellationToken cancel = default(CancellationToken))
     {
-        IProgress progress = AmbientProgress?.Progress;
-        using (IProgress subprogress = progress?.TrackPart(0.01f, 0.75f, "Download "))
+        IAmbientProgress progress = AmbientProgress?.Progress;
+        using (progress?.TrackPart(0.01f, 0.75f, "Download "))
         {
             await Download();
         }
-        using (IProgress subprogress = progress?.TrackPart(0.75f, 0.99f, "Unzip "))
+        using (progress?.TrackPart(0.75f, 0.99f, "Unzip "))
         {
             await Unzip();
         }
     }
     public async Task Download()
     {
-        IProgress progress = AmbientProgress?.Progress;
-        CancellationToken cancel = progress.GetCancellationTokenOrDefault();
+        IAmbientProgress progress = AmbientProgress?.Progress;
+        CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
         HttpWebRequest request = HttpWebRequest.CreateHttp(_downlaodUrl);
         using (WebResponse response = request.GetResponse())
         {
@@ -246,8 +261,8 @@ class DownloadAndUnzip
     }
     public Task Unzip()
     {
-        IProgress progress = AmbientProgress?.Progress;
-        CancellationToken cancel = progress.GetCancellationTokenOrDefault();
+        IAmbientProgress progress = AmbientProgress?.Progress;
+        CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
 
         ZipArchive archive = new ZipArchive(_package);
         int entries = archive.Entries.Count;
@@ -274,9 +289,8 @@ class DownloadAndUnzip
 /// </summary>
 class BufferPool
 {
-    private static readonly IAmbientSettings AmbientSettings = AmbientServices.ServiceBroker<IAmbientSettings>.GlobalImplementation;
-    private static readonly ISetting<int> MaxTotalBufferBytes = AmbientSettings.GetSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", s => Int32.Parse(s), 1000 * 1000);
-    private static readonly ISetting<int> DefaultBufferBytes = AmbientSettings.GetSetting<int>(nameof(BufferPool) + "-DefaultBufferBytes", s => Int32.Parse(s), 8000);
+    private static readonly IAmbientSetting<int> MaxTotalBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", s => Int32.Parse(s), 1000 * 1000);
+    private static readonly IAmbientSetting<int> DefaultBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-DefaultBufferBytes", s => Int32.Parse(s), 8000);
 
     private SizedBufferRecycler _recycler;  // interlocked
 
@@ -322,11 +336,11 @@ class BufferPool
         _recycler = new SizedBufferRecycler(bufferBytes);
     }
 
-    private void _DefaultBufferBytes_SettingValueChanged(object sender, SettingValueChangedEventArgs<int> e)
+    private void _DefaultBufferBytes_SettingValueChanged(object sender, EventArgs e)
     {
         // yes, there may be a race condition here depending on the implementation of the settings value changed event, but that would only happen if the setting changed twice very quickly, and even so, it would only result in buffers not getting recycled correctly
         // this could be handled by rechecking the value every time we get a new buffer, but for now it's just not worth it
-        SizedBufferRecycler newRecycler = new SizedBufferRecycler(e.NewValue);
+        SizedBufferRecycler newRecycler = new SizedBufferRecycler(DefaultBufferBytes.Value);
         System.Threading.Interlocked.Exchange(ref _recycler, newRecycler);
     }
 
@@ -356,11 +370,74 @@ class BufferPool
 
 
 
+
+#region AmbientClockSample
+/// <summary>
+/// A test for TimeDependentService.
+/// </summary>
+[TestClass]
+public class TimeDependentServiceTest
+{
+    [TestMethod]
+    public async Task TestCancellation()
+    {
+        // this first part *should* get cancelled because we're using the system clock
+        AmbientCancellationTokenSource cts = AmbientClock.CreateCancellationTokenSource(TimeSpan.FromSeconds(1));
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token));
+
+        // switch the current call context to the artifically-paused ambient clock and try again
+        using (AmbientClock.Pause())
+        {
+            AmbientCancellationTokenSource cts2 = AmbientClock.CreateCancellationTokenSource(TimeSpan.FromSeconds(1));
+            // this should *not* throw because the clock has been paused
+            await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
+
+            // this skips the artifical paused clock ahead, triggering the cancellation
+            AmbientClock.SkipAhead(TimeSpan.FromSeconds(1));
+            // make sure the cancellation got triggered
+            Assert.ThrowsException<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
+        }
+    }
+    private async Task AsyncFunctionThatShouldCancelAfterOneSecond(CancellationToken cancel)
+    {
+        for (int loop = 0; loop < 20; ++loop)
+        {
+            await Task.Delay(100);
+            cancel.ThrowIfCancellationRequested();
+        }
+    }
+    [TestMethod]
+    public async Task TestCodeThatCouldTimeoutUnderHeavyLoad()
+    {
+        using (AmbientClock.Pause())
+        {
+            AmbientCancellationTokenSource cts = AmbientClock.CreateCancellationTokenSource(TimeSpan.FromSeconds(1));
+            await AsyncFunctionThatCouldTimeoutUnderHeavyLoad(cts.Token);
+        }
+    }
+    private async Task AsyncFunctionThatCouldTimeoutUnderHeavyLoad(CancellationToken cancel)
+    {
+        AmbientStopwatch stopwatch = new AmbientStopwatch(true);
+        for (int count = 0; count < 9; ++count)
+        {
+            await Task.Delay(100);
+            cancel.ThrowIfCancellationRequested();
+        }
+        // if we finished before getting cancelled, we must have been scheduled within about 10 milliseconds on average, or we must be running using a paused ambient clock
+    }
+}
+#endregion
+
+
+
+
+
+
 #region CustomAmbientServiceSample
 /// <summary>
 /// An interface that abstracts a simple ambient call stack tracking service.
 /// </summary>
-interface IAmbientCallStack
+public interface IAmbientCallStack
 {
     /// <summary>
     /// Creates a call stack scope for the specified fuction name, keeping it on the stack until it is disposed.
@@ -373,29 +450,31 @@ interface IAmbientCallStack
     /// </summary>
     IEnumerable<string> Entries { get; }
 }
+
 /// <summary>
 /// A basic implementation of <see cref="IAmbientCallStack"/>.
+/// A few enhancements could make these call stacks accessible remotely, which could be very handy for diagnosing what servers are busy doing.
 /// </summary>
-[DefaultAmbientServiceAttribute]
+[DefaultAmbientServiceProvider]
 class BasicAmbientCallStack : IAmbientCallStack
 {
-    static private ThreadLocal<Stack<string>> _stack = new ThreadLocal<Stack<string>>();
+    static private AsyncLocal<ImmutableStack<string>> _Stack = new AsyncLocal<ImmutableStack<string>>();
 
-    static private Stack<string> GetStack()
+    static private ImmutableStack<string> GetStack()
     {
-        Stack<string> stack = _stack.Value;
-        if (_stack.Value == null)
+        ImmutableStack<string> stack = _Stack.Value;
+        if (_Stack.Value == null)
         {
-            stack = new Stack<string>();
-            _stack.Value = stack;
+            stack = ImmutableStack<string>.Empty;
+            _Stack.Value = stack;
         }
         return stack;
     }
 
     public IDisposable Scope(string entry)
     {
-        Stack<string> stack = GetStack();
-        stack.Push(entry);
+        ImmutableStack<string> stack = GetStack();
+        stack = stack.Push(entry);
         return new CallStackEntry(stack);
     }
 
@@ -403,14 +482,13 @@ class BasicAmbientCallStack : IAmbientCallStack
 
     class CallStackEntry : IDisposable
     {
-        private Stack<string> _stack;
+        private ImmutableStack<string> _stack;
 
-        public CallStackEntry(Stack<string> stack)
+        public CallStackEntry(ImmutableStack<string> stack)
         {
             _stack = stack;
         }
 
-        #region IDisposable Support
         private bool _disposedValue = false;
 
         protected virtual void Dispose(bool disposing)
@@ -432,10 +510,11 @@ class BasicAmbientCallStack : IAmbientCallStack
         {
             Dispose(true);
         }
-        #endregion
     }
 }
 #endregion
+
+
 
 
 
@@ -446,9 +525,10 @@ class BasicAmbientCallStack : IAmbientCallStack
 /// </summary>
 class Setup
 {
+    private static readonly ServiceAccessor<IAmbientCacheProvider> _CacheProvider = Service.GetAccessor<IAmbientCacheProvider>();
     static Setup()
     {
-        ServiceBroker<IAmbientCache>.GlobalImplementation = null;
+        _CacheProvider.GlobalProvider = null;
     }
 }
 #endregion
@@ -457,45 +537,33 @@ class Setup
 
 
 
+
 #region OverrideAmbientServiceGlobalSample
 /// <summary>
-/// An application setup class that registers an implementation of <see cref="IAmbientSettings"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
+/// An application setup class that registers an implementation of <see cref="IAmbientSettingsProvider"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
 /// </summary>
 class SetupApplication
 {
     static SetupApplication()
     {
-        ServiceBroker<IAmbientSettings>.GlobalImplementation = new AppConfigAmbientSettings();
+        ServiceAccessor<IAmbientSettingsProvider> SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+        SettingsProvider.GlobalProvider = new AppConfigAmbientSettings();
     }
 }
 /// <summary>
-/// An implementation of <see cref="IAmbientSettings"/> that uses <see cref="Configuration.AppSettings"/> as the backend settings store.
+/// An implementation of <see cref="IAmbientSettingsProvider"/> that uses <see cref="Configuration.AppSettings"/> as the backend settings store.
 /// </summary>
-class AppConfigAmbientSettings : IAmbientSettings
+class AppConfigAmbientSettings : IAmbientSettingsProvider
 {
-    public ISetting<T> GetSetting<T>(string key, Func<string, T> convert, T defaultValue = default(T))
-    {
-        return new AppConfigSetting<T>(key, convert, defaultValue);
-    }
-    class AppConfigSetting<T> : ISetting<T>
-    {
-        private T _value;
-        public AppConfigSetting(string name, Func<string, T> convert, T defaultValue = default(T))
-        {
-            string valueString = GetValue(name);
-            _value = (valueString == null) ? defaultValue : convert(valueString);
-        }
-        private static string GetValue(string name)
-        {
-            return ConfigurationManager.AppSettings[name];
-        }
+    public string ProviderName => "AppConfig";
 
-        public T Value => _value;
-
-        // NOTE: to implement support for settings that change on the fly, see the reference implementation in the BasicAmbientSettings class in AmbientServices on GitHub, as it can be quite complicated
-#pragma warning disable CS0067
-        public event EventHandler<SettingValueChangedEventArgs<T>> ValueChanged;
+#pragma warning disable CS0067  // System.Configuration.ConfigurationManager has no refresh/reload capability
+    public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
 #pragma warning restore CS0067
+
+    public string GetSetting(string key)
+    {
+        return System.Configuration.ConfigurationManager.AppSettings[key];
     }
 }
 #endregion
@@ -507,11 +575,13 @@ class AppConfigAmbientSettings : IAmbientSettings
 
 #region OverrideAmbientServiceLocalSample
 /// <summary>
-/// An implementation of <see cref="IAmbientSettings"/> that overrides specific settings.
+/// An implementation of <see cref="IAmbientSettingsProvider"/> that overrides specific settings.
 /// </summary>
-class LocalAmbientSettingsOverride : IAmbientSettings, IDisposable
+class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
 {
-    private readonly IAmbientSettings _oldSettings;
+    private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+
+    private readonly IAmbientSettingsProvider _oldSettings;
     private readonly Dictionary<string, string> _overrides;
 
     /// <summary>
@@ -520,46 +590,38 @@ class LocalAmbientSettingsOverride : IAmbientSettings, IDisposable
     /// <param name="overrides">A Dictionary containing the key/value pairs to override.</param>
     public LocalAmbientSettingsOverride(Dictionary<string, string> overrides)
     {
-        _oldSettings = ServiceBroker<IAmbientSettings>.LocalImplementation;
-        ServiceBroker<IAmbientSettings>.LocalImplementation = this;
+        _oldSettings = _SettingsProvider.LocalProvider;
+        _SettingsProvider.LocalProviderOverride = this;
         _overrides = new Dictionary<string, string>();
     }
+
+    public string ProviderName => nameof(LocalAmbientSettingsOverride);
+
+#pragma warning disable CS0067  // there is no need for refreshing settings in the local call context (where would the events go anyway?)
+    public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
+#pragma warning restore CS0067
+
     /// <summary>
     /// Disposes of this instance, returning the ambient settings to their former value.
     /// </summary>
     public void Dispose()
     {
-        ServiceBroker<IAmbientSettings>.LocalImplementation = _oldSettings;
+        _SettingsProvider.LocalProviderOverride = _oldSettings;
     }
 
-    public ISetting<T> GetSetting<T>(string key, Func<string, T> convert, T defaultValue = default(T))
-    {
-        return new OverrideSetting<T>(this, key, convert, defaultValue);
-    }
-    private string GetOverride(string name)
+    public string GetSetting(string key)
     {
         string value;
-        if (_overrides.TryGetValue(name, out value))
+        if (_overrides.TryGetValue(key, out value))
         {
             return value;
         }
-        return null;
-    }
-    class OverrideSetting<T> : ISetting<T>
-    {
-        private T _value;
-        public OverrideSetting(LocalAmbientSettingsOverride overrideSettings, string name, Func<string, T> convert, T defaultValue = default(T))
-        {
-            string valueString = overrideSettings.GetOverride(name);
-            _value = (valueString == null) ? overrideSettings._oldSettings.GetSetting<T>(name, convert, defaultValue).Value : convert(valueString);
-        }
-
-        public T Value => _value;
-
-        // NOTE: to implement support for settings that change on the fly, see the reference implementation in the BasicAmbientSettings class in AmbientServices on GitHub, as it can be quite complicated
-#pragma warning disable CS0067
-        public event EventHandler<SettingValueChangedEventArgs<T>> ValueChanged;
-#pragma warning restore CS0067
+        return _oldSettings.GetSetting(key);
     }
 }
 #endregion
+
+
+
+
+
