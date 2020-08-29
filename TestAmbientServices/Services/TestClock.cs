@@ -140,8 +140,9 @@ namespace TestAmbientServices
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
                 Assert.IsTrue(stopwatch.TicksElapsed == 0);
                 stopwatch = new AmbientStopwatch(true);
-                AmbientClock.SkipAhead(TimeSpan.FromTicks(100 * TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency));
-                Assert.AreEqual(100, stopwatch.Elapsed.Ticks * System.Diagnostics.Stopwatch.Frequency / TimeSpan.TicksPerSecond);
+                TimeSpan delay = TimeSpan.FromMilliseconds(100);
+                AmbientClock.SkipAhead(delay);
+                Assert.AreEqual(delay, stopwatch.Elapsed);
             }
         }
         /// <summary>

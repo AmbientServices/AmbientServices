@@ -26,7 +26,7 @@ namespace AmbientServices
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks(_ClockAccessor.LocalProvider?.Ticks ?? Stopwatch.GetTimestamp() * TimeSpan.TicksPerSecond / Stopwatch.Frequency); } }
+        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks((_ClockAccessor.LocalProvider?.Ticks ?? Stopwatch.GetTimestamp()) * TimeSpan.TicksPerSecond / Stopwatch.Frequency); } }
         /// <summary>
         /// Gets the current virtual UTC <see cref="DateTime"/>.
         /// </summary>
@@ -109,7 +109,7 @@ namespace AmbientServices
         internal class PausedAmbientClockProvider : IAmbientClockProvider
         {
             private readonly DateTime _baseDateTime;
-            private long _ticks;
+            private long _stopwatchTicks;
 
             /// <summary>
             /// Constructs a test ambient clock that starts at the current date-time and only moves time forward when explicitly told to do so.
@@ -117,7 +117,7 @@ namespace AmbientServices
             public PausedAmbientClockProvider()
             {
                 _baseDateTime = DateTime.UtcNow;
-                _ticks = 0;
+                _stopwatchTicks = 0;
             }
 
             /// <summary>
@@ -126,7 +126,7 @@ namespace AmbientServices
             /// <remarks>
             /// This property is thread-safe.
             /// </remarks>
-            public long Ticks { get { return _ticks; } }
+            public long Ticks { get { return _stopwatchTicks; } }
 
             /// <summary>
             /// Gets the current UTC <see cref="DateTime"/>.
@@ -134,11 +134,11 @@ namespace AmbientServices
             /// <remarks>
             /// This property is thread-safe.
             /// </remarks>
-            public DateTime UtcDateTime { get { return UtcDateTimeFromTicks(_baseDateTime, _ticks); } }
+            public DateTime UtcDateTime { get { return UtcDateTimeFromStopwatchTicks(_baseDateTime, _stopwatchTicks); } }
 
-            private static DateTime UtcDateTimeFromTicks(DateTime baseUtcDateTime, long ticks)
+            private static DateTime UtcDateTimeFromStopwatchTicks(DateTime baseUtcDateTime, long stopwatchTicks)
             {
-                return baseUtcDateTime.AddTicks((long)(ticks * 1.0 / Stopwatch.Frequency * TimeSpan.TicksPerSecond));
+                return baseUtcDateTime.AddTicks(stopwatchTicks * TimeSpan.TicksPerSecond / Stopwatch.Frequency);
             }
 
             /// <summary>
@@ -149,14 +149,14 @@ namespace AmbientServices
             /// <summary>
             /// Moves the clock forward by the specified number of ticks.  Ticks are the same units as <see cref="Stopwatch"/> ticks, with <see cref="Stopwatch.Frequency"/> ticks per second.
             /// </summary>
-            /// <param name="ticks">The number of milliseconds to move forward.</param>
+            /// <param name="ticks">The number of ticks to move forward.</param>
             /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called in an <see cref="IAmbientClockProvider.AtTime"/> action.</remarks>
             public void SkipAhead(long ticks)
             {
-                long newTicks = System.Threading.Interlocked.Add(ref _ticks, ticks);
+                long newTicks = System.Threading.Interlocked.Add(ref _stopwatchTicks, ticks);
                 long oldTicks = newTicks - ticks;
                 // notify any subscribers
-                OnTimeChanged?.Invoke(this, new AmbientClockProviderTimeChangedEventArgs { Clock = this, OldTicks = oldTicks, NewTicks = newTicks, OldUtcDateTime = UtcDateTimeFromTicks(_baseDateTime, oldTicks), NewUtcDateTime = UtcDateTimeFromTicks(_baseDateTime, newTicks) });
+                OnTimeChanged?.Invoke(this, new AmbientClockProviderTimeChangedEventArgs { Clock = this, OldTicks = oldTicks, NewTicks = newTicks, OldUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, oldTicks), NewUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, newTicks) });
             }
         }
     }
@@ -281,8 +281,8 @@ namespace AmbientServices
         private static readonly ServiceAccessor<IAmbientClockProvider> _ClockAccessor = Service.GetAccessor<IAmbientClockProvider>();
 
         private IAmbientClockProvider _clock;           // exactly one of _clock and _timer should be null
-        private long _periodTicks;
-        private long _nextTrigger;
+        private long _periodStopwatchTicks;
+        private long _nextTriggerStopwatchTicks;
         private int _autoReset;
         private int _enabled;
         private System.Timers.Timer _timer;
@@ -324,13 +324,14 @@ namespace AmbientServices
             // is there a clock?
             if (clock != null)
             {
-                long now = clock.Ticks;
+                long nowStopwatchTicks = clock.Ticks;
                 IAmbientClockProvider tempClock = clock;
                 _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientTimer, object, AmbientClockProviderTimeChangedEventArgs>(
                     this, OnTimeChanged, wtc => tempClock.OnTimeChanged -= wtc.WeakEventHandler);
                 clock.OnTimeChanged += _weakTimeChanged.WeakEventHandler;
-                _periodTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
-                _nextTrigger = now + _periodTicks;
+                _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
+System.Diagnostics.Trace.WriteLine($"now:{nowStopwatchTicks}, pst:{_periodStopwatchTicks}, sf:{Stopwatch.Frequency}, tt:{TimeSpan.TicksPerSecond}");
+                _nextTriggerStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = (period.Ticks > 0) ? 1 : 0;
             }
             else // no clock, so use a system timer
@@ -363,18 +364,19 @@ namespace AmbientServices
             if (timer._enabled != 0)
             {
                 // was it not time to trigger before, but it is now?
-                long nextTrigger = timer._nextTrigger;
-                long periodTicks = timer._periodTicks;
+                long nextTriggerStopwatchTicks = timer._nextTriggerStopwatchTicks;
+                long periodStopwatchTicks = timer._periodStopwatchTicks;
                 bool autoReset = (timer._autoReset != 0);
                 EventHandler<AmbientTimerElapsedEventHandler> elapsed = timer.Elapsed;
                 AmbientTimerElapsedEventHandler args = new AmbientTimerElapsedEventHandler { Timer = timer };
-                while (elapsed != null && nextTrigger > e.OldTicks && nextTrigger <= e.NewTicks && timer._enabled != 0)
+System.Diagnostics.Trace.WriteLine($"nextTrigger:{nextTriggerStopwatchTicks}, oldTicks:{e.OldTicks}, newTicks:{e.NewTicks}");
+                while (elapsed != null && nextTriggerStopwatchTicks > e.OldTicks && nextTriggerStopwatchTicks <= e.NewTicks && timer._enabled != 0)
                 {
                     elapsed.Invoke(sender, args);
                     // should we reset for another period?
-                    if (autoReset && periodTicks != 0)
+                    if (autoReset && periodStopwatchTicks != 0)
                     {
-                        nextTrigger = System.Threading.Interlocked.Add(ref timer._nextTrigger, periodTicks);
+                        nextTriggerStopwatchTicks = System.Threading.Interlocked.Add(ref timer._nextTriggerStopwatchTicks, periodStopwatchTicks);
                         // we may loop around again in case the event should have been triggered more than once
                     }
                     else
@@ -428,7 +430,7 @@ namespace AmbientServices
         /// </summary>
         public TimeSpan Period
         {
-            get { return (_timer != null) ? TimeSpan.FromMilliseconds(_timer.Interval) : new TimeSpan(_periodTicks); }
+            get { return (_timer != null) ? TimeSpan.FromMilliseconds(_timer.Interval) : new TimeSpan(_periodStopwatchTicks * TimeSpan.TicksPerSecond / Stopwatch.Frequency); }
             set
             {
                 if (_timer != null)
@@ -437,7 +439,7 @@ namespace AmbientServices
                 }
                 else
                 {
-                    System.Threading.Interlocked.Exchange(ref _periodTicks, value.Ticks);
+                    System.Threading.Interlocked.Exchange(ref _periodStopwatchTicks, value.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
                     // are we enabled?
                     if (_enabled != 0) SetupNextTrigger();
                 }
@@ -448,7 +450,7 @@ namespace AmbientServices
         {
             System.Diagnostics.Debug.Assert(_timer == null && _clock != null);
             long now = _clock.Ticks;
-            System.Threading.Interlocked.Exchange(ref _nextTrigger, now + _periodTicks);
+            System.Threading.Interlocked.Exchange(ref _nextTriggerStopwatchTicks, now + _periodStopwatchTicks);
         }
 
         /// <summary>
