@@ -330,7 +330,6 @@ namespace AmbientServices
                     this, OnTimeChanged, wtc => tempClock.OnTimeChanged -= wtc.WeakEventHandler);
                 clock.OnTimeChanged += _weakTimeChanged.WeakEventHandler;
                 _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
-System.Diagnostics.Trace.WriteLine($"now:{nowStopwatchTicks}, pst:{_periodStopwatchTicks}, sf:{Stopwatch.Frequency}, tt:{TimeSpan.TicksPerSecond}");
                 _nextTriggerStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = (period.Ticks > 0) ? 1 : 0;
             }
@@ -369,7 +368,6 @@ System.Diagnostics.Trace.WriteLine($"now:{nowStopwatchTicks}, pst:{_periodStopwa
                 bool autoReset = (timer._autoReset != 0);
                 EventHandler<AmbientTimerElapsedEventHandler> elapsed = timer.Elapsed;
                 AmbientTimerElapsedEventHandler args = new AmbientTimerElapsedEventHandler { Timer = timer };
-System.Diagnostics.Trace.WriteLine($"nextTrigger:{nextTriggerStopwatchTicks}, oldTicks:{e.OldTicks}, newTicks:{e.NewTicks}");
                 while (elapsed != null && nextTriggerStopwatchTicks > e.OldTicks && nextTriggerStopwatchTicks <= e.NewTicks && timer._enabled != 0)
                 {
                     elapsed.Invoke(sender, args);
