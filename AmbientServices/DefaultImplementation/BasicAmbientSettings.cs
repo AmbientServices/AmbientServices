@@ -71,8 +71,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="key">A string that uniquely identifies the setting.</param>
         /// <param name="value">The new string value for the setting.</param>
-        /// <param name="defaultValue">The default value for the setting.</param>
-        /// <returns>A <see cref="IAmbientSetting{T}"/> instance that is updatedt every time the setting gets updated.</returns>
+        /// <returns>A <see cref="IAmbientSetting{T}"/> instance that is updated every time the setting gets updated.</returns>
         public void ChangeSetting(string key, string value)
         {
             _rawValues.AddOrUpdate(key, value, (k,v) => value);

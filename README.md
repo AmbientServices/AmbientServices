@@ -169,7 +169,7 @@ Progress tracking should never affect control flow or results, except in the eve
 
 ### Helpers
 
-The only helper class here is ```AmbientCancellationTokenSource```, which is a superset of the framework's ```CancellationTokenSource``` that can trigger cancellation using an ambient clock.
+The only helper class here is ```AmbientCancellationTokenSource```, which is a superset of the framework's ```CancellationTokenSource``` that can raise cancellation using an ambient clock.
 
 ### Settings
 
@@ -288,9 +288,9 @@ public class TimeDependentServiceTest
             // this should *not* throw because the clock has been paused
             await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
 
-            // this skips the artifical paused clock ahead, triggering the cancellation
+            // this skips the artifical paused clock ahead, raising the cancellation
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(1));
-            // make sure the cancellation got triggered
+            // make sure the cancellation got raised
             Assert.ThrowsException<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
         }
     }
@@ -329,10 +329,10 @@ There is no default provider.  This causes the helper classes to use the system 
 ## AmbientSettings
 
 The ambient settings interface abstracts a simple string-based settings accessor.  Each setting has a value identified by a unique string.  The value of the setting is always a string, but each setting may be converted to a desired type by specifying a delegate that converts the string into the desired strongly-typed value.
-Often a settings values may change on the fly, so the value exposed by the helper class might change after initialization.  Users can also subscribe to an event that notifies them when the value for a setting changes, in case they need to trigger something more complicated than just parsing the new value.  Value change event notifications may arrive asynchronously on any thread at any time, so users must no depend on the notification occurring before they get an updated value.  
+Often a settings values may change on the fly, so the value exposed by the helper class might change after initialization.  Users can also subscribe to an event that notifies them when the value for a setting changes, in case they need to do something more complicated than just parsing the new value.  Value change event notifications may arrive asynchronously on any thread at any time, so users must no depend on the notification occurring before they get an updated value.  
 A call-context-specific override can be used for some settings, but of course no change notifications can occur when the value changes due to setting a call-context-local provider or changes of the value within a call-context-local provider (where would the notification go?).
 
-Providers may or may not provide post-initialization settings value updates but if they do, they should also trigger the notifications.
+Providers may or may not provide post-initialization settings value updates but if they do, they should also raise the notifications.
 
 Among other things, the ambient settings system is designed to provide sensible access to settings and notification of changes during system startup and shutdown.  For example, at the beginning of startup, the settings just use default values.  At some point, the global provider can be replaced with a provider that reads from a local configuration, and then later on with a provider that reads settings from a centralized settings store.  Users of settings don't need to bother with knowing where the settings come from, only that they might change during system startup.  This is especially useful for things like logging.  Errors that occur before the location of shared logs is determined (that location might be stored in a central database) can be stored in the event log or local file system as desired.  Once the centralized settings are hooked up, logging can automatically switch to a remote provider indicated in the centralized settings store.  No central (and often complicated) "startup" code is required for this kind of transition.  Code can (and should) automatically use the default or local settings until the central settings become available.
 

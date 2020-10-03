@@ -366,9 +366,9 @@ namespace TestAmbientServices
                 timer.Period = TimeSpan.FromMilliseconds(100);
                 Assert.AreEqual(TimeSpan.FromMilliseconds(100), timer.Period);
                 Assert.AreEqual(0, elapsed);
-                // wait up to 5 seconds to get triggered (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
+                // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
                 await ss.WaitAsync(5000);
-                Assert.AreEqual(1, elapsed);    // the event should *never* get triggered more than once because AutoReset is false
+                Assert.AreEqual(1, elapsed);    // the event should *never* get raised more than once because AutoReset is false
                 Assert.AreEqual(0, disposed);
             }
             Assert.AreEqual(1, disposed);
@@ -392,11 +392,11 @@ namespace TestAmbientServices
                 timer.Start();
                 Assert.AreEqual(TimeSpan.FromMilliseconds(100), timer.Period);
                 Assert.AreEqual(0, elapsed);
-                // wait up to 5 seconds to get triggered (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
+                // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
                 await ss.WaitAsync(5000);
-                Assert.IsTrue(elapsed >= 1);    // this could be more than one occasionally if the event gets triggered again after being released and before we can stop it here
+                Assert.IsTrue(elapsed >= 1);    // this could be more than one occasionally if the event gets raised again after being released and before we can stop it here
                 Assert.AreEqual(0, disposed);
-                timer.Stop();   // after this, the event should *not* trigger again, though a trigger may already be in progress, so this could fail on rare occasions
+                timer.Stop();   // after this, the event should *not* be raised again, though a notification may already be in progress, so this could fail on rare occasions
                 int postStopElapsed = elapsed;
                 await Task.Delay(300);
                 Assert.AreEqual(postStopElapsed, elapsed);

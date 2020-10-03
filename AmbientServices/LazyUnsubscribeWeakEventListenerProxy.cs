@@ -7,7 +7,7 @@ namespace AmbientServices
 {
     /// <summary>
     /// A class that weakly proxies for an event subscriber and routes event notifications to static functions for it, thus preventing the event hook from keeping the event subscriber alive.
-    /// Automatically unsubscribes the first time the event is triggered after the event subscriber is collected.
+    /// Automatically unsubscribes the first time the event is raised after the event subscriber is collected.
     /// </summary>
     /// <typeparam name="TTYPETOWEAKEN">The type that is being weakly referenced.</typeparam>
     /// <typeparam name="TEVENTARG1">The first argument for the event handler (usually the sender object).</typeparam>

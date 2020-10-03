@@ -25,11 +25,18 @@ namespace AmbientServices
         private IAmbientLoggerProvider _provider;
         private AmbientLogFilter _logFilter;
 
+        /// <summary>
+        /// Constructs an AmbientLogger using the ambient logger provider and ambient settings provider.
+        /// </summary>
         public AmbientLogger()
             : this (_LoggerProvider.LocalProvider, null)
         {
         }
-
+        /// <summary>
+        /// Constructs an AmbientLogger with the specified logger and settings providers.
+        /// </summary>
+        /// <param name="logger">The <see cref="IAmbientLoggerProvider"/> to use for the logging.</param>
+        /// <param name="loggerSettingsProvider">A <see cref="IAmbientSettingsProvider"/> from which the settings should be queried.</param>
         public AmbientLogger(IAmbientLoggerProvider logger, IAmbientSettingsProvider loggerSettingsProvider = null)
         {
             _provider = logger;

@@ -150,7 +150,7 @@ namespace AmbientServices
             /// Moves the clock forward by the specified number of ticks.  Ticks are the same units as <see cref="Stopwatch"/> ticks, with <see cref="Stopwatch.Frequency"/> ticks per second.
             /// </summary>
             /// <param name="ticks">The number of ticks to move forward.</param>
-            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called in an <see cref="IAmbientClockProvider.AtTime"/> action.</remarks>
+            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClockProvider.OnTimeChanged"/> is being raised.</remarks>
             public void SkipAhead(long ticks)
             {
                 long newTicks = System.Threading.Interlocked.Add(ref _stopwatchTicks, ticks);
@@ -257,21 +257,25 @@ namespace AmbientServices
         }
     }
     /// <summary>
-    /// An event class that contains information about the timer whose <see cref="AmbientTimer.Elapsed"/> event is triggered.
+    /// An event class that contains information about the timer whose <see cref="AmbientTimer.Elapsed"/> event is raised.
     /// </summary>
     public sealed class AmbientTimerElapsedEventHandler
     {
+        /// <summary>
+        /// The <see cref="AmbientTimer"/> whose <see cref="AmbientTimer.Elapsed"/> event is being raised.
+        /// </summary>
         public AmbientTimer Timer { get; set; }
     }
     /// <summary>
-    /// An event class that contains information about the timer whose <see cref="AmbientTimer.Disposed"/> event is triggered.
+    /// An event class that contains information about the timer whose <see cref="AmbientTimer.Disposed"/> event is raised.
     /// </summary>
     public sealed class AmbientTimerDisposedEventHandler
     {
+        /// The <see cref="AmbientTimer"/> whose <see cref="AmbientTimer.Disposed"/> event is being raised.
         public AmbientTimer Timer { get; set; }
     }
     /// <summary>
-    /// A helper class that triggers an event after a specified time, periodically if desired.
+    /// A helper class that raises an event after a specified time, periodically if desired.
     /// </summary>
     /// <remarks>
     /// AmbientTimer is thread-safe.
@@ -282,7 +286,7 @@ namespace AmbientServices
 
         private IAmbientClockProvider _clock;           // exactly one of _clock and _timer should be null
         private long _periodStopwatchTicks;
-        private long _nextTriggerStopwatchTicks;
+        private long _nextRaiseStopwatchTicks;
         private int _autoReset;
         private int _enabled;
         private System.Timers.Timer _timer;
@@ -299,25 +303,25 @@ namespace AmbientServices
         /// <summary>
         /// Constructs an AmbientTimer using the ambient clock and the specified period.
         /// </summary>
-        /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be triggered.</param>
+        /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be raised.</param>
         public AmbientTimer(TimeSpan period)
             : this(_ClockAccessor.LocalProvider, period)
         {
         }
         /// <summary>
-        /// Constructs an AmbientTimer that will use the specified clock to determine when to trigger the <see cref="Elapsed"/> event.
+        /// Constructs an AmbientTimer that will use the specified clock to determine when to raise the <see cref="Elapsed"/> event.
         /// </summary>
-        /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to trigger the <see cref="Elapsed"/> event.</param>
+        /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
         public AmbientTimer(IAmbientClockProvider clock)
             : this(clock, TimeSpan.Zero)
         {
         }
 
         /// <summary>
-        /// Constructs an AmbientTimer that will use the specified period and clock to determine when to trigger the <see cref="Elapsed"/> event.
+        /// Constructs an AmbientTimer that will use the specified period and clock to determine when to raise the <see cref="Elapsed"/> event.
         /// </summary>
-        /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to trigger the <see cref="Elapsed"/> event.</param>
-        /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be triggered.  If zero, the timer will not be enabled.  If non-zero, the timer will start immediately.</param>
+        /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
+        /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be raised.  If zero, the timer will not be enabled.  If non-zero, the timer will start immediately.</param>
         public AmbientTimer(IAmbientClockProvider clock, TimeSpan period)
         {
             _clock = clock;
@@ -330,7 +334,7 @@ namespace AmbientServices
                     this, OnTimeChanged, wtc => tempClock.OnTimeChanged -= wtc.WeakEventHandler);
                 clock.OnTimeChanged += _weakTimeChanged.WeakEventHandler;
                 _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
-                _nextTriggerStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
+                _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = (period.Ticks > 0) ? 1 : 0;
             }
             else // no clock, so use a system timer
@@ -354,7 +358,7 @@ namespace AmbientServices
             timer.Elapsed?.Invoke(sender, new AmbientTimerElapsedEventHandler { Timer = timer });
         }
 
-        // when there is an ambient clock, events are triggered ONLY when the clock changes, and we get notified here every time that happens
+        // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
         private static void OnTimeChanged(AmbientTimer timer, object sender, AmbientClockProviderTimeChangedEventArgs e)
         {
             // there should be a clock and NOT a timer if we get here
@@ -362,20 +366,20 @@ namespace AmbientServices
             // is the timer enabled?
             if (timer._enabled != 0)
             {
-                // was it not time to trigger before, but it is now?
-                long nextTriggerStopwatchTicks = timer._nextTriggerStopwatchTicks;
+                // was it not time to raise before, but it is now?
+                long nextRaiseStopwatchTicks = timer._nextRaiseStopwatchTicks;
                 long periodStopwatchTicks = timer._periodStopwatchTicks;
                 bool autoReset = (timer._autoReset != 0);
                 EventHandler<AmbientTimerElapsedEventHandler> elapsed = timer.Elapsed;
                 AmbientTimerElapsedEventHandler args = new AmbientTimerElapsedEventHandler { Timer = timer };
-                while (elapsed != null && nextTriggerStopwatchTicks > e.OldTicks && nextTriggerStopwatchTicks <= e.NewTicks && timer._enabled != 0)
+                while (elapsed != null && nextRaiseStopwatchTicks > e.OldTicks && nextRaiseStopwatchTicks <= e.NewTicks && timer._enabled != 0)
                 {
                     elapsed.Invoke(sender, args);
                     // should we reset for another period?
                     if (autoReset && periodStopwatchTicks != 0)
                     {
-                        nextTriggerStopwatchTicks = System.Threading.Interlocked.Add(ref timer._nextTriggerStopwatchTicks, periodStopwatchTicks);
-                        // we may loop around again in case the event should have been triggered more than once
+                        nextRaiseStopwatchTicks = System.Threading.Interlocked.Add(ref timer._nextRaiseStopwatchTicks, periodStopwatchTicks);
+                        // we may loop around again in case the event should have been raised more than once
                     }
                     else
                     {
@@ -386,7 +390,7 @@ namespace AmbientServices
         }
 
         /// <summary>
-        /// Gets or sets whether or not the event resets and fires again after being triggered.
+        /// Gets or sets whether or not the event resets and fires again after being raised.
         /// </summary>
         public bool AutoReset
         {
@@ -404,7 +408,7 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Gets or sets whether or not the timer is enabled (ie. whether or not it will trigger the <see cref="Elapsed"/> event.
+        /// Gets or sets whether or not the timer is enabled (ie. whether or not it will raise the <see cref="Elapsed"/> event.
         /// </summary>
         public bool Enabled
         {
@@ -418,8 +422,8 @@ namespace AmbientServices
                 else
                 {
                     int oldValue = System.Threading.Interlocked.Exchange(ref _enabled, value ? 1 : 0);
-                    // are we enabling and it was NOT enabled before?  set up the next trigger
-                    if (value && oldValue == 0) SetupNextTrigger();
+                    // are we enabling and it was NOT enabled before?  set up the next raise
+                    if (value && oldValue == 0) SetupNextRaise();
                 }
             }
         }
@@ -439,20 +443,20 @@ namespace AmbientServices
                 {
                     System.Threading.Interlocked.Exchange(ref _periodStopwatchTicks, value.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
                     // are we enabled?
-                    if (_enabled != 0) SetupNextTrigger();
+                    if (_enabled != 0) SetupNextRaise();
                 }
             }
         }
 
-        private void SetupNextTrigger()
+        private void SetupNextRaise()
         {
             System.Diagnostics.Debug.Assert(_timer == null && _clock != null);
             long now = _clock.Ticks;
-            System.Threading.Interlocked.Exchange(ref _nextTriggerStopwatchTicks, now + _periodStopwatchTicks);
+            System.Threading.Interlocked.Exchange(ref _nextRaiseStopwatchTicks, now + _periodStopwatchTicks);
         }
 
         /// <summary>
-        /// Starts the timer running so that the <see cref="Elapsed"/> event can be triggered.
+        /// Starts the timer running so that the <see cref="Elapsed"/> event can be raised.
         /// </summary>
         public void Start()
         {
@@ -463,12 +467,12 @@ namespace AmbientServices
             else
             {
                 System.Threading.Interlocked.Exchange(ref _enabled, 1);
-                SetupNextTrigger();
+                SetupNextRaise();
             }
         }
 
         /// <summary>
-        /// Stops the timer running so that the <see cref="Elapsed"/> will not be triggered until <see cref="Start"/> is called.
+        /// Stops the timer running so that the <see cref="Elapsed"/> will not be raised until <see cref="Start"/> is called.
         /// </summary>
         public void Stop()
         {
@@ -483,11 +487,11 @@ namespace AmbientServices
         }
 
         /// <summary>
-        /// An event that is triggered each time the specified period elapses.
+        /// An event that is raised each time the specified period elapses.
         /// </summary>
         public event EventHandler<AmbientTimerElapsedEventHandler> Elapsed;
         /// <summary>
-        /// An event that is triggered when the timer is disposed.
+        /// An event that is raised when the timer is disposed.
         /// </summary>
         public event EventHandler<AmbientTimerDisposedEventHandler> Disposed;
 

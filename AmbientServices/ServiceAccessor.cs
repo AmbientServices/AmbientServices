@@ -17,7 +17,7 @@ namespace AmbientServices
         /// Gets the <see cref="ServiceAccessor{T}"/> for the indicated specified type.
         /// </summary>
         /// <typeparam name="T">The type whose service accessor is needed.</typeparam>
-        /// <returns>The <see cref="ServiceAccessor{T}"/> instance.</returns>
+        /// <returns>The <see cref="ServiceAccessor{T}"/> instance.  This should never be null.</returns>
         public static ServiceAccessor<T> GetAccessor<T>() where T : class
         {
             return ServiceAccessor<T>.GetAccessor();
@@ -27,7 +27,7 @@ namespace AmbientServices
         /// </summary>
         /// <typeparam name="T">The type whose service accessor is needed.</typeparam>
         /// <param name="accessor">[OUT] Receives the service accessor.</param>
-        /// <returns>The <see cref="ServiceAccessor{T}"/> instance.</returns>
+        /// <returns>The <see cref="ServiceAccessor{T}"/> instance.  This should never be null.</returns>
         public static ServiceAccessor<T> GetAccessor<T>(out ServiceAccessor<T> accessor) where T : class
         {
             accessor = ServiceAccessor<T>.GetAccessor();
@@ -96,7 +96,6 @@ namespace AmbientServices
         /// <summary>
         /// Gets the <see cref="ServiceAccessor{T}"/> for the indicated specified type.
         /// </summary>
-        /// <typeparam name="T">The type whose service accessor is needed.</typeparam>
         /// <returns>The <see cref="ServiceAccessor{T}"/> instance.</returns>
         internal static ServiceAccessor<T> GetAccessor()
         {
@@ -106,7 +105,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets or sets the global provider.
         /// If set to null, suppresses the default provider (so that the getter returns null).
-        /// When setting the provider, overwrites any previous provider and triggers the <see cref="GlobalProviderChanged"/> event either on this thread or another thread asynchronously.
+        /// When setting the provider, overwrites any previous provider and raises the <see cref="GlobalProviderChanged"/> event either on this thread or another thread asynchronously.
         /// Thread-safe.
         /// </summary>
         public T GlobalProvider
@@ -167,7 +166,7 @@ namespace AmbientServices
         /// <remarks>
         /// In order to avoid memory leaks, most subscribers will want to subscribe a static method or use the weak event listener pattern when subscribing to this event, 
         /// because the service broker lives forever.
-        /// Because the event can be triggered asynchronously, notifications may not come in the order the changes occur.
+        /// Because the event can be raised asynchronously, notifications may not come in the order the changes occur.
         /// Subscribers should query the latest value if needed when they received the event notification and must take care to avoid race conditions that may be caused by out-of-order notifications.
         /// </remarks>
         public event EventHandler<EventArgs> GlobalProviderChanged;

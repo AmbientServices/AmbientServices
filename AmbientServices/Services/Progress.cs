@@ -51,7 +51,7 @@ namespace AmbientServices
         void Update(float portionComplete, string itemCurrentlyBeingProcessed = null);
         /// <summary>
         /// Starts a sub-part of the processing and begins tracking that specified range of the process.
-        /// The sub-progress becomes the new ambient progress returned by <see cref="IAmbientProgressProvider."/>.
+        /// The sub-progress becomes the new ambient progress returned by <see cref="IAmbientProgressProvider"./>.
         /// Checks to see if cancellation has been requested and updates the parent process to indicate that the sub-part has started.
         /// </summary>
         /// <param name="startPortion">The portion complete within the process represented by this progress at which the part starts.</param>

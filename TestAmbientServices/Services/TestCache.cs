@@ -38,7 +38,7 @@ namespace TestAmbientServices
                     await cache.Store(true, "Test2", this, null, DateTime.MinValue);
                     ret = await cache.Retrieve<TestCache>("Test2", null);
                     Assert.AreEqual(this, ret);
-                    await TriggerEjection(cache, 2);
+                    await Eject(cache, 2);
                     ret = await cache.Retrieve<TestCache>("Test2", null);
                     Assert.IsNull(ret);
                     await cache.Store(true, "Test3", this, TimeSpan.FromMinutes(-1));
@@ -55,7 +55,7 @@ namespace TestAmbientServices
                     Assert.AreEqual(this, ret);
                     ret = await cache.Retrieve<TestCache>("Test6", TimeSpan.FromMinutes(10));
                     Assert.AreEqual(this, ret);
-                    await TriggerEjection(cache, 50);
+                    await Eject(cache, 50);
                     await cache.Clear();
                     ret = await cache.Retrieve<TestCache>("Test6", null);
                     Assert.IsNull(ret);
@@ -104,7 +104,7 @@ namespace TestAmbientServices
                 await cache.Store<TestCache>(true, "Test2", this, null, DateTime.MinValue);
                 ret = await cache.Retrieve<TestCache>("Test2", null);
                 Assert.AreEqual(this, ret);
-                await TriggerEjection(cache, 1);
+                await Eject(cache, 1);
                 ret = await cache.Retrieve<TestCache>("Test2", null);
                 Assert.IsNull(ret);
                 await cache.Store<TestCache>(true, "Test3", this, TimeSpan.FromMinutes(-1));
@@ -121,7 +121,7 @@ namespace TestAmbientServices
                 Assert.AreEqual(this, ret);
                 ret = await cache.Retrieve<TestCache>("Test6", TimeSpan.FromMinutes(10));
                 Assert.AreEqual(this, ret);
-                await TriggerEjection(cache, 50);
+                await Eject(cache, 50);
                 await cache.Clear();
                 ret = await cache.Retrieve<TestCache>("Test6", null);
                 Assert.IsNull(ret);
@@ -149,7 +149,7 @@ namespace TestAmbientServices
                     await cache.Store<TestCache>(true, "CacheRefresh1", this, TimeSpan.FromMinutes(10));
                     ret = await cache.Retrieve<TestCache>("CacheRefresh1", null);
                     Assert.AreEqual(this, ret);
-                    await TriggerEjection(cache, 50);
+                    await Eject(cache, 50);
 
                     await cache.Store<TestCache>(true, "CacheRefresh2", this);
                     ret = await cache.Retrieve<TestCache>("CacheRefresh2", null);
@@ -161,12 +161,12 @@ namespace TestAmbientServices
                     ret = await cache.Retrieve<TestCache>("CacheRefresh3", null);
                     Assert.IsNull(ret);
 
-                    await TriggerEjection(cache, 50);
+                    await Eject(cache, 50);
                 }
             }
         }
         const int CountsToEject = 20;
-        private async Task TriggerEjection(IAmbientCacheProvider cache, int count)
+        private async Task Eject(IAmbientCacheProvider cache, int count)
         {
             for (int ejection = 0; ejection < count; ++ejection)
             {
@@ -177,7 +177,7 @@ namespace TestAmbientServices
                 }
             }
         }
-        private async Task TriggerEjection<T>(AmbientCache<T> cache, int count)
+        private async Task Eject<T>(AmbientCache<T> cache, int count)
         {
             for (int ejection = 0; ejection < count; ++ejection)
             {

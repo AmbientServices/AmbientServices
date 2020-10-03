@@ -147,17 +147,17 @@ namespace TestAmbientServices
             string testSettingKey = nameof(SettingsGarbageCollection);
             WeakReference<ProviderSetting<string>> wr = FinalizableSetting(testSettingKey, settingsProvider);
             GC.Collect();   // this should collect the temporary Setting created in the function below
-            settingsProvider.ChangeSetting(testSettingKey, nameof(SettingsGarbageCollection) + "-triggerCollect");  // this should trigger the weak proxy to get removed and the instance to be destroyed
+            settingsProvider.ChangeSetting(testSettingKey, nameof(SettingsGarbageCollection) + "-CauseCollect");  // this should cause the weak proxy to get removed and the instance to be destroyed
             ProviderSetting<string> alive;
             Assert.IsFalse(wr.TryGetTarget(out alive));
         }
         private WeakReference<ProviderSetting<string>> FinalizableSetting(string testSettingKey, IMutableAmbientSettingsProvider settingsProvider)
         {
-            ProviderSetting<string> temporarySetting = new ProviderSetting<string>(settingsProvider, testSettingKey, s => s, nameof(SettingsGarbageCollection) + "-initialValue");
+            ProviderSetting<string> temporarySetting = new ProviderSetting<string>(settingsProvider, testSettingKey, s => s, nameof(SettingsGarbageCollection) + "-InitialValue");
             WeakReference<ProviderSetting<string>> wr = new WeakReference<ProviderSetting<string>>(temporarySetting);
             bool valueChanged = false;
             string value = temporarySetting.Value;
-            Assert.AreEqual(nameof(SettingsGarbageCollection) + "-initialValue", value);
+            Assert.AreEqual(nameof(SettingsGarbageCollection) + "-InitialValue", value);
             EventHandler<EventArgs> valueChangedLambda = (s, e) =>
             {
                 valueChanged = true;
@@ -166,10 +166,10 @@ namespace TestAmbientServices
             };
             temporarySetting.ValueChanged += valueChangedLambda;
             // change the setting to be sure we are actually hooked into the provider's notification event
-            settingsProvider.ChangeSetting(testSettingKey, nameof(SettingsGarbageCollection) + "-valueChanged");
-            Assert.AreEqual(nameof(SettingsGarbageCollection) + "-valueChanged", temporarySetting.Value);
+            settingsProvider.ChangeSetting(testSettingKey, nameof(SettingsGarbageCollection) + "-ValueChanged");
+            Assert.AreEqual(nameof(SettingsGarbageCollection) + "-ValueChanged", temporarySetting.Value);
             Assert.IsTrue(valueChanged);
-            Assert.AreEqual(nameof(SettingsGarbageCollection) + "-valueChanged", value);
+            Assert.AreEqual(nameof(SettingsGarbageCollection) + "-ValueChanged", value);
             temporarySetting.ValueChanged -= valueChangedLambda;
             return wr;
         }

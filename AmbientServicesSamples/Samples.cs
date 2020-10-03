@@ -323,6 +323,7 @@ class BufferPool
             {
                 _bag.Add(buffer);
             }
+            // else just let the garbage collector release this byte array
         }
     }
 
@@ -392,9 +393,9 @@ public class TimeDependentServiceTest
             // this should *not* throw because the clock has been paused
             await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
 
-            // this skips the artifical paused clock ahead, triggering the cancellation
+            // this skips the artifical paused clock ahead, raising the cancellation
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(1));
-            // make sure the cancellation got triggered
+            // make sure the cancellation got raised
             Assert.ThrowsException<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
         }
     }

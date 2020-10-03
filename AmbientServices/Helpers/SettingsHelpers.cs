@@ -22,8 +22,8 @@ namespace AmbientServices
         /// This event is so that the subscriber *knows* when the value changes, in case something else needs to be done as a result of the change.
         /// </summary>
         /// <remarks>
-        /// Users MUST NOT rely on this event getting triggered before (or even after) updated values are returned by <see cref="Value"/>.
-        /// Because this event may be triggered asynchronously, multiple triggers of the event might be received out-of-order.
+        /// Users MUST NOT rely on this event getting raised before (or even after) updated values are returned by <see cref="Value"/>.
+        /// Because this event may be raised asynchronously, multiple raisings of the event might be received out-of-order.
         /// As a result, the new value is not sent.  The subscriber should get the latest value and use that (and handle any resulting race conditions).
         /// </remarks>
         event EventHandler<EventArgs> ValueChanged;
@@ -48,7 +48,7 @@ namespace AmbientServices
         }
         /// <summary>
         /// Construct a setting instance that uses a specific settings provider and caches the setting with the specified key, converting it from a string using the specified delegate.
-        /// Settings changes caused by a setting value change within the specified provider will trigger the <see cref="ValueChanged"/> event and in <see cref="Value"/>, 
+        /// Settings changes caused by a setting value change within the specified provider will raise the <see cref="IAmbientSetting{T}.ValueChanged"/> event and will be reflected in the value returned by the <see cref="IAmbientSetting{T}.Value"/> property, 
         /// but no provider changes or overrides will.
         /// </summary>
         /// <param name="provider">The <see cref="IAmbientSettingsProvider"/> to get the setting value from.  If null, the setting will always contain the default value.</param>
@@ -62,10 +62,10 @@ namespace AmbientServices
         /// <summary>
         /// Construct an ambient setting instance that caches the setting with the specified key, converting it from a string using the specified delegate.
         /// Settings will be gathered from the ambient local provider, even if it changes after construction.
-        /// The <see cref="ValueChanged"/> event will be triggered if the setting changes due to the global provider changing or the value within the global provider changing, 
-        /// but will not be triggered if a local override is applied or a setting changes there.  
+        /// The <see cref="IAmbientSetting{T}.ValueChanged"/> event will be raised if the setting changes due to the global provider changing or the value within the global provider changing, 
+        /// but will not be raised if a local override is applied or a setting changes there.  
         /// This is due to the fact that the settings instance isn't owned by any particular call context.
-        /// In these cases, the value returned by <see cref="Value"/> will be different from the most recent value received by event subscribers.
+        /// In these cases, the value returned by <see cref="IAmbientSetting{T}.Value"/> will be different from the most recent value received by event subscribers.
         /// </summary>
         /// <param name="key">A key string identifying the setting.</param>
         /// <param name="convert">A delegate that takes a string and returns the type.</param>
@@ -100,7 +100,7 @@ namespace AmbientServices
 
         /// <summary>
         /// Construct a setting instance that uses a specific settings provider and caches the setting with the specified key, converting it from a string using the specified delegate.
-        /// Settings changes caused by a setting value change within the specified provider will trigger the <see cref="ValueChanged"/> event and in <see cref="Value"/>, 
+        /// Settings changes caused by a setting value change within the specified provider will raise the <see cref="ValueChanged"/> event and in <see cref="Value"/>, 
         /// but no provider changes or overrides will.
         /// </summary>
         /// <param name="provider">The <see cref="IAmbientSettingsProvider"/> to get the setting value from.</param>
@@ -170,8 +170,8 @@ namespace AmbientServices
         /// This event is so that the subscriber *knows* when the value changes, in case something else needs to be done as a result of the change.
         /// </summary>
         /// <remarks>
-        /// Users MUST NOT rely on this event getting triggered before (or even after) updated values are returned by <see cref="Value"/>.
-        /// Because this event may be triggered asynchronously, multiple triggers of the event might be received out-of-order.
+        /// Users MUST NOT rely on this event getting raised before (or even after) updated values are returned by <see cref="Value"/>.
+        /// Because this event may be raised asynchronously, multiple raises of the event might be received out-of-order.
         /// As a result, the new value is not sent.  The subscriber should get the latest value and use that (and handle any resulting race conditions).
         /// </remarks>
         public event EventHandler<EventArgs> ValueChanged;
@@ -181,8 +181,8 @@ namespace AmbientServices
     /// </summary>
     /// <typeparam name="T">The type contained in the setting.</typeparam>
     /// <remarks>
-    /// An ambient setting is one that may be updated within global the provider, or may come from a local service override.
-    /// Change notifications through <see cref=""/>
+    /// An ambient setting is one that may be updated within the global provider, or may come from a local service override.
+    /// Change notifications can be received by subscribing to <see cref="ValueChanged"/>, but this is only raised when the global value changes.
     /// </remarks>
     class AmbientSetting<T> : IAmbientSetting<T>
     {
@@ -211,8 +211,8 @@ namespace AmbientServices
         /// <summary>
         /// Construct an ambient setting instance that caches the setting with the specified key, converting it from a string using the specified delegate.
         /// Settings will be gathered from the ambient local provider, even if it changes after construction.
-        /// The <see cref="ValueChanged"/> event will be triggered if the setting changes due to the global provider changing or the value within the global provider changing, 
-        /// but will not be triggered if a local override is applied or a setting changes there.  
+        /// The <see cref="ValueChanged"/> event will be raised if the setting changes due to the global provider changing or the value within the global provider changing, 
+        /// but will not be raised if a local override is applied or a setting changes there.  
         /// This is due to the fact that the settings instance isn't owned by any particular call context.
         /// In these cases, the value returned by <see cref="Value"/> will be different from the most recent value received by event subscribers.
         /// </summary>
@@ -290,8 +290,8 @@ namespace AmbientServices
         /// This event is so that the subscriber *knows* when the value changes, in case something else needs to be done as a result of the change.
         /// </summary>
         /// <remarks>
-        /// Users MUST NOT rely on this event getting triggered before (or even after) updated values are returned by <see cref="Value"/>.
-        /// Because this event may be triggered asynchronously, multiple triggers of the event might be received out-of-order.
+        /// Users MUST NOT rely on this event getting raised before (or even after) updated values are returned by <see cref="Value"/>.
+        /// Because this event may be raised asynchronously, multiple raises of the event might be received out-of-order.
         /// As a result, the new value is not sent.  The subscriber should get the latest value from the settings provider and use that, handling any race conditions in the process.
         /// </remarks>
         public event EventHandler<EventArgs> ValueChanged;

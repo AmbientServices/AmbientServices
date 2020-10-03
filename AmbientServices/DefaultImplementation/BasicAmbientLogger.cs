@@ -64,7 +64,6 @@ namespace AmbientServices
         {
             try
             {
-                // trigger the semaphore
                 _Semaphore.Release();
                 return true;
             }

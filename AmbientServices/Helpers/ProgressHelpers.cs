@@ -77,6 +77,10 @@ namespace AmbientServices
         public bool IsCancellationRequested { get { return _tokenSource?.IsCancellationRequested ?? true; } }
 
         #region IDisposable Support
+        /// <summary>
+        /// Implementation of the standard dispose pattern.
+        /// </summary>
+        /// <param name="disposing">Whether or not this instance is being disposed, as opposed to finalized.</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)

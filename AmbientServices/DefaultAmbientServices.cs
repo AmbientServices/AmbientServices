@@ -30,9 +30,9 @@ namespace AmbientServices
         /// Constructs a DefaultAmbientServiceAttribute.
         /// </summary>
         /// <param name="registrationInterface">An interface type to use for the registration instead of all the interfaces implemented by the class.</param>
-        public DefaultAmbientServiceProviderAttribute(Type registrationInterfaces)
+        public DefaultAmbientServiceProviderAttribute(Type registrationInterface)
         {
-            _registrationInterfaces = new Type[] { registrationInterfaces };
+            _registrationInterfaces = new Type[] { registrationInterface };
         }
         /// <summary>
         /// Constructs a DefaultAmbientServiceAttribute.

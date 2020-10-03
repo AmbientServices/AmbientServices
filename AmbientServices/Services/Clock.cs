@@ -9,7 +9,7 @@ namespace AmbientServices
     public class AmbientClockProviderTimeChangedEventArgs
     {
         /// <summary>
-        /// Gets or sets the <see cref="IAmbientClockProvider"/> that triggered the event.
+        /// Gets or sets the <see cref="IAmbientClockProvider"/> that raised the event.
         /// </summary>
         public IAmbientClockProvider Clock { get; set; }
         /// <summary>
@@ -35,7 +35,7 @@ namespace AmbientServices
     public interface IAmbientClockProvider
     {
         /// <summary>
-        /// Gets the number of ticks elapsed.  Ticks must be measured in units of <see cref="Stopwatch.Frequency"/>.
+        /// Gets the number of ticks elapsed.  Ticks must be measured in units of <see cref="System.Diagnostics.Stopwatch.Frequency"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.

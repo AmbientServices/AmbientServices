@@ -163,3 +163,4 @@ $RECYCLE.BIN/
 /.vs/AmbientServices/DesignTimeBuild
 /.vs/AmbientServices/v16/TestStore/0
 /coveragereport
+/AmbientServices/AmbientServices.xml
