@@ -248,6 +248,18 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
+        public void AmbientTimerInfiniteTimeout()
+        {
+            using (AmbientClock.Pause())
+            {
+                using (AmbientTimer timer = new AmbientTimer(Timeout.InfiniteTimeSpan)) { }
+            }
+            using (AmbientTimer timer = new AmbientTimer(Timeout.InfiniteTimeSpan)) { }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// </summary>
+        [TestMethod]
         public void TimerExplicitClockAutoStartAutoReset()
         {
             AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();

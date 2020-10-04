@@ -66,6 +66,9 @@ namespace AmbientServices
         /// Skips a paused clock ahead the specified amount.
         /// If the clock is not paused in the current call context, nothing is done.
         /// </summary>
+        /// <remarks>
+        /// Note that negative times are allowed in order to test clock issues.
+        /// </remarks>
         /// <param name="skipTime">The amount of time to skip ahead.</param>
         public static void SkipAhead(TimeSpan skipTime)
         {
@@ -149,6 +152,9 @@ namespace AmbientServices
             /// <summary>
             /// Moves the clock forward by the specified number of ticks.  Ticks are the same units as <see cref="Stopwatch"/> ticks, with <see cref="Stopwatch.Frequency"/> ticks per second.
             /// </summary>
+            /// <remarks>
+            /// Note that negative times are allowed in order to test clock issues and error conditions.
+            /// </remarks>
             /// <param name="ticks">The number of ticks to move forward.</param>
             /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClockProvider.OnTimeChanged"/> is being raised.</remarks>
             public void SkipAhead(long ticks)
@@ -339,7 +345,7 @@ namespace AmbientServices
             }
             else // no clock, so use a system timer
             {
-                double milliseconds = (period.Ticks == 0) ? (double)Int32.MaxValue : period.TotalMilliseconds;
+                double milliseconds = (period.Ticks == 0 || period.Ticks == Timeout.InfiniteTimeSpan.Ticks) ? (double)Int32.MaxValue : period.TotalMilliseconds;
                 _timer = new System.Timers.Timer(milliseconds);
                 _timer.AutoReset = false;
                 // start with the timer disabled?
