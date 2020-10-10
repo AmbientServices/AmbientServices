@@ -389,6 +389,7 @@ class BufferPool
             {
                 _bag.Add(buffer);
             }
+            // else just let the garbage collector release this byte array
         }
     }
 
