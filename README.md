@@ -32,7 +32,7 @@ In order to prevent unexpected alteration of outputs, care must be taken to ensu
 
 ### Helpers
 
-The ```AmbientCache<TOWNER>``` generic class provides a wrapper of the ambient cache that attaches the owner type name as a prefix for each cache key to prevent cross-class cache key conflicts, and ignores calls when there is no cache provider or it has been suppressed.
+The `AmbientCache<TOWNER>` generic class provides a wrapper of the ambient cache that attaches the owner type name as a prefix for each cache key to prevent cross-class cache key conflicts, and ignores calls when there is no cache provider or it has been suppressed.
 
 ### Settings
 
@@ -109,16 +109,16 @@ Logging should never affect control flow or results.  The only side-effect shoul
 
 ### Helpers
 
-The ```AmbientLogger<TOWNER>``` generic class provides a wrapper of the ambient cache that attaches the owner type, a severity level, and a category to each message and filters them according to settings from the ambient or specified settings.  Overloads that take a message-generating lambda are also provided.  These overloads should be used when generating the log message from the provided input data is expensive and the caller wants to avoid that expense when the message is going to be filtered anyway.
+The `AmbientLogger<TOWNER>` generic class provides a wrapper of the ambient cache that attaches the owner type, a severity level, and a category to each message and filters them according to settings from the ambient or specified settings.  Overloads that take a message-generating lambda are also provided.  These overloads should be used when generating the log message from the provided input data is expensive and the caller wants to avoid that expense when the message is going to be filtered anyway.
 
 ### Settings
 
-AmbientLogger-Format: A format string that controls what entries in the log look like where {0} is the entry time, {1} is the level, {2} is the log owner type, {3} is the category, and {4} is the message.  Default is {0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}.
-AmbientLogFilter-LogLevel: the AmbientLogLevel above which logs will be filtered (entries at this level and below will be logged).  Default is Information.
-AmbientLogFilter-TypeAllow: A regular expression indicating which type(s) are allowed to be logged.  Default is null, meaning all types are allowed.
-AmbientLogFilter-TypeBlock: A regular expression indicating which type(s) should be blocked from being logged.  Default is null, meaning no types should be blocked.
-AmbientLogFilter-CategoryAllow: A regular expression indicating which categorie(s) are allowed to be logged.  Default is null, meaning all categories are allowed.
-AmbientLogFilter-CategoryBlock: A regular expression indicating which categorie(s) should be blocked from being logged.  Default is null, meaning no categories should be blocked.
+`AmbientLogger-Format`: A format string that controls what entries in the log look like where {0} is the entry time, {1} is the level, {2} is the log owner type, {3} is the category, and {4} is the message.  Default is {0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}.
+`AmbientLogFilter-LogLevel`: the AmbientLogLevel above which logs will be filtered (entries at this level and below will be logged).  Default is Information.
+`AmbientLogFilter-TypeAllow`: A regular expression indicating which type(s) are allowed to be logged.  Default is null, meaning all types are allowed.
+`AmbientLogFilter-TypeBlock`: A regular expression indicating which type(s) should be blocked from being logged.  Default is null, meaning no types should be blocked.
+`AmbientLogFilter-CategoryAllow`: A regular expression indicating which categorie(s) are allowed to be logged.  Default is null, meaning all categories are allowed.
+`AmbientLogFilter-CategoryBlock`: A regular expression indicating which categorie(s) should be blocked from being logged.  Default is null, meaning no categories should be blocked.
 
 ### Sample
 [//]: # (AmbientLoggerSample)
@@ -169,7 +169,7 @@ Progress tracking should never affect control flow or results, except in the eve
 
 ### Helpers
 
-The only helper class here is ```AmbientCancellationTokenSource```, which is a superset of the framework's ```CancellationTokenSource``` that can raise cancellation using an ambient clock.
+The only helper class here is `AmbientCancellationTokenSource`, which is a superset of the framework's `CancellationTokenSource` that can raise cancellation using an ambient clock.
 
 ### Settings
 
@@ -261,9 +261,9 @@ Clocks should never go backwards.  Provider implementors must ensure this holds 
 
 ### Helpers
 
-The ```AmbientClock``` static class provides an abstraction that automatically uses the system clock if there is no registered provider.  It also provides a ```Pause``` function that allows the caller to temporarily pause time as seen by the ambient clock.  The ```SkipAhead``` function allows the caller to move the paused clock forward (ignored if the clock is not paused).  ```AmbientClock``` can also issue an ```AmbientCancellationToken``` that is cancelled by the ambient clock provider.
-The ```AmbientStopwatch``` class provides a time measuring class similar to the framework's ```Stopwatch``` class, but pauses when the ambient clock is paused.
-The ```AmbientTimer``` class provides a callback similar to the framework's ```Timer``` class, but follows the ambient clock.
+The `AmbientClock` static class provides an abstraction that automatically uses the system clock if there is no registered provider.  It also provides a `Pause` function that allows the caller to temporarily pause time as seen by the ambient clock.  The `SkipAhead` function allows the caller to move the paused clock forward (ignored if the clock is not paused).  `AmbientClock` can also issue an `AmbientCancellationToken` that is cancelled by the ambient clock provider.
+The `AmbientStopwatch` class provides a time measuring class similar to the framework's `Stopwatch` class, but pauses when the ambient clock is paused.
+The `AmbientTimer` class provides a callback similar to the framework's `Timer` class, but follows the ambient clock.
 
 ### Sample
 [//]: # (AmbientClockSample)
@@ -329,7 +329,7 @@ There is no default provider.  This causes the helper classes to use the system 
 ## AmbientSettings
 
 The ambient settings interface abstracts a simple string-based settings accessor.  Each setting has a value identified by a unique string.  The value of the setting is always a string, but each setting may be converted to a desired type by specifying a delegate that converts the string into the desired strongly-typed value.
-Often a settings values may change on the fly, so the value exposed by the helper class might change after initialization.  Users can also subscribe to an event that notifies them when the value for a setting changes, in case they need to do something more complicated than just parsing the new value.  Value change event notifications may arrive asynchronously on any thread at any time, so users must no depend on the notification occurring before they get an updated value.  
+Often the value for a setting may change on the fly, so the value exposed by the helper class might change after initialization.  Users can also subscribe to an event that notifies them when the value for a setting changes, in case they need to do something more complicated than just parsing the new value.  Value change event notifications may arrive asynchronously on any thread at any time, so users must not depend on the notification occurring before they get an updated value.  
 A call-context-specific override can be used for some settings, but of course no change notifications can occur when the value changes due to setting a call-context-local provider or changes of the value within a call-context-local provider (where would the notification go?).
 
 Providers may or may not provide post-initialization settings value updates but if they do, they should also raise the notifications.
@@ -340,8 +340,8 @@ Settings by their very nature must be considered inputs for the purposes of func
 
 ### Helpers
 
-The ```IAmbientSetting<T>``` generic helper interface provides access to a type-converted setting and an event to notify subscribers when the setting value changes.
-The ```AmbientSettings``` static class is used to construct an ```IAmbientSetting<T>``` for the caller.  Settings provided by ```AmbientSettings``` can be "provider" settings whose value comes from an explicit provider specified during construction, or "ambient" settings whose value comes from the default ambient provider (even if there is a local override in the call-context when the value is retrieved).
+The `IAmbientSetting<T>` generic helper interface provides access to a type-converted setting and an event to notify subscribers when the setting value changes.
+The `AmbientSettings` static class is used to construct an `IAmbientSetting<T>` for the caller.  Settings provided by `AmbientSettings` can be "provider" settings whose value comes from an explicit provider specified during construction, or "ambient" settings whose value comes from the default ambient provider (even if there is a local override in the call-context when the value is retrieved).
 
 ### Settings
 
@@ -433,7 +433,7 @@ class BufferPool
 }
 ```
 ### Default Provider
-The default provider just uses the default value as the initial value.  An alternate interface, ```IMutableAmbientSettings```, can be used to change the settings values in this implementation.  Other service implementations may or may not support changing settings values and may or may not support this interface to do so.  The simplicity of this abstraction is due to the wide variety of settings systems available.  Since the interface is only one function, implementing a bridge to Configuration.AppSettings or some other more appropriate settings repository is very simple.
+The default provider just uses the default value as the initial value.  An alternate interface, `IMutableAmbientSettings`, can be used to change the settings values in this implementation.  Other service implementations may or may not support changing settings values and may or may not support this interface to do so.  The simplicity of this abstraction is due to the wide variety of settings systems available.  Since the interface is only one function, implementing a bridge to Configuration.AppSettings or some other more appropriate settings repository is very simple.
 
 
 # Customizing Ambient Services

@@ -14,7 +14,7 @@ namespace AmbientServices
     public static class Service
     {
         /// <summary>
-        /// Gets the <see cref="ServiceAccessor{T}"/> for the indicated specified type.
+        /// Gets the <see cref="ServiceAccessor{T}"/> for the indicated type.
         /// </summary>
         /// <typeparam name="T">The type whose service accessor is needed.</typeparam>
         /// <returns>The <see cref="ServiceAccessor{T}"/> instance.  This should never be null.</returns>
@@ -23,7 +23,7 @@ namespace AmbientServices
             return ServiceAccessor<T>.GetAccessor();
         }
         /// <summary>
-        /// Gets the <see cref="ServiceAccessor{T}"/> for the indicated specified type.
+        /// Gets the <see cref="ServiceAccessor{T}"/> for the indicated type.
         /// </summary>
         /// <typeparam name="T">The type whose service accessor is needed.</typeparam>
         /// <param name="accessor">[OUT] Receives the service accessor.</param>
@@ -33,10 +33,38 @@ namespace AmbientServices
             accessor = ServiceAccessor<T>.GetAccessor();
             return accessor;
         }
+        /// <summary>
+        /// Overrides the local override provider for the indicated type for the current call context.
+        /// </summary>
+        /// <typeparam name="T">The type whose local provider should be overridden.</typeparam>
+        /// <param name="localOverride">The new local override.  If null, blocks access to the global provider, making accesses think there is no provider.</param>
+        public static void SetLocalProvider<T>(T localOverride) where T : class
+        {
+            ServiceAccessor<T>.GetAccessor().LocalProvider = localOverride;
+        }
+        /// <summary>
+        /// Reverts the local call context to the global provider.
+        /// Note that if the local provider override was set in a higher call context rather than the calling one, the local context and lower ones will be affected, but that context will *not* be affected.
+        /// </summary>
+        /// <typeparam name="T">The type whose local provider override should be removed.</typeparam>
+        public static void RevertToGlobalProvider<T>() where T : class
+        {
+            ServiceAccessor<T>.GetAccessor().LocalProviderOverride = null;
+        }
     }
     /// <summary>
     /// Provides a class that provides access to the global and local providers for a service.
+    /// Must be constructed through <see cref="Service.GetAccessor{T}"/>.
     /// </summary>
+    /// <remarks>
+    /// Note that accessing the provider requires two accesses, one AsyncLocal access to get the local provider override followed by a fallback to the global provider.
+    /// Attempting to optimize this to only do one access by caching the global provider in the AsyncLocal as it changes doesn't appear to be possible
+    /// because this would still require checking the AsyncLocal to see if it is initialized, so conditional and dereferencing costs would be the same,
+    /// but such a system would require allocating an async-local object for every call context, which greatly degrades AsyncLocal performance and has higher memory requirements.
+    /// In addition, such a system would require either allocating another async-local object for any local overrides in subcontexts, or requires keeping track of
+    /// the old local value to restore at the end of the subcontext override.  
+    /// Using a straight async-local implementation makes subcontext overrides naturally rollback as the stack is unwound.
+    /// </remarks>
     /// <typeparam name="T">The interface implemented by the service being accessed.</typeparam>
     public class ServiceAccessor<T> where T : class
     {
@@ -55,22 +83,14 @@ namespace AmbientServices
         /// </summary>
         private object _provider;
         /// <summary>
-        /// The call-context-local service accesor (caches the current value and updates automatically when the global provider changes).
+        /// The call-context-specific local override.
         /// </summary>
-        private AsyncLocal<CallContextServiceAccessor<T>> _callContextServiceAccesor;
+        private AsyncLocal<object> _localOverride;
 
         internal ServiceAccessor()
         {
             _provider = DefaultProvider();
-            _callContextServiceAccesor = new AsyncLocal<CallContextServiceAccessor<T>>();
-        }
-
-        private void InitializeCallContext()
-        {
-            if (_callContextServiceAccesor.Value == null)
-            {
-                _callContextServiceAccesor.Value = new CallContextServiceAccessor<T>(this);
-            }
+            _localOverride = new AsyncLocal<object>();
         }
 
         private static T DefaultProvider()
@@ -130,13 +150,11 @@ namespace AmbientServices
         {
             get
             {
-                InitializeCallContext();
-                return _callContextServiceAccesor.Value.ProviderOverride;
+                return _localOverride.Value as T;
             }
             set
             {
-                InitializeCallContext();
-                _callContextServiceAccesor.Value.ProviderOverride = value;
+                _localOverride.Value = value;
             }
         }
         /// <summary>
@@ -149,13 +167,11 @@ namespace AmbientServices
         {
             get
             {
-                InitializeCallContext();
-                return _callContextServiceAccesor.Value.Provider;
+                return (_localOverride.Value ?? GlobalProvider) as T;
             }
             set
             {
-                InitializeCallContext();
-                _callContextServiceAccesor.Value.Provider = value;
+                _localOverride.Value = value ?? SuppressedProvider;
             }
         }
         /// <summary>
@@ -174,6 +190,7 @@ namespace AmbientServices
 
     /// <summary>
     /// A scoping class that overrides the local service provider during its scope.
+    /// Note that restoring the original value is rarely needed, but in unit tests, the call context is carried between tests, so it needs to at least be reset when a test that overrides it is complete, just in case another test subsequently runs using the same call context.
     /// </summary>
     /// <typeparam name="T">The service interface type.</typeparam>
     public sealed class LocalServiceScopedOverride<T> : IDisposable where T : class
@@ -226,6 +243,7 @@ namespace AmbientServices
         }
         #endregion
     }
+
     /// <summary>
     /// A generic class used to serialize the instantiation of the default provider.
     /// </summary>
@@ -234,124 +252,5 @@ namespace AmbientServices
     {
         private static T _Provider = Activator.CreateInstance<T>();
         public static T GetProvider() { return _Provider; }
-    }
-    /// <summary>
-    /// A class that hooks into the global service provider and allows a call-context-local override.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    class CallContextServiceAccessor<T> where T : class
-    {
-        /// <summary>
-        /// An object whose instance is used to indicate that the default provider has been suppressed.
-        /// </summary>
-        private static readonly object SuppressedProvider = new object();
-
-        private readonly object _changeNotificationLock = new object();
-        /// <summary>
-        /// The main service accessor.
-        /// </summary>
-        private readonly ServiceAccessor<T> _accessor;
-        /// <summary>
-        /// A weak subscriber to the global provider changed event.
-        /// </summary>
-        private LazyUnsubscribeWeakEventListenerProxy<CallContextServiceAccessor<T>, object, EventArgs> _weakGlobalProviderChanged;
-        /// <summary>
-        /// The provider override (null, <see cref="SuppressedProvider"/>, or the provider).
-        /// </summary>
-        private object _providerOverride;
-        /// <summary>
-        /// The cached (and asynchronously updated) global provider.
-        /// </summary>
-        private object _currentGlobalProvider;
-
-        /// <summary>
-        /// Constructs a call-context service accessor.
-        /// </summary>
-        /// <param name="accessor">The <see cref="ServiceAccessor{T}"/> this call context service accessor uses to access and refresh the global provider.</param>
-        internal CallContextServiceAccessor(ServiceAccessor<T> accessor)
-        {
-            _accessor = accessor;
-            UpdateSubscription();
-        }
-        private void GlobalProviderChanged(CallContextServiceAccessor<T> broker, object sender, EventArgs e)
-        {
-            // is there NOT an override?
-            if (Object.ReferenceEquals(_providerOverride as T, null))
-            {
-                // I generally prefer lock-free constructs whenever possible, but in this case we need to
-                // lock here to make sure we get the latest provider and set it into _currentGlobalProvider 
-                // without the lock this function could get called twice when two updates happen very quickly or when the system is under heavy load
-                // and the two threads could execute in such a way that the first updated global provider is retreived on one thread,
-                // but then the thread is interrupted and a second change is made and goes through the entire notification process.
-                // Sometime later, when the first thread resumes and without the lock, it would overwrite _currentGlobalProvider with the first version,
-                // leaving it in an incorrect state
-                // note that we are careful here to avoid calling out to outside code that might lock (the event subscribers) while the lock is held
-                lock (_changeNotificationLock)
-                {
-                    // the new provider affects this call context, so keep it
-                    System.Threading.Interlocked.Exchange(ref _currentGlobalProvider, _accessor.GlobalProvider);
-                }
-            }
-        }
-        private void UpdateSubscription()
-        {
-            // is there now *not* an override?
-            if (_providerOverride == null)
-            {
-                // use the global provider
-                _currentGlobalProvider = _accessor.GlobalProvider;
-                // subscribe to changes in the global provider
-                if (_weakGlobalProviderChanged == null)
-                {
-                    _weakGlobalProviderChanged = new LazyUnsubscribeWeakEventListenerProxy<CallContextServiceAccessor<T>, object, EventArgs>(
-                        this, GlobalProviderChanged, wgic => _accessor.GlobalProviderChanged -= wgic.WeakEventHandler
-                        );
-                    _accessor.GlobalProviderChanged += _weakGlobalProviderChanged.WeakEventHandler;
-                }
-            }
-            else // there is now an override
-            {
-                // have we not unsubscribed yet?
-                if (_weakGlobalProviderChanged != null)
-                {
-                    // unsubscribe now and stop listening to provider changed event notifications
-                    _weakGlobalProviderChanged.Unsubscribe();
-                    _weakGlobalProviderChanged = null;
-                }
-                _currentGlobalProvider = _providerOverride;
-            }
-        }
-        /// <summary>
-        /// Gets or sets the provider.
-        /// If set to null, suppresses any local or global provider and ignores updates to the global provider.
-        /// </summary>
-        public T Provider
-        {
-            get
-            {
-                return _currentGlobalProvider as T;
-            }
-            set
-            {
-                _providerOverride = value ?? SuppressedProvider;
-                UpdateSubscription();
-            }
-        }
-        /// <summary>
-        /// Gets or sets the override provider, which will be null if there is no local override or if it is suppressed.
-        /// If set to null, <see cref="Provider"/> reverts to the global provider.
-        /// </summary>
-        public T ProviderOverride
-        {
-            get
-            {
-                return _providerOverride as T;
-            }
-            set
-            {
-                _providerOverride = value;
-                UpdateSubscription();
-            }
-        }
     }
 }
