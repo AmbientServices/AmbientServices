@@ -24,13 +24,13 @@ namespace TestAmbientServices
         [TestMethod]
         public void LogFilterTypeCategoryAllow()
         {
-            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider();
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-TypeAllow", ".*[Aa]llow.*");
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-TypeBlock", null);
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryAllow", ".*[Aa]llow.*");
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryBlock", null);
-            AmbientLogFilter filter = new AmbientLogFilter(settings);
+            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(LogFilterTypeCategoryAllow));
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllow) + "-" + nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllow) + "-" + nameof(AmbientLogFilter) + "-TypeAllow", ".*[Aa]llow.*");
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllow) + "-" + nameof(AmbientLogFilter) + "-TypeBlock", null);
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllow) + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", ".*[Aa]llow.*");
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllow) + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", null);
+            AmbientLogFilter filter = new AmbientLogFilter(nameof(LogFilterTypeCategoryAllow), settings);
             Assert.AreEqual(AmbientLogLevel.Information, filter.LogLevel);
             Assert.IsFalse(filter.IsTypeBlocked("testallow"));
             Assert.IsTrue(filter.IsTypeBlocked("test"));
@@ -43,13 +43,13 @@ namespace TestAmbientServices
         [TestMethod]
         public void LogFilterTypeCategoryBlock()
         {
-            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider();
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-TypeAllow", null);
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryAllow", null);
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
-            AmbientLogFilter filter = new AmbientLogFilter(settings);
+            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(LogFilterTypeCategoryBlock));
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryBlock) + "-" + nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryBlock) + "-" + nameof(AmbientLogFilter) + "-TypeAllow", null);
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryBlock) + "-" + nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryBlock) + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", null);
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryBlock) + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
+            AmbientLogFilter filter = new AmbientLogFilter(nameof(LogFilterTypeCategoryBlock), settings);
             Assert.AreEqual(AmbientLogLevel.Information, filter.LogLevel);
             Assert.IsFalse(filter.IsTypeBlocked("test"));
             Assert.IsTrue(filter.IsTypeBlocked("testblock"));
@@ -62,13 +62,13 @@ namespace TestAmbientServices
         [TestMethod]
         public void LogFilterTypeCategoryAllowBlock()
         {
-            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider();
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-TypeAllow", ".*[Aa]llow.*");
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryAllow", ".*[Aa]llow.*");
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
-            AmbientLogFilter filter = new AmbientLogFilter(settings);
+            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(LogFilterTypeCategoryAllowBlock));
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllowBlock) + "-" + nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllowBlock) + "-" + nameof(AmbientLogFilter) + "-TypeAllow", ".*[Aa]llow.*");
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllowBlock) + "-" + nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllowBlock) + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", ".*[Aa]llow.*");
+            settings.ChangeSetting(nameof(LogFilterTypeCategoryAllowBlock) + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
+            AmbientLogFilter filter = new AmbientLogFilter(nameof(LogFilterTypeCategoryAllowBlock), settings);
             Assert.AreEqual(AmbientLogLevel.Information, filter.LogLevel);
             Assert.IsTrue(filter.IsTypeBlocked("test"));
             Assert.IsTrue(filter.IsTypeBlocked("testblock"));
@@ -83,11 +83,11 @@ namespace TestAmbientServices
         [TestMethod]
         public void LogFilterBlock()
         {
-            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider();
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
-            settings.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
-            AmbientLogFilter filter = new AmbientLogFilter(settings);
+            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(LogFilterBlock));
+            settings.ChangeSetting(nameof(LogFilterBlock) + "-" + nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
+            settings.ChangeSetting(nameof(LogFilterBlock) + "-" + nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
+            settings.ChangeSetting(nameof(LogFilterBlock) + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
+            AmbientLogFilter filter = new AmbientLogFilter(nameof(LogFilterBlock), settings);
             Assert.IsFalse(filter.IsBlocked(AmbientLogLevel.Information, "test", "test"));
             Assert.IsTrue(filter.IsBlocked(AmbientLogLevel.Trace, "test", "test"));
             Assert.IsTrue(filter.IsBlocked(AmbientLogLevel.Information, "testBlock", "test"));
@@ -192,7 +192,7 @@ namespace TestAmbientServices
                 testlogger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
                 testlogger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
 
-                await _LoggerProvider.LocalProvider.Flush();
+                await _LoggerProvider.Provider.Flush();
             }
         }
         /// <summary>

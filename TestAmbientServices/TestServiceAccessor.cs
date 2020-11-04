@@ -103,10 +103,10 @@ namespace TestAmbientServices
         public void LocalServiceOverride()
         {
             ILocalOverrideTest oldGlobal = _LocalOverrideTest.GlobalProvider;
-            ILocalOverrideTest oldLocalOverride = _LocalOverrideTest.LocalProviderOverride;
+            ILocalOverrideTest oldLocalOverride = _LocalOverrideTest.ProviderOverride;
             using (LocalServiceScopedOverride<ILocalOverrideTest> o = new LocalServiceScopedOverride<ILocalOverrideTest>(null))
             {
-                Assert.IsNull(_LocalOverrideTest.LocalProvider);
+                Assert.IsNull(_LocalOverrideTest.Provider);
                 Assert.AreEqual(oldGlobal, o.OldGlobal);
                 Assert.AreEqual(oldLocalOverride, o.OldOverride);
             }
@@ -163,41 +163,41 @@ namespace TestAmbientServices
         public void Override()
         {
             Assert.IsInstanceOfType(_LocalTestProvider.GlobalProvider, typeof(LocalTest));
-            Assert.IsInstanceOfType(_LocalTestProvider.LocalProvider, typeof(LocalTest));
+            Assert.IsInstanceOfType(_LocalTestProvider.Provider, typeof(LocalTest));
 
             _LocalTestProvider.GlobalProvider = new LocalTest2();
             Assert.IsInstanceOfType(_LocalTestProvider.GlobalProvider, typeof(LocalTest2));
-            Assert.IsInstanceOfType(_LocalTestProvider.LocalProvider, typeof(LocalTest2));
+            Assert.IsInstanceOfType(_LocalTestProvider.Provider, typeof(LocalTest2));
 
-            _LocalTestProvider.LocalProvider = null;
+            _LocalTestProvider.Provider = null;
             Assert.IsInstanceOfType(_LocalTestProvider.GlobalProvider, typeof(LocalTest2));
-            Assert.IsNull(_LocalTestProvider.LocalProvider);
+            Assert.IsNull(_LocalTestProvider.Provider);
 
             _LocalTestProvider.GlobalProvider = null;
             Assert.IsNull(_LocalTestProvider.GlobalProvider);
-            Assert.IsNull(_LocalTestProvider.LocalProvider);
+            Assert.IsNull(_LocalTestProvider.Provider);
 
-            _LocalTestProvider.LocalProvider = new LocalTest3();
+            _LocalTestProvider.Provider = new LocalTest3();
             Assert.IsNull(_LocalTestProvider.GlobalProvider);
-            Assert.IsInstanceOfType(_LocalTestProvider.LocalProvider, typeof(LocalTest3));
+            Assert.IsInstanceOfType(_LocalTestProvider.Provider, typeof(LocalTest3));
 
             _LocalTestProvider.GlobalProvider = new LocalTest2();
             Assert.IsInstanceOfType(_LocalTestProvider.GlobalProvider, typeof(LocalTest2));
-            Assert.IsInstanceOfType(_LocalTestProvider.LocalProvider, typeof(LocalTest3));
+            Assert.IsInstanceOfType(_LocalTestProvider.Provider, typeof(LocalTest3));
 
-            _LocalTestProvider.LocalProvider = _LocalTestProvider.GlobalProvider;
+            _LocalTestProvider.Provider = _LocalTestProvider.GlobalProvider;
             Assert.IsInstanceOfType(_LocalTestProvider.GlobalProvider, typeof(LocalTest2));
-            Assert.IsInstanceOfType(_LocalTestProvider.LocalProvider, typeof(LocalTest2));
-            Assert.AreEqual(_LocalTestProvider.GlobalProvider, _LocalTestProvider.LocalProvider);
+            Assert.IsInstanceOfType(_LocalTestProvider.Provider, typeof(LocalTest2));
+            Assert.AreEqual(_LocalTestProvider.GlobalProvider, _LocalTestProvider.Provider);
 
             _LocalTestProvider.GlobalProvider = new LocalTest3();
             Assert.IsInstanceOfType(_LocalTestProvider.GlobalProvider, typeof(LocalTest3));
-            Assert.IsInstanceOfType(_LocalTestProvider.LocalProvider, typeof(LocalTest2));
+            Assert.IsInstanceOfType(_LocalTestProvider.Provider, typeof(LocalTest2));
 
-            _LocalTestProvider.LocalProviderOverride = null;
+            _LocalTestProvider.ProviderOverride = null;
             Assert.IsInstanceOfType(_LocalTestProvider.GlobalProvider, typeof(LocalTest3));
-            Assert.IsInstanceOfType(_LocalTestProvider.LocalProvider, typeof(LocalTest3));
-            Assert.AreEqual(_LocalTestProvider.GlobalProvider, _LocalTestProvider.LocalProvider);
+            Assert.IsInstanceOfType(_LocalTestProvider.Provider, typeof(LocalTest3));
+            Assert.AreEqual(_LocalTestProvider.GlobalProvider, _LocalTestProvider.Provider);
         }
     }
 

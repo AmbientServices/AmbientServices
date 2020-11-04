@@ -40,17 +40,29 @@ namespace TestAmbientServices
         [TestMethod]
         public async Task Clock()
         {
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             long startTicks = AmbientClock.Ticks;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             TimeSpan startElapsed = AmbientClock.Elapsed;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             DateTime start = DateTime.UtcNow;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             await Task.Delay(100);
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             long testTicks = AmbientClock.Ticks;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             TimeSpan testElapsed = AmbientClock.Elapsed;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             DateTime test = AmbientClock.UtcNow;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             await Task.Delay(100);
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             DateTime end = DateTime.UtcNow;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             long endTicks = AmbientClock.Ticks;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             TimeSpan endElapsed = AmbientClock.Elapsed;
+            Assert.IsTrue(AmbientClock.IsSystemClock);
             Assert.IsTrue(start <= test && test <= end);
             Assert.IsTrue(startTicks <= testTicks && testTicks <= endTicks);
             Assert.IsTrue(startElapsed <= testElapsed && testElapsed <= endElapsed);
@@ -100,9 +112,9 @@ namespace TestAmbientServices
                 DateTime end = DateTime.UtcNow;
                 long endTicks = AmbientClock.Ticks;
                 TimeSpan endElapsed = AmbientClock.Elapsed;
-                Assert.IsTrue(start <= test && test <= end);
-                Assert.IsTrue(startTicks <= testTicks && testTicks <= endTicks);
-                Assert.IsTrue(startElapsed <= testElapsed && testElapsed <= endElapsed);
+                Assert.IsTrue(start <= test && test <= end, $"{start}/{test}/{end}");
+                Assert.IsTrue(startTicks <= testTicks && testTicks <= endTicks, $"{startTicks}/{testTicks}/{endTicks}");
+                Assert.IsTrue(startElapsed <= testElapsed && testElapsed <= endElapsed, $"{startElapsed}/{testElapsed}/{endElapsed}");
             }
         }
         /// <summary>

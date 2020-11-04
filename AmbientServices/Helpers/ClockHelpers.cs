@@ -14,26 +14,33 @@ namespace AmbientServices
     {
         private static readonly ServiceAccessor<IAmbientClockProvider> _ClockAccessor = Service.GetAccessor<IAmbientClockProvider>();
         /// <summary>
+        /// Gets whether or not the ambient clock is just the system clock.
+        /// </summary>
+        /// <remarks>
+        /// This property is thread-safe.
+        /// </remarks>
+        public static bool IsSystemClock { get { return _ClockAccessor.Provider == null; } }
+        /// <summary>
         /// Gets the number of virtual ticks elapsed.  Ticks must be measured in units of <see cref="Stopwatch.Frequency"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static long Ticks { get { return _ClockAccessor.LocalProvider?.Ticks ?? Stopwatch.GetTimestamp(); } }
+        public static long Ticks { get { return _ClockAccessor.Provider?.Ticks ?? Stopwatch.GetTimestamp(); } }
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> indicating the amount of virtual time that has elapsed.  Much more convenient than <see cref="Ticks"/>, but based entirely on it's value.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks((_ClockAccessor.LocalProvider?.Ticks ?? Stopwatch.GetTimestamp()) * TimeSpan.TicksPerSecond / Stopwatch.Frequency); } }
+        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks((_ClockAccessor.Provider?.Ticks ?? Stopwatch.GetTimestamp()) * TimeSpan.TicksPerSecond / Stopwatch.Frequency); } }
         /// <summary>
         /// Gets the current virtual UTC <see cref="DateTime"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static DateTime UtcNow { get { return _ClockAccessor.LocalProvider?.UtcDateTime ?? DateTime.UtcNow; } }
+        public static DateTime UtcNow { get { return _ClockAccessor.Provider?.UtcDateTime ?? DateTime.UtcNow; } }
         /// <summary>
         /// Creates an <see cref="AmbientCancellationTokenSource"/> that cancels after the specified timeout.
         /// </summary>
@@ -72,7 +79,7 @@ namespace AmbientServices
         /// <param name="skipTime">The amount of time to skip ahead.</param>
         public static void SkipAhead(TimeSpan skipTime)
         {
-            PausedAmbientClockProvider controllable = _ClockAccessor.LocalProviderOverride as PausedAmbientClockProvider;
+            PausedAmbientClockProvider controllable = _ClockAccessor.ProviderOverride as PausedAmbientClockProvider;
             if (controllable != null) controllable.SkipAhead(skipTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
         }
         sealed class ClockPauser : IDisposable
@@ -81,8 +88,8 @@ namespace AmbientServices
 
             internal ClockPauser()
             {
-                _clockToRestore = _ClockAccessor.LocalProviderOverride;
-                _ClockAccessor.LocalProviderOverride = new PausedAmbientClockProvider();
+                _clockToRestore = _ClockAccessor.ProviderOverride;
+                _ClockAccessor.ProviderOverride = new PausedAmbientClockProvider();
             }
 
             #region IDisposable Support
@@ -94,7 +101,7 @@ namespace AmbientServices
                 {
                     if (disposing)
                     {
-                        _ClockAccessor.LocalProviderOverride = _clockToRestore;
+                        _ClockAccessor.ProviderOverride = _clockToRestore;
                     }
                     _disposed = true;
                 }
@@ -111,6 +118,9 @@ namespace AmbientServices
         /// </summary>
         internal class PausedAmbientClockProvider : IAmbientClockProvider
         {
+#if DEBUG
+            private readonly string _construction = new StackTrace().ToString();
+#endif
             private readonly DateTime _baseDateTime;
             private long _stopwatchTicks;
 
@@ -190,7 +200,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="run">Whether or not to start the stopwatch running.</param>
         public AmbientStopwatch(bool run = true)
-            : this(_ClockAccesor.LocalProvider, run)
+            : this(_ClockAccesor.Provider, run)
         {
         }
         /// <summary>
@@ -263,7 +273,7 @@ namespace AmbientServices
         }
     }
     /// <summary>
-    /// An event class that contains information about the timer whose <see cref="AmbientTimer.Elapsed"/> event is raised.
+    /// An event class that contains information about the timer whose <see cref="AmbientTimer.Elapsed"/> event was raised.
     /// </summary>
     public sealed class AmbientTimerElapsedEventHandler
     {
@@ -273,7 +283,7 @@ namespace AmbientServices
         public AmbientTimer Timer { get; set; }
     }
     /// <summary>
-    /// An event class that contains information about the timer whose <see cref="AmbientTimer.Disposed"/> event is raised.
+    /// An event class that contains information about the timer whose <see cref="AmbientTimer.Disposed"/> event was raised.
     /// </summary>
     public sealed class AmbientTimerDisposedEventHandler
     {
@@ -303,7 +313,7 @@ namespace AmbientServices
         /// Constructs an AmbientTimer using the ambient clock and no period.
         /// </summary>
         public AmbientTimer()
-            : this(_ClockAccessor.LocalProvider, TimeSpan.Zero)
+            : this(_ClockAccessor.Provider, TimeSpan.Zero)
         {
         }
         /// <summary>
@@ -311,7 +321,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be raised.</param>
         public AmbientTimer(TimeSpan period)
-            : this(_ClockAccessor.LocalProvider, period)
+            : this(_ClockAccessor.Provider, period)
         {
         }
         /// <summary>

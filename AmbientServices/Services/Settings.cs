@@ -24,11 +24,17 @@ namespace AmbientServices
         /// </summary>
         string ProviderName { get; }
         /// <summary>
-        /// Gets the current setting for the specified key, or null if the setting is not set.
+        /// Gets the current raw value for the setting with the specified key, or null if the setting is not set.
         /// </summary>
         /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
         /// <returns>The setting value, or null if the setting is not set.</returns>
-        string GetSetting(string key);
+        string GetRawValue(string key);
+        /// <summary>
+        /// Gets the current typed value for the setting with the specified key, or null if the setting is not set.
+        /// </summary>
+        /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
+        /// <returns>The setting value, or null if the setting is not set.</returns>
+        object GetTypedValue(string key);
         /// <summary>
         /// An event that will notify subscribers when one or more settings values change.  
         /// This event is so that the subscriber *knows* when the value changes, in case something else needs to be done as a result of the change.
@@ -47,7 +53,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="key">A string that uniquely identifies the setting.</param>
         /// <param name="value">The new string value for the setting.</param>
-        /// <returns>A <see cref="IAmbientSetting{T}"/> instance that is updated every time the setting gets updated.</returns>
-        void ChangeSetting(string key, string value);
+        /// <returns>Whether or not the setting actually changed.</returns>
+        bool ChangeSetting(string key, string value);
     }
 }

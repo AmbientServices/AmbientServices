@@ -355,8 +355,8 @@ There are no settings for this service.
 /// </summary>
 class BufferPool
 {
-    private static readonly IAmbientSetting<int> MaxTotalBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", s => Int32.Parse(s), 1000 * 1000);
-    private static readonly IAmbientSetting<int> DefaultBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-DefaultBufferBytes", s => Int32.Parse(s), 8000);
+    private static readonly IAmbientSetting<int> MaxTotalBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", "The maximum total number of bytes to use for all the allocated buffers.  The default value is 1MB.", s => Int32.Parse(s), "1000000");
+    private static readonly IAmbientSetting<int> DefaultBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-BufferBytes", "The number of bytes to allocate for each buffer.  The default value is 8000 bytes.", s => Int32.Parse(s), "8000");
 
     private SizedBufferRecycler _recycler;  // interlocked
 
@@ -398,17 +398,7 @@ class BufferPool
     /// </summary>
     public BufferPool()
     {
-        DefaultBufferBytes.ValueChanged += _DefaultBufferBytes_SettingValueChanged;
-        int bufferBytes = DefaultBufferBytes.Value;
-        _recycler = new SizedBufferRecycler(bufferBytes);
-    }
-
-    private void _DefaultBufferBytes_SettingValueChanged(object sender, EventArgs e)
-    {
-        // yes, there may be a race condition here depending on the implementation of the settings value changed event, but that would only happen if the setting changed twice very quickly, and even so, it would only result in buffers not getting recycled correctly
-        // this could be handled by rechecking the value every time we get a new buffer, but for now it's just not worth it
-        SizedBufferRecycler newRecycler = new SizedBufferRecycler(DefaultBufferBytes.Value);
-        System.Threading.Interlocked.Exchange(ref _recycler, newRecycler);
+        _recycler = new SizedBufferRecycler(DefaultBufferBytes.Value);
     }
 
     /// <summary>
@@ -562,9 +552,15 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
     public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
 #pragma warning restore CS0067
 
-    public string GetSetting(string key)
+    public string GetRawValue(string key)
     {
         return System.Configuration.ConfigurationManager.AppSettings[key];
+    }
+    public object GetTypedValue(string key)
+    {
+        string rawValue = System.Configuration.ConfigurationManager.AppSettings[key];
+        IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
     }
 }
 ```
@@ -588,8 +584,8 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     /// <param name="overrides">A Dictionary containing the key/value pairs to override.</param>
     public LocalAmbientSettingsOverride(Dictionary<string, string> overrides)
     {
-        _oldSettings = _SettingsProvider.LocalProvider;
-        _SettingsProvider.LocalProviderOverride = this;
+        _oldSettings = _SettingsProvider.Provider;
+        _SettingsProvider.ProviderOverride = this;
         _overrides = new Dictionary<string, string>();
     }
 
@@ -604,17 +600,23 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     /// </summary>
     public void Dispose()
     {
-        _SettingsProvider.LocalProviderOverride = _oldSettings;
+        _SettingsProvider.ProviderOverride = _oldSettings;
     }
 
-    public string GetSetting(string key)
+    public string GetRawValue(string key)
     {
         string value;
         if (_overrides.TryGetValue(key, out value))
         {
             return value;
         }
-        return _oldSettings.GetSetting(key);
+        return _oldSettings.GetRawValue(key);
+    }
+    public object GetTypedValue(string key)
+    {
+        string rawValue = GetRawValue(key);
+        IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
     }
 }
 ```

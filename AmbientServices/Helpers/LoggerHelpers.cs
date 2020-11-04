@@ -18,9 +18,8 @@ namespace AmbientServices
     {
         private static readonly string TypeName = typeof(TOWNER).Name;
 
-        private static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting("AmbientLogger-Format", null, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
+        private static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting("AmbientLogger-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
         private static readonly ServiceAccessor<IAmbientLoggerProvider> _LoggerProvider = Service.GetAccessor<IAmbientLoggerProvider>();
-        private static readonly AmbientLogFilter _DefaultLogFilter = new AmbientLogFilter();
 
         private IAmbientLoggerProvider _provider;
         private AmbientLogFilter _logFilter;
@@ -29,7 +28,7 @@ namespace AmbientServices
         /// Constructs an AmbientLogger using the ambient logger provider and ambient settings provider.
         /// </summary>
         public AmbientLogger()
-            : this (_LoggerProvider.LocalProvider, null)
+            : this (_LoggerProvider.Provider, null)
         {
         }
         /// <summary>
@@ -40,7 +39,7 @@ namespace AmbientServices
         public AmbientLogger(IAmbientLoggerProvider logger, IAmbientSettingsProvider loggerSettingsProvider = null)
         {
             _provider = logger;
-            _logFilter = (loggerSettingsProvider == null) ? _DefaultLogFilter : new AmbientLogFilter(loggerSettingsProvider);
+            _logFilter = (loggerSettingsProvider == null) ? AmbientLogFilter.Default : new AmbientLogFilter(TypeName, loggerSettingsProvider);
         }
 
         private void InnerLog(string message, string category = null, AmbientLogLevel level = AmbientLogLevel.Information)
@@ -115,25 +114,34 @@ namespace AmbientServices
     }
     internal class AmbientLogFilter
     {
+        private static readonly AmbientLogFilter _Default = new AmbientLogFilter("Default");
+        /// <summary>
+        /// Gets the default log filter.
+        /// </summary>
+        public static AmbientLogFilter Default {  get { return _Default; } }
+
+        private readonly string _name;
         private readonly IAmbientSetting<AmbientLogLevel> _logLevelSetting;
         private readonly IAmbientSetting<Regex> _typeAllowSetting;
         private readonly IAmbientSetting<Regex> _typeBlockSetting;
         private readonly IAmbientSetting<Regex> _categoryAllowSetting;
         private readonly IAmbientSetting<Regex> _categoryBlockSetting;
 
-        public AmbientLogFilter()
-            : this (null)
+        public AmbientLogFilter(string name)
+            : this (name, null)
         {
         }
-        internal AmbientLogFilter(IAmbientSettingsProvider settingsProvider)
+        internal AmbientLogFilter(string name, IAmbientSettingsProvider settingsProvider)
         {
-            _logLevelSetting = AmbientSettings.GetSetting<AmbientLogLevel>(settingsProvider, nameof(AmbientLogFilter) + "-LogLevel", s => (AmbientLogLevel)Enum.Parse(typeof(AmbientLogLevel), s), AmbientLogLevel.Information);
-            _typeAllowSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, nameof(AmbientLogFilter) + "-TypeAllow", s => new Regex(s, RegexOptions.Compiled));
-            _typeBlockSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, nameof(AmbientLogFilter) + "-TypeBlock", s => new Regex(s, RegexOptions.Compiled));
-            _categoryAllowSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, nameof(AmbientLogFilter) + "-CategoryAllow", s => new Regex(s, RegexOptions.Compiled));
-            _categoryBlockSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, nameof(AmbientLogFilter) + "-CategoryBlock", s => new Regex(s, RegexOptions.Compiled));
+            _name = name;
+            _logLevelSetting = AmbientSettings.GetSetting<AmbientLogLevel>(settingsProvider, name + "-" + nameof(AmbientLogFilter) + "-LogLevel", "The AmbientLogLevel above which events should not be logged.  The default value is AmbientLogLevel.Information.", s => (AmbientLogLevel)Enum.Parse(typeof(AmbientLogLevel), s), AmbientLogLevel.Information.ToString());
+            _typeAllowSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, name + "-" + nameof(AmbientLogFilter) + "-TypeAllow", "A regular expression indicating which logger owner types should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all types.", s => (s == null) ? null : new Regex(s, RegexOptions.Compiled));
+            _typeBlockSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, name + "-" + nameof(AmbientLogFilter) + "-TypeBlock", "A regular expression indicating which logger owner types should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no types.", s => (s == null) ? null : new Regex(s, RegexOptions.Compiled));
+            _categoryAllowSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, name + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", "A regular expression indicating which categories should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all categories.", s => (s == null) ? null : new Regex(s, RegexOptions.Compiled));
+            _categoryBlockSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, name + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", "A regular expression indicating which categories should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no categories.", s => (s == null) ? null : new Regex(s, RegexOptions.Compiled));
         }
-        internal AmbientLogLevel LogLevel {  get { return _logLevelSetting.Value; } }
+        internal string Name { get { return _name; } }
+        internal AmbientLogLevel LogLevel { get { return _logLevelSetting.Value; } }
 
         internal bool IsTypeBlocked(string typeName)
         {

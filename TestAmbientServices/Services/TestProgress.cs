@@ -325,7 +325,7 @@ namespace TestAmbientServices
 
             using (LocalServiceScopedOverride<IAmbientProgressProvider> LocalServiceOverride = new LocalServiceScopedOverride<IAmbientProgressProvider>(null))
             {
-                IAmbientProgress noProgress = _ProgressProvider.LocalProvider?.Progress;
+                IAmbientProgress noProgress = _ProgressProvider.Provider?.Progress;
                 CancellationToken cancel = noProgress?.CancellationToken ?? default(CancellationToken);
             }
         }
@@ -335,7 +335,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void CancellationTokenSource()
         {
-            IAmbientProgress progress = _ProgressProvider.LocalProvider.Progress;
+            IAmbientProgress progress = _ProgressProvider.Provider.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (AmbientClock.Pause())
             {
@@ -406,11 +406,11 @@ namespace TestAmbientServices
         [TestMethod]
         public void SubProgressCancellationTokenSource()
         {
-            IAmbientProgress progress = _ProgressProvider.LocalProvider.Progress;
+            IAmbientProgress progress = _ProgressProvider.Provider.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.0f, 1.0f))
             {
-                IAmbientProgress subprogress = _ProgressProvider.LocalProvider.Progress;
+                IAmbientProgress subprogress = _ProgressProvider.Provider.Progress;
                 using (AmbientClock.Pause())
                 {
                     subprogress.ResetCancellation(TimeSpan.FromMilliseconds(100));
@@ -445,7 +445,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void Cancellation()
         {
-            IAmbientProgress progress = _ProgressProvider.LocalProvider.Progress;
+            IAmbientProgress progress = _ProgressProvider.Provider.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (AmbientClock.Pause())
             {
@@ -455,7 +455,7 @@ namespace TestAmbientServices
                 Assert.IsFalse(tokenSource.IsCancellationRequested);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                 Assert.IsTrue(tokenSource.IsCancellationRequested);
-                Assert.ThrowsException<OperationCanceledException>(() => _ProgressProvider.LocalProvider.Progress.ThrowIfCancelled());
+                Assert.ThrowsException<OperationCanceledException>(() => _ProgressProvider.Provider.Progress.ThrowIfCancelled());
             }
         }
         /// <summary>
@@ -464,12 +464,12 @@ namespace TestAmbientServices
         [TestMethod]
         public void SubProgressCancellation()
         {
-            IAmbientProgress progress = _ProgressProvider.LocalProvider.Progress;
+            IAmbientProgress progress = _ProgressProvider.Provider.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.CancellationToken.ThrowIfCancellationRequested();
             using (progress.TrackPart(0.0f, 1.0f))
             {
-                IAmbientProgress subprogress = _ProgressProvider.LocalProvider.Progress;
+                IAmbientProgress subprogress = _ProgressProvider.Provider.Progress;
                 using (AmbientClock.Pause())
                 {
                     subprogress.ResetCancellation(TimeSpan.FromMilliseconds(104));
@@ -478,7 +478,7 @@ namespace TestAmbientServices
                     Assert.IsFalse(tokenSource.IsCancellationRequested);
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(106));
                     Assert.IsTrue(tokenSource.IsCancellationRequested);
-                    Assert.ThrowsException<OperationCanceledException>(() => _ProgressProvider.LocalProvider.Progress.ThrowIfCancelled());
+                    Assert.ThrowsException<OperationCanceledException>(() => _ProgressProvider.Provider.Progress.ThrowIfCancelled());
                 }
             }
         }

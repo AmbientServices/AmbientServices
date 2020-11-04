@@ -136,7 +136,7 @@ namespace AmbientServices
         internal static void OnLoad(Assembly assembly)
         {
             Logger.Log(assembly.GetName().Name, "AssemblyLoad", AmbientLogLevel.Error);
-            Service.GetAccessor<IAmbientLoggerProvider>().LocalProvider?.Flush();
+            Service.GetAccessor<IAmbientLoggerProvider>().Provider?.Flush();
         }
     }
     static class AssemblyExtensions

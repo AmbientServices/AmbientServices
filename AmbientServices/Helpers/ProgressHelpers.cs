@@ -34,7 +34,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="timeout">A <see cref="TimeSpan"/> indicating how long to wait before timing out.</param>
         public AmbientCancellationTokenSource(TimeSpan timeout)
-            : this(_ClockProviderAccessor.LocalProvider, timeout)
+            : this(_ClockProviderAccessor.Provider, timeout)
         {
         }
         /// <summary>

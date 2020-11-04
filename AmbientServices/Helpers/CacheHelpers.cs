@@ -45,7 +45,7 @@ namespace AmbientServices
         /// <returns>The cached object, or null if it was not found in the cache.</returns>
         public Task<T> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
-            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.LocalProvider;
+            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.Provider;
             if (provider == null) return Task.FromResult<T>(null);
             return provider.Retrieve<T>(_cacheKeyPrefix + itemKey, refresh, cancel);
         }
@@ -63,7 +63,7 @@ namespace AmbientServices
         /// </remarks>
         public Task Store<T>(bool localOnly, string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
-            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.LocalProvider;
+            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.Provider;
             if (provider == null) return Task.CompletedTask;
             return provider.Store<T>(localOnly, _cacheKeyPrefix + itemKey, item, maxCacheDuration, expiration, cancel);
         }
@@ -75,7 +75,7 @@ namespace AmbientServices
         /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
         public Task Remove<T>(bool localOnly, string itemKey, CancellationToken cancel = default(CancellationToken))
         {
-            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.LocalProvider;
+            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.Provider;
             if (provider == null) return Task.CompletedTask;
             return provider.Remove<T>(localOnly, _cacheKeyPrefix + itemKey, cancel);
         }
@@ -85,7 +85,7 @@ namespace AmbientServices
         /// <param name="localOnly">Whether or not to clear only the local cache.</param>
         public Task Clear(bool localOnly = true, CancellationToken cancel = default(CancellationToken))
         {
-            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.LocalProvider;
+            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.Provider;
             if (provider == null) return Task.CompletedTask;
             return provider.Clear(localOnly, cancel);
         }

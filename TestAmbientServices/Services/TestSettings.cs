@@ -29,19 +29,19 @@ namespace TestAmbientServices
             using (LocalServiceScopedOverride<IAmbientSettingsProvider> LocalOverrideTest = new LocalServiceScopedOverride<IAmbientSettingsProvider>(settings))
             {
                 AmbientSetting<int> value;
-                value = new AmbientSetting<int>("int-setting", s => Int32.Parse(s));
+                value = new AmbientSetting<int>("int-setting", "", s => s == null ? 0 : Int32.Parse(s));
                 Assert.AreEqual(0, value.Value);
-                value = new AmbientSetting<int>("int-setting", s => Int32.Parse(s), 1);
+                value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
                 Assert.AreEqual(1, value.Value);
-                value = new AmbientSetting<int>("int-setting", s => Int32.Parse(s), 1);
+                value = new AmbientSetting<int>("int-setting-3", "", s => Int32.Parse(s), "1");
                 Assert.AreEqual(1, value.Value);
 
                 // test changing the setting without an event listener
-                settings.ChangeSetting("int-setting", "5");
+                settings.ChangeSetting("int-setting-3", "5");
                 // test changing the setting to the same value without an event listener
-                settings.ChangeSetting("int-setting", "5");
+                settings.ChangeSetting("int-setting-3", "5");
                 // test changing the setting to null so we fall through to the global provider
-                settings.ChangeSetting("int-setting", null);
+                settings.ChangeSetting("int-setting-3", null);
                 int settingValue = value.Value;
                 Assert.AreEqual(1, value.Value);
             }
@@ -56,15 +56,14 @@ namespace TestAmbientServices
             using (LocalServiceScopedOverride<IAmbientSettingsProvider> LocalOverrideTest = new LocalServiceScopedOverride<IAmbientSettingsProvider>(null))
             {
                 AmbientSetting<int> value;
-                value = new AmbientSetting<int>("int-setting", s => Int32.Parse(s));
+                value = new AmbientSetting<int>("int-setting", "", s => s == null ? 0 : Int32.Parse(s));
                 Assert.AreEqual(0, value.Value);
-                value = new AmbientSetting<int>("int-setting", s => Int32.Parse(s), 1);
+                value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
                 Assert.AreEqual(1, value.Value);
-                value = new AmbientSetting<int>("int-setting", s => Int32.Parse(s), -1);
+                value = new AmbientSetting<int>("int-setting-4", "", s => Int32.Parse(s), "-1");
                 Assert.AreEqual(-1, value.Value);
             }
         }
-
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
         /// </summary>
@@ -72,14 +71,13 @@ namespace TestAmbientServices
         public void ProviderSettingChangeNotification()
         {
             IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(ProviderSettingChangeNotification));
-            string testSettingKey = "testNotification";
+            string testSettingKey = nameof(ProviderSettingChangeNotification);
             string initialValue = "initialValue";
-            ProviderSetting<string> testSetting = new ProviderSetting<string>(settingsProvider, testSettingKey, s => s, initialValue);
-            Assert.AreEqual(initialValue, testSetting.Value);
             string notificationNewValue = "";
-            testSetting.ValueChanged += (s, e) => notificationNewValue = testSetting.Value;
+            ProviderSetting<string> testSetting = new ProviderSetting<string>(settingsProvider, testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
+            Assert.AreEqual(initialValue, testSetting.Value);
             string secondValue = "change1";
-            Assert.AreEqual("", notificationNewValue);
+            Assert.AreEqual(initialValue, notificationNewValue);
             settingsProvider.ChangeSetting(testSettingKey, secondValue);
             Assert.AreEqual(secondValue, testSetting.Value);
         }
@@ -90,9 +88,9 @@ namespace TestAmbientServices
         public void ProviderSettingChangeNoNotification()
         {
             IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(ProviderSettingChangeNoNotification));
-            string testSettingKey = "testNotification";
+            string testSettingKey = nameof(ProviderSettingChangeNoNotification);
             string initialValue = "initialValue";
-            ProviderSetting<string> testSetting = new ProviderSetting<string>(settingsProvider, testSettingKey, s => s, initialValue);
+            ProviderSetting<string> testSetting = new ProviderSetting<string>(settingsProvider, testSettingKey, "", s => s, initialValue);
             Assert.AreEqual(initialValue, testSetting.Value);
             string secondValue = "change1";
             settingsProvider.ChangeSetting(testSettingKey, secondValue);
@@ -105,14 +103,11 @@ namespace TestAmbientServices
         public void ProviderSettingNullConvert()
         {
             IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(ProviderSettingNullConvert));
-            string testSettingKey = "testNotification";
+            string testSettingKey = nameof(ProviderSettingNullConvert);
             string initialValue = "initialValue";
-            ProviderSetting<string> testSetting = new ProviderSetting<string>(settingsProvider, testSettingKey, null, initialValue);
+            ProviderSetting<string> testSetting = new ProviderSetting<string>(settingsProvider, testSettingKey, "", null, initialValue);
             Assert.AreEqual(initialValue, testSetting.Value);
-            string notificationNewValue = "";
-            testSetting.ValueChanged += (s, e) => notificationNewValue = testSetting.Value;
             string secondValue = "change1";
-            Assert.AreEqual("", notificationNewValue);
             settingsProvider.ChangeSetting(testSettingKey, secondValue);
             Assert.AreEqual(secondValue, testSetting.Value);
         }
@@ -123,8 +118,8 @@ namespace TestAmbientServices
         public void ProviderSettingNonStringNullConvert()
         {
             IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(ProviderSettingNonStringNullConvert));
-            string testSettingKey = "testNotification";
-            Assert.ThrowsException<ArgumentNullException>(() => new ProviderSetting<int>(settingsProvider, testSettingKey, null, 1));
+            string testSettingKey = nameof(ProviderSettingNonStringNullConvert);
+            Assert.ThrowsException<ArgumentNullException>(() => new ProviderSetting<int>(settingsProvider, testSettingKey, "", null, "1"));
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
@@ -153,24 +148,16 @@ namespace TestAmbientServices
         }
         private WeakReference<ProviderSetting<string>> FinalizableSetting(string testSettingKey, IMutableAmbientSettingsProvider settingsProvider)
         {
-            ProviderSetting<string> temporarySetting = new ProviderSetting<string>(settingsProvider, testSettingKey, s => s, nameof(SettingsGarbageCollection) + "-InitialValue");
-            WeakReference<ProviderSetting<string>> wr = new WeakReference<ProviderSetting<string>>(temporarySetting);
             bool valueChanged = false;
-            string value = temporarySetting.Value;
+            string value = null;
+            ProviderSetting<string> temporarySetting = new ProviderSetting<string>(settingsProvider, testSettingKey, "", s => { valueChanged = true; value = s; return s; }, nameof(SettingsGarbageCollection) + "-InitialValue");
+            WeakReference<ProviderSetting<string>> wr = new WeakReference<ProviderSetting<string>>(temporarySetting);
             Assert.AreEqual(nameof(SettingsGarbageCollection) + "-InitialValue", value);
-            EventHandler<EventArgs> valueChangedLambda = (s, e) =>
-            {
-                valueChanged = true;
-                Assert.AreEqual(settingsProvider, temporarySetting.Provider);
-                value = temporarySetting.Value;
-            };
-            temporarySetting.ValueChanged += valueChangedLambda;
             // change the setting to be sure we are actually hooked into the provider's notification event
             settingsProvider.ChangeSetting(testSettingKey, nameof(SettingsGarbageCollection) + "-ValueChanged");
             Assert.AreEqual(nameof(SettingsGarbageCollection) + "-ValueChanged", temporarySetting.Value);
             Assert.IsTrue(valueChanged);
             Assert.AreEqual(nameof(SettingsGarbageCollection) + "-ValueChanged", value);
-            temporarySetting.ValueChanged -= valueChangedLambda;
             return wr;
         }
         /// <summary>
@@ -181,12 +168,11 @@ namespace TestAmbientServices
         {
             string testSettingKey = nameof(SettingGlobalValueChangeNotification);
             string initialValue = "initialValue";
-            AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, s => s, initialValue);
-            Assert.AreEqual(initialValue, testSetting.Value);
             string notificationNewValue = "";
-            testSetting.ValueChanged += (s, e) => { string newValue = testSetting.Value;  if (!string.IsNullOrEmpty(newValue)) { notificationNewValue = newValue; } };
+            AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue); 
+            Assert.AreEqual(initialValue, testSetting.Value);
             string secondValue = "change1";
-            Assert.AreEqual("", notificationNewValue);
+            Assert.AreEqual(initialValue, notificationNewValue);
             IAmbientSettingsProvider settingsReader = _SettingsProvider.GlobalProvider;
             IMutableAmbientSettingsProvider settingsMutator = settingsReader as IMutableAmbientSettingsProvider;
             if (settingsMutator != null)
@@ -194,11 +180,11 @@ namespace TestAmbientServices
                 settingsMutator.ChangeSetting(testSettingKey, secondValue);
                 Assert.AreEqual(secondValue, testSetting.Value);
                 Assert.AreEqual(secondValue, notificationNewValue);
-                // now change it to the same value it already has (the event should *not* be called)
+                // now change it to the same value it already has (this should not do anything)
                 notificationNewValue = "";
-                settingsMutator.ChangeSetting(testSettingKey, secondValue);
+                bool changed = settingsMutator.ChangeSetting(testSettingKey, secondValue);
                 Assert.AreEqual(secondValue, testSetting.Value);
-                Assert.AreEqual("", notificationNewValue);
+                Assert.AreEqual("", notificationNewValue, changed.ToString());
             }
         }
         /// <summary>
@@ -213,13 +199,12 @@ namespace TestAmbientServices
             string defaultValue = "defaultValue";
             string overrideValue = "overrideProviderValue";
             Dictionary<string, string> overrides = new Dictionary<string, string>() { { testSettingKey, overrideValue } };
-            AmbientSetting<string> testSetting = new AmbientSetting<string>(pretendGlobalAccessor, testSettingKey, s => s, defaultValue);
-
             string notificationNewValue = "";
-            testSetting.ValueChanged += (s, e) => notificationNewValue = testSetting.Value;
+            AmbientSetting<string> testSetting = new AmbientSetting<string>(pretendGlobalAccessor, testSettingKey, "", s => { notificationNewValue = s; return s; }, defaultValue);
+
             Assert.AreEqual(defaultValue, testSetting.Value);
 
-            AmbientSettingsOverride pretendGlobalSettingsProvider = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), pretendGlobalAccessor);
+            AmbientSettingsOverride pretendGlobalSettingsProvider = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), null, pretendGlobalAccessor);
             pretendGlobalAccessor.GlobalProvider = pretendGlobalSettingsProvider;
 
             Assert.AreEqual(overrideValue, testSetting.Value);
@@ -235,12 +220,12 @@ namespace TestAmbientServices
             }
 
             overrides = new Dictionary<string, string>() { { testSettingKey, overrideValue } };
-            AmbientSettingsOverride pretendGlobalSettingsProvider2 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), pretendGlobalAccessor);
+            AmbientSettingsOverride pretendGlobalSettingsProvider2 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), null, pretendGlobalAccessor);
             pretendGlobalAccessor.GlobalProvider = pretendGlobalSettingsProvider2;
             Assert.AreEqual(overrideValue, testSetting.Value);
 
             overrides[testSettingKey] = null;
-            AmbientSettingsOverride pretendGlobalSettingsProvider3 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), pretendGlobalAccessor);
+            AmbientSettingsOverride pretendGlobalSettingsProvider3 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), null, pretendGlobalAccessor);
             pretendGlobalAccessor.GlobalProvider = pretendGlobalSettingsProvider3;
             Assert.AreEqual(defaultValue, testSetting.Value);
         }
@@ -252,15 +237,15 @@ namespace TestAmbientServices
         {
             ServiceAccessor<IAmbientSettingsProvider> pretendGlobalAccessor = new ServiceAccessor<IAmbientSettingsProvider>();
 
-            string testSettingKey = nameof(SettingGlobalProviderChangeNotification);
+            string testSettingKey = nameof(SettingGlobalProviderChangeNoNotification);
             string defaultValue = "defaultValue";
             string overrideValue = "overrideProviderValue";
             Dictionary<string, string> overrides = new Dictionary<string, string>() { { testSettingKey, overrideValue } };
-            AmbientSetting<string> testSetting = new AmbientSetting<string>(pretendGlobalAccessor, testSettingKey, s => s, defaultValue);
+            AmbientSetting<string> testSetting = new AmbientSetting<string>(pretendGlobalAccessor, testSettingKey, "", s => s, defaultValue);
 
             Assert.AreEqual(defaultValue, testSetting.Value);
 
-            AmbientSettingsOverride pretendGlobalSettingsProvider = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), pretendGlobalAccessor);
+            AmbientSettingsOverride pretendGlobalSettingsProvider = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNoNotification), null, pretendGlobalAccessor);
             pretendGlobalAccessor.GlobalProvider = pretendGlobalSettingsProvider;
 
             Assert.AreEqual(overrideValue, testSetting.Value);
@@ -274,12 +259,12 @@ namespace TestAmbientServices
             }
 
             overrides = new Dictionary<string, string>() { { testSettingKey, overrideValue } };
-            AmbientSettingsOverride pretendGlobalSettingsProvider2 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), pretendGlobalAccessor);
+            AmbientSettingsOverride pretendGlobalSettingsProvider2 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNoNotification), null, pretendGlobalAccessor);
             pretendGlobalAccessor.GlobalProvider = pretendGlobalSettingsProvider2;
             Assert.AreEqual(overrideValue, testSetting.Value);
 
             overrides[testSettingKey] = null;
-            AmbientSettingsOverride pretendGlobalSettingsProvider3 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNotification), pretendGlobalAccessor);
+            AmbientSettingsOverride pretendGlobalSettingsProvider3 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalProviderChangeNoNotification), null, pretendGlobalAccessor);
             pretendGlobalAccessor.GlobalProvider = pretendGlobalSettingsProvider3;
             Assert.AreEqual(defaultValue, testSetting.Value);
         }
@@ -287,20 +272,19 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
         /// </summary>
         [TestMethod]
-        public void SettingLocalChangeNotification()
+        public void SettingLocalValueChangeNotification()
         {
-            IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(SettingLocalChangeNotification));
+            IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(SettingLocalValueChangeNotification));
             using (new LocalServiceScopedOverride<IMutableAmbientSettingsProvider>(settingsProvider))
             using (new LocalServiceScopedOverride<IAmbientSettingsProvider>(settingsProvider))
             {
-                string testSettingKey = nameof(SettingLocalChangeNotification);
+                string testSettingKey = nameof(SettingLocalValueChangeNotification);
                 string initialValue = "initialValue";
-                AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, s => s, initialValue);
-                Assert.AreEqual(initialValue, testSetting.Value);
                 string notificationNewValue = "";
-                testSetting.ValueChanged += (s, e) => notificationNewValue = testSetting.Value;
+                AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
+                Assert.AreEqual(initialValue, testSetting.Value);
                 string secondValue = "change1";
-                Assert.AreEqual("", notificationNewValue);
+                Assert.AreEqual(initialValue, notificationNewValue);
                 settingsProvider.ChangeSetting(testSettingKey, secondValue);
                 Assert.AreEqual(secondValue, testSetting.Value);
                 Assert.AreEqual(secondValue, notificationNewValue);
@@ -316,13 +300,12 @@ namespace TestAmbientServices
             using (new LocalServiceScopedOverride<IMutableAmbientSettingsProvider>(settingsProvider))
             using (new LocalServiceScopedOverride<IAmbientSettingsProvider>(settingsProvider))
             {
-                string testSettingKey = nameof(SettingLocalChangeNotification);
+                string testSettingKey = nameof(SettingLocalChangeProvider);
                 string initialValue = "initialValue";
-                AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, s => s, initialValue);
-                Assert.AreEqual(initialValue, testSetting.Value);
                 string notificationNewValue = "";
-                testSetting.ValueChanged += (s, e) => notificationNewValue = testSetting.Value;
-                Assert.AreEqual("", notificationNewValue);
+                AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
+                Assert.AreEqual(initialValue, testSetting.Value);
+                Assert.AreEqual(initialValue, notificationNewValue);
 
                 // now switch local providers and try again
                 string secondValue = "change1";
@@ -332,10 +315,26 @@ namespace TestAmbientServices
                 {
                     settingsProvider2.ChangeSetting(testSettingKey, secondValue);
                     Assert.AreEqual(secondValue, testSetting.Value);
-                    // we don't get notified of this type of change (change due to change in local provider or changes to settings within local provider)
-                    Assert.AreEqual("", notificationNewValue);
+                    Assert.AreEqual(secondValue, notificationNewValue);
                 }
             }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public void AmbientSettingsInfo()
+        {
+            AmbientLogFilter filter = AmbientLogFilter.Default;
+            filter.IsBlocked(AmbientLogLevel.Critical, "TestType", "TestCategory");
+            int ambientLogFilterSettings = 0;
+            string settingsDescriptions = "";
+            foreach (IAmbientSettingInfo info in AmbientSettings.AmbientSettingsInfo)
+            {
+                if (info.Key.StartsWith(filter.Name + "-" + nameof(AmbientLogFilter))) ++ambientLogFilterSettings;
+                settingsDescriptions += $"{info.Key}:{info.Description} @{info.LastUsed.ToShortDateString()} {info.LastUsed.ToShortTimeString()}" + Environment.NewLine;
+            }
+            Assert.AreEqual(5, ambientLogFilterSettings);
         }
     }
 }

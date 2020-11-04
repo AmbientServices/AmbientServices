@@ -13,15 +13,16 @@ namespace AmbientServices
     public class BasicAmbientSettingsProvider : IMutableAmbientSettingsProvider
     {
         private readonly string _name;
+        private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IProviderSetting> _weakSettingRegistered;
         private ConcurrentDictionary<string, string> _rawValues;
+        private ConcurrentDictionary<string, object> _typedValues;
 
         /// <summary>
         /// Constructs a new empty ambient settings provider.
         /// </summary>
         public BasicAmbientSettingsProvider()
+            : this (nameof(BasicAmbientSettingsProvider))
         {
-            _name = nameof(BasicAmbientSettingsProvider);
-            _rawValues = new ConcurrentDictionary<string, string>();
         }
         /// <summary>
         /// Constructs a new ambient settings provider with the specified values.
@@ -31,6 +32,10 @@ namespace AmbientServices
         {
             _name = name;
             _rawValues = new ConcurrentDictionary<string, string>();
+            _typedValues = new ConcurrentDictionary<string, object>();
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IProviderSetting>(
+                    this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
+            SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
         /// <summary>
         /// Constructs a new ambient settings provider with the specified values.
@@ -41,6 +46,28 @@ namespace AmbientServices
         {
             _name = name;
             _rawValues = new ConcurrentDictionary<string, string>(values);
+            _typedValues = new ConcurrentDictionary<string, object>();
+            if (values != null)
+            {
+                foreach (string key in values.Keys)
+                {
+                    IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                    _typedValues[key] = (ps != null) ? ps.Convert(this, values[key]) : values[key];
+                }
+            }
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IProviderSetting>(
+                    this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
+            SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
+        }
+        static void NewSettingRegistered(BasicAmbientSettingsProvider settingsProvider, object sender, IProviderSetting setting)
+        {
+            // is there a value for this setting?
+            string value;
+            if (settingsProvider._rawValues.TryGetValue(setting.Key, out value))
+            {
+                // get the typed value
+                settingsProvider._typedValues[setting.Key] = setting.Convert(settingsProvider, value);
+            }
         }
 
         /// <summary>
@@ -48,15 +75,25 @@ namespace AmbientServices
         /// </summary>
         public string ProviderName => _name;
         /// <summary>
-        /// Gets the current setting for the specified key, or null if the setting is not set.
+        /// Gets the current raw (string) value for the specified key, or null if the setting is not set.
         /// </summary>
         /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
         /// <returns>The setting value, or null if the setting is not set.</returns>
 
-        public string GetSetting(string key)
+        public string GetRawValue(string key)
         {
             string value;
             return _rawValues.TryGetValue(key, out value) ? value : null;
+        }
+        /// <summary>
+        /// Gets the current typed value for the setting with the specified key, or null if the setting is not set.
+        /// </summary>
+        /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
+        /// <returns>The setting value, or null if the setting is not set.</returns>
+        public object GetTypedValue(string key)
+        {
+            object value;
+            return _typedValues.TryGetValue(key, out value) ? value : null;
         }
         /// <summary>
         /// An event that will notify subscribers when one or more settings values change.  
@@ -70,12 +107,29 @@ namespace AmbientServices
         /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.
         /// </summary>
         /// <param name="key">A string that uniquely identifies the setting.</param>
-        /// <param name="value">The new string value for the setting.</param>
-        /// <returns>A <see cref="IAmbientSetting{T}"/> instance that is updated every time the setting gets updated.</returns>
-        public void ChangeSetting(string key, string value)
+        /// <param name="value">The new string value for the setting, or null to remove the setting and revert to the .</param>
+        /// <returns>Whether or not the setting actually changed.</returns>
+        public bool ChangeSetting(string key, string value)
         {
-            _rawValues.AddOrUpdate(key, value, (k,v) => value);
+            if (value == null)
+            {
+                string oldValue;
+                _rawValues.TryRemove(key, out oldValue);
+                _typedValues.TryRemove(key, out _);
+                // did the value *not* change?  bail out early
+                if (oldValue == null) return false;
+            }
+            else
+            {
+                string oldValue = null;
+                _rawValues.AddOrUpdate(key, value, (k, v) => { oldValue = v; return value; });
+                // did the value *not* change?  bail out early
+                if (String.Equals(value, oldValue, StringComparison.Ordinal)) return false;
+                IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                _typedValues[key] = (ps != null) ? ps.Convert(this, value) : value;
+            }
             SettingsChanged?.Invoke(this, new AmbientSettingsChangedEventArgs { Keys = new string[] { key } });
+            return true;
         }
         /// <summary>
         /// Gets a string representing the settings instance.

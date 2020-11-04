@@ -1,6 +1,7 @@
 ﻿using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -80,6 +81,33 @@ namespace TestAmbientServices
                 Assert.IsNull(ret);
                 await cache.Clear();
                 ret = await cache.Retrieve<TestCache>("Test1", null);
+                Assert.IsNull(ret);
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientCacheProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public async Task CacheExpiration()
+        {
+            IAmbientCacheProvider localOverride = new BasicAmbientCache();
+            using (AmbientClock.Pause())
+            using (LocalServiceScopedOverride<IAmbientCacheProvider> localCache = new LocalServiceScopedOverride<IAmbientCacheProvider>(localOverride))
+            {
+                string keyName = nameof(CacheExpiration);
+                TestCache ret;
+                AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
+                await cache.Store(true, keyName, this, TimeSpan.FromMilliseconds(50));
+                ret = await cache.Retrieve<TestCache>(keyName);
+                Assert.IsNotNull(ret);
+                await Eject(cache, 3);
+                ret = await cache.Retrieve<TestCache>(keyName);
+                Assert.IsNotNull(ret);
+                await Eject(cache, 3);
+                ret = await cache.Retrieve<TestCache>(keyName);
+                Assert.IsNotNull(ret);
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+                ret = await cache.Retrieve<TestCache>(keyName);
                 Assert.IsNull(ret);
             }
         }
@@ -192,35 +220,80 @@ namespace TestAmbientServices
 
     sealed class AmbientSettingsOverride : IMutableAmbientSettingsProvider
     {
-        private readonly ServiceAccessor<IAmbientSettingsProvider> _settings;
-        private readonly Dictionary<string, string> _overrideSettings;
+        private readonly LazyUnsubscribeWeakEventListenerProxy<AmbientSettingsOverride, object, IProviderSetting> _weakSettingRegistered;
+        private readonly IAmbientSettingsProvider _fallbackSettings;
+        private readonly ConcurrentDictionary<string, string> _overrideRawSettings;
+        private readonly ConcurrentDictionary<string, object> _overrideTypedSettings;
         private string _name;
 
-        public AmbientSettingsOverride(Dictionary<string, string> overrideSettings, string name, ServiceAccessor<IAmbientSettingsProvider> settings = null)
+        public AmbientSettingsOverride(Dictionary<string, string> overrideSettings, string name, IAmbientSettingsProvider fallback = null, ServiceAccessor<IAmbientSettingsProvider> settings = null)
         {
-            _overrideSettings = overrideSettings;
+            _overrideRawSettings = new ConcurrentDictionary<string, string>(overrideSettings);
+            _overrideTypedSettings = new ConcurrentDictionary<string, object>();
+            foreach (string key in overrideSettings.Keys)
+            {
+                IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                if (ps != null) _overrideTypedSettings[key] = ps.Convert(this, overrideSettings[key]);
+            }
             _name = name;
-            _settings = settings ?? Service.GetAccessor<IAmbientSettingsProvider>();
+            _fallbackSettings = fallback ?? settings?.Provider;
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<AmbientSettingsOverride, object, IProviderSetting>(
+                    this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
+            SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
+        }
+        static void NewSettingRegistered(AmbientSettingsOverride settingsProvider, object sender, IProviderSetting setting)
+        {
+            // is there a value for this setting?
+            string value;
+            if (settingsProvider._overrideRawSettings.TryGetValue(setting.Key, out value))
+            {
+                // get the typed value
+                settingsProvider._overrideTypedSettings[setting.Key] = setting.Convert(settingsProvider, value);
+            }
         }
 
         public string ProviderName => _name;
 
         public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
 
-        public void ChangeSetting(string key, string value)
+        public bool ChangeSetting(string key, string value)
         {
-            _overrideSettings[key] = value;
+            string oldValue = null;
+            _overrideRawSettings.AddOrUpdate(key, value, (k, v) => { oldValue = v; return value; } );
+            // no change?
+            if (String.Equals(oldValue, value, StringComparison.Ordinal)) return false;
+            IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+            _overrideTypedSettings[key] = ps.Convert(this, value);
             SettingsChanged?.Invoke(this, new AmbientSettingsChangedEventArgs { Keys = new string[] { key } });
+            return true;
         }
-
-        public string GetSetting(string key)
+        /// <summary>
+        /// Gets the current raw value for the setting with the specified key, or null if the setting is not set.
+        /// </summary>
+        /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
+        /// <returns>The setting value, or null if the setting is not set.</returns>
+        public string GetRawValue(string key)
         {
             string value;
-            if (_overrideSettings.TryGetValue(key, out value))
+            if (_overrideRawSettings.TryGetValue(key, out value))
             {
                 return value;
             }
-            return _settings.LocalProvider.GetSetting(key);
+            return _fallbackSettings?.GetRawValue(key) ?? SettingsRegistry.DefaultRegistry.TryGetSetting(key)?.DefaultValueString;
+        }
+        /// <summary>
+        /// Gets the current typed value for the setting with the specified key, or null if the setting is not set.
+        /// </summary>
+        /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
+        /// <returns>The setting value, or null if the setting is not set.</returns>
+        public object GetTypedValue(string key)
+        {
+            object value;
+            if (_overrideTypedSettings.TryGetValue(key, out value))
+            {
+                return value;
+            }
+            return _fallbackSettings?.GetTypedValue(key) ?? SettingsRegistry.DefaultRegistry.TryGetSetting(key)?.DefaultValue;
         }
     }
 }

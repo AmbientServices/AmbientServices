@@ -20,14 +20,14 @@ namespace AmbientServices
         private ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>();
 
         public BasicAmbientCache()
-            : this(_SettingsAccessor.LocalProvider)
+            : this(_SettingsAccessor.Provider)
         {
         }
 
         public BasicAmbientCache(IAmbientSettingsProvider settings)
         {
-            _callFrequencyToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-EjectFrequency", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), 100);
-            _countToEjectCountToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-ItemCount", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), 1000);
+            _callFrequencyToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-EjectFrequency", "The number of operations between cache ejections.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
+            _countToEjectCountToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-ItemCount", "The maximum number of items to allow in the cache before ejecting items.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "1000");
         }
 
         struct TimedQueueEntry
@@ -101,10 +101,10 @@ namespace AmbientServices
                     CacheEntry entry;
                     if (_cache.TryGetValue(qEntry.Key, out entry))
                     {
-                        // is the expiration still the same?
-                        if (qEntry.Expiration == entry.Expiration)
+                        // is the expiration still the same OR in the past?
+                        if (qEntry.Expiration == entry.Expiration && entry.Expiration < AmbientClock.UtcNow)
                         {
-                            // remove it from the cache
+                            // remove it from the cache, even though it may not have expired yet because it's time to eject something
                             _cache.TryRemove(qEntry.Key, out entry);
                         }
                         else // else the item was refreshed, so we should ignore this entry and go around again
