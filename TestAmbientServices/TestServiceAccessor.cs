@@ -24,6 +24,7 @@ namespace TestAmbientServices
         private static readonly ServiceAccessor<IAmbientLoggerProvider> _LoggerProvider = Service.GetAccessor<IAmbientLoggerProvider>();
         private static readonly ServiceAccessor<IAmbientProgressProvider> _ProgressProvider = Service.GetAccessor<IAmbientProgressProvider>();
         private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+        private static readonly ServiceAccessor<IAmbientCacheProvider> _CacheProvider = Service.GetAccessor<IAmbientCacheProvider>();
         private static readonly ServiceAccessor<IJunk> _JunkProvider = Service.GetAccessor<IJunk>();
         private static readonly ServiceAccessor<ILocalTest> _LocalTestProvider = Service.GetAccessor<ILocalTest>();
         private static readonly ServiceAccessor<ILateAssignmentTest> _LateAssignmentTestProvider = Service.GetAccessor<ILateAssignmentTest>();
@@ -55,7 +56,8 @@ namespace TestAmbientServices
             int changed = 0;
             ITest updatedTest = test;
             Assert.IsNotNull(updatedTest);
-            _TestProvider.GlobalProviderChanged += (s, e) => { updatedTest = _TestProvider.GlobalProvider; ++changed; };
+            EventHandler<EventArgs> providerChanged = (o,e) => { updatedTest = _TestProvider.GlobalProvider; ++changed; }; 
+            _TestProvider.GlobalProviderChanged += providerChanged;
 
             _TestProvider.GlobalProvider = null;
             Assert.AreEqual(1, changed);
@@ -71,6 +73,25 @@ namespace TestAmbientServices
 
             ITest reenabledTest = _TestProvider.GlobalProvider;
             Assert.IsNotNull(reenabledTest);
+
+            _TestProvider.GlobalProviderChanged -= providerChanged;
+        }
+
+        [TestMethod]
+        public void AmbientServicesLocalProviderChanged()
+        {
+            BasicAmbientCache cache1 = new BasicAmbientCache();
+            Service.SetLocalProvider<IAmbientCacheProvider>(cache1);
+            bool changeNotified = false;
+            _CacheProvider.LocalReference.ProviderChanged += (s, e) => { changeNotified = true; };
+            Assert.IsFalse(changeNotified);
+            BasicAmbientCache cache2 = new BasicAmbientCache();
+            using (LocalServiceScopedOverride<IAmbientCacheProvider> o2 = new LocalServiceScopedOverride<IAmbientCacheProvider>(cache2))
+            {
+                Assert.AreEqual(cache2, _CacheProvider.LocalReference.Provider);
+                Assert.IsTrue(changeNotified);
+            }
+            Service.RevertToGlobalProvider<IAmbientCacheProvider>();
         }
 
         [TestMethod, ExpectedException(typeof(TypeInitializationException))]
@@ -151,6 +172,13 @@ namespace TestAmbientServices
         {
             Assert.IsFalse(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(typeof(System.ValueTuple).Assembly, Assembly.GetExecutingAssembly()));
             Assert.IsTrue(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), typeof(IAmbientCacheProvider).Assembly));
+            Assert.IsTrue(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), Assembly.GetExecutingAssembly()));
+        }
+        [TestMethod]
+        public void UnloadableAssembly()
+        {
+            string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "ReflectionTypeLoadExceptionAssembly.dll");
+            Type[] types = AmbientServices.AssemblyExtensions.GetLoadableTypes(Assembly.LoadFrom(dllPath)).ToArray();
         }
         [TestMethod]
         public void TwoInterfacesOneInstance()

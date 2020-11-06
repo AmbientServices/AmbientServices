@@ -56,8 +56,10 @@ namespace AmbientServices
                     _timedQueue.Enqueue(new TimedQueueEntry { Key = key, Expiration = newExpiration });
                 }
                 EjectIfNeeded();
-                // no expiration or NOT expired?
+                // no expiration or NOT expired? return the item now
                 if (entry.Expiration == null || entry.Expiration >= now) return Task.FromResult<T>(entry.Entry as T);
+                // else this item is expired so remove it from the cache
+                _cache.TryRemove(entry.Key, out entry);
             }
             else
             {
@@ -101,8 +103,8 @@ namespace AmbientServices
                     CacheEntry entry;
                     if (_cache.TryGetValue(qEntry.Key, out entry))
                     {
-                        // is the expiration still the same OR in the past?
-                        if (qEntry.Expiration == entry.Expiration && entry.Expiration < AmbientClock.UtcNow)
+                        // is the expiration still the same?
+                        if (qEntry.Expiration == entry.Expiration)
                         {
                             // remove it from the cache, even though it may not have expired yet because it's time to eject something
                             _cache.TryRemove(qEntry.Key, out entry);
@@ -120,7 +122,7 @@ namespace AmbientServices
                     // peek at the next entry
                     if (_timedQueue.TryPeek(out qEntry))
                     {
-                        // has this entry expired?
+                        // has this entry expired? remove this one too, even though we didn't have to
                         if (entry.Expiration < AmbientClock.UtcNow) continue;
                         // else the entry hasn't expired and we either removed an entry above or skipped this code, so we can just fall through and exit the loop
                     }

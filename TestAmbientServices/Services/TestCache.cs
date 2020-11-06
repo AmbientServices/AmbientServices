@@ -31,6 +31,7 @@ namespace TestAmbientServices
                     TestCache ret;
                     AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
                     await cache.Store(true, "Test1", this);
+                    await cache.Store(true, "Test1", this);
                     ret = await cache.Retrieve<TestCache>("Test1", null);
                     Assert.AreEqual(this, ret);
                     await cache.Remove<TestCache>(true, "Test1");
@@ -94,21 +95,86 @@ namespace TestAmbientServices
             using (AmbientClock.Pause())
             using (LocalServiceScopedOverride<IAmbientCacheProvider> localCache = new LocalServiceScopedOverride<IAmbientCacheProvider>(localOverride))
             {
-                string keyName = nameof(CacheExpiration);
+                string keyName1 = nameof(CacheExpiration) + "1";
+                string keyName2 = nameof(CacheExpiration) + "2";
+                string keyName3 = nameof(CacheExpiration) + "3";
                 TestCache ret;
                 AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
-                await cache.Store(true, keyName, this, TimeSpan.FromMilliseconds(50));
-                ret = await cache.Retrieve<TestCache>(keyName);
+                await cache.Store(true, keyName1, this, TimeSpan.FromMilliseconds(50));
+                await cache.Store(true, keyName1, this, TimeSpan.FromMilliseconds(50));
+                await cache.Store(true, keyName2, this);
+                await cache.Store(true, keyName2, this);
+                await cache.Store(true, keyName3, this, TimeSpan.FromMilliseconds(-50));
+                await cache.Store(true, keyName3, this, TimeSpan.FromMilliseconds(-50));
+                ret = await cache.Retrieve<TestCache>(keyName1);
                 Assert.IsNotNull(ret);
-                await Eject(cache, 3);
-                ret = await cache.Retrieve<TestCache>(keyName);
+                ret = await cache.Retrieve<TestCache>(keyName2);
                 Assert.IsNotNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName3);
+                Assert.IsNull(ret);
                 await Eject(cache, 3);
-                ret = await cache.Retrieve<TestCache>(keyName);
+                ret = await cache.Retrieve<TestCache>(keyName1);
+                Assert.IsNotNull(ret);
+                await Eject(cache, 1);
+                ret = await cache.Retrieve<TestCache>(keyName1);
                 Assert.IsNotNull(ret);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
-                ret = await cache.Retrieve<TestCache>(keyName);
+                ret = await cache.Retrieve<TestCache>(keyName1);
                 Assert.IsNull(ret);
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientCacheProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public async Task CacheDoubleExpiration()
+        {
+            IAmbientCacheProvider localOverride = new BasicAmbientCache();
+            using (AmbientClock.Pause())
+            using (LocalServiceScopedOverride<IAmbientCacheProvider> localCache = new LocalServiceScopedOverride<IAmbientCacheProvider>(localOverride))
+            {
+                string keyName1 = nameof(CacheDoubleExpiration) + "1";
+                string keyName2 = nameof(CacheDoubleExpiration) + "2";
+                string keyName3 = nameof(CacheDoubleExpiration) + "3";
+                string keyName4 = nameof(CacheDoubleExpiration) + "4";
+                string keyName5 = nameof(CacheDoubleExpiration) + "5";
+//                string keyName6 = nameof(CacheDoubleExpiration) + "6";
+                TestCache ret;
+                AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
+                await cache.Store(true, keyName1, this, TimeSpan.FromMilliseconds(51));
+                await cache.Store(true, keyName2, this, TimeSpan.FromMilliseconds(50));
+                await cache.Store(true, keyName3, this, TimeSpan.FromSeconds(50));
+                await cache.Store(true, keyName4, this, TimeSpan.FromSeconds(50));
+                await cache.Store(true, keyName5, this, TimeSpan.FromSeconds(50));
+//                await cache.Store(true, keyName6, this, TimeSpan.FromSeconds(50));
+                ret = await cache.Retrieve<TestCache>(keyName2);
+                Assert.IsNotNull(ret);
+                await Eject(cache, 3);
+                ret = await cache.Retrieve<TestCache>(keyName2);
+                Assert.IsNotNull(ret);
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+                ret = await cache.Retrieve<TestCache>(keyName1);    // this should return null even though we haven't ejected stuff because it's expired
+                Assert.IsNull(ret);
+                await Eject(cache, 3);  // this should eject 1 and 2 because they're both expired, and 3 because it's the LRU item
+                ret = await cache.Retrieve<TestCache>(keyName1);
+                Assert.IsNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName2);
+                Assert.IsNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName3);
+                Assert.IsNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName4);
+                Assert.IsNotNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName5);
+                Assert.IsNotNull(ret);
+                //ret = await cache.Retrieve<TestCache>(keyName6);
+                //Assert.IsNotNull(ret);
+                await Eject(cache, 5);  // this should eject 4, but only because it's the LRU item
+                ret = await cache.Retrieve<TestCache>(keyName4);
+                Assert.IsNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName5);
+                Assert.IsNotNull(ret);
+                //ret = await cache.Retrieve<TestCache>(keyName6);
+                //Assert.IsNotNull(ret);
             }
         }
         /// <summary>
@@ -254,8 +320,6 @@ namespace TestAmbientServices
 
         public string ProviderName => _name;
 
-        public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
-
         public bool ChangeSetting(string key, string value)
         {
             string oldValue = null;
@@ -264,7 +328,6 @@ namespace TestAmbientServices
             if (String.Equals(oldValue, value, StringComparison.Ordinal)) return false;
             IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
             _overrideTypedSettings[key] = ps.Convert(this, value);
-            SettingsChanged?.Invoke(this, new AmbientSettingsChangedEventArgs { Keys = new string[] { key } });
             return true;
         }
         /// <summary>

@@ -153,11 +153,11 @@ namespace AmbientServices
         {
             get
             {
-                return (LocalReference?.RawOverride ?? _globalReference.Provider) as T;
+                return (LocalReference.RawOverride ?? _globalReference.Provider) as T;
             }
             set
             {
-                LocalReference.RawOverride = value ?? LocalServiceReference<T>.SuppressedProvider;
+                LocalReference.Provider = value;
                 LocalReference.RaiseProviderChanged();
             }
         }
@@ -316,6 +316,8 @@ namespace AmbientServices
             // still no default provider registered?  try again later
             if (newDefaultProvider == null) return null;
             T oldDefaultProvider = System.Threading.Interlocked.CompareExchange(ref _provider, newDefaultProvider, null) as T;
+            // we should almost always get a null back here, but it's theoretically possible if two attempts to retrieve the provider happen at the same time, but even in this case, the only way we would get back instances of different types would be if the default ambient service changed, which shouldn't be possible given the current implementation
+            // as a result, the non-null case below is unlikely to get covered by tests
             return (oldDefaultProvider == null)
                 ? newDefaultProvider
                 : oldDefaultProvider;
@@ -383,6 +385,7 @@ namespace AmbientServices
             set
             {
                 _localOverride = value;
+                RaiseProviderChanged();
             }
         }
         internal void RaiseProviderChanged()

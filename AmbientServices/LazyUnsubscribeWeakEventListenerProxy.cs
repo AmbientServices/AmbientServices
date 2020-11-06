@@ -54,7 +54,7 @@ namespace AmbientServices
             else
             {
                 // the subscriber is dead, so unsubscribe us (that way we'll go away too)
-                _staticUnsubscribe(this);
+                Unsubscribe();
             }
         }
     }

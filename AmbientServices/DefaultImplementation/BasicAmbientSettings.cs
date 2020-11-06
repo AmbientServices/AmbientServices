@@ -95,12 +95,6 @@ namespace AmbientServices
             object value;
             return _typedValues.TryGetValue(key, out value) ? value : null;
         }
-        /// <summary>
-        /// An event that will notify subscribers when one or more settings values change.  
-        /// This event is so that the subscriber *knows* when the value changes, in case something else needs to be done as a result of the change.
-        /// Note that due to the multithreaded nature of this event, the setting value may be updated before the subscriber is notified of the change.
-        /// </summary>
-        public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
 
         /// <summary>
         /// Changes the specified setting.
@@ -128,7 +122,6 @@ namespace AmbientServices
                 IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
                 _typedValues[key] = (ps != null) ? ps.Convert(this, value) : value;
             }
-            SettingsChanged?.Invoke(this, new AmbientSettingsChangedEventArgs { Keys = new string[] { key } });
             return true;
         }
         /// <summary>

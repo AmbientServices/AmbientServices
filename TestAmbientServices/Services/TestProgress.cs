@@ -514,6 +514,12 @@ namespace TestAmbientServices
             using (Progress progress = new Progress(new BasicAmbientProgressProvider()))
             {
                 progress.Dispose(); // dispose here so we can test double-dispose
+                progress.ResetCancellation();
+            }
+            using (Progress progress = new Progress(new BasicAmbientProgressProvider()))
+            {
+                progress.Dispose(); // dispose here so we can test double-dispose
+                progress.ResetCancellation(TimeSpan.FromMilliseconds(0));
             }
         }
         /// <summary>

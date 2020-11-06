@@ -142,7 +142,7 @@ namespace AmbientServices
                     {
                         // overwrite that one--were we NOT able to overwrite it?
                         if (!_settings.TryUpdate(setting.Key, newReference, existingReference))
-                        {
+                        { // the inside of this loop is nearly impossible to cover in tests
                             // wait a bit and try again
                             System.Threading.Thread.Sleep((int)Math.Pow(2, loopCount + 1));
                             continue;
@@ -162,6 +162,7 @@ namespace AmbientServices
                 // raise the registered event
                 SettingRegistered?.Invoke(null, setting);
                 return;
+            // the loop and exception is nearly impossible to cover in tests
             } while (loopCount++ < 10);
             throw new TimeoutException("Timeout attempting to register setting!");
         }
@@ -262,7 +263,17 @@ namespace AmbientServices
         /// <returns>A typed value created from the string value.</returns>
         public object Convert(IAmbientSettingsProvider provider, string value)
         {
-            T ret = _convert(value);
+            T ret;
+            try
+            {
+                ret = _convert(value);
+            }
+#pragma warning disable CA1031 
+            catch
+            {
+                ret = _defaultValue;
+            }
+#pragma warning restore CA1031 
             // is this provider this setting's provider or the global provider
             if (provider == _SettingsAccessor.GlobalProvider)
             {
@@ -312,11 +323,6 @@ namespace AmbientServices
         protected readonly SettingBase<T> _settingBase;
         private readonly IAmbientSettingsProvider _fixedProvider;
 
-        public ProviderSetting(string key, string description, Func<string, T> convert, string defaultValueString = null)
-            : this((IAmbientSettingsProvider)null, key, description, convert, defaultValueString)
-        {
-        }
-
         public ProviderSetting(IAmbientSettingsProvider fixedProvider, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
             _settingBase = new SettingBase<T>(key, description, convert, defaultValueString);
@@ -352,8 +358,6 @@ namespace AmbientServices
                 }
             }
         }
-
-        internal IAmbientSettingsProvider Provider { get { return _fixedProvider; } }
     }
     class AmbientSetting<T> : ProviderSetting<T>
     {

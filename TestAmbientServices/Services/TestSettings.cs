@@ -52,7 +52,6 @@ namespace TestAmbientServices
         [TestMethod]
         public void NoAmbientSetting()
         {
-            // use a local override in case we ran another test that left the global or local settings provider set to something else on this thread
             using (LocalServiceScopedOverride<IAmbientSettingsProvider> LocalOverrideTest = new LocalServiceScopedOverride<IAmbientSettingsProvider>(null))
             {
                 AmbientSetting<int> value;
@@ -62,7 +61,41 @@ namespace TestAmbientServices
                 Assert.AreEqual(1, value.Value);
                 value = new AmbientSetting<int>("int-setting-4", "", s => Int32.Parse(s), "-1");
                 Assert.AreEqual(-1, value.Value);
+                ProviderSetting<int> providerValue = new ProviderSetting<int>(_SettingsProvider, nameof(NoAmbientSetting) + "4", "", s => Int32.Parse(s), "4");
+                Assert.AreEqual(4, providerValue.Value);
             }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public void ProviderWithExtraSettings()
+        {
+            Dictionary<string, string> settings = new Dictionary<string, string> { { nameof(ProviderWithExtraSettings) + "1", null }, { nameof(ProviderWithExtraSettings) + "2", "test" }, };
+            IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(ProviderWithExtraSettings), settings);
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public void ProviderGetRawValue()
+        {
+            Dictionary<string, string> settings = new Dictionary<string, string> { { nameof(ProviderGetRawValue), "1" }, };
+            IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(ProviderGetRawValue), settings);
+            Assert.AreEqual(null, settingsProvider.GetRawValue(nameof(ProviderGetRawValue) + "-notfound"));
+            Assert.AreEqual("1", settingsProvider.GetRawValue(nameof(ProviderGetRawValue)));
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public void ProviderWithPreregisteredSettings()
+        {
+            SettingBase<string> base1 = new SettingBase<string>(nameof(ProviderWithPreregisteredSettings) + "1", "", null);
+            SettingBase<int> base2 = new SettingBase<int>(nameof(ProviderWithPreregisteredSettings) + "2", "", s => (s == null) ? 2 : Int32.Parse(s));
+            SettingBase<int> base3 = new SettingBase<int>(nameof(ProviderWithPreregisteredSettings) + "3", "", s => Int32.Parse(s), "3");
+            Dictionary<string, string> settings = new Dictionary<string, string> { { nameof(ProviderWithPreregisteredSettings) + "1", null }, { nameof(ProviderWithPreregisteredSettings) + "2", "2" }, { nameof(ProviderWithPreregisteredSettings) + "3", null }, };
+            IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(ProviderWithPreregisteredSettings), settings);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
@@ -169,7 +202,7 @@ namespace TestAmbientServices
             string testSettingKey = nameof(SettingGlobalValueChangeNotification);
             string initialValue = "initialValue";
             string notificationNewValue = "";
-            AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue); 
+            AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
             Assert.AreEqual(initialValue, testSetting.Value);
             string secondValue = "change1";
             Assert.AreEqual(initialValue, notificationNewValue);
@@ -335,6 +368,60 @@ namespace TestAmbientServices
                 settingsDescriptions += $"{info.Key}:{info.Description} @{info.LastUsed.ToShortDateString()} {info.LastUsed.ToShortTimeString()}" + Environment.NewLine;
             }
             Assert.AreEqual(5, ambientLogFilterSettings);
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public void SettingsRegistryTest()
+        {
+            SettingsRegistry registry = new SettingsRegistry();
+            registry.SettingRegistered += Registry_SettingRegistered;
+            TestProviderSetting setting1 = new TestProviderSetting();
+            registry.Register(setting1);
+            registry.SettingRegistered -= Registry_SettingRegistered;
+            TempRegister(registry);
+            TempRegister(registry, "key2", "description");
+            GC.Collect(2, GCCollectionMode.Forced, false, false);
+            TempRegister(registry);
+            TempRegister(registry, "key2", "description");
+            Assert.ThrowsException<ArgumentException>(() => TempRegister(registry, description: "different description"));
+
+            Assert.ThrowsException<ArgumentNullException>(() => registry.Register(null));
+        }
+
+        private void Registry_SettingRegistered(object sender, IProviderSetting e)
+        {
+        }
+        private void TempRegister(SettingsRegistry registry, string key = null, string description = null)
+        {
+            TestProviderSetting setting2 = new TestProviderSetting(key ?? "key", "defaultValue", description);
+            registry.Register(setting2);
+        }
+
+        class TestProviderSetting : IProviderSetting
+        {
+            public TestProviderSetting(string key = "", string defaultValueString = null, string description = null)
+            {
+                this.Key = key;
+                this.DefaultValueString = defaultValueString;
+                this.Description = description;
+            }
+
+            public object DefaultValue { get { return DefaultValueString; } }
+
+            public string Key { get; private set; }
+
+            public string DefaultValueString { get; private set; }
+
+            public string Description { get; private set; }
+
+            public DateTime LastUsed => DateTime.MinValue;
+
+            public object Convert(IAmbientSettingsProvider provider, string value)
+            {
+                return DefaultValueString;
+            }
         }
     }
 }

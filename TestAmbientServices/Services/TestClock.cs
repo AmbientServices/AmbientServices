@@ -71,6 +71,33 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
+        public void TimerAutoRestartAndEnabled()
+        {
+            using (AmbientClock.Pause())
+            using (AmbientTimer timer = new AmbientTimer(TimeSpan.FromMilliseconds(1)))
+            {
+                timer.AutoReset = true;
+                Assert.IsTrue(timer.AutoReset);
+                timer.Enabled = true;
+                Assert.IsTrue(timer.Enabled);
+                timer.AutoReset = false;
+                Assert.IsFalse(timer.AutoReset);
+                timer.Enabled = false;
+                Assert.IsFalse(timer.Enabled);
+                timer.AutoReset = true;
+                Assert.IsTrue(timer.AutoReset);
+                timer.Enabled = true;
+                Assert.IsTrue(timer.Enabled);
+                timer.AutoReset = false;
+                Assert.IsFalse(timer.AutoReset);
+                timer.Enabled = false;
+                Assert.IsFalse(timer.Enabled);
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// </summary>
+        [TestMethod]
         public async Task ClockPaused()
         {
             using (AmbientClock.Pause())
@@ -236,6 +263,31 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
+        public void TimerSystem()
+        {
+            bool elapsed = false;
+            bool disposed = false;
+            using (AmbientTimer timer = new AmbientTimer())
+            {
+                timer.AutoReset = true;
+                timer.Period = TimeSpan.FromMilliseconds(10);
+                timer.Enabled = true;
+                // hopefully we can get the timer to elapse now (without a subscriber)
+                System.Threading.Thread.Sleep(100);
+                // add a subscriber
+                timer.Elapsed += (s, e) => { elapsed = true; };
+                timer.Disposed += (s, e) => { disposed = true; };
+                // now try to get it to elapse again (this time with a subscriber)
+                System.Threading.Thread.Sleep(100);
+                Assert.IsTrue(elapsed);
+                Assert.IsFalse(disposed);
+            }
+            Assert.IsTrue(disposed);
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// </summary>
+        [TestMethod]
         public void TimerAmbientClock()
         {
             using (AmbientClock.Pause())
@@ -251,6 +303,26 @@ namespace TestAmbientServices
                     Assert.IsFalse(elapsed);
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                     Assert.IsTrue(elapsed);
+                    Assert.IsFalse(disposed);
+                }
+                Assert.IsTrue(disposed);
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public void TimerAmbientClockNoSubscriber()
+        {
+            using (AmbientClock.Pause())
+            {
+                bool disposed = false;
+                using (AmbientTimer timer = new AmbientTimer())
+                {
+                    timer.Disposed += (s, e) => { disposed = true; };
+                    timer.Period = TimeSpan.FromMilliseconds(100);
+                    timer.Enabled = true;
+                    AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                     Assert.IsFalse(disposed);
                 }
                 Assert.IsTrue(disposed);

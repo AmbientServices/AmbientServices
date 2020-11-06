@@ -114,7 +114,7 @@ namespace AmbientServices
             _parentProgress = parentProgress;
             _startPortion = startPortion;
             _portionPart = portionPart;
-            if (_inheritedCancelSource = inheritCancellationSource)
+            if (_inheritedCancelSource = inheritCancellationSource) // note that this is an ASSIGNMENT in addition to a test
             {
                 _cancelSource = parentProgress.CancellationTokenSource;
             }

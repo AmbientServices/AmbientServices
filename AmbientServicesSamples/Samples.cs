@@ -548,10 +548,6 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
 {
     public string ProviderName => "AppConfig";
 
-#pragma warning disable CS0067  // System.Configuration.ConfigurationManager has no refresh/reload capability
-    public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
-#pragma warning restore CS0067
-
     public string GetRawValue(string key)
     {
         return System.Configuration.ConfigurationManager.AppSettings[key];
@@ -593,10 +589,6 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     }
 
     public string ProviderName => nameof(LocalAmbientSettingsOverride);
-
-#pragma warning disable CS0067  // there is no need for refreshing settings in the local call context (where would the events go anyway?)
-    public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
-#pragma warning restore CS0067
 
     /// <summary>
     /// Disposes of this instance, returning the ambient settings to their former value.

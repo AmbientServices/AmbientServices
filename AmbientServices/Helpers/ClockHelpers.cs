@@ -119,7 +119,9 @@ namespace AmbientServices
         internal class PausedAmbientClockProvider : IAmbientClockProvider
         {
 #if DEBUG
+#pragma warning disable CA1823
             private readonly string _construction = new StackTrace().ToString();
+#pragma warning restore CA1823
 #endif
             private readonly DateTime _baseDateTime;
             private long _stopwatchTicks;
@@ -347,6 +349,7 @@ namespace AmbientServices
                 long nowStopwatchTicks = clock.Ticks;
                 IAmbientClockProvider tempClock = clock;
                 _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientTimer, object, AmbientClockProviderTimeChangedEventArgs>(
+                    // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
                     this, OnTimeChanged, wtc => tempClock.OnTimeChanged -= wtc.WeakEventHandler);
                 clock.OnTimeChanged += _weakTimeChanged.WeakEventHandler;
                 _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
@@ -362,6 +365,7 @@ namespace AmbientServices
                 _timer.Enabled = (period.Ticks > 0);
                 System.Timers.Timer tempTimer = _timer;
                 _weakElapsed = new LazyUnsubscribeWeakEventListenerProxy<AmbientTimer, object, System.Timers.ElapsedEventArgs>(
+                    // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
                     this, OnTimerElapsed, we => tempTimer.Elapsed -= we.WeakEventHandler);
                 _timer.Elapsed += _weakElapsed.WeakEventHandler;
             }
