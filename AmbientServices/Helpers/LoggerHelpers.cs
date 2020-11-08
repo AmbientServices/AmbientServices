@@ -19,7 +19,7 @@ namespace AmbientServices
         private static readonly string TypeName = typeof(TOWNER).Name;
 
         private static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting("AmbientLogger-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
-        private static readonly ServiceAccessor<IAmbientLoggerProvider> _LoggerProvider = Service.GetAccessor<IAmbientLoggerProvider>();
+        private static readonly ServiceReference<IAmbientLoggerProvider> _LoggerProvider = Service.GetReference<IAmbientLoggerProvider>();
 
         private IAmbientLoggerProvider _provider;
         private AmbientLogFilter _logFilter;

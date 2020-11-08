@@ -10,7 +10,7 @@ namespace AmbientServices
     /// </summary>
     public class AmbientCancellationTokenSource : IDisposable
     {
-        private static readonly ServiceAccessor<IAmbientClockProvider> _ClockProviderAccessor = Service.GetAccessor<IAmbientClockProvider>();
+        private static readonly ServiceReference<IAmbientClockProvider> _ClockProviderAccessor = Service.GetReference<IAmbientClockProvider>();
         private static readonly CancellationToken _AlreadyCancelled = AlreadyCancelledToken();
         private static CancellationToken AlreadyCancelledToken()
         {
@@ -59,7 +59,7 @@ namespace AmbientServices
                         _tokenSource.Cancel();
                         _ambientTimer.Dispose();
                     };
-                    _ambientTimer.Elapsed += handler;
+                    _ambientTimer.Elapsed += handler;   // note that the handler will keep the timer and the token source alive until the event is raised, but the event is only raised once anyway, and there is no need to unsubscribe because the owner of the event is disposed when the event is triggered anyway
                 }
             }
             else

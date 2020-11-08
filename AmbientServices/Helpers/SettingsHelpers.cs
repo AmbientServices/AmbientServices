@@ -88,12 +88,6 @@ namespace AmbientServices
         /// Gets the last time the setting's value was retrieved.
         /// </summary>
         DateTime LastUsed { get; }
-    }
-    /// <summary>
-    /// An interface that adds private information about a setting.
-    /// </summary>
-    public interface IProviderSetting : IAmbientSettingInfo
-    {
         /// <summary>
         /// Gets the default value that is used when the value is not found in the settings provider.
         /// </summary>
@@ -119,20 +113,20 @@ namespace AmbientServices
         public static SettingsRegistry DefaultRegistry { get { return _DefaultRegistry; } }
 
 
-        private ConcurrentDictionary<string, WeakReference<IProviderSetting>> _settings = new ConcurrentDictionary<string, WeakReference<IProviderSetting>>();
+        private ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>>();
         /// <summary>
-        /// Registers an <see cref="IProviderSetting"/> in the global registry.
+        /// Registers an <see cref="IAmbientSettingInfo"/> in the global registry.
         /// </summary>
-        /// <param name="setting">The <see cref="IProviderSetting"/> to register.</param>
-        public void Register(IProviderSetting setting)
+        /// <param name="setting">The <see cref="IAmbientSettingInfo"/> to register.</param>
+        public void Register(IAmbientSettingInfo setting)
         {
             if (setting == null) throw new ArgumentNullException(nameof(setting));
-            WeakReference<IProviderSetting> newReference = new WeakReference<IProviderSetting>(setting);
-            WeakReference<IProviderSetting> existingReference;
+            WeakReference<IAmbientSettingInfo> newReference = new WeakReference<IAmbientSettingInfo>(setting);
+            WeakReference<IAmbientSettingInfo> existingReference;
             int loopCount = 0;
             do
             {
-                IProviderSetting existingSetting;
+                IAmbientSettingInfo existingSetting;
                 existingReference = _settings.GetOrAdd(setting.Key, newReference);
                 // did we NOT succeed?
                 if (newReference != existingReference)
@@ -169,13 +163,13 @@ namespace AmbientServices
         /// <summary>
         /// Gets an enumeration of all the settings in the system.
         /// </summary>
-        public IEnumerable<IProviderSetting> Settings
+        public IEnumerable<IAmbientSettingInfo> Settings
         {
             get
             {
-                foreach (KeyValuePair<string, WeakReference<IProviderSetting>> s in _settings)
+                foreach (KeyValuePair<string, WeakReference<IAmbientSettingInfo>> s in _settings)
                 {
-                    IProviderSetting setting;
+                    IAmbientSettingInfo setting;
                     if (s.Value.TryGetTarget(out setting))
                     {
                         yield return setting;
@@ -188,34 +182,34 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Attempts to get the <see cref="IProviderSetting"/> for the specified settings key.
+        /// Attempts to get the <see cref="IAmbientSettingInfo"/> for the specified settings key.
         /// </summary>
         /// <param name="key">The key for the setting.</param>
-        /// <returns>An <see cref="IProviderSetting"/> for the specified setting.</returns>
-        public IProviderSetting TryGetSetting(string key)
+        /// <returns>An <see cref="IAmbientSettingInfo"/> for the specified setting.</returns>
+        public IAmbientSettingInfo TryGetSetting(string key)
         {
-            WeakReference<IProviderSetting> wrSetting;
-            IProviderSetting setting;
+            WeakReference<IAmbientSettingInfo> wrSetting;
+            IAmbientSettingInfo setting;
             return _settings.TryGetValue(key, out wrSetting) ? (wrSetting.TryGetTarget(out setting) ? setting : null) : null;
         }
         /// <summary>
         /// An event the is raised when a new setting is registered, allowing settings providers to call the setting's conversion function to get a strongly-typed value.
         /// </summary>
-        public event EventHandler<IProviderSetting> SettingRegistered;
+        public event EventHandler<IAmbientSettingInfo> SettingRegistered;
     }
-    class SettingBase<T> : IProviderSetting
+    class SettingInfo<T> : IAmbientSettingInfo
     {
-        protected static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsAccessor = ServiceAccessor<IAmbientSettingsProvider>.Accessor;
+        protected static readonly ServiceReference<IAmbientSettingsProvider> _SettingsAccessor = ServiceReference<IAmbientSettingsProvider>.Instance;
 
         private readonly string _key;
         private readonly string _description;
         private readonly string _defaultValueString;
         private readonly T _defaultValue;
         private readonly Func<string, T> _convert;
-        private long _lastUsedTicks;      // interlocked
-        private object _globalValue;      // interlocked
+        private long _lastUsedTicks = DateTime.MinValue.Ticks;      // interlocked
+        private object _globalValue;                                // interlocked
 
-        public SettingBase(string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public SettingInfo(string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
             if (convert == null)
             {
@@ -253,7 +247,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the untyped default value.
         /// </summary>
-        object IProviderSetting.DefaultValue => _defaultValue;
+        object IAmbientSettingInfo.DefaultValue => _defaultValue;
 
         /// <summary>
         /// Converts the specified value for the specified provider.
@@ -295,13 +289,13 @@ namespace AmbientServices
                 if (oldValue == System.Threading.Interlocked.CompareExchange(ref _lastUsedTicks, accessTime, oldValue))
                 {
                     // we're done and we were the new max
-                    return;
+                    break;
                 }
                 // NOTE: this loop is nondeterministic when running with multiple threads, so code coverage may not cover these lines, and it's not possible to force this condition
                 // update our value
                 oldValue = _lastUsedTicks;
             }
-            // we're done and we were not the max value
+            // if we didn't break, we're done but the existing value is the max, not this one
         }
         /// <summary>
         /// Gets the current value of the setting (cached from the value given by the provider).
@@ -317,21 +311,21 @@ namespace AmbientServices
     }
     class ProviderSetting<T> : IAmbientSetting<T>
     {
-        protected static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsAccessor = ServiceAccessor<IAmbientSettingsProvider>.Accessor;
+        protected static readonly ServiceReference<IAmbientSettingsProvider> _SettingsAccessor = ServiceReference<IAmbientSettingsProvider>.Instance;
 
-        protected readonly ServiceAccessor<IAmbientSettingsProvider> _accessor;
-        protected readonly SettingBase<T> _settingBase;
+        protected readonly ServiceReference<IAmbientSettingsProvider> _accessor;
+        protected readonly SettingInfo<T> _settingBase;
         private readonly IAmbientSettingsProvider _fixedProvider;
 
         public ProviderSetting(IAmbientSettingsProvider fixedProvider, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            _settingBase = new SettingBase<T>(key, description, convert, defaultValueString);
+            _settingBase = new SettingInfo<T>(key, description, convert, defaultValueString);
             _fixedProvider = fixedProvider;
         }
 
-        internal ProviderSetting(ServiceAccessor<IAmbientSettingsProvider> accessor, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        internal ProviderSetting(ServiceReference<IAmbientSettingsProvider> accessor, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            _settingBase = new SettingBase<T>(key, description, convert, defaultValueString);
+            _settingBase = new SettingInfo<T>(key, description, convert, defaultValueString);
             _accessor = accessor;
         }
         /// <summary>
@@ -366,7 +360,7 @@ namespace AmbientServices
         {
         }
 
-        internal AmbientSetting(ServiceAccessor<IAmbientSettingsProvider> accessor, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        internal AmbientSetting(ServiceReference<IAmbientSettingsProvider> accessor, string key, string description, Func<string, T> convert, string defaultValueString = null)
             : base(accessor, key, description, convert, defaultValueString)
         {
         }
@@ -378,7 +372,7 @@ namespace AmbientServices
         {
             get
             {
-                ServiceAccessor<IAmbientSettingsProvider> accessor = _accessor ?? _SettingsAccessor;
+                ServiceReference<IAmbientSettingsProvider> accessor = _accessor ?? _SettingsAccessor;
                 // is there a local provider override?
                 IAmbientSettingsProvider localProviderOverride = accessor.ProviderOverride;
                 if (localProviderOverride != null)

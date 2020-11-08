@@ -13,7 +13,7 @@ namespace AmbientServices
     public class BasicAmbientSettingsProvider : IMutableAmbientSettingsProvider
     {
         private readonly string _name;
-        private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IProviderSetting> _weakSettingRegistered;
+        private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IAmbientSettingInfo> _weakSettingRegistered;
         private ConcurrentDictionary<string, string> _rawValues;
         private ConcurrentDictionary<string, object> _typedValues;
 
@@ -33,7 +33,7 @@ namespace AmbientServices
             _name = name;
             _rawValues = new ConcurrentDictionary<string, string>();
             _typedValues = new ConcurrentDictionary<string, object>();
-            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IProviderSetting>(
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IAmbientSettingInfo>(
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
             SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
@@ -51,15 +51,15 @@ namespace AmbientServices
             {
                 foreach (string key in values.Keys)
                 {
-                    IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                    IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
                     _typedValues[key] = (ps != null) ? ps.Convert(this, values[key]) : values[key];
                 }
             }
-            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IProviderSetting>(
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IAmbientSettingInfo>(
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
             SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
-        static void NewSettingRegistered(BasicAmbientSettingsProvider settingsProvider, object sender, IProviderSetting setting)
+        static void NewSettingRegistered(BasicAmbientSettingsProvider settingsProvider, object sender, IAmbientSettingInfo setting)
         {
             // is there a value for this setting?
             string value;
@@ -119,7 +119,7 @@ namespace AmbientServices
                 _rawValues.AddOrUpdate(key, value, (k, v) => { oldValue = v; return value; });
                 // did the value *not* change?  bail out early
                 if (String.Equals(value, oldValue, StringComparison.Ordinal)) return false;
-                IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
                 _typedValues[key] = (ps != null) ? ps.Convert(this, value) : value;
             }
             return true;

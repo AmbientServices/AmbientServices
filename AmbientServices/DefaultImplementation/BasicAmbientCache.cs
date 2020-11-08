@@ -10,10 +10,10 @@ namespace AmbientServices
     [DefaultAmbientServiceProvider]
     internal class BasicAmbientCache : IAmbientCacheProvider
     {
-        private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsAccessor = Service.GetAccessor<IAmbientSettingsProvider>();
+        private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsAccessor = Service.GetReference<IAmbientSettingsProvider>();
 
         private readonly ProviderSetting<int> _callFrequencyToEject;
-        private readonly ProviderSetting<int> _countToEjectCountToEject;
+        private readonly ProviderSetting<int> _countToEject;
         private int _expireCount = 0;
         private ConcurrentQueue<TimedQueueEntry> _timedQueue = new ConcurrentQueue<TimedQueueEntry>();
         private ConcurrentQueue<string> _untimedQueue = new ConcurrentQueue<string>();
@@ -27,7 +27,7 @@ namespace AmbientServices
         public BasicAmbientCache(IAmbientSettingsProvider settings)
         {
             _callFrequencyToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-EjectFrequency", "The number of operations between cache ejections.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
-            _countToEjectCountToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-ItemCount", "The maximum number of items to allow in the cache before ejecting items.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "1000");
+            _countToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-ItemCount", "The maximum number of items to allow in the cache before ejecting items.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "1000");
         }
 
         struct TimedQueueEntry
@@ -91,7 +91,7 @@ namespace AmbientServices
         void EjectIfNeeded()
         {
             int callFrequencyToEject = _callFrequencyToEject.Value;
-            int countToEject = _countToEjectCountToEject.Value;
+            int countToEject = _countToEject.Value;
             // time to eject?
             while ((System.Threading.Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
             {

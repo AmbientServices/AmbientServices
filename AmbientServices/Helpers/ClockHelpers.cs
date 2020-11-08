@@ -8,11 +8,11 @@ using System.Threading;
 namespace AmbientServices
 {
     /// <summary>
-    /// An static class that utilizes the <see cref="IAmbientClockProvider"/> if one is registered, or the system clock if not.
+    /// A static class that utilizes the ambient <see cref="IAmbientClockProvider"/> service provider if one is active, or the system clock if not.
     /// </summary>
     public static class AmbientClock
     {
-        private static readonly ServiceAccessor<IAmbientClockProvider> _ClockAccessor = Service.GetAccessor<IAmbientClockProvider>();
+        private static readonly ServiceReference<IAmbientClockProvider> _ClockAccessor = Service.GetReference<IAmbientClockProvider>();
         /// <summary>
         /// Gets whether or not the ambient clock is just the system clock.
         /// </summary>
@@ -28,7 +28,7 @@ namespace AmbientServices
         /// </remarks>
         public static long Ticks { get { return _ClockAccessor.Provider?.Ticks ?? Stopwatch.GetTimestamp(); } }
         /// <summary>
-        /// Gets a <see cref="TimeSpan"/> indicating the amount of virtual time that has elapsed.  Much more convenient than <see cref="Ticks"/>, but based entirely on it's value.
+        /// Gets a <see cref="TimeSpan"/> indicating the amount of virtual time that has elapsed.  Often more convenient than <see cref="Ticks"/>, but based entirely on its value.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
@@ -62,19 +62,19 @@ namespace AmbientServices
         /// <summary>
         /// Pauses the time within the current call context so that no time passes until the returned <see cref="IDisposable"/> is disposed or <see cref="SkipAhead"/> is called.
         /// </summary>
-        /// The returned instance must be disposed in the same call context.
         /// <remarks>
+        /// The returned instance must be disposed in the same call context.  If disposed in a child call context, the first disposal will unpause the clock for all child call contexts.
         /// </remarks>
         public static IDisposable Pause()
         {
-            return new ClockPauser();
+            return new ScopedClockPauser();
         }
         /// <summary>
-        /// Skips a paused clock ahead the specified amount.
+        /// Skips a paused clock ahead the specified amount of time.
         /// If the clock is not paused in the current call context, nothing is done.
         /// </summary>
         /// <remarks>
-        /// Note that negative times are allowed in order to test clock issues.
+        /// Note that negative times are allowed, but should only be used to test weird clock issues.
         /// </remarks>
         /// <param name="skipTime">The amount of time to skip ahead.</param>
         public static void SkipAhead(TimeSpan skipTime)
@@ -82,18 +82,18 @@ namespace AmbientServices
             PausedAmbientClockProvider controllable = _ClockAccessor.ProviderOverride as PausedAmbientClockProvider;
             if (controllable != null) controllable.SkipAhead(skipTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
         }
-        sealed class ClockPauser : IDisposable
+        sealed class ScopedClockPauser : IDisposable
         {
             private IAmbientClockProvider _clockToRestore;
 
-            internal ClockPauser()
+            internal ScopedClockPauser()
             {
                 _clockToRestore = _ClockAccessor.ProviderOverride;
                 _ClockAccessor.ProviderOverride = new PausedAmbientClockProvider();
             }
 
             #region IDisposable Support
-            private bool _disposed = false; // To detect redundant calls
+            private bool _disposed = false; // to detect redundant calls
 
             private void Dispose(bool disposing)
             {
@@ -127,14 +127,13 @@ namespace AmbientServices
             private long _stopwatchTicks;
 
             /// <summary>
-            /// Constructs a test ambient clock that starts at the current date-time and only moves time forward when explicitly told to do so.
+            /// Constructs an ambient clock that is paused at the current date-time and only moves time forward when explicitly told to do so.
             /// </summary>
             public PausedAmbientClockProvider()
             {
                 _baseDateTime = DateTime.UtcNow;
                 _stopwatchTicks = 0;
             }
-
             /// <summary>
             /// Gets the number of ticks elapsed.  (In units of <see cref="Stopwatch.Frequency"/>).
             /// </summary>
@@ -142,7 +141,6 @@ namespace AmbientServices
             /// This property is thread-safe.
             /// </remarks>
             public long Ticks { get { return _stopwatchTicks; } }
-
             /// <summary>
             /// Gets the current UTC <see cref="DateTime"/>.
             /// </summary>
@@ -159,38 +157,43 @@ namespace AmbientServices
             /// <summary>
             /// An event indicating that the ambient clock's time has changed.
             /// </summary>
-            public event EventHandler<AmbientClockProviderTimeChangedEventArgs> OnTimeChanged;
+            /// <remarks>
+            /// This is used by <see cref="AmbientTimer"/> in order to know when the paused time changes and it's time to raise the timer's elapsed event.
+            /// </remarks>
+            public event EventHandler<AmbientClockProviderTimeChangedEventArgs> TimeChanged;
 
             /// <summary>
             /// Moves the clock forward by the specified number of ticks.  Ticks are the same units as <see cref="Stopwatch"/> ticks, with <see cref="Stopwatch.Frequency"/> ticks per second.
             /// </summary>
             /// <remarks>
-            /// Note that negative times are allowed in order to test clock issues and error conditions.
+            /// Note that negative times are allowed, but should only be used to test weird clock issues.
             /// </remarks>
             /// <param name="ticks">The number of ticks to move forward.</param>
-            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClockProvider.OnTimeChanged"/> is being raised.</remarks>
+            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClockProvider.TimeChanged"/> is being raised.</remarks>
             public void SkipAhead(long ticks)
             {
                 long newTicks = System.Threading.Interlocked.Add(ref _stopwatchTicks, ticks);
                 long oldTicks = newTicks - ticks;
                 // notify any subscribers
-                OnTimeChanged?.Invoke(this, new AmbientClockProviderTimeChangedEventArgs { Clock = this, OldTicks = oldTicks, NewTicks = newTicks, OldUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, oldTicks), NewUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, newTicks) });
+                TimeChanged?.Invoke(this, new AmbientClockProviderTimeChangedEventArgs { Clock = this, OldTicks = oldTicks, NewTicks = newTicks, OldUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, oldTicks), NewUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, newTicks) });
             }
         }
     }
     /// <summary>
-    /// A helper class similar to <see cref="Stopwatch"/> that uses an ambient clock if one is available, or the system clock if no ambient clock is available.
+    /// A helper class that implements the same methods and properties as <see cref="Stopwatch"/> but uses an ambient clock if one is available.
+    /// When an ambient clock is not available, should behave identically to <see cref="Stopwatch"/>.
     /// </summary>
     /// <remarks>
     /// AmbientStopwatch measures elapsed time.  It has two states, running and paused.  It can be constructed in either state, but uses the running state by default.
-    /// While in the running state, <see cref="TicksElapsed"/> will return successively increasing values (or equal values if it is called faster than the resolution of the underlying clock).
-    /// While in the paused state, <see cref="TicksElapsed"/> will return the same value, indicating the number of ticks that were previously accumulated after construction or the last call to <see cref="Reset"/> and while running.
-    /// AmbientStopwatch is not thread-safe.  Threadsafe versions would be possible to implement but are much more complicated due to the race caused by the state, the start time, and the previously-accumulated ticks being stored separately.
+    /// While running, <see cref="ElapsedTicks"/> will return successively increasing values (or equal values if it is called faster than the resolution of the underlying clock).
+    /// While not running, <see cref="ElapsedTicks"/> will return the same value, indicating the number of ticks that were previously accumulated after construction or the last call to <see cref="Reset"/> and while running.
+    /// AmbientStopwatch is not thread-safe, but neither is <see cref="Stopwatch"/>.
+    /// Threadsafe versions would be possible to implement but are much more complicated due to the race caused by the state, the start time, and the previously-accumulated ticks being stored separately.
     /// AmbientStopwatch does not support changing the clock provider after construction.
     /// </remarks>
     public sealed class AmbientStopwatch
     {
-        private static readonly ServiceAccessor<IAmbientClockProvider> _ClockAccesor = Service.GetAccessor<IAmbientClockProvider>();
+        private static readonly ServiceReference<IAmbientClockProvider> _ClockProvider = Service.GetReference<IAmbientClockProvider>();
 
         private readonly IAmbientClockProvider _clock;
         private long _accumulatedTicks;
@@ -198,11 +201,19 @@ namespace AmbientServices
         private bool _running;
 
         /// <summary>
+        /// Returns a newly constructed <see cref="AmbientStopwatch"/> that has been started.
+        /// </summary>
+        public static AmbientStopwatch StartNew()
+        {
+            return new AmbientStopwatch(true);
+        }
+
+        /// <summary>
         /// Constructs an AmbientStopwatch using the local ambient clock if there is one.
         /// </summary>
-        /// <param name="run">Whether or not to start the stopwatch running.</param>
-        public AmbientStopwatch(bool run = true)
-            : this(_ClockAccesor.Provider, run)
+        /// <param name="run">Whether or not to start the stopwatch running.  Default is false (to match <see cref="Stopwatch"/>).</param>
+        public AmbientStopwatch(bool run = false)
+            : this(_ClockProvider.Provider, run)
         {
         }
         /// <summary>
@@ -217,6 +228,22 @@ namespace AmbientServices
             _running = run;
         }
         /// <summary>
+        /// Gets a timestamp number that may be used to determine how many ticks have elapsed between calls.
+        /// </summary>
+        /// <returns>A timestamp.</returns>
+        public static long GetTimestamp()
+        {
+            return _ClockProvider.Provider?.Ticks ?? Stopwatch.GetTimestamp();
+        }
+        /// <summary>
+        /// Gets the frequency of the stopwatch.
+        /// </summary>
+        public static long Frequency => Stopwatch.Frequency;
+        /// <summary>
+        /// Gets whether or not the stopwatch supports high resolution.
+        /// </summary>
+        public static bool IsHighResolution => Stopwatch.IsHighResolution;
+        /// <summary>
         /// Gets the ticks as determined by the clock, or the system clock if there is no clock.
         /// </summary>
         private long Ticks => _clock?.Ticks ?? Stopwatch.GetTimestamp();
@@ -230,16 +257,24 @@ namespace AmbientServices
         /// Arithmetic wraparound is technically possible, though in practice, at least on Windows, this should not happen unless the stopwatch has run for at least 100 years (50 years before it goes negative).
         /// In most cases, time spans measured in years should use <see cref="DateTime"/> instead of stopwatches.
         /// </remarks>
-        public long TicksElapsed => _running ? Ticks - _resumeTicks + _accumulatedTicks : _accumulatedTicks;
+        public long ElapsedTicks => _running ? Ticks - _resumeTicks + _accumulatedTicks : _accumulatedTicks;
         /// <summary>
-        /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="TicksElapsed"/> and the (system-constant) resolution of the clock.
+        /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>
-        public TimeSpan Elapsed => TimeSpan.FromTicks(TicksElapsed * TimeSpan.TicksPerSecond / Stopwatch.Frequency);
+        public TimeSpan Elapsed => TimeSpan.FromTicks(ElapsedTicks * TimeSpan.TicksPerSecond / Stopwatch.Frequency);
+        /// <summary>
+        /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
+        /// </summary>
+        public long ElapsedMilliseconds => (long)Elapsed.TotalMilliseconds;
+        /// <summary>
+        /// Gets whether or not the stopwatch is currently running.
+        /// </summary>
+        public bool IsRunning => _running;
 
         /// <summary>
-        /// Pauses the stopwatch so that it temporarily stops accumulating time.  While paused, <see cref="TicksElapsed"/> will return the same value.
+        /// Stops the stopwatch so that it temporarily stops accumulating time.  While paused, <see cref="ElapsedTicks"/> will return the same value.
         /// </summary>
-        public void Pause()
+        public void Stop()
         {
             // pause--was it *not* paused before?
             if (_running)
@@ -250,11 +285,12 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Resumes the stopwatch so that it starts running again.  When resumed, <see cref="TicksElapsed"/> will return increasing values (or the same value if called faster than the resolution of the underlying clock).
+        /// Starts the stopwatch so that time begins accumulating (again).
+        /// <see cref="ElapsedTicks"/> will subsequently return increasing values (or the same value if called faster than the resolution of the underlying clock).
         /// </summary>
-        public void Resume()
+        public void Start()
         {
-            // resume--was it *not* resumed before?
+            // start--was it *not* started before?
             if (!_running)
             {
                 long resumeTicks = Ticks;
@@ -263,15 +299,22 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Resets the stopwatch, causing <see cref="TicksElapsed"/> to reset to zero.
-        /// If the stopwatch was running, it keeps running and <see cref="TicksElapsed"/> will return the number of ticks since it was reset.  
-        /// If the stopwatch was stopped, <see cref="TicksElapsed"/> will return zero until <see cref="Resume"/> is called.
+        /// Starts the stopwatch so that time begins accumulating (again).
+        /// <see cref="ElapsedTicks"/> will subsequently return increasing values (or the same value if called faster than the resolution of the underlying clock).
+        /// </summary>
+        public void Restart()
+        {
+            _accumulatedTicks = 0;
+            _resumeTicks = Ticks;
+            _running = true;
+        }
+        /// <summary>
+        /// Stops the stopwatch and resets the elapsed time to zero.
         /// </summary>
         public void Reset()
         {
+            Stop();
             _accumulatedTicks = 0;
-            // if we're running, we need to pretend that we just started
-            if (_running) _resumeTicks = Ticks;
         }
     }
     /// <summary>
@@ -300,7 +343,7 @@ namespace AmbientServices
     /// </remarks>
     public sealed class AmbientTimer : IDisposable
     {
-        private static readonly ServiceAccessor<IAmbientClockProvider> _ClockAccessor = Service.GetAccessor<IAmbientClockProvider>();
+        private static readonly ServiceReference<IAmbientClockProvider> _ClockAccessor = Service.GetReference<IAmbientClockProvider>();
 
         private IAmbientClockProvider _clock;           // exactly one of _clock and _timer should be null
         private long _periodStopwatchTicks;
@@ -350,8 +393,8 @@ namespace AmbientServices
                 IAmbientClockProvider tempClock = clock;
                 _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientTimer, object, AmbientClockProviderTimeChangedEventArgs>(
                     // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
-                    this, OnTimeChanged, wtc => tempClock.OnTimeChanged -= wtc.WeakEventHandler);
-                clock.OnTimeChanged += _weakTimeChanged.WeakEventHandler;
+                    this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
+                clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
                 _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
                 _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = (period.Ticks > 0) ? 1 : 0;

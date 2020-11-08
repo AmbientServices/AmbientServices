@@ -4,7 +4,7 @@ using System.Threading;
 namespace AmbientServices
 {
     /// <summary>
-    /// A class that holds values related to the <see cref="IAmbientClockProvider.OnTimeChanged"/> event.
+    /// A class that holds values related to the <see cref="IAmbientClockProvider.TimeChanged"/> event.
     /// </summary>
     public class AmbientClockProviderTimeChangedEventArgs
     {
@@ -49,8 +49,8 @@ namespace AmbientServices
         /// </remarks>
         DateTime UtcDateTime { get; }
         /// <summary>
-        /// An event indicating that the ambient clock's time has changed.
+        /// An event that is raised when the ambient clock's time is changed.
         /// </summary>
-        event EventHandler<AmbientClockProviderTimeChangedEventArgs> OnTimeChanged;
+        event EventHandler<AmbientClockProviderTimeChangedEventArgs> TimeChanged;
     }
 }

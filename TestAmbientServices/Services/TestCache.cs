@@ -23,10 +23,10 @@ namespace TestAmbientServices
         public async Task CacheAmbient()
         {
             AmbientSettingsOverride localProvider = new AmbientSettingsOverride(TestCacheSettingsDictionary, nameof(CacheAmbient));
-            using (new LocalServiceScopedOverride<IAmbientSettingsProvider>(localProvider))
+            using (new LocalProviderScopedOverride<IAmbientSettingsProvider>(localProvider))
             {
                 IAmbientCacheProvider localOverride = new BasicAmbientCache();
-                using (LocalServiceScopedOverride<IAmbientCacheProvider> localCache = new LocalServiceScopedOverride<IAmbientCacheProvider>(localOverride))
+                using (LocalProviderScopedOverride<IAmbientCacheProvider> localCache = new LocalProviderScopedOverride<IAmbientCacheProvider>(localOverride))
                 {
                     TestCache ret;
                     AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
@@ -70,7 +70,7 @@ namespace TestAmbientServices
         [TestMethod]
         public async Task CacheNone()
         {
-            using (LocalServiceScopedOverride<IAmbientCacheProvider> localCache = new LocalServiceScopedOverride<IAmbientCacheProvider>(null))
+            using (LocalProviderScopedOverride<IAmbientCacheProvider> localCache = new LocalProviderScopedOverride<IAmbientCacheProvider>(null))
             {
                 TestCache ret;
                 AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
@@ -93,7 +93,7 @@ namespace TestAmbientServices
         {
             IAmbientCacheProvider localOverride = new BasicAmbientCache();
             using (AmbientClock.Pause())
-            using (LocalServiceScopedOverride<IAmbientCacheProvider> localCache = new LocalServiceScopedOverride<IAmbientCacheProvider>(localOverride))
+            using (LocalProviderScopedOverride<IAmbientCacheProvider> localCache = new LocalProviderScopedOverride<IAmbientCacheProvider>(localOverride))
             {
                 string keyName1 = nameof(CacheExpiration) + "1";
                 string keyName2 = nameof(CacheExpiration) + "2";
@@ -131,7 +131,7 @@ namespace TestAmbientServices
         {
             IAmbientCacheProvider localOverride = new BasicAmbientCache();
             using (AmbientClock.Pause())
-            using (LocalServiceScopedOverride<IAmbientCacheProvider> localCache = new LocalServiceScopedOverride<IAmbientCacheProvider>(localOverride))
+            using (LocalProviderScopedOverride<IAmbientCacheProvider> localCache = new LocalProviderScopedOverride<IAmbientCacheProvider>(localOverride))
             {
                 string keyName1 = nameof(CacheDoubleExpiration) + "1";
                 string keyName2 = nameof(CacheDoubleExpiration) + "2";
@@ -184,7 +184,7 @@ namespace TestAmbientServices
         public async Task CacheSpecifiedProvider()
         {
             AmbientSettingsOverride localProvider = new AmbientSettingsOverride(TestCacheSettingsDictionary, nameof(CacheSpecifiedProvider));
-            using (new LocalServiceScopedOverride<IAmbientSettingsProvider>(localProvider))
+            using (new LocalProviderScopedOverride<IAmbientSettingsProvider>(localProvider))
             {
                 TestCache ret;
                 IAmbientCacheProvider cacheProvider = new BasicAmbientCache(localProvider);
@@ -228,7 +228,7 @@ namespace TestAmbientServices
         public async Task CacheRefresh()
         {
             AmbientSettingsOverride localProvider = new AmbientSettingsOverride(TestCacheSettingsDictionary, nameof(CacheRefresh));
-            using (new LocalServiceScopedOverride<IAmbientSettingsProvider>(localProvider))
+            using (new LocalProviderScopedOverride<IAmbientSettingsProvider>(localProvider))
             {
                 using (AmbientClock.Pause())
                 {
@@ -286,28 +286,28 @@ namespace TestAmbientServices
 
     sealed class AmbientSettingsOverride : IMutableAmbientSettingsProvider
     {
-        private readonly LazyUnsubscribeWeakEventListenerProxy<AmbientSettingsOverride, object, IProviderSetting> _weakSettingRegistered;
+        private readonly LazyUnsubscribeWeakEventListenerProxy<AmbientSettingsOverride, object, IAmbientSettingInfo> _weakSettingRegistered;
         private readonly IAmbientSettingsProvider _fallbackSettings;
         private readonly ConcurrentDictionary<string, string> _overrideRawSettings;
         private readonly ConcurrentDictionary<string, object> _overrideTypedSettings;
         private string _name;
 
-        public AmbientSettingsOverride(Dictionary<string, string> overrideSettings, string name, IAmbientSettingsProvider fallback = null, ServiceAccessor<IAmbientSettingsProvider> settings = null)
+        public AmbientSettingsOverride(Dictionary<string, string> overrideSettings, string name, IAmbientSettingsProvider fallback = null, ServiceReference<IAmbientSettingsProvider> settings = null)
         {
             _overrideRawSettings = new ConcurrentDictionary<string, string>(overrideSettings);
             _overrideTypedSettings = new ConcurrentDictionary<string, object>();
             foreach (string key in overrideSettings.Keys)
             {
-                IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
                 if (ps != null) _overrideTypedSettings[key] = ps.Convert(this, overrideSettings[key]);
             }
             _name = name;
             _fallbackSettings = fallback ?? settings?.Provider;
-            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<AmbientSettingsOverride, object, IProviderSetting>(
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<AmbientSettingsOverride, object, IAmbientSettingInfo>(
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
             SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
-        static void NewSettingRegistered(AmbientSettingsOverride settingsProvider, object sender, IProviderSetting setting)
+        static void NewSettingRegistered(AmbientSettingsOverride settingsProvider, object sender, IAmbientSettingInfo setting)
         {
             // is there a value for this setting?
             string value;
@@ -326,7 +326,7 @@ namespace TestAmbientServices
             _overrideRawSettings.AddOrUpdate(key, value, (k, v) => { oldValue = v; return value; } );
             // no change?
             if (String.Equals(oldValue, value, StringComparison.Ordinal)) return false;
-            IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+            IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
             _overrideTypedSettings[key] = ps.Convert(this, value);
             return true;
         }

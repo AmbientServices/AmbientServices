@@ -212,7 +212,7 @@ public static class AssemblyLoggingExtensions
 /// </summary>
 class DownloadAndUnzip
 {
-    private static readonly IAmbientProgressProvider AmbientProgress = Service.GetAccessor<IAmbientProgressProvider>().GlobalProvider;
+    private static readonly IAmbientProgressProvider AmbientProgress = Service.GetReference<IAmbientProgressProvider>().GlobalProvider;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -516,7 +516,7 @@ class BasicAmbientCallStack : IAmbientCallStack
 /// </summary>
 class Setup
 {
-    private static readonly ServiceAccessor<IAmbientCacheProvider> _CacheProvider = Service.GetAccessor<IAmbientCacheProvider>();
+    private static readonly ServiceReference<IAmbientCacheProvider> _CacheProvider = Service.GetReference<IAmbientCacheProvider>();
     static Setup()
     {
         _CacheProvider.GlobalProvider = null;
@@ -537,7 +537,7 @@ class SetupApplication
 {
     static SetupApplication()
     {
-        ServiceAccessor<IAmbientSettingsProvider> SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+        ServiceReference<IAmbientSettingsProvider> SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
         SettingsProvider.GlobalProvider = new AppConfigAmbientSettings();
     }
 }
@@ -555,7 +555,7 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
     public object GetTypedValue(string key)
     {
         string rawValue = System.Configuration.ConfigurationManager.AppSettings[key];
-        IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
         return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
     }
 }
@@ -572,7 +572,7 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
 /// </summary>
 class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
 {
-    private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+    private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
 
     private readonly IAmbientSettingsProvider _oldSettings;
     private readonly Dictionary<string, string> _overrides;
@@ -610,7 +610,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     public object GetTypedValue(string key)
     {
         string rawValue = GetRawValue(key);
-        IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
         return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
     }
 }

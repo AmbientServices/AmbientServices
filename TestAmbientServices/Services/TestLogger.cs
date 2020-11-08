@@ -15,8 +15,8 @@ namespace TestAmbientServices
     [TestClass]
     public class TestLogger
     {
-        private static readonly ServiceAccessor<IAmbientLoggerProvider> _LoggerProvider = Service.GetAccessor<IAmbientLoggerProvider>(out _LoggerProvider);
-        private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>(out _SettingsProvider);
+        private static readonly ServiceReference<IAmbientLoggerProvider> _LoggerProvider = Service.GetReference<IAmbientLoggerProvider>(out _LoggerProvider);
+        private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsProvider = Service.GetReference<IAmbientSettingsProvider>(out _SettingsProvider);
 
         /// <summary>
         /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
@@ -125,7 +125,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void LoggerNone()
         {
-            using (new LocalServiceScopedOverride<IAmbientLoggerProvider>(null))
+            using (new LocalProviderScopedOverride<IAmbientLoggerProvider>(null))
             {
                 AmbientLogger<TestLogger> logger = new AmbientLogger<TestLogger>();
                 logger.Log(new ApplicationException());
@@ -173,7 +173,7 @@ namespace TestAmbientServices
             settingsProvider.ChangeSetting(nameof(BasicAmbientLogger) + "-LogLevel", AmbientLogLevel.Error.ToString());
             settingsProvider.ChangeSetting(nameof(BasicAmbientLogger) + "-TypeFilter", "AllowedLoggerType");
             settingsProvider.ChangeSetting(nameof(BasicAmbientLogger) + "-CategoryFilter", "AllowedCategory");
-            using (LocalServiceScopedOverride<IAmbientSettingsProvider> o = new LocalServiceScopedOverride<IAmbientSettingsProvider>(settingsProvider))
+            using (LocalProviderScopedOverride<IAmbientSettingsProvider> o = new LocalProviderScopedOverride<IAmbientSettingsProvider>(settingsProvider))
             {
                 AmbientLogger<AllowedLoggerType> logger = new AmbientLogger<AllowedLoggerType>();
                 logger.Log(new ApplicationException());

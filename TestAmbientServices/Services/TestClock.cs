@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -24,7 +25,7 @@ namespace TestAmbientServices
             DateTime now = DateTime.UtcNow;
             AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();
             AmbientClockProviderTimeChangedEventArgs eventArgs = null;
-            clock.OnTimeChanged += (s,e) => { Assert.AreEqual(s, clock); eventArgs = e; };
+            clock.TimeChanged += (s,e) => { Assert.AreEqual(s, clock); eventArgs = e; };
             clock.SkipAhead(10000);
             Assert.IsNotNull(eventArgs);
             Assert.AreEqual(clock, eventArgs.Clock);
@@ -126,7 +127,7 @@ namespace TestAmbientServices
         [TestMethod]
         public async Task ClockSystem()
         {
-            using (new LocalServiceScopedOverride<IAmbientClockProvider>(null))
+            using (new LocalProviderScopedOverride<IAmbientClockProvider>(null))
             {
                 long startTicks = AmbientClock.Ticks;
                 TimeSpan startElapsed = AmbientClock.Elapsed;
@@ -170,14 +171,17 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
-        public async Task Stopwatch()
+        public async Task StopwatchTest()
         {
+            long timestamp1 = Stopwatch.GetTimestamp();
+            long timestamp2 = AmbientStopwatch.GetTimestamp();
+            Assert.IsTrue(Math.Abs(timestamp1 - timestamp2) < Stopwatch.Frequency * 10);    // if this fails, it means that either there is a bug or the two lines above took 10+ seconds to run
             using (AmbientClock.Pause())
             {
-                AmbientStopwatch stopwatch = new AmbientStopwatch();
+                AmbientStopwatch stopwatch = new AmbientStopwatch(true);
                 await Task.Delay(100);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
-                Assert.IsTrue(stopwatch.TicksElapsed == 0);
+                Assert.IsTrue(stopwatch.ElapsedTicks == 0);
                 stopwatch = new AmbientStopwatch(true);
                 TimeSpan delay = TimeSpan.FromMilliseconds(100);
                 AmbientClock.SkipAhead(delay);
@@ -190,18 +194,18 @@ namespace TestAmbientServices
         [TestMethod]
         public async Task StopwatchSystem()
         {
-            using (new LocalServiceScopedOverride<IAmbientClockProvider>(null))
+            using (new LocalProviderScopedOverride<IAmbientClockProvider>(null))
             {
                 AmbientStopwatch stopwatch = new AmbientStopwatch(false);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
-                Assert.IsTrue(stopwatch.TicksElapsed == 0);
+                Assert.IsTrue(stopwatch.ElapsedTicks == 0);
                 await Task.Delay(100);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
-                Assert.IsTrue(stopwatch.TicksElapsed == 0);
+                Assert.IsTrue(stopwatch.ElapsedTicks == 0);
                 stopwatch = new AmbientStopwatch(true);
                 await Task.Delay(100);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds > 0);
-                Assert.IsTrue(stopwatch.TicksElapsed > 0);
+                Assert.IsTrue(stopwatch.ElapsedTicks > 0);
             }
         }
         /// <summary>
@@ -212,19 +216,19 @@ namespace TestAmbientServices
         {
             using (AmbientClock.Pause())
             {
-                AmbientStopwatch stopwatch = new AmbientStopwatch();
+                AmbientStopwatch stopwatch = AmbientStopwatch.StartNew();
                 await Task.Delay(100);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
                 stopwatch.Reset();
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
-                stopwatch.Resume();
-                stopwatch.Resume();
+                stopwatch.Start();
+                stopwatch.Start();
                 AmbientClock.SkipAhead(TimeSpan.FromTicks(100 * TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency));
                 Assert.AreEqual(100, stopwatch.Elapsed.Ticks * System.Diagnostics.Stopwatch.Frequency / TimeSpan.TicksPerSecond);
                 AmbientClock.SkipAhead(TimeSpan.FromTicks(100 * TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency));
                 Assert.AreEqual(200, stopwatch.Elapsed.Ticks * System.Diagnostics.Stopwatch.Frequency / TimeSpan.TicksPerSecond);
-                stopwatch.Pause();
-                stopwatch.Pause();
+                stopwatch.Stop();
+                stopwatch.Stop();
                 AmbientClock.SkipAhead(TimeSpan.FromTicks(100 * TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency));
                 Assert.AreEqual(200, stopwatch.Elapsed.Ticks * System.Diagnostics.Stopwatch.Frequency / TimeSpan.TicksPerSecond);
                 stopwatch.Reset();
@@ -235,9 +239,36 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
+        public void StopwatchEmulation()
+        {
+            Assert.AreEqual(Stopwatch.Frequency, AmbientStopwatch.Frequency);
+            Assert.AreEqual(Stopwatch.IsHighResolution, AmbientStopwatch.IsHighResolution);
+            using (AmbientClock.Pause())
+            {
+                AmbientStopwatch stopwatch;
+                Assert.AreEqual(AmbientStopwatch.GetTimestamp(), AmbientStopwatch.GetTimestamp());
+
+                stopwatch = new AmbientStopwatch();
+                Assert.IsFalse(stopwatch.IsRunning);
+                Assert.AreEqual(0, stopwatch.ElapsedMilliseconds);
+                Assert.AreEqual((long)stopwatch.Elapsed.TotalMilliseconds, stopwatch.ElapsedMilliseconds);
+                stopwatch.Restart();
+                Assert.IsTrue(stopwatch.IsRunning);
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+                Assert.AreEqual(100, stopwatch.ElapsedMilliseconds);
+
+                stopwatch = AmbientStopwatch.StartNew();
+                Assert.IsTrue(stopwatch.IsRunning);
+                Assert.AreEqual((long)stopwatch.Elapsed.TotalMilliseconds, stopwatch.ElapsedMilliseconds);
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// </summary>
+        [TestMethod]
         public async Task StopwatchSystemPauseResumeReset()
         {
-            using (new LocalServiceScopedOverride<IAmbientClockProvider>(null))
+            using (new LocalProviderScopedOverride<IAmbientClockProvider>(null))
             {
                 AmbientStopwatch stopwatch = new AmbientStopwatch(false);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
@@ -245,16 +276,16 @@ namespace TestAmbientServices
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
                 stopwatch.Reset();
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
-                stopwatch.Resume();
-                stopwatch.Resume();
+                stopwatch.Start();
+                stopwatch.Start();
                 await Task.Delay(100);
-                Assert.IsTrue(stopwatch.TicksElapsed > 0);
-                stopwatch.Pause();
-                stopwatch.Pause();
-                long elapsed = stopwatch.TicksElapsed;
+                Assert.IsTrue(stopwatch.ElapsedTicks > 0);
+                stopwatch.Stop();
+                stopwatch.Stop();
+                long elapsed = stopwatch.ElapsedTicks;
                 await Task.Delay(100);
-                Assert.AreEqual(elapsed, stopwatch.TicksElapsed);
-                stopwatch.Resume();
+                Assert.AreEqual(elapsed, stopwatch.ElapsedTicks);
+                stopwatch.Start();
                 stopwatch.Reset();
                 Assert.IsTrue(stopwatch.Elapsed.Ticks < 1000);  // this could fail if there is lots of CPU contention
             }
@@ -519,7 +550,7 @@ namespace TestAmbientServices
                 Assert.AreEqual(0, elapsed);
                 await Task.Delay(375);
                 Assert.IsTrue(elapsed == 2 || elapsed == 3, elapsed.ToString());        // this is sometimes two when the tests run slowly
-                Assert.AreEqual(0, disposed);
+                Assert.AreEqual(0, disposed);           // this assertion failed once, but is very intermittent
             }
             Assert.AreEqual(1, disposed);
         }

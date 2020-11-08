@@ -183,7 +183,7 @@ There are no settings for this service.
 /// </summary>
 class DownloadAndUnzip
 {
-    private static readonly IAmbientProgressProvider AmbientProgress = Service.GetAccessor<IAmbientProgressProvider>().GlobalProvider;
+    private static readonly IAmbientProgressProvider AmbientProgress = Service.GetReference<IAmbientProgressProvider>().GlobalProvider;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -264,6 +264,22 @@ Clocks should never go backwards.  Provider implementors must ensure this holds 
 The `AmbientClock` static class provides an abstraction that automatically uses the system clock if there is no registered provider.  It also provides a `Pause` function that allows the caller to temporarily pause time as seen by the ambient clock.  The `SkipAhead` function allows the caller to move the paused clock forward (ignored if the clock is not paused).  `AmbientClock` can also issue an `AmbientCancellationToken` that is cancelled by the ambient clock provider.
 The `AmbientStopwatch` class provides a time measuring class similar to the framework's `Stopwatch` class, but pauses when the ambient clock is paused.
 The `AmbientTimer` class provides a callback similar to the framework's `Timer` class, but follows the ambient clock.
+
+### Usage
+Converting a project to use `AmbientClock` begins with changing all references to `DateTime.UtcNow` to `AmbientClock.UtcNow`, `Stopwatch` to `AmbientStopwatch`, and `System.Timers.Timer` to `AmbientTimer`.  This should not affect anything at all.  Next, in unit tests that are sensitive to timing, add the following code:
+```
+using (AmbientClock.Pause())
+{
+
+    // beginning of test here--no time will appear to pass while this code executes
+
+    // move the ambient clock ahead such that it will appear to the system that exactly 100ms has passed
+    AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+
+    // more test code here--no time will appear to pass while this code executes, but 100ms will appear to have elapsed since the first part of the code ran
+
+}
+```
 
 ### Sample
 [//]: # (AmbientClockSample)
@@ -519,7 +535,7 @@ class BasicAmbientCallStack : IAmbientCallStack
 /// </summary>
 class Setup
 {
-    private static readonly ServiceAccessor<IAmbientCacheProvider> _CacheProvider = Service.GetAccessor<IAmbientCacheProvider>();
+    private static readonly ServiceReference<IAmbientCacheProvider> _CacheProvider = Service.GetReference<IAmbientCacheProvider>();
     static Setup()
     {
         _CacheProvider.GlobalProvider = null;
@@ -537,7 +553,7 @@ class SetupApplication
 {
     static SetupApplication()
     {
-        ServiceAccessor<IAmbientSettingsProvider> SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+        ServiceReference<IAmbientSettingsProvider> SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
         SettingsProvider.GlobalProvider = new AppConfigAmbientSettings();
     }
 }
@@ -555,7 +571,7 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
     public object GetTypedValue(string key)
     {
         string rawValue = System.Configuration.ConfigurationManager.AppSettings[key];
-        IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
         return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
     }
 }
@@ -569,7 +585,7 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
 /// </summary>
 class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
 {
-    private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+    private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
 
     private readonly IAmbientSettingsProvider _oldSettings;
     private readonly Dictionary<string, string> _overrides;
@@ -607,7 +623,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     public object GetTypedValue(string key)
     {
         string rawValue = GetRawValue(key);
-        IProviderSetting ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
         return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
     }
 }

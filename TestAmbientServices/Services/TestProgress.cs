@@ -15,7 +15,7 @@ namespace TestAmbientServices
     [TestClass]
     public class TestProgress
     {
-        private static readonly ServiceAccessor<IAmbientProgressProvider> _ProgressProvider = Service.GetAccessor<IAmbientProgressProvider>();
+        private static readonly ServiceReference<IAmbientProgressProvider> _ProgressProvider = Service.GetReference<IAmbientProgressProvider>();
 
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgressProvider"/>.
@@ -323,7 +323,7 @@ namespace TestAmbientServices
             CancellationToken token = progress.CancellationToken;
             Assert.IsNotNull(token);
 
-            using (LocalServiceScopedOverride<IAmbientProgressProvider> LocalServiceOverride = new LocalServiceScopedOverride<IAmbientProgressProvider>(null))
+            using (LocalProviderScopedOverride<IAmbientProgressProvider> LocalServiceOverride = new LocalProviderScopedOverride<IAmbientProgressProvider>(null))
             {
                 IAmbientProgress noProgress = _ProgressProvider.Provider?.Progress;
                 CancellationToken cancel = noProgress?.CancellationToken ?? default(CancellationToken);

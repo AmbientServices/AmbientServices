@@ -20,18 +20,18 @@ namespace TestAmbientServices
     [TestClass]
     public class TestServiceAccessor
     {
-        private static readonly ServiceAccessor<ITest> _TestProvider = Service.GetAccessor<ITest>();
-        private static readonly ServiceAccessor<IAmbientLoggerProvider> _LoggerProvider = Service.GetAccessor<IAmbientLoggerProvider>();
-        private static readonly ServiceAccessor<IAmbientProgressProvider> _ProgressProvider = Service.GetAccessor<IAmbientProgressProvider>();
-        private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
-        private static readonly ServiceAccessor<IAmbientCacheProvider> _CacheProvider = Service.GetAccessor<IAmbientCacheProvider>();
-        private static readonly ServiceAccessor<IJunk> _JunkProvider = Service.GetAccessor<IJunk>();
-        private static readonly ServiceAccessor<ILocalTest> _LocalTestProvider = Service.GetAccessor<ILocalTest>();
-        private static readonly ServiceAccessor<ILateAssignmentTest> _LateAssignmentTestProvider = Service.GetAccessor<ILateAssignmentTest>();
-        private static readonly ServiceAccessor<ITest1> _Test1Provider = Service.GetAccessor<ITest1>();
-        private static readonly ServiceAccessor<ITest2> _Test2Provider = Service.GetAccessor<ITest2>();
-        private static readonly ServiceAccessor<IGlobalOverrideTest> _GlobalOverrideTest = Service.GetAccessor<IGlobalOverrideTest>();
-        private static readonly ServiceAccessor<ILocalOverrideTest> _LocalOverrideTest = Service.GetAccessor<ILocalOverrideTest>();
+        private static readonly ServiceReference<ITest> _TestProvider = Service.GetReference<ITest>();
+        private static readonly ServiceReference<IAmbientLoggerProvider> _LoggerProvider = Service.GetReference<IAmbientLoggerProvider>();
+        private static readonly ServiceReference<IAmbientProgressProvider> _ProgressProvider = Service.GetReference<IAmbientProgressProvider>();
+        private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
+        private static readonly ServiceReference<IAmbientCacheProvider> _CacheProvider = Service.GetReference<IAmbientCacheProvider>();
+        private static readonly ServiceReference<IJunk> _JunkProvider = Service.GetReference<IJunk>();
+        private static readonly ServiceReference<ILocalTest> _LocalTestProvider = Service.GetReference<ILocalTest>();
+        private static readonly ServiceReference<ILateAssignmentTest> _LateAssignmentTestProvider = Service.GetReference<ILateAssignmentTest>();
+        private static readonly ServiceReference<ITest1> _Test1Provider = Service.GetReference<ITest1>();
+        private static readonly ServiceReference<ITest2> _Test2Provider = Service.GetReference<ITest2>();
+        private static readonly ServiceReference<IGlobalOverrideTest> _GlobalOverrideTest = Service.GetReference<IGlobalOverrideTest>();
+        private static readonly ServiceReference<ILocalOverrideTest> _LocalOverrideTest = Service.GetReference<ILocalOverrideTest>();
 
         [TestMethod]
         public void AmbientServicesProviders()
@@ -86,7 +86,7 @@ namespace TestAmbientServices
             _CacheProvider.LocalReference.ProviderChanged += (s, e) => { changeNotified = true; };
             Assert.IsFalse(changeNotified);
             BasicAmbientCache cache2 = new BasicAmbientCache();
-            using (LocalServiceScopedOverride<IAmbientCacheProvider> o2 = new LocalServiceScopedOverride<IAmbientCacheProvider>(cache2))
+            using (LocalProviderScopedOverride<IAmbientCacheProvider> o2 = new LocalProviderScopedOverride<IAmbientCacheProvider>(cache2))
             {
                 Assert.AreEqual(cache2, _CacheProvider.LocalReference.Provider);
                 Assert.IsTrue(changeNotified);
@@ -97,7 +97,7 @@ namespace TestAmbientServices
         [TestMethod, ExpectedException(typeof(TypeInitializationException))]
         public void NonInterfaceType()
         {
-            ServiceAccessor<DefaultTest> DefaultTestProvider = Service.GetAccessor<DefaultTest>();
+            ServiceReference<DefaultTest> DefaultTestProvider = Service.GetReference<DefaultTest>();
             DefaultTest test = DefaultTestProvider.GlobalProvider;
         }
 
@@ -125,7 +125,7 @@ namespace TestAmbientServices
         {
             ILocalOverrideTest oldGlobal = _LocalOverrideTest.GlobalProvider;
             ILocalOverrideTest oldLocalOverride = _LocalOverrideTest.ProviderOverride;
-            using (LocalServiceScopedOverride<ILocalOverrideTest> o = new LocalServiceScopedOverride<ILocalOverrideTest>(null))
+            using (LocalProviderScopedOverride<ILocalOverrideTest> o = new LocalProviderScopedOverride<ILocalOverrideTest>(null))
             {
                 Assert.IsNull(_LocalOverrideTest.Provider);
                 Assert.AreEqual(oldGlobal, o.OldGlobal);
@@ -135,7 +135,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void NoOpAssemblyOnLoad()
         {
-            using (new LocalServiceScopedOverride<IAmbientLoggerProvider>(null))
+            using (new LocalProviderScopedOverride<IAmbientLoggerProvider>(null))
             {
                 AssemblyLoader.OnLoad(Assembly.GetExecutingAssembly());
             }
@@ -284,8 +284,8 @@ namespace TestAmbientServices
     [DefaultAmbientServiceProvider(typeof(ITestAmbientService), typeof(ITestAmbientService2))]
     internal class DefaultTestAmbientService2 : ITestAmbientService, ITestAmbientService2
     {
-        private static readonly ServiceAccessor<ITestAmbientService> _Accessor = Service.GetAccessor<ITestAmbientService>();
-        private static readonly ServiceAccessor<ITestAmbientService2> _Accessor2 = Service.GetAccessor<ITestAmbientService2>();
+        private static readonly ServiceReference<ITestAmbientService> _Accessor = Service.GetReference<ITestAmbientService>();
+        private static readonly ServiceReference<ITestAmbientService2> _Accessor2 = Service.GetReference<ITestAmbientService2>();
         public static void Load()
         {
             ITestAmbientService service = _Accessor.GlobalProvider;

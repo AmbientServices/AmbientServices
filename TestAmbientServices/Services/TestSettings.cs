@@ -14,7 +14,7 @@ namespace TestAmbientServices
     [TestClass]
     public class TestSettings
     {
-        private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+        private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
 
         private static object _lock = new object();
 
@@ -26,7 +26,7 @@ namespace TestAmbientServices
         {
             // use a local override in case we ran another test that left the global or local settings provider set to something else on this thread
             BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(AmbientSettingInt));
-            using (LocalServiceScopedOverride<IAmbientSettingsProvider> LocalOverrideTest = new LocalServiceScopedOverride<IAmbientSettingsProvider>(settings))
+            using (LocalProviderScopedOverride<IAmbientSettingsProvider> LocalOverrideTest = new LocalProviderScopedOverride<IAmbientSettingsProvider>(settings))
             {
                 AmbientSetting<int> value;
                 value = new AmbientSetting<int>("int-setting", "", s => s == null ? 0 : Int32.Parse(s));
@@ -52,7 +52,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void NoAmbientSetting()
         {
-            using (LocalServiceScopedOverride<IAmbientSettingsProvider> LocalOverrideTest = new LocalServiceScopedOverride<IAmbientSettingsProvider>(null))
+            using (LocalProviderScopedOverride<IAmbientSettingsProvider> LocalOverrideTest = new LocalProviderScopedOverride<IAmbientSettingsProvider>(null))
             {
                 AmbientSetting<int> value;
                 value = new AmbientSetting<int>("int-setting", "", s => s == null ? 0 : Int32.Parse(s));
@@ -91,9 +91,9 @@ namespace TestAmbientServices
         [TestMethod]
         public void ProviderWithPreregisteredSettings()
         {
-            SettingBase<string> base1 = new SettingBase<string>(nameof(ProviderWithPreregisteredSettings) + "1", "", null);
-            SettingBase<int> base2 = new SettingBase<int>(nameof(ProviderWithPreregisteredSettings) + "2", "", s => (s == null) ? 2 : Int32.Parse(s));
-            SettingBase<int> base3 = new SettingBase<int>(nameof(ProviderWithPreregisteredSettings) + "3", "", s => Int32.Parse(s), "3");
+            SettingInfo<string> base1 = new SettingInfo<string>(nameof(ProviderWithPreregisteredSettings) + "1", "", null);
+            SettingInfo<int> base2 = new SettingInfo<int>(nameof(ProviderWithPreregisteredSettings) + "2", "", s => (s == null) ? 2 : Int32.Parse(s));
+            SettingInfo<int> base3 = new SettingInfo<int>(nameof(ProviderWithPreregisteredSettings) + "3", "", s => Int32.Parse(s), "3");
             Dictionary<string, string> settings = new Dictionary<string, string> { { nameof(ProviderWithPreregisteredSettings) + "1", null }, { nameof(ProviderWithPreregisteredSettings) + "2", "2" }, { nameof(ProviderWithPreregisteredSettings) + "3", null }, };
             IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(ProviderWithPreregisteredSettings), settings);
         }
@@ -226,7 +226,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void SettingGlobalProviderChangeNotification()
         {
-            ServiceAccessor<IAmbientSettingsProvider> pretendGlobalAccessor = new ServiceAccessor<IAmbientSettingsProvider>();
+            ServiceReference<IAmbientSettingsProvider> pretendGlobalAccessor = new ServiceReference<IAmbientSettingsProvider>();
 
             string testSettingKey = nameof(SettingGlobalProviderChangeNotification);
             string defaultValue = "defaultValue";
@@ -268,7 +268,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void SettingGlobalProviderChangeNoNotification()
         {
-            ServiceAccessor<IAmbientSettingsProvider> pretendGlobalAccessor = new ServiceAccessor<IAmbientSettingsProvider>();
+            ServiceReference<IAmbientSettingsProvider> pretendGlobalAccessor = new ServiceReference<IAmbientSettingsProvider>();
 
             string testSettingKey = nameof(SettingGlobalProviderChangeNoNotification);
             string defaultValue = "defaultValue";
@@ -308,8 +308,8 @@ namespace TestAmbientServices
         public void SettingLocalValueChangeNotification()
         {
             IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(SettingLocalValueChangeNotification));
-            using (new LocalServiceScopedOverride<IMutableAmbientSettingsProvider>(settingsProvider))
-            using (new LocalServiceScopedOverride<IAmbientSettingsProvider>(settingsProvider))
+            using (new LocalProviderScopedOverride<IMutableAmbientSettingsProvider>(settingsProvider))
+            using (new LocalProviderScopedOverride<IAmbientSettingsProvider>(settingsProvider))
             {
                 string testSettingKey = nameof(SettingLocalValueChangeNotification);
                 string initialValue = "initialValue";
@@ -330,8 +330,8 @@ namespace TestAmbientServices
         public void SettingLocalChangeProvider()
         {
             IMutableAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider(nameof(SettingLocalChangeProvider));
-            using (new LocalServiceScopedOverride<IMutableAmbientSettingsProvider>(settingsProvider))
-            using (new LocalServiceScopedOverride<IAmbientSettingsProvider>(settingsProvider))
+            using (new LocalProviderScopedOverride<IMutableAmbientSettingsProvider>(settingsProvider))
+            using (new LocalProviderScopedOverride<IAmbientSettingsProvider>(settingsProvider))
             {
                 string testSettingKey = nameof(SettingLocalChangeProvider);
                 string initialValue = "initialValue";
@@ -343,12 +343,43 @@ namespace TestAmbientServices
                 // now switch local providers and try again
                 string secondValue = "change1";
                 IMutableAmbientSettingsProvider settingsProvider2 = new BasicAmbientSettingsProvider(nameof(SettingLocalChangeProvider) + "_2");
-                using (new LocalServiceScopedOverride<IMutableAmbientSettingsProvider>(settingsProvider2))
-                using (new LocalServiceScopedOverride<IAmbientSettingsProvider>(settingsProvider2))
+                using (new LocalProviderScopedOverride<IMutableAmbientSettingsProvider>(settingsProvider2))
+                using (new LocalProviderScopedOverride<IAmbientSettingsProvider>(settingsProvider2))
                 {
                     settingsProvider2.ChangeSetting(testSettingKey, secondValue);
                     Assert.AreEqual(secondValue, testSetting.Value);
                     Assert.AreEqual(secondValue, notificationNewValue);
+                }
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientSettingsProvider"/>.
+        /// </summary>
+        [TestMethod]
+        public void SettingsInfo()
+        {
+            string settingName = nameof(SettingsInfo);
+            DateTime start = AmbientClock.UtcNow;
+            AmbientSetting<string> testSetting = new AmbientSetting<string>(settingName, "", s => s, "default value");
+            foreach (IAmbientSettingInfo info in SettingsRegistry.DefaultRegistry.Settings)
+            {
+                if (String.Equals(settingName, info.Key))
+                {
+                    Assert.IsTrue(info.LastUsed == DateTime.MinValue);
+                    Assert.IsTrue(String.IsNullOrEmpty(info.Description));
+                    Assert.AreEqual("default value", info.DefaultValueString);
+                    Assert.AreEqual("default value", (string)info.DefaultValue);
+                }
+            }
+            Assert.AreEqual("default value", testSetting.Value);
+            foreach (IAmbientSettingInfo info in SettingsRegistry.DefaultRegistry.Settings)
+            {
+                if (String.Equals(settingName, info.Key))
+                {
+                    Assert.IsTrue(info.LastUsed >= start);
+                    Assert.IsTrue(String.IsNullOrEmpty(info.Description));
+                    Assert.AreEqual("default value", info.DefaultValueString);
+                    Assert.AreEqual("default value", (string)info.DefaultValue);
                 }
             }
         }
@@ -390,7 +421,7 @@ namespace TestAmbientServices
             Assert.ThrowsException<ArgumentNullException>(() => registry.Register(null));
         }
 
-        private void Registry_SettingRegistered(object sender, IProviderSetting e)
+        private void Registry_SettingRegistered(object sender, IAmbientSettingInfo e)
         {
         }
         private void TempRegister(SettingsRegistry registry, string key = null, string description = null)
@@ -399,7 +430,7 @@ namespace TestAmbientServices
             registry.Register(setting2);
         }
 
-        class TestProviderSetting : IProviderSetting
+        class TestProviderSetting : IAmbientSettingInfo
         {
             public TestProviderSetting(string key = "", string defaultValueString = null, string description = null)
             {
