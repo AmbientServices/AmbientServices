@@ -19,7 +19,7 @@ namespace AmbientServices
 
         private IAmbientClockProvider _clockProvider;
         private CancellationTokenSource _tokenSource;
-        private AmbientTimer _ambientTimer;
+        private AmbientEventTimer _ambientTimer;
 
         /// <summary>
         /// Constructs an ambient cancellation token source using a system <see cref="CancellationTokenSource"/>.
@@ -50,8 +50,8 @@ namespace AmbientServices
                 _tokenSource = new CancellationTokenSource();
                 if (timeout != null)
                 {
-                    _ambientTimer = new AmbientTimer(timeout.Value);
-                    System.EventHandler<AmbientTimerElapsedEventHandler> handler = null;
+                    _ambientTimer = new AmbientEventTimer(timeout.Value);
+                    System.Timers.ElapsedEventHandler handler = null;
                     handler = (source, e)
                         =>
                     {
@@ -60,6 +60,7 @@ namespace AmbientServices
                         _ambientTimer.Dispose();
                     };
                     _ambientTimer.Elapsed += handler;   // note that the handler will keep the timer and the token source alive until the event is raised, but the event is only raised once anyway, and there is no need to unsubscribe because the owner of the event is disposed when the event is triggered anyway
+                    _ambientTimer.Enabled = true;
                 }
             }
             else

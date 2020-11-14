@@ -39,7 +39,7 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
-        public async Task Clock()
+        public async Task ClockSystem()
         {
             Assert.IsTrue(AmbientClock.IsSystemClock);
             long startTicks = AmbientClock.Ticks;
@@ -55,6 +55,8 @@ namespace TestAmbientServices
             TimeSpan testElapsed = AmbientClock.Elapsed;
             Assert.IsTrue(AmbientClock.IsSystemClock);
             DateTime test = AmbientClock.UtcNow;
+            DateTime testLocal = AmbientClock.Now;
+            Assert.IsTrue(Math.Abs((test.ToLocalTime() - testLocal).Ticks) < 10000000);
             Assert.IsTrue(AmbientClock.IsSystemClock);
             await Task.Delay(100);
             Assert.IsTrue(AmbientClock.IsSystemClock);
@@ -75,7 +77,7 @@ namespace TestAmbientServices
         public void TimerAutoRestartAndEnabled()
         {
             using (AmbientClock.Pause())
-            using (AmbientTimer timer = new AmbientTimer(TimeSpan.FromMilliseconds(1)))
+            using (AmbientEventTimer timer = new AmbientEventTimer(1))
             {
                 timer.AutoReset = true;
                 Assert.IsTrue(timer.AutoReset);
@@ -125,7 +127,7 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
-        public async Task ClockSystem()
+        public async Task ClockOverrideNull()
         {
             using (new LocalProviderScopedOverride<IAmbientClockProvider>(null))
             {
@@ -136,6 +138,8 @@ namespace TestAmbientServices
                 long testTicks = AmbientClock.Ticks;
                 TimeSpan testElapsed = AmbientClock.Elapsed;
                 DateTime test = AmbientClock.UtcNow;
+                DateTime testLocal = AmbientClock.Now;
+                Assert.IsTrue(Math.Abs((test.ToLocalTime() - testLocal).Ticks) < 10000000);
                 await Task.Delay(100);
                 DateTime end = DateTime.UtcNow;
                 long endTicks = AmbientClock.Ticks;
@@ -298,20 +302,26 @@ namespace TestAmbientServices
         {
             bool elapsed = false;
             bool disposed = false;
-            using (AmbientTimer timer = new AmbientTimer())
+            using (AmbientEventTimer timer = new AmbientEventTimer())
             {
                 timer.AutoReset = true;
-                timer.Period = TimeSpan.FromMilliseconds(10);
+                timer.Interval = 10;
                 timer.Enabled = true;
                 // hopefully we can get the timer to elapse now (without a subscriber)
                 System.Threading.Thread.Sleep(100);
                 // add a subscriber
-                timer.Elapsed += (s, e) => { elapsed = true; };
-                timer.Disposed += (s, e) => { disposed = true; };
+                System.Timers.ElapsedEventHandler elapsedHandler = (s, e) => { elapsed = true; };
+                EventHandler disposedHandler = (s, e) => { disposed = true; };
+                timer.Elapsed += elapsedHandler;
+                timer.Disposed += disposedHandler;
                 // now try to get it to elapse again (this time with a subscriber)
                 System.Threading.Thread.Sleep(100);
                 Assert.IsTrue(elapsed);
                 Assert.IsFalse(disposed);
+                timer.Elapsed -= elapsedHandler;
+                timer.Disposed -= disposedHandler;
+                // we needed to test the Disposed event removal, but we need to get notified of disposal
+                timer.Disposed += disposedHandler;
             }
             Assert.IsTrue(disposed);
         }
@@ -325,11 +335,11 @@ namespace TestAmbientServices
             {
                 bool elapsed = false;
                 bool disposed = false;
-                using (AmbientTimer timer = new AmbientTimer())
+                using (AmbientEventTimer timer = new AmbientEventTimer())
                 {
                     timer.Elapsed += (s, e) => { elapsed = true; };
                     timer.Disposed += (s, e) => { disposed = true; };
-                    timer.Period = TimeSpan.FromMilliseconds(100);
+                    timer.Interval = 100;
                     timer.Enabled = true;
                     Assert.IsFalse(elapsed);
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
@@ -348,10 +358,10 @@ namespace TestAmbientServices
             using (AmbientClock.Pause())
             {
                 bool disposed = false;
-                using (AmbientTimer timer = new AmbientTimer())
+                using (AmbientEventTimer timer = new AmbientEventTimer())
                 {
                     timer.Disposed += (s, e) => { disposed = true; };
-                    timer.Period = TimeSpan.FromMilliseconds(100);
+                    timer.Interval = 100;
                     timer.Enabled = true;
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                     Assert.IsFalse(disposed);
@@ -363,13 +373,13 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
-        public void AmbientTimerInfiniteTimeout()
+        public void AmbientTimerDisposeBeforeRasied()
         {
             using (AmbientClock.Pause())
             {
-                using (AmbientTimer timer = new AmbientTimer(Timeout.InfiniteTimeSpan)) { }
+                using (AmbientEventTimer timer = new AmbientEventTimer(TimeSpan.FromMilliseconds(Int32.MaxValue))) { }
             }
-            using (AmbientTimer timer = new AmbientTimer(Timeout.InfiniteTimeSpan)) { }
+            using (AmbientEventTimer timer = new AmbientEventTimer(TimeSpan.FromMilliseconds(Int32.MaxValue))) { }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
@@ -380,7 +390,7 @@ namespace TestAmbientServices
             AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientTimer timer = new AmbientTimer(clock, TimeSpan.FromMilliseconds(100)))
+            using (AmbientEventTimer timer = new AmbientEventTimer(clock, TimeSpan.FromMilliseconds(100)))
             {
                 timer.AutoReset = true;
                 timer.Elapsed += (s, e) => { ++elapsed; };
@@ -403,17 +413,18 @@ namespace TestAmbientServices
         /// Performs tests on <see cref="IAmbientClockProvider"/>.
         /// </summary>
         [TestMethod]
-        public void TimerAmbientClockAutoStart()
+        public void TimerAmbientClockStartPaused()
         {
             using (AmbientClock.Pause())
             {
                 bool elapsed = false;
                 bool disposed = false;
-                using (AmbientTimer timer = new AmbientTimer(TimeSpan.FromMilliseconds(100)))
+                using (AmbientEventTimer timer = new AmbientEventTimer(TimeSpan.FromMilliseconds(100)))
                 {
                     Assert.IsFalse(timer.AutoReset);
-                    Assert.AreEqual(TimeSpan.FromMilliseconds(100), timer.Period);
-                    Assert.IsTrue(timer.Enabled);
+                    Assert.AreEqual(100.0, timer.Interval);
+                    Assert.IsFalse(timer.Enabled);
+                    timer.Enabled = true;
                     timer.Elapsed += (s, e) => { elapsed = true; };
                     timer.Disposed += (s, e) => { disposed = true; };
                     Assert.IsFalse(elapsed);
@@ -433,13 +444,13 @@ namespace TestAmbientServices
             AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientTimer timer = new AmbientTimer(clock))
+            using (AmbientEventTimer timer = new AmbientEventTimer(clock))
             {
                 timer.AutoReset = true;
-                timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, e.Timer); };
-                timer.Disposed += (s, e) => { ++disposed; Assert.AreEqual(timer, e.Timer); };
+                timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, s); };
+                timer.Disposed += (s, e) => { ++disposed; Assert.AreEqual(timer, s); };
                 timer.Enabled = true;
-                timer.Period = TimeSpan.FromMilliseconds(100);
+                timer.Interval = 100;
                 Assert.AreEqual(0, elapsed);
                 clock.SkipAhead(TimeSpan.FromMilliseconds(100).Ticks * System.Diagnostics.Stopwatch.Frequency / TimeSpan.TicksPerSecond);
                 Assert.AreEqual(1, elapsed);
@@ -456,11 +467,11 @@ namespace TestAmbientServices
             AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientTimer timer = new AmbientTimer(clock))
+            using (AmbientEventTimer timer = new AmbientEventTimer(clock))
             {
-                timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, e.Timer); };
-                timer.Disposed += (s, e) => { ++disposed; Assert.AreEqual(timer, e.Timer); };
-                timer.Period = TimeSpan.FromMilliseconds(100);
+                timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, s); };
+                timer.Disposed += (s, e) => { ++disposed; Assert.AreEqual(timer, s); };
+                timer.Interval = 100;
                 timer.AutoReset = true;
                 timer.Start();
                 Assert.AreEqual(0, elapsed);
@@ -482,16 +493,17 @@ namespace TestAmbientServices
         {
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientTimer timer = new AmbientTimer(null))
+            using (AmbientEventTimer timer = new AmbientEventTimer(null))
             {
                 SemaphoreSlim ss = new SemaphoreSlim(0);
-                Assert.IsFalse(timer.AutoReset);
+                Assert.IsTrue(timer.AutoReset);
                 Assert.IsFalse(timer.Enabled);
+                timer.AutoReset = false;
                 timer.Elapsed += (s, e) => { ++elapsed; ss.Release(); };
                 timer.Disposed += (s, e) => { ++disposed; };
                 timer.Enabled = true;
-                timer.Period = TimeSpan.FromMilliseconds(100);
-                Assert.AreEqual(TimeSpan.FromMilliseconds(100), timer.Period);
+                timer.Interval = 100;
+                Assert.AreEqual(100.0, timer.Interval);
                 Assert.AreEqual(0, elapsed);
                 // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
                 await ss.WaitAsync(5000);
@@ -508,16 +520,16 @@ namespace TestAmbientServices
         {
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientTimer timer = new AmbientTimer(null))
+            using (AmbientEventTimer timer = new AmbientEventTimer(null))
             {
                 SemaphoreSlim ss = new SemaphoreSlim(0);
                 Assert.IsFalse(timer.Enabled);
                 timer.AutoReset = true;
                 timer.Elapsed += (s, e) => { ++elapsed; ss.Release(); };
                 timer.Disposed += (s, e) => { ++disposed; };
-                timer.Period = TimeSpan.FromMilliseconds(100);
+                timer.Interval = 100;
                 timer.Start();
-                Assert.AreEqual(TimeSpan.FromMilliseconds(100), timer.Period);
+                Assert.AreEqual(100.0, timer.Interval);
                 Assert.AreEqual(0, elapsed);
                 // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
                 await ss.WaitAsync(5000);
@@ -539,15 +551,16 @@ namespace TestAmbientServices
         {
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientTimer timer = new AmbientTimer(null, TimeSpan.FromMilliseconds(100)))
+            using (AmbientEventTimer timer = new AmbientEventTimer(null, TimeSpan.FromMilliseconds(100)))
             {
-                Assert.IsFalse(timer.AutoReset);
-                Assert.IsTrue(timer.Enabled);
-                timer.AutoReset = true;
-                Assert.AreEqual(TimeSpan.FromMilliseconds(100), timer.Period);
-                timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, e.Timer); };
-                timer.Disposed += (s, e) => { ++disposed; Assert.AreEqual(timer, e.Timer); };
+                Assert.IsTrue(timer.AutoReset);
+                Assert.IsFalse(timer.Enabled);
+                Assert.AreEqual(100, timer.Interval);
+                timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, s); };
+                timer.Disposed += (s, e) => { ++disposed; Assert.AreEqual(timer, s); };
                 Assert.AreEqual(0, elapsed);
+                timer.AutoReset = true;
+                timer.Enabled = true;
                 await Task.Delay(375);
                 Assert.IsTrue(elapsed == 2 || elapsed == 3, elapsed.ToString());        // this is sometimes two when the tests run slowly
                 Assert.AreEqual(0, disposed);           // this assertion failed once, but is very intermittent
