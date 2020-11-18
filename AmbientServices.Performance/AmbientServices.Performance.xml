@@ -1,0 +1,1130 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>AmbientServices.Performance</name>
+    </assembly>
+    <members>
+        <member name="T:AmbientServices.Performance.CallContextActiveSystemData">
+            <summary>
+            A struct that holds information about which system is currently active in a call contxt.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.CallContextActiveSystemData.Group">
+            <summary>
+            The currently-active system or system group identifier.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.CallContextActiveSystemData.StartStopwatchTimestamp">
+            <summary>
+            The stopwatch timestamp when this system or group became active.
+            Based on <see cref="P:AmbientServices.AmbientClock.Ticks"/>.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.CallContextActiveSystemData.#ctor(System.String)">
+            <summary>
+            Constructs a CallContextActiveSystemData with the specified system, starting right now.
+            </summary>
+            <param name="system">The identifier for the active system (or system group).</param>
+        </member>
+        <member name="M:AmbientServices.Performance.CallContextActiveSystemData.#ctor(System.String,System.Int64)">
+            <summary>
+            Constructs a CallContextActiveSystemData with the specified system (or system group) and start timestamp.
+            </summary>
+            <param name="system">The identifier for the active system (or system group).</param>
+            <param name="startStopwatchTimestamp">The start timestamp, which presumably originated from a previous get of <see cref="P:AmbientServices.AmbientClock.Ticks"/>.</param>
+        </member>
+        <member name="T:AmbientServices.Performance.ProcessOrSingleTimeWindowServiceProfiler">
+            <summary>
+            A class that tracks service profile statistics across multiple call contexts in a process or a single time window.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.ScopeOnSystemSwitchedDistributor.OnSystemSwitched(System.Object,AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent)">
+            <summary>
+            Switches scope to the specified new system.
+            </summary>
+            <param name="sender">The sender of the event.</param>
+            <param name="changes">The <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> for this system change.</param>
+        </member>
+        <member name="T:AmbientServices.Performance.CallContextServiceProfiler">
+            <summary>
+            A class that tracks service profile statistics for a specific call context.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.CallContextServiceProfiler.#ctor(AmbientServices.Performance.ScopeOnSystemSwitchedDistributor,System.String,System.Text.RegularExpressions.Regex,System.String)">
+            <summary>
+            Constructs a ScopeProcessingDistributionTracker.
+            </summary>
+            <param name="distributor">A <see cref="T:AmbientServices.Performance.ScopeOnSystemSwitchedDistributor"/> to hook into to receive system change events.</param>
+            <param name="scopeName">The name of the call contxt being tracked.</param>
+            <param name="systemGroupTransform">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to transform the procesor into a system group.</param>
+            <param name="startSystem">The optional starting system.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.CallContextServiceProfiler.OnSystemChanged(System.Object,AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent)">
+            <summary>
+            Switches scope to the specified new processor.
+            </summary>
+            <param name="sender">The sender of the event.</param>
+            <param name="changes">The <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> for this processor change.</param>
+        </member>
+        <member name="T:AmbientServices.Performance.TimeWindowServiceProfiler">
+            <summary>
+            A class that tracks service profile statistics for a moving time window.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.TimeWindowServiceProfiler.#ctor(AmbientServices.Performance.IAmbientServiceProfiler,System.String,System.TimeSpan,System.Func{AmbientServices.Performance.IAmbientServiceProfile,System.Threading.Tasks.Task},System.Text.RegularExpressions.Regex)">
+            <summary>
+            Constructs a TimeWindowProcessingDistributionTracker.
+            </summary>
+            <param name="metrics">A <see cref="T:AmbientServices.Performance.IAmbientServiceProfiler"/> to hook into to receive processor change events.</param>
+            <param name="scopeNamePrefix">A <see cref="T:System.TimeSpan"/> indicating the size of the window.</param>
+            <param name="windowPeriod">A <see cref="T:System.TimeSpan"/> indicating how often reports are desired.</param>
+            <param name="onWindowComplete">An async delegate that receives a <see cref="T:AmbientServices.Performance.IAmbientServiceProfile"/> at the end of each time window.</param>
+            <param name="systemGroupTransform">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to transform the system into a system group.</param>
+        </member>
+        <member name="T:AmbientServices.Performance.EnumExtensions">
+            <summary>
+            A static class that holds extensions to the system <see cref="T:System.Enum"/> class.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.EnumExtensions.MaxEnumValue``1">
+            <summary>
+            Returns the highest possible value for an enum.
+            </summary>
+            <typeparam name="T">The enum to get the maximum value for.</typeparam>
+            <returns>The highest enum value.</returns>
+        </member>
+        <member name="T:AmbientServices.Performance.EnumMax`1">
+            <summary>
+            A static class that holds onto the computed max enum value.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:AmbientServices.Performance.InterlockedExtensions">
+            <summary>
+            A static class to hold enhanced functions for performing interlocked operations.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.InterlockedExtensions.TryOptomisticAdd(System.Double@,System.Double)">
+            <summary>
+            Attempts to add the specified amount to the value using interlocked operations.
+            If there is too much contention on <paramref name="valueReference"/>, the attempt will fail and no exception will be thrown.
+            </summary>
+            <param name="valueReference">A reference to the value being manipulated.</param>
+            <param name="toAdd">The value to add to the value.</param>
+            <returns>The new value.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.InterlockedExtensions.TryOptomisticMax(System.Int64@,System.Int64)">
+            <summary>
+            Replaces the value with the specified value if the specified value is greater.
+            If there is too much contention on <paramref name="valueReference"/>, the attempt will fail and no exception will be thrown.
+            </summary>
+            <param name="valueReference">A reference to the value being manipulated.</param>
+            <param name="possibleNewMax">The value to replace the value with if it is greater.</param>
+            <returns>The new maximum value.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.InterlockedExtensions.TryOptomisticMin(System.Int64@,System.Int64)">
+            <summary>
+            Replaces the value with the specified value if the specified value is greater.
+            If there is too much contention on <paramref name="valueReference"/>, the attempt will fail and no exception will be thrown.
+            </summary>
+            <param name="valueReference">A reference to the value being manipulated.</param>
+            <param name="possibleNewMin">The value to replace the value with if it is greater.</param>
+            <returns>The new minimum value.</returns>
+        </member>
+        <member name="P:AmbientServices.Performance.InterlockedExtensions.Pseudorandom">
+            <summary>
+            Gets a superfast pseudorandom number.  This number, based on a combination of a simple interlocked rotator and the tick count, will jump rapidly from low numbers to high numbers.
+            </summary>
+            <returns>A singed but always positive pseudorandom number.</returns>
+            <remarks>
+            This number will be useful for certain types of algorithms where a fast, even statistical distribution is needed, but where no semblance of cryptographic security is required.
+            For example, load distribution.
+            </remarks>
+        </member>
+        <member name="T:AmbientServices.Performance.AmbientBottleneck">
+            <summary>
+            A class that contains immutable information about a bottleneck, something that could potentially limit performance as system use intensifies.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneck.Id">
+            <summary>
+            The identifier for the bottleneck.  The identifier is used in combination with regular expressions to filter which bottlenecks are tracked and analyzed.
+            </summary>
+            <remarks>
+            The identifier string is dash-delimited and starts with the most generic classification and progresses down to ID of the specific bottleneck.
+            </remarks>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneck.UtilizationAlgorithm">
+            <summary>
+            A <see cref="T:AmbientServices.Performance.AmbientBottleneckUtilizationAlgorithm"/> indicating the type of bottleneck.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneck.Automatic">
+            <summary>
+            Whether or not this bottleneck is measured automatically using elapsed time.
+            If not automatic, no usage will be recorded unless either <see cref="M:AmbientServices.Performance.AmbientBottleneckAccessor.SetUsage(System.Int64,System.Double)"/> or <see cref="M:AmbientServices.Performance.AmbientBottleneckAccessor.AddUsage(System.Int64,System.Double)"/> is called.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneck.Description">
+            <summary>
+            A human-readable description of the bottleneck.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneck.Limit">
+            <summary>
+            The limit that is enforced, if any.  See <see cref="T:AmbientServices.Performance.AmbientBottleneckUtilizationAlgorithm"/> for what this value means.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneck.LimitPeriod">
+            <summary>
+            A <see cref="T:System.TimeSpan"/> indicating the period in which the limit is enforced, if any.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneck.#ctor(System.String,AmbientServices.Performance.AmbientBottleneckUtilizationAlgorithm,System.Boolean,System.String,System.Nullable{System.Double},System.Nullable{System.TimeSpan})">
+            <summary>
+            Constructs an AmbientBottleneck with the specified properties.
+            </summary>
+            <param name="id">The string identifier for the bottleneck.</param>
+            <param name="utilizationAlgorithm">An <see cref="T:AmbientServices.Performance.AmbientBottleneckUtilizationAlgorithm"/> indicating the algorithm to use to calculate the utilization.</param>
+            <param name="automatic">Whether or not the bottleneck's usage is measured automaticall or using <see cref="M:AmbientServices.Performance.AmbientBottleneckAccessor.SetUsage(System.Int64,System.Double)"/> or <see cref="M:AmbientServices.Performance.AmbientBottleneckAccessor.AddUsage(System.Int64,System.Double)"/>.</param>
+            <param name="description">A description of the bottleneck.</param>
+            <param name="limit">An optional limit.</param>
+            <param name="limitPeriod">A <see cref="T:System.TimeSpan"/> indicating the period during which the limit is applied.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneck.EnterBottleneck">
+            <summary>
+            Enters the bottleneck, if there is a configured detector.
+            </summary>
+            <returns>An <see cref="T:AmbientServices.Performance.AmbientBottleneckAccessor"/> that should be disposed when exiting the bottleneck.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneck.ToString">
+            <summary>
+            Gets a string that represents this object.
+            </summary>
+            <returns>A string that represents this object.</returns>
+        </member>
+        <member name="T:AmbientServices.Performance.IAmbientBottleneckSurvey">
+            <summary>
+            An interface that abstracts a survey of bottleneck statistics.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientBottleneckSurvey.ScopeName">
+            <summary>
+            Gets the name of the scope that was surveyed.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientBottleneckSurvey.MostUtilizedBottleneck">
+            <summary>
+            Gets the <see cref="T:AmbientServices.Performance.AmbientBottleneckAccessor"/> that was utilized the most.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientBottleneckSurvey.GetMostUtilizedBottlenecks(System.Int32)">
+            <summary>
+            Gets the most used <see cref="T:AmbientServices.Performance.AmbientBottleneckAccessor"/> within the scope.
+            </summary>
+            <param name="count">The number of top limits to get.  Due to the potentially-large number of bottlenecks and the fact that this function sorts them before returning results, large values for this parameter are not recommended.</param>
+            <returns>An enumeration of <see cref="T:AmbientServices.Performance.AmbientBottleneckAccessor"/>s for the most utilized bottlenecks.</returns>
+        </member>
+        <member name="T:AmbientServices.Performance.IAmbientBottleneckSurveyor">
+            <summary>
+            An interface that combines <see cref="T:AmbientServices.Performance.IAmbientBottleneckSurvey"/> and <see cref="T:System.IDisposable"/> in order to scope the duration of the survey.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator">
+            <summary>
+            A class that manages bottleneck surveyors.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.#ctor">
+            <summary>
+            Constructs a AmbientBottleneckTracker using the ambient settings provider.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.#ctor(AmbientServices.IAmbientSettingsProvider)">
+            <summary>
+            Constructs a AmbientBottleneckTracker using the specified settings provider.
+            </summary>
+            <param name="settingsProvider">An <see cref="T:AmbientServices.IAmbientSettingsProvider"/> to get settings from.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.CreateCallContextSurveyor(System.String,System.String,System.String)">
+            <summary>
+            Creates a call context bottleneck survey.
+            </summary>
+            <param name="scopeName">A name of the call context to attach to the analyzer.  Defaults to the name of the calling function.</param>
+            <param name="overrideAllowRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to override the default allow filter.</param>
+            <param name="overrideBlockRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to override the default block filter.</param>
+            <returns>A <see cref="T:AmbientServices.Performance.IAmbientBottleneckSurveyor"/> that surveys bottleneck statistics for this call context.  Note that the returned object is NOT thread-safe.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.CreateTimeWindowSurveyor(System.TimeSpan,System.Func{AmbientServices.Performance.IAmbientBottleneckSurvey,System.Threading.Tasks.Task},System.String,System.String)">
+            <summary>
+            Creates a bottleneck survey generator that generates bottleneck statistics surveys for periodic time windows until the returned <see cref="T:System.IDisposable"/> is disposed.
+            Note that the name of each window's scope is generated automatically.
+            </summary>
+            <param name="windowSize">The size of the temporal windows that will be used for contention tracking.</param>
+            <param name="onWindowComplete">An async delegate that is invoked whenever a time window has ended, making a new survey available.  Note that the surveys returned are not thread-safe.</param>
+            <param name="overrideAllowRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to override the default allow filter.</param>
+            <param name="overrideBlockRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to override the default block filter.</param>
+            <returns>A <see cref="T:System.IDisposable"/> that scopes the collection of the surveys.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.CreateProcessSurveyor(System.String,System.String,System.String)">
+            <summary>
+            Creates a bottleneck survey which analyzes limit proximities for everything in the process until the process terminates. 
+            Note that this is only useful to determine the limits for an entire process from beginning to end, which is not useful if the process is very long-lived.
+            <see cref="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.CreateTimeWindowSurveyor(System.TimeSpan,System.Func{AmbientServices.Performance.IAmbientBottleneckSurvey,System.Threading.Tasks.Task},System.String,System.String)"/> is a better match in most situations.
+            </summary>
+            <param name="processScopeName">The name of the thread scope, or <b>null</b> to automatically build one with the name or ID of the current thread.</param>
+            <param name="overrideAllowRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to override the default allow filter.</param>
+            <param name="overrideBlockRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to override the default block filter.</param>
+            <returns>A <see cref="T:AmbientServices.Performance.IAmbientBottleneckSurveyor"/> that surveys bottleneck statistics survey for the entire process.  Note that the returned object is NOT thread-safe.</returns>
+            <remarks>
+            This is different from using <see cref="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.CreateCallContextSurveyor(System.String,System.String,System.String)"/> because that will only survey the call context it's called from, 
+            whereas this will survey all threads and call contexts in the process.  
+            They will produce the same results only for programs where there is only a single call context (no parallelization).
+            </remarks>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.CreateThreadSurveyor(System.String,System.String,System.String)">
+            <summary>
+            Creates a bottleneck survey which tracks limit proximities for everything in the thread until the thread terminates. 
+            Note that <see cref="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.CreateTimeWindowSurveyor(System.TimeSpan,System.Func{AmbientServices.Performance.IAmbientBottleneckSurvey,System.Threading.Tasks.Task},System.String,System.String)"/> is a better match in most situations.
+            </summary>
+            <param name="threadScopeName">The name of the thread scope, or <b>null</b> to automatically build one with the name or ID of the current thread.</param>
+            <param name="overrideAllowRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to override the default allow filter.</param>
+            <param name="overrideBlockRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to override the default block filter.</param>
+            <returns>A <see cref="T:AmbientServices.Performance.IAmbientBottleneckSurveyor"/> that surveys bottleneck statistics survey for the current thread.  Note that the returned object is NOT thread-safe.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.Dispose(System.Boolean)">
+            <summary>
+            Disposes of the instance.
+            </summary>
+            <param name="disposing">Whether the instance is being disposed (as opposed to finalized).</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckSurveyorCoordinator.Dispose">
+            <summary>
+            Disposes of the instance.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.AmbientServiceProfilerFactory">
+            <summary>
+            A class that acts as a factory for service profilers.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerFactory.#ctor">
+            <summary>
+            Constructs an AmbientServiceProfilerFactory using settings obtained from the ambient settings provider.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerFactory.#ctor(AmbientServices.IAmbientSettingsProvider)">
+            <summary>
+            Constructs an AmbientServiceProfilerFactory using the specified settings provider.
+            </summary>
+            <param name="settingsProvider"></param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerFactory.OnSystemSwitched(System.Object,AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent)">
+            <summary>
+            Notifies the service profiler of a system switch.
+            </summary>
+            <param name="sender">The sender of the event.</param>
+            <param name="changes">The <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> for this system switch.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerFactory.CreateCallContextProfiler(System.String,System.String)">
+            <summary>
+            Creates a call context profiler.
+            </summary>
+            <param name="scopeName">A name of the call context to attach to the analyzer.</param>
+            <param name="overrideSystemGroupTransformRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to transform the system into a system group.</param>
+            <returns>A <see cref="T:AmbientServices.Performance.IAmbientServiceProfile"/> that will profile systems executed in this call context, or null if there is no ambient service profiler event collector.  Note that the returned object is NOT thread-safe.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerFactory.CreateTimeWindowProfiler(System.String,System.TimeSpan,System.Func{AmbientServices.Performance.IAmbientServiceProfile,System.Threading.Tasks.Task},System.String)">
+            <summary>
+            Creates a service profiler which profiles the entire process in sequential time units of the specified size.
+            </summary>
+            <param name="scopeNamePrefix">A <see cref="T:System.TimeSpan"/> indicating the size of the window.</param>
+            <param name="windowPeriod">A <see cref="T:System.TimeSpan"/> indicating how often reports are desired.</param>
+            <param name="onWindowComplete">An async delegate that receives a <see cref="T:AmbientServices.Performance.IAmbientServiceProfile"/> at the end of each time window.</param>
+            <param name="overrideSystemGroupTransformRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to transform the procesor into a processor group.</param>
+            <returns>A <see cref="T:System.IDisposable"/> that scopes the collection of the profiles.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerFactory.CreateProcessProfiler(System.String,System.String)">
+            <summary>
+            Creates a bottleneck survey which analyzes limit proximities for everything in the process until the process terminates. 
+            Note that this is only useful to determine the distribtion for an entire process from start to finish, which is not very useful if the process is very long-lived.
+            <see cref="M:AmbientServices.Performance.AmbientServiceProfilerFactory.CreateTimeWindowProfiler(System.String,System.TimeSpan,System.Func{AmbientServices.Performance.IAmbientServiceProfile,System.Threading.Tasks.Task},System.String)"/> is a better match in most situations.
+            </summary>
+            <param name="scopeName">A name for the contxt to attach to the analyzer.</param>
+            <param name="overrideSystemGroupTransformRegex">A <see cref="T:System.Text.RegularExpressions.Regex"/> string to transform the procesor into a processor group.</param>
+            <returns>A <see cref="T:AmbientServices.Performance.IAmbientServiceProfile"/> containing a service profile for the entire process.  Note that the returned object is NOT thread-safe.</returns>
+            <remarks>
+            This is different from using <see cref="M:AmbientServices.Performance.AmbientServiceProfilerFactory.CreateCallContextProfiler(System.String,System.String)"/> because that will only analyze the call context it's called from, 
+            whereas this will analyze all threads and call contexts in the process.  
+            They will produce the same results only for programs where there is only a single call context (no parallelization)
+            </remarks>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerFactory.Dispose(System.Boolean)">
+            <summary>
+            Disposes of this instance.  May be overridden by derived classes.
+            </summary>
+            <param name="disposing">Whether or not we're disposing (as opposed to finalizing).</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerFactory.Dispose">
+            <summary>
+            Disposes of this instance.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.IAmbientServiceProfile">
+            <summary>
+            An interface that abstracts an ambient service profile.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientServiceProfile.ScopeName">
+            <summary>
+            Gets the name of the scope being analyzed.  The scope identifies the scope of the operations that were profiled.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientServiceProfile.ProfilerStatistics">
+            <summary>
+            Gets an enumeration of <see cref="T:AmbientServices.Performance.AmbientServiceProfilerAccumulator"/> instances indicating the relative ratios of time spent executing in each of the systems in the associated scope.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.AmbientServiceProfilerAccumulator">
+            <summary>
+            A class that accumulates processing count and time for a specific system.  Thread-safe.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientServiceProfilerAccumulator.Group">
+            <summary>
+            Gets the group the accumulator is for.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientServiceProfilerAccumulator.ExecutionCount">
+            <summary>
+            Gest the number of times systems in this group were executed.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientServiceProfilerAccumulator.TotalStopwatchTicksUsed">
+            <summary>
+            Gets the total number of stopwatch ticks used by this system group.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientServiceProfilerAccumulator.TimeUsed">
+            <summary>
+            Gets the amount of time used by this system group.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerAccumulator.#ctor(System.String,System.Int64,System.Int64)">
+            <summary>
+            Constructs a AmbientServiceProfileAccumulator for the specified system.
+            </summary>
+            <param name="group">The system.</param>
+            <param name="totalStopwatchTicksUsed">The number of stopwatch ticks used by this system.</param>
+            <param name="executionCount">The initial execution count.  Defaults to one.</param>
+        </member>
+        <member name="T:AmbientServices.Performance.IAmbientBottleneckDetector">
+            <summary>
+            An interface that abstracts an ambient bottleneck detector.
+            </summary>
+            <remarks>
+            Each time a bottleneck is used, the caller informs this interface, telling it when the bottleneck is entered and exited, as well as how much usage has occurred.
+            An survey that ranks the bottlenecks by how close to (or how much over) their limits they are may then be accessed.
+            </remarks>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientBottleneckDetector.EnterBottleneck(AmbientServices.Performance.AmbientBottleneck)">
+            <summary>
+            Enters the specified bottleneck.
+            </summary>
+            <param name="bottleneck">The <see cref="T:AmbientServices.Performance.AmbientBottleneck"/> for the bottleneck being accessed.</param>
+            <returns>An <see cref="T:AmbientServices.Performance.AmbientBottleneckAccessor"/> that should be disposed when exiting the bottleneck.</returns>
+        </member>
+        <member name="E:AmbientServices.Performance.IAmbientBottleneckDetector.BottleneckEntered">
+            <summary>
+            An event that is raised whenever <see cref="M:AmbientServices.Performance.IAmbientBottleneckDetector.EnterBottleneck(AmbientServices.Performance.AmbientBottleneck)"/> is called to enter a bottleneck.
+            </summary>
+        </member>
+        <member name="E:AmbientServices.Performance.IAmbientBottleneckDetector.BottleneckExited">
+            <summary>
+            An event that is raised whenever the <see cref="T:AmbientServices.Performance.AmbientBottleneckAccessor"/> returned by <see cref="M:AmbientServices.Performance.IAmbientBottleneckDetector.EnterBottleneck(AmbientServices.Performance.AmbientBottleneck)"/> gets disposed, indicating that the bottleneck access is complete.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.AmbientBottleneckUtilizationAlgorithm">
+            <summary>
+            An enumeration of possible bottleneck types.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.AmbientBottleneckUtilizationAlgorithm.Zero">
+            <summary>
+            Utilization will always be zero, so this type of bottleneck will never rank above any bottlenecks with a non-zero utilization.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.AmbientBottleneckUtilizationAlgorithm.Linear">
+            <summary>
+            Utilization will be computed as (<see cref="P:AmbientServices.Performance.AmbientBottleneckAccessor.LimitUsed"/> / <see cref="P:AmbientServices.Performance.AmbientBottleneckAccessor.AccessDurationStopwatchTicks"/>) / ((<see cref="P:AmbientServices.Performance.AmbientBottleneck.Limit"/> ?? 1.0) / (<see cref="P:AmbientServices.Performance.AmbientBottleneck.LimitPeriod"/>?.Ticks ?? 1.0)).
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach">
+            <summary>
+            There are no known fixed limits for this bottleneck, but it should be tracked anyway.
+            Utilization will be computed as 1.0 - 1.0 / (1.0 + Linear Result * 2.0).
+            This formula starts at zero, hits one half when the limit used hits half the limit (relative to the limit window), hits two thirds when the linear result would have returned one, and never returns a utilization of more than one.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.AmbientBottleneckAccessor">
+            <summary>
+            A class that tracks a single access to a bottleneck.
+            </summary>
+            <remarks>
+            The access may or may not be in-progress.  
+            The access counts the same whether the operation being performed succeeds or not because the contention will be the same either way.
+            </remarks>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneckAccessor.Bottleneck">
+            <summary>
+            Gets the <see cref="T:AmbientServices.Performance.AmbientBottleneck"/> for the bottleneck.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneckAccessor.AccessBegin">
+            <summary>
+            Gets the beginning of the time range for the access.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneckAccessor.AccessEnd">
+            <summary>
+            Gets the end of the time range for the access, if the access is finished.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneckAccessor.AccessCount">
+            <summary>
+            Gets the number of times the bottleneck was accessed.  This is only statistical and is not used to compute <see cref="P:AmbientServices.Performance.AmbientBottleneckAccessor.Utilization"/> or rank bottlenecks.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneckAccessor.LimitUsed">
+            <summary>
+            Gets the amount of the limit which was used.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneckAccessor.Utilization">
+            <summary>
+            Gets the utilization factor, usually between 0.0 and 1.0, where 1.0 indicates that the limit was just reached, and numbers larger than 1.0 indicate contention beyond what was possible to satisfy (similar to the average queue disk length in windows)
+            </summary>
+            <remarks>
+            This computed value is used to sort the seriousness of the usage, with larger values indicating more of a problem, ie. being closer to a system overload.
+            The value is only updated when constructed, when <see cref="M:AmbientServices.Performance.AmbientBottleneckAccessor.SetUsage(System.Int64,System.Double)"/> or <see cref="M:AmbientServices.Performance.AmbientBottleneckAccessor.AddUsage(System.Int64,System.Double)"/> is called, or when disposed at the end of the access.
+            </remarks>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientBottleneckAccessor.AccessDurationStopwatchTicks">
+            <summary>
+            Gets number of stopwatch ticks between the beginning and end of the access.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.#ctor(AmbientServices.Performance.BasicAmbientBottleneckDetector,AmbientServices.Performance.AmbientBottleneck,System.Int64)">
+            <summary>
+            Constructs a single-access AmbientBottleneckAccessRecord for the specified bottleneck with access starting at the specified timestamp.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.#ctor(AmbientServices.Performance.BasicAmbientBottleneckDetector,AmbientServices.Performance.AmbientBottleneck,System.Int64,System.Int64,System.Int64,System.Double)">
+            <summary>
+            Constructs an AmbientBottleneckAccessRecord from the completely specified property values.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.#ctor(AmbientServices.Performance.BasicAmbientBottleneckDetector,AmbientServices.Performance.AmbientBottleneck,System.DateTime)">
+            <summary>
+            Constructs a AmbientBottleneckAccessRecord from the specified property values.
+            </summary>
+            <param name="owner">The <see cref="T:AmbientServices.Performance.BasicAmbientBottleneckDetector"/> that owns this access.</param>
+            <param name="bottleneck">The <see cref="T:AmbientServices.Performance.AmbientBottleneck"/> being accessed.</param>
+            <param name="accessBegin">The <see cref="T:System.DateTime"/> indicating the beginning of the access (presumably now, or just a bit ago).</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.SetUsage(System.Int64,System.Double)">
+            <summary>
+            Sets the access count and limit used.
+            </summary>
+            <param name="accessCount">The number of access counts.</param>
+            <param name="limitUsed">The amount towards the associated limit that has been used.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.AddUsage(System.Int64,System.Double)">
+            <summary>
+            Adds to the the access count and limit used.
+            </summary>
+            <param name="additionalAccessCount">The additional number of access counts.</param>
+            <param name="additionalLimitUsed">The additional amount towards the associated limit that has been used.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.Dispose">
+            <summary>
+            Disposes of this instance, indicating that the access of the bottleneck has completed.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.CompareTo(AmbientServices.Performance.AmbientBottleneckAccessor)">
+            <summary>
+            Compares this AmbientBottleneckAccessRecord to another one to see which one has used more towards any set limit.
+            </summary>
+            <param name="other">The other AmbientBottleneckAccessRecord.</param>
+            <returns>&gt;0 if this one has used more than <paramref name="other"/>, &lt;0 if this one has used less than <paramref name="other"/>, or 0 if they have used the same amount.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.Equals(System.Object)">
+            <summary>
+            Gets whether or not the specified object is logically equivalent to this one.
+            </summary>
+            <param name="obj">The object to compare to.</param>
+            <returns>true if the objects are logically equivalent, false if they are not.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.GetHashCode">
+            <summary>
+            Gets a 32-bit hash code for the value of this object.
+            </summary>
+            <returns>A 32-bit hash code for the value of this object.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.op_Equality(AmbientServices.Performance.AmbientBottleneckAccessor,AmbientServices.Performance.AmbientBottleneckAccessor)">
+            <summary>
+            Checks to see if two AmbientBottleneckAccessRecord are logically equal.
+            </summary>
+            <param name="left">The left AmbientBottleneckAccessRecord.</param>
+            <param name="right">The right AmbientBottleneckAccessRecord.</param>
+            <returns>true if the AmbientBottleneckAccessRecords are logically equal, false if they are not.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.op_Inequality(AmbientServices.Performance.AmbientBottleneckAccessor,AmbientServices.Performance.AmbientBottleneckAccessor)">
+            <summary>
+            Checks to see if two AmbientBottleneckAccessRecord are logically not equal.
+            </summary>
+            <param name="left">The left AmbientBottleneckAccessRecord.</param>
+            <param name="right">The right AmbientBottleneckAccessRecord.</param>
+            <returns>true if the AmbientBottleneckAccessRecords are logically not equal, false if they are logically equal.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.op_LessThan(AmbientServices.Performance.AmbientBottleneckAccessor,AmbientServices.Performance.AmbientBottleneckAccessor)">
+            <summary>
+            Checks to see if a AmbientBottleneckAccessRecord is less than another one.
+            </summary>
+            <param name="left">The left AmbientBottleneckAccessRecord.</param>
+            <param name="right">The right AmbientBottleneckAccessRecord.</param>
+            <returns>true if the <paramref name="left"/> is less than <paramref name="right"/>, false if not.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.op_LessThanOrEqual(AmbientServices.Performance.AmbientBottleneckAccessor,AmbientServices.Performance.AmbientBottleneckAccessor)">
+            <summary>
+            Checks to see if a AmbientBottleneckAccessRecord is less than or equal to another one.
+            </summary>
+            <param name="left">The left AmbientBottleneckAccessRecord.</param>
+            <param name="right">The right AmbientBottleneckAccessRecord.</param>
+            <returns>true if the <paramref name="left"/> is less than or equal to <paramref name="right"/>, false if not.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.op_GreaterThan(AmbientServices.Performance.AmbientBottleneckAccessor,AmbientServices.Performance.AmbientBottleneckAccessor)">
+            <summary>
+            Checks to see if a AmbientBottleneckAccessRecord is greater than another one.
+            </summary>
+            <param name="left">The left AmbientBottleneckAccessRecord.</param>
+            <param name="right">The right AmbientBottleneckAccessRecord.</param>
+            <returns>true if the <paramref name="left"/> is greater than <paramref name="right"/>, false if not.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientBottleneckAccessor.op_GreaterThanOrEqual(AmbientServices.Performance.AmbientBottleneckAccessor,AmbientServices.Performance.AmbientBottleneckAccessor)">
+            <summary>
+            Checks to see if a AmbientBottleneckAccessRecord is greater than or equal to another one.
+            </summary>
+            <param name="left">The left AmbientBottleneckAccessRecord.</param>
+            <param name="right">The right AmbientBottleneckAccessRecord.</param>
+            <returns>true if the <paramref name="left"/> is greater than or equal to <paramref name="right"/>, false if not.</returns>
+        </member>
+        <member name="T:AmbientServices.Performance.IAmbientServiceProfiler">
+            <summary>
+            An interface that abstracts a service profiler.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientServiceProfiler.SwitchSystem(System.String,System.String)">
+            <summary>
+            Switches the system that is executing in this call context.
+            </summary>
+            <param name="system">A string indicating which system is beginning to execute, or null to indicate that the default system (ie. CPU) is executing.</param>
+            <param name="updatedPreviousSystem">An optional updated for the previous system in case part of the system identifier couldn't be determined until the execution completed.  For example, if the operation failed, we can retroactively reclassify the time spent in order to properly separately track time spent on successful, timed-out, and failed operations.</param>
+            <remarks>
+            The system should be identified using the following form:
+            MainSystem/[Subsystem Type:]Subsystem/[Subsystem Type:]Subsystem/[Subsystem Type:]Subsystem/[Subsystem Type:]Subsystem...
+            For example:
+            DynamoDB/Table:My-table/Partition:342644/Result:Success
+            S3/Bucket:My-bucket/Prefix:abcdefg/Result:Retry
+            SQL/Database:My-database/Table:User/Result:Failed
+            In the analysis pipeline, systems are grouped using the system group transform Regex from the settings.
+            Any matching Regex match groups found by the regex expression will be concatenated into the transformed string.
+            To pass the system string through unaltered (as its own group), use null, empty string, or .* as the system group transform string.
+            For example, to transform the group systems by only the main system, database, bucket, and result, while retaining the prefixes, use the following Regex:
+            (?:([^:/]+)(?:(/Database:[^:/]*)|(/Bucket:[^:/]*)|(/Result:[^:/]*)|(?:/[^/]*))*)
+            For example, to transform the group systems by only the main system, database, bucket, and result, without retaining the prefixes, use the following Regex:
+            (?:([^:/]+)(?:(?:(/)(?:Database:)([^:/]*))|(?:(/)(?:Bucket:)([^:/]*))|(?:(/)(?:Result:)([^:/]*))|(?:/[^/]*))*)
+            </remarks>
+        </member>
+        <member name="E:AmbientServices.Performance.IAmbientServiceProfiler.SystemSwitched">
+            <summary>
+            An event that is raised whenever <see cref="M:AmbientServices.Performance.IAmbientServiceProfiler.SwitchSystem(System.String,System.String)"/> is called.  
+            Note that we break the normal style of inheriting the event arguments from <see cref="T:System.EventArgs"/> in order to avoid an allocation here.  
+            Performance is critical for this.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent">
+            <summary>
+            A struct that contains the data about a profiler system changed event.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.NewSystem">
+            <summary>
+            Gets the new system.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.OldSystemStartStopwatchTimestamp">
+            <summary>
+            Gets the stopwatch timestamp when the old system started.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.NewSystemStartStopwatchTimestamp">
+            <summary>
+            Gets the stopwatch timestamp when the old system stopped and the new system started.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.RevisedOldSystem">
+            <summary>
+            Gets the revised old system.  If null, the old system was not revised during processing.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.#ctor(System.String,System.Int64,System.Int64,System.String)">
+            <summary>
+            Constructs an AmbientServiceProfilerSystemChangedEvent with the specified property values.
+            </summary>
+            <param name="newSystem">The new system.</param>
+            <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started.</param>
+            <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system stopped and the new system started.</param>
+            <param name="revisedOldSystem">The revised old system. Default to null meaning that no revision is necessary.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.GetHashCode">
+            <summary>
+            Gets a 32-bit hash code for this value.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.Equals(System.Object)">
+            <summary>
+            Compares this value to another to see if they are logically equivalent.
+            </summary>
+            <param name="obj">The object to compare to this one.</param>
+            <returns>true if the object has the same value as this one, false if the values differ.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.Equals(AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent)">
+            <summary>
+            Compares this value to another one to see if they are logically equivalent.
+            </summary>
+            <param name="that">The other <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> to compare to this one.</param>
+            <returns>true if <paramref name="that"/> has the same value, false if it has a different value.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.op_Equality(AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent,AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent)">
+            <summary>
+            Checks to see if the specified <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> are logically equivalent.
+            </summary>
+            <param name="left">The first <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> to compare.</param>
+            <param name="right">The second <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> to compare.</param>
+            <returns>true if <paramref name="left"/> and <paramref name="right"/> have the same value, false if they have different values.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent.op_Inequality(AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent,AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent)">
+            <summary>
+            Checks to see if the specified <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> are *not* logically equivalent.
+            </summary>
+            <param name="left">The first <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> to compare.</param>
+            <param name="right">The second <see cref="T:AmbientServices.Performance.AmbientServiceProfilerSystemSwitchedEvent"/> to compare.</param>
+            <returns>true if <paramref name="left"/> and <paramref name="right"/> do *not* have the same value, false if they have the same values</returns>
+        </member>
+        <member name="T:AmbientServices.Performance.IAmbientStatistics">
+            <summary>
+            An interface to create and manage system statistics, which provide long-lived high-performance tracking of accumulated, minimum, maximum, or raw samples.
+            Statistics can be used to track memory allocated, time waited, minimum or maximum sizes or times, request processing time, cache hit and misses, etc.
+            Ratios of two statistics can be used to track things like average sizes or times, events per second, bytes per second, hit ratios, etc.
+            All times are in terms of ticks whose frequency is <see cref="F:System.Diagnostics.Stopwatch.Frequency"/>.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatistics.Statistics">
+            <summary>
+            Gets a <see cref="T:System.Collections.Generic.IDictionary`2"/> with all the statistics.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientStatistics.ReadStatistic(System.String)">
+            <summary>
+            Finds the specified statistic.
+            </summary>
+            <returns>A <see cref="T:AmbientServices.Performance.IAmbientStatisticReader"/> the caller can use to read the statistic.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientStatistics.GetOrAddStatistic(System.Boolean,System.String,System.String,System.Boolean,System.Int64,AmbientServices.Performance.AggregationTypes,AmbientServices.Performance.AggregationTypes,AmbientServices.Performance.AggregationTypes,AmbientServices.Performance.AggregationTypes,AmbientServices.Performance.MissingSampleHandling)">
+            <summary>
+            Adds or updates a statistic with the specified identifier, description, and attributes.
+            </summary>
+            <param name="timeBased">Whether or not this statistic is a time-based statistic.</param>
+            <param name="id">A dash-delimited identifier for the statistic.</param>
+            <param name="description">A human-readable description for the statistic.</param>
+            <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
+            <param name="initialValue">The initial value for the statistic, if it is created.</param>
+            <param name="temporalAggregationTypes">A set of <see cref="T:AmbientServices.Performance.AggregationTypes"/> indicating how this statistic should be aggregated over time.</param>
+            <param name="spatialAggregationTypes">A set of <see cref="T:AmbientServices.Performance.AggregationTypes"/> indicating how this statistic should be aggregated across systems.</param>
+            <param name="preferredTemporalAggregationType">A single <see cref="T:AmbientServices.Performance.AggregationTypes"/> indicating the default way this statistic should be aggregated over time.</param>
+            <param name="preferredSpatialAggregationType">A single <see cref="T:AmbientServices.Performance.AggregationTypes"/> indicating the default way this statistic should be aggregated across systems.</param>
+            <param name="missingSampleHandling">A <see cref="T:AmbientServices.Performance.MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
+            <returns>A <see cref="T:AmbientServices.Performance.IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientStatistics.RemoveStatistic(System.String)">
+            <summary>
+            Removes the specified statistic if it exists.
+            </summary>
+            <returns>Whether or not the statistic was successfully removed.</returns>
+            <remarks>
+            Note that the ExecutionTime statistic cannot be removed and will return false from this function.
+            </remarks>
+        </member>
+        <member name="T:AmbientServices.Performance.AggregationTypes">
+            <summary>
+            An enumeration of ways to aggregate statistic data.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.AggregationTypes.Sum">
+            <summary>
+            The aggregation should sum the values.  Any statistics that use <see cref="M:AmbientServices.Performance.IAmbientStatistic.Increment"/> or <see cref="M:AmbientServices.Performance.IAmbientStatistic.Add(System.Int64)"/> should probably use this type of aggregation.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.AggregationTypes.Average">
+            <summary>
+            The aggregation should average the values.  Statistics that use <see cref="M:AmbientServices.Performance.IAmbientStatistic.SetValue(System.Int64)"/> might use this type of aggregation.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.AggregationTypes.Min">
+            <summary>
+            The aggregation should take the least of the values.  Statistics that use <see cref="M:AmbientServices.Performance.IAmbientStatistic.SetMin(System.Int64)"/> would likely use this type of aggregation.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.AggregationTypes.Max">
+            <summary>
+            The aggregation should take the greatest of the values.  Statistics that use <see cref="M:AmbientServices.Performance.IAmbientStatistic.SetMax(System.Int64)"/> would likely use this type of aggregation.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.AggregationTypes.MostRecent">
+            <summary>
+            The aggregation should take the most recent value.  Statistics that use <see cref="M:AmbientServices.Performance.IAmbientStatistic.SetValue(System.Int64)"/> might use this type of aggregation.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.MissingSampleHandling">
+            <summary>
+            An enumeration indicating how missing (null) samples should be handled, usually on the client side (perhaps on the server side if the server is generating higher-level statistics).
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.MissingSampleHandling.Skip">
+            <summary>
+            When samples get missed, the missing samples should just be ignored.  This is useful when you want to see missing samples as gaps in graphs.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.MissingSampleHandling.Zero">
+            <summary>
+            When samples get missed, the missing samples should be filled in with zeros.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.MissingSampleHandling.LinearEstimation">
+            <summary>
+            When samples get missed, the missing values should be filled in using linear estimation.  This is the default type of missing sample handling.
+            </summary>
+        </member>
+        <member name="F:AmbientServices.Performance.MissingSampleHandling.ExponentialEstimation">
+            <summary>
+            When samples get missed, the missing values should be filled in using exponential estimation.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.IAmbientStatisticReader">
+            <summary>
+            An interface that give read access to a single statistic.
+            Note that many user-facing statistics will naturally be a ratio of the samples of two statistics or the changes in those samples over time.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.IsTimeBased">
+            <summary>
+            Gets whether or not the statistic is a time-based statistic.  Immutable.
+            Has no effect on how the internal implementation.
+            Time-based statistics can be converted into seconds by dividing by <see cref="F:System.Diagnostics.Stopwatch.Frequency"/>.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.Id">
+            <summary>
+            Gets the identifier for the statistic.
+            The identifier should be a dash-delimited path identifying the data.  Immutable.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.Description">
+            <summary>
+            Gets a human-readable description of this statistic.  Immutable.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.SampleValue">
+            <summary>
+            Gets the current statistic sample value.  Thread-safe, possibly interlocked.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.TemporalAggregationTypes">
+            <summary>
+            The types of aggregation that should be used when aggregating samples over time.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.SpatialAggregationTypes">
+            <summary>
+            The types of aggregation that should be used when aggregating samples from different systems.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.PreferredTemporalAggregationType">
+            <summary>
+            The type of aggregation that should be used when aggregating samples over time and only one aggregation can be kept.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.PreferredSpatialAggregationType">
+            <summary>
+            The type of aggregation that should be used when aggregating samples from different systems and only one aggregation can be kept.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.IAmbientStatisticReader.MissingSampleHandling">
+            <summary>
+            How missing samples should be handled.
+            </summary>
+        </member>
+        <member name="T:AmbientServices.Performance.IAmbientStatistic">
+            <summary>
+            An interface that gives write access to a single statistic.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientStatistic.Increment">
+            <summary>
+            Increments the statistic sample value.  Thread-safe, possibly interlocked.
+            </summary>
+            <returns>The incremented sample value.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientStatistic.Add(System.Int64)">
+            <summary>
+            Adds to the statistic sample value.  Thread-safe, possibly interlocked.
+            </summary>
+            <param name="addend">The amount to add to the statistic sample value.</param>
+            <returns>The new sample value.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientStatistic.SetValue(System.Int64)">
+            <summary>
+            Sets the statistic sample value.  Thread-safe, possibly interlocked.
+            </summary>
+            <param name="newValue">The new value to use.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientStatistic.SetMin(System.Int64)">
+            <summary>
+            Sets the statistic sample value.  Thread-safe, possibly interlocked.
+            </summary>
+            <param name="newPossibleMinValue">A value which will be the new sample value if it is smaller than the current sample value.</param>
+            <returns>The new sample value.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.IAmbientStatistic.SetMax(System.Int64)">
+            <summary>
+            Sets the statistic sample value.  Thread-safe, possibly interlocked.
+            </summary>
+            <param name="newPossibleMaxValue">A value which will be the new sample value if it is larger than the current sample value.</param>
+            <returns>The new sample value.</returns>
+        </member>
+        <member name="T:AmbientServices.Performance.ConcurrentHashSet`1">
+            <summary>
+            A non-blocking version of <see cref="T:System.Collections.Generic.HashSet`1"/>.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.#ctor">
+            <summary>
+            Constructs an empty ConcurrentHashSet.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.#ctor(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Constructs a ConcurrentHashSet with the specified items in it.
+            </summary>
+            <param name="collection">An enumeration of items to initialize the set with.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.#ctor(System.Collections.Generic.IEqualityComparer{`0})">
+            <summary>
+            Constructs a ConcurrentHashSet with the specified item comparer.
+            </summary>
+            <param name="comparer">The <see cref="T:System.Collections.Generic.IEqualityComparer`1"/> to use to compare items in the set.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.#ctor(System.Collections.Generic.IEnumerable{`0},System.Collections.Generic.IEqualityComparer{`0})">
+            <summary>
+            Constructs a ConcurrentHashSet with the specified item comparer and the specified items in it.
+            </summary>
+            <param name="collection">An enumeration of items to initialize the set with.</param>
+            <param name="comparer">The <see cref="T:System.Collections.Generic.IEqualityComparer`1"/> to use to compare items in the set.</param>
+        </member>
+        <member name="P:AmbientServices.Performance.ConcurrentHashSet`1.Comparer">
+            <summary>
+            Gets the item comparer used for this set.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.ConcurrentHashSet`1.Count">
+            <summary>
+            Gets the number of items currently in this set.
+            </summary>
+        </member>
+        <member name="P:AmbientServices.Performance.ConcurrentHashSet`1.IsEmpty">
+            <summary>
+            Gets whether or not the set is empty.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.Add(`0)">
+            <summary>
+            Adds the specified item to the set if it is not already there.
+            </summary>
+            <param name="item">The item to add to the set.</param>
+            <returns>Whether or not the item was added (as opposed to it already being there).</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.TryAdd(`0)">
+            <summary>
+            Adds the specified item to the set if it is not already there.
+            </summary>
+            <param name="item">The item to add to the set.</param>
+            <returns>Whether or not the item was added (as opposed to it already being there).</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.System#Collections#Generic#ICollection{T}#Add(`0)">
+            <summary>
+            Adds the specified item to the set if it is not already there.
+            </summary>
+            <param name="item">The item to add to the set.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.Clear">
+            <summary>
+            Clears all items from the set.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.Contains(`0)">
+            <summary>
+            Checks to see whether or not the specified item is in the set.
+            </summary>
+            <param name="item">The item to look for.</param>
+            <returns><b>true</b> if the item is in the set, otherwise <b>false</b>.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.CopyTo(`0[])">
+            <summary>
+            Copies all the items in the set into the specified array.
+            </summary>
+            <param name="array">The array to copy items into.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.CopyTo(`0[],System.Int32)">
+            <summary>
+            Copies all the items in the set into the specified array starting at the specified location.
+            </summary>
+            <param name="array">The array to copy items into.</param>
+            <param name="arrayIndex">The offset within the array where the first item is to be placed.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.CreateSetComparer">
+            <summary>
+            Creates a <see cref="T:System.Collections.Generic.IEqualityComparer`1"/> for comparing sets (using the default item comparer).
+            </summary>
+            <returns>An <see cref="T:System.Collections.Generic.IEqualityComparer`1"/></returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.ExceptWith(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Removes all elements in the specified collection from the current set.
+            </summary>
+            <param name="other">An enumeration of items to remove from this set.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.IntersectWith(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Modifies the current set to contain only elements that are present in that object and in the specified collection.
+            </summary>
+            <param name="other">An enumeration of items to keep.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.IsProperSubsetOf(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Determines whether this set is a proper subset of the specified collection.
+            </summary>
+            <param name="other">An enumeration of items to compare to.</param>
+            <returns><b>true</b> if this set is a proper subset of the specified collection.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.IsProperSupersetOf(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Determines whether this set is a proper superset of the specified collection.
+            </summary>
+            <param name="other">An enumeration of items to compare to.</param>
+            <returns><b>true</b> if this set is a proper superset of the specified collection.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.IsSubsetOf(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Determines whether this set is a subset of the specified collection.
+            </summary>
+            <param name="other">An enumeration of items to compare to.</param>
+            <returns><b>true</b> if this set is a subset of the specified collection.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.IsSupersetOf(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Determines whether this set is a superset of the specified collection.
+            </summary>
+            <param name="other">An enumeration of items to compare to.</param>
+            <returns><b>true</b> if this set is a superset of the specified collection.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.Overlaps(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Checks to see whether or not there are any items common between this set and the specified collection.
+            </summary>
+            <param name="other">An enumeration of items to compare to.</param>
+            <returns><b>true</b> if there is at least one item that exists in both this set and the specified collection.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.Remove(`0)">
+            <summary>
+            Removes an item from the set.
+            </summary>
+            <param name="item">The item to remove from the set.</param>
+            <returns>Whether or not the item was removed (it may not have been there to begin with).</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.RemoveWhere(System.Predicate{`0})">
+            <summary>
+            Removes all items in the set that match the specified predicate.
+            </summary>
+            <param name="match">A <see cref="T:System.Predicate`1"/> to use to evaluate each item in the set.</param>
+            <returns>The number of items removed from the set.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.SetEquals(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Checks to see whether or not this set contains exactly the same items as the specified collection.
+            </summary>
+            <param name="other">An enumeration of items to compare to.</param>
+            <returns>Whether or not this set contains exactly the same items as the specified collection.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.SymmetricExceptWith(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Modifies the current set to contain only elements that are present either in that object or in the specified collection, but not both.
+            </summary>
+            <param name="other">An enumeration of items to compare to.</param>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.UnionWith(System.Collections.Generic.IEnumerable{`0})">
+            <summary>
+            Modifies the current set to contain all elements that are present in itself, the specified collection, or both.
+            </summary>
+            <param name="other">An enumeration of items to compare to.</param>
+        </member>
+        <member name="P:AmbientServices.Performance.ConcurrentHashSet`1.IsReadOnly">
+            <summary>
+            Gets whether or not this set is readonly.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.GetEnumerator">
+            <summary>
+            Gets an <see cref="T:System.Collections.Generic.IEnumerator`1"/> that can be used to enumerate items in this set.
+            </summary>
+            <returns>An <see cref="T:System.Collections.Generic.IEnumerator`1"/> that can be used to enumerate items in this set.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.ConcurrentHashSet`1.ToString">
+            <summary>
+            Gets a string representation of this instance.
+            </summary>
+            <returns>A string representation of this instance.</returns>
+        </member>
+        <member name="T:AmbientServices.Performance.WindowScope">
+            <summary>
+            A static class that extends <see cref="T:System.DateTime"/>.
+            </summary>
+        </member>
+        <member name="M:AmbientServices.Performance.WindowScope.WindowId(System.DateTime,System.TimeSpan)">
+            <summary>
+            Gets a timestamp for the specified <see cref="T:System.DateTime"/>, with a resolution appropriate for the units near the specified <see cref="T:System.TimeSpan"/>.
+            </summary>
+            <param name="dateTime">The <see cref="T:System.DateTime"/> to get an window identifier for.</param>
+            <param name="resolution">A <see cref="T:System.TimeSpan"/> indicating what type of resolution is needed.</param>
+            <returns>A string containing a timespan that will be distinguishable from timestamps for other <see cref="T:System.DateTime"/>s plus or minus the specified <see cref="T:System.TimeSpan"/>.</returns>
+        </member>
+        <member name="M:AmbientServices.Performance.WindowScope.WindowSize(System.TimeSpan)">
+            <summary>
+            Gets a short string representing the specified timespan.
+            </summary>
+            <param name="duration">The <see cref="T:System.TimeSpan"/> whose string representation is to be generated</param>
+            <returns>An easily human-readable string representing the time span with a postfix character indicating the units (ms, s, m, h, d).</returns>
+        </member>
+    </members>
+</doc>

@@ -394,10 +394,27 @@ namespace AmbientServices
         /// </summary>
         /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
         public AmbientEventTimer(IAmbientClockProvider clock)
-            : this(clock, TimeSpan.FromMilliseconds(100))
+            : base()
         {
-        }
+            _clock = clock;
+            // is there a clock?
+            if (clock != null)
+            {
+                // disable the system timer (it should be disabled anyway, but just in case)
+                base.Enabled = false;
 
+                long nowStopwatchTicks = clock.Ticks;
+                IAmbientClockProvider tempClock = clock;
+                _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockProviderTimeChangedEventArgs>(
+                    // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
+                    this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
+                clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
+                _periodStopwatchTicks = 0;
+                _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
+                _enabled = 0;
+            }
+            // else no clock, so use the base system timer
+        }
         /// <summary>
         /// Constructs an AmbientEventTimer that will use the specified period and clock to determine when to raise the <see cref="Elapsed"/> event.
         /// The timer starts with <see cref="AutoReset"/> set to true and <see cref="Enabled"/> set to false.
@@ -590,13 +607,22 @@ namespace AmbientServices
             }
         }
     }
-    public class AmbientCallbackTimer : MarshalByRefObject,
+    /// <summary>
+    /// A helper class that implements the same methods and properties as <see cref="System.Threading.Timer"/> but uses an ambient clock if one is available.
+    /// When an ambient clock is not available, should behave identically to <see cref="System.Threading.Timer"/>.
+    /// Note that whether the timer uses the system time or the ambient time is only determined at construction time.
+    /// </summary>
+    /// <remarks>
+    /// AmbientCallbackTimer is thread-safe.
+    /// </remarks>
+    public sealed class AmbientCallbackTimer : MarshalByRefObject,
 #if NET5_0 || NETCORE3_0 || NETCORE3_1 || NETSTANDARD2_1
         IAsyncDisposable, 
 #endif
         IDisposable
     {
         private static readonly ServiceReference<IAmbientClockProvider> _ClockAccessor = Service.GetReference<IAmbientClockProvider>();
+        private static readonly ManualResetEvent _AlwaysSignaled = new ManualResetEvent(true);
         private static readonly object _UseTimerInstanceForStateIndicator = new object();
         private static long _TimerCount;
 
@@ -616,18 +642,18 @@ namespace AmbientServices
 
         private readonly TimerCallback _callback;
         private readonly object _state;
+        private readonly IAmbientClockProvider _clock;           // exactly one of _clock and _timer should be null
+        private readonly System.Threading.Timer _timer;
 
-        private IAmbientClockProvider _clock;           // exactly one of _clock and _timer should be null
         private long _periodStopwatchTicks;
         private long _nextRaiseStopwatchTicks;
         private int _autoReset;
         private int _enabled;
         private LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockProviderTimeChangedEventArgs> _weakTimeChanged;
-
-        private System.Threading.Timer _timer;
+        private bool _disposed = false; // To detect redundant calls
 
         /// <summary>
-        /// Constructs an AmbientCallbackTimer using the ambient clock with autoreset and a period of 100ms.
+        /// Constructs an AmbientCallbackTimer using the ambient clock.  The timer will not be set to call he callback.
         /// </summary>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
         public AmbientCallbackTimer(TimerCallback callback)
@@ -671,6 +697,17 @@ namespace AmbientServices
         /// <summary>
         /// Constructs an AmbientCallbackTimer using the ambient clock and the specified period.
         /// </summary>
+        /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
+        /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
+        /// <param name="dueTime">A <see cref="TimeSpan"/> indicating the number of milliseconds to delay before calling the callback.  <see cref="Timeout.InfiniteTimeSpan"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
+        /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
+        public AmbientCallbackTimer(TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period)
+            : this(_ClockAccessor.Provider, callback, state, dueTime, period)
+        {
+        }
+        /// <summary>
+        /// Constructs an AmbientCallbackTimer using the ambient clock and the specified period.
+        /// </summary>
         /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to invoke the vallback.</param>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
         /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
@@ -678,40 +715,27 @@ namespace AmbientServices
         /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(IAmbientClockProvider clock, TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period)
         {
+            if (callback == null) throw new ArgumentNullException(nameof(callback));
+            if (dueTime != Timeout.InfiniteTimeSpan && dueTime.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(dueTime), "The dueTime parameter must not be negative unless it is Infinite!");
+            if (period != Timeout.InfiniteTimeSpan && period.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(period), "The period parameter must not be negative unless it is Infinite!");
+
             _callback = callback;
             _state = Object.ReferenceEquals(state, _UseTimerInstanceForStateIndicator) ? this : state;
             _clock = clock;
             // is there a clock?
             if (clock != null)
             {
-                if (dueTime != Timeout.InfiniteTimeSpan && dueTime.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(dueTime), "The dueTime parameter must not be negative unless it is Infinite!");
-                if (period != Timeout.InfiniteTimeSpan && period.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(period), "The period parameter must not be negative unless it is Infinite!");
-
-                _autoReset = (period == Timeout.InfiniteTimeSpan) ? 1 : 0;
-                _enabled = (dueTime == Timeout.InfiniteTimeSpan) ? 1 : 0;
+                _autoReset = (period == Timeout.InfiniteTimeSpan) ? 0 : 1;
+                _enabled = (dueTime == Timeout.InfiniteTimeSpan) ? 0 : 1;
                 if (_enabled != 0)
                 {
-                    System.Threading.Interlocked.Increment(ref _TimerCount);
-                    long nowStopwatchTicks = clock.Ticks;
-                    IAmbientClockProvider tempClock = clock;
-                    _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockProviderTimeChangedEventArgs>(
-                        // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
-                        this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
-                    clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
-                    _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
-                    _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
+                    Enable(dueTime, period);
                 }
             }
-            else // no clock, so use a system threading timer
+            else // no clock, so just fall through to using a system threading timer
             {
-                double milliseconds = (period.Ticks == 0 || period.Ticks == Timeout.InfiniteTimeSpan.Ticks) ? (double)Int32.MaxValue : period.TotalMilliseconds;
-                _timer = new System.Threading.Timer(OnTimerElapsed);
+                _timer = new System.Threading.Timer(callback, state, dueTime, period);
             }
-        }
-
-        private void OnTimerElapsed(object state)
-        {
-            _callback?.Invoke(_state);
         }
 
         // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
@@ -737,39 +761,78 @@ namespace AmbientServices
                     if (autoReset && periodStopwatchTicks != Timeout.Infinite)
                     {
                         nextRaiseStopwatchTicks = System.Threading.Interlocked.Add(ref _nextRaiseStopwatchTicks, periodStopwatchTicks);
-                        // we may loop around again in case the event should have been raised more than once
+                        // we might loop around again and invoke the callback again depending on how much the time changed
                     }
                     else // we're no longer active, as the period indicates that we shouldn't invoke the callback again
                     {
-                        // race to disable us-- did we win the race?
-                        if (1 == System.Threading.Interlocked.Exchange(ref _enabled, 0))
-                        {
-                            _weakTimeChanged.Unsubscribe();
-                            System.Threading.Interlocked.Decrement(ref _TimerCount);
-                        }
+                        Disable();
                         // _enabled getting set to zero should cause us to break out of the loop, unless the callback reenables us or someone else changes it asynchronously
                     }
-                    _callback?.Invoke(_state);
+                    _callback.Invoke(_state);
                 }
             }
         }
 
+        private void Disable()
+        {
+            // race to disable us-- did we win the race?
+            if (1 == System.Threading.Interlocked.Exchange(ref _enabled, 0))
+            {
+                _weakTimeChanged.Unsubscribe();
+                System.Threading.Interlocked.Decrement(ref _TimerCount);
+            }
+        }
+        private void Enable(TimeSpan dueTime, TimeSpan period)
+        {
+            System.Threading.Interlocked.Increment(ref _TimerCount);
+            long nowStopwatchTicks = _clock.Ticks;
+            IAmbientClockProvider tempClock = _clock;
+            _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockProviderTimeChangedEventArgs>(
+                // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
+                this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
+            _clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
+            _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
+            long ticksToNextInvocation = dueTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
+            _nextRaiseStopwatchTicks = nowStopwatchTicks + ticksToNextInvocation;
+        }
+
+        /// <summary>
+        /// Changes the time when the timer will activate, ignoring all previous activations and timing settings.
+        /// </summary>
+        /// <param name="dueTime">The number of milliseconds before the timer will go off for the first time, with <see cref="Timeout.Infinite"/> meaning that the timer will be disabled.</param>
+        /// <param name="period">The number of milliseconds indicating how often the timer will go off after the first activation, with <see cref="Timeout.Infinite"/> meaning that the timer will only go off once.</param>
+        /// <returns>true if the timer was successfully updated, otherwise false.</returns>
         public bool Change(int dueTime, int period)
         {
             return Change(TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period));
         }
-
+        /// <summary>
+        /// Changes the time when the timer will activate, ignoring all previous activations and timing settings.
+        /// </summary>
+        /// <param name="dueTime">The number of milliseconds before the timer will go off for the first time, with <see cref="Timeout.Infinite"/> meaning that the timer will be disabled.</param>
+        /// <param name="period">The number of milliseconds indicating how often the timer will go off after the first activation, with <see cref="Timeout.Infinite"/> meaning that the timer will only go off once.</param>
+        /// <returns>true if the timer was successfully updated, otherwise false.</returns>
         public bool Change(long dueTime, long period)
         {
             return Change(TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period));
         }
-
+        /// <summary>
+        /// Changes the time when the timer will activate, ignoring all previous activations and timing settings.
+        /// </summary>
+        /// <param name="dueTime">The number of milliseconds before the timer will go off for the first time, with <see cref="Timeout.Infinite"/> meaning that the timer will be disabled.</param>
+        /// <param name="period">The number of milliseconds indicating how often the timer will go off after the first activation, with <see cref="Timeout.Infinite"/> meaning that the timer will only go off once.</param>
+        /// <returns>true if the timer was successfully updated, otherwise false.</returns>
         [CLSCompliant(false)]
         public bool Change(uint dueTime, uint period)
         {
             return Change(TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period));
         }
-
+        /// <summary>
+        /// Changes the time when the timer will activate, ignoring all previous activations and timing settings.
+        /// </summary>
+        /// <param name="dueTime">A <see cref="TimeSpan"/> indicating the amount of time before the timer will go off for the first time, with <see cref="Timeout.InfiniteTimeSpan"/> meaning that the timer will be disabled.</param>
+        /// <param name="period">A <see cref="TimeSpan"/> indicating how often the timer will go off after the first activation, with <see cref="Timeout.InfiniteTimeSpan"/> meaning that the timer will only go off once.</param>
+        /// <returns>true if the timer was successfully updated, otherwise false.</returns>
         public bool Change(TimeSpan dueTime, TimeSpan period)
         {
             if (_clock != null)
@@ -780,27 +843,14 @@ namespace AmbientServices
                 // were we enabled before?
                 if (_enabled != 0)
                 {
-                    // race to disable us-- did we win the race?
-                    if (1 == System.Threading.Interlocked.Exchange(ref _enabled, 0))
-                    {
-                        _weakTimeChanged.Unsubscribe();
-                        System.Threading.Interlocked.Decrement(ref _TimerCount);
-                    }
+                    Disable();
                 }
-                _autoReset = (period == Timeout.InfiniteTimeSpan) ? 1 : 0;
+                _autoReset = (period == Timeout.InfiniteTimeSpan) ? 0 : 1;
                 // race to enable us--did we win the race?
-                int newEnabled = (dueTime == Timeout.InfiniteTimeSpan) ? 1 : 0;
+                int newEnabled = (dueTime == Timeout.InfiniteTimeSpan) ? 0 : 1;
                 if (newEnabled != 0 && System.Threading.Interlocked.Exchange(ref _enabled, newEnabled) == 0)
                 {
-                    System.Threading.Interlocked.Increment(ref _TimerCount);
-                    long nowStopwatchTicks = _clock.Ticks;
-                    IAmbientClockProvider tempClock = _clock;
-                    _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockProviderTimeChangedEventArgs>(
-                        // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
-                        this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
-                    _clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
-                    _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
-                    _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
+                    Enable(dueTime, period);
                 }
                 return true;
             }
@@ -810,12 +860,6 @@ namespace AmbientServices
             }
         }
 
-        private void SetupNextRaise()
-        {
-            System.Diagnostics.Debug.Assert(_timer == null && _clock != null);
-            long now = _clock.Ticks;
-            System.Threading.Interlocked.Exchange(ref _nextRaiseStopwatchTicks, now + _periodStopwatchTicks);
-        }
         #region IDisposable Support
 #if NET5_0 || NETCORE3_0 || NETCORE3_1 || NETSTANDARD2_1
         public static System.Runtime.CompilerServices.ConfiguredAsyncDisposable ConfigureAwait(this IAsyncDisposable source, bool continueOnCapturedContext)
@@ -823,19 +867,33 @@ namespace AmbientServices
         }
 #endif
 
-
-        private bool _disposedValue = false; // To detect redundant calls
-
-        private void Dispose(WaitHandle waitHandle)
+        /// <summary>
+        /// Disposes of the timer, signaling an optional <see cref="WaitHandle"/> when the disposal is complete (meaning that the callback is not in progress and will not be subsequently called).
+        /// </summary>
+        /// <param name="waitHandle">The <see cref="WaitHandle"/> to signal when the disposal is complete, or null if no notification is needed.</param>
+        /// <returns>true if the disposal was successful and neede, otherwise false.</returns>
+        public bool Dispose(WaitHandle waitHandle)
         {
-            if (_clock != null)
+            bool ret = false;
+            if (!_disposed)
             {
-                Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                if (_clock != null)
+                {
+                    bool enabled = (_enabled != 0);
+                    Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                    // since notification when we have a clock provider is synchronous, there is no need to wait for full disposal
+                    WaitHandle.SignalAndWait(waitHandle, _AlwaysSignaled);
+                    // return whether or not we were already canceled
+                    ret = enabled;
+                }
+                else
+                {
+                    ret = _timer.Dispose(waitHandle);
+                }
+                System.Threading.Interlocked.Decrement(ref _TimerCount);
+                _disposed = true;
             }
-            else
-            {
-                _timer.Dispose(waitHandle);
-            }
+            return ret;
         }
 
 #if NET5_0 || NETCORE3_0 || NETCORE3_1 || NETSTANDARD2_1
@@ -846,48 +904,48 @@ namespace AmbientServices
             }
             else
             {
-                return _timer?.DisposeAsync();
+                return _timer.DisposeAsync();
             }
         }
 #endif
-
-        /// <summary>
-        /// Does the work of disposing the AmbientCallbackTimer.
-        /// </summary>
-        /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_disposedValue)
-            {
-                if (disposing)
-                {
-                    _timer?.Dispose();
-                }
-                System.Threading.Interlocked.Decrement(ref _TimerCount);
-                _disposedValue = true;
-            }
-        }
         /// <summary>
         /// Disposes of this instance.
         /// </summary>
         public void Dispose()
         {
-            Dispose(true);
+            if (!_disposed)
+            {
+                if (_clock != null)
+                {
+                    Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                }
+                else
+                {
+                    _timer.Dispose();
+                }
+                System.Threading.Interlocked.Decrement(ref _TimerCount);
+                _disposed = true;
+            }
             GC.SuppressFinalize(this);
         }
 
         #endregion
     }
+    /// <summary>
+    /// A sealed class that emulates <see cref="RegisteredWaitHandle"/> but uses the ambient clock if one is registered.
+    /// </summary>
     public sealed class AmbientRegisteredWaitHandle
     {
         private static readonly ServiceReference<IAmbientClockProvider> _Clock = Service.GetReference<IAmbientClockProvider>();
+        private static readonly ManualResetEvent _ManualResetEvent = new ManualResetEvent(true);
 
 
-        private readonly RegisteredWaitHandle _waitHandle;
+        private readonly RegisteredWaitHandle _registeredWaitHandle;
         private readonly IAmbientClockProvider _clock;
         private readonly WaitOrTimerCallback _callback;
+        private readonly bool _executeOnlyOnce;
         private readonly object _state;
-        private readonly long _period;
+        private readonly long _periodStopwatchTicks;
         private readonly ExecutionContext _executionContext;
         private long _nextCallbackTimeStopwatchTicks;
 
@@ -911,7 +969,7 @@ namespace AmbientServices
         {
             if ((_clock = _Clock.Provider) == null)
             {
-                _waitHandle = safe
+                _registeredWaitHandle = safe
                     ? ThreadPool.RegisterWaitForSingleObject(waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce)
                     : ThreadPool.UnsafeRegisterWaitForSingleObject(waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
             }
@@ -919,29 +977,37 @@ namespace AmbientServices
             {
                 _callback = callback;
                 _state = state;
-                _waitHandle = safe
+                _registeredWaitHandle = safe
                     ? ThreadPool.RegisterWaitForSingleObject(waitHandle, OnWaitHandleSignaled, null, -1, executeOnlyOnce)
                     : ThreadPool.UnsafeRegisterWaitForSingleObject(waitHandle, OnWaitHandleSignaled, null, -1, executeOnlyOnce);
                 if (safe)
                 {
                     _executionContext = ExecutionContext.Capture();
                 }
-                _nextCallbackTimeStopwatchTicks = (millisecondTimeoutInterval == Timeout.Infinite) ? Timeout.Infinite : _clock.Ticks + millisecondTimeoutInterval * Stopwatch.Frequency / 1000;
-                _period = executeOnlyOnce ? Timeout.Infinite : millisecondTimeoutInterval;
+                long timeoutIntervalStopwatchTicks = millisecondTimeoutInterval * Stopwatch.Frequency / 1000;
+                _nextCallbackTimeStopwatchTicks = (millisecondTimeoutInterval == Timeout.Infinite) ? Timeout.Infinite : (_clock.Ticks + timeoutIntervalStopwatchTicks);
+                _periodStopwatchTicks = executeOnlyOnce ? Timeout.Infinite : timeoutIntervalStopwatchTicks;
+                _executeOnlyOnce = executeOnlyOnce;
                 _clock.TimeChanged += OnAmbientClockProviderTimeChanged;
             }
         }
 
         private void OnWaitHandleSignaled(object state, bool timedOut)
         {
+            // only execute once?
+            if (_executeOnlyOnce)
+            {
+                // disable further signal invocations
+                _registeredWaitHandle.Unregister(_ManualResetEvent);
+            }
             // no period (ie. this is the only callback)?
-            if (_period == Timeout.Infinite)
+            if (_periodStopwatchTicks == Timeout.Infinite)
             {   // cancel all further timed callbacks
                 System.Threading.Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, Timeout.Infinite);
             }
             else
             {   // schedule the next callback
-                System.Threading.Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, _clock.Ticks + _period);
+                System.Threading.Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, _clock.Ticks + _periodStopwatchTicks);
             }
             // the wait handle was signaled--we should always call the callback in this case
             _callback(_state, false);
@@ -955,15 +1021,21 @@ namespace AmbientServices
             while (_nextCallbackTimeStopwatchTicks != Timeout.Infinite && _nextCallbackTimeStopwatchTicks > eventArgs.OldTicks && _nextCallbackTimeStopwatchTicks <= eventArgs.NewTicks)
             {
                 // should we reset for another period?
-                if (_period != Timeout.Infinite)
+                if (_periodStopwatchTicks != Timeout.Infinite)
                 {
-                    System.Threading.Interlocked.Add(ref _nextCallbackTimeStopwatchTicks, _period);
+                    System.Threading.Interlocked.Add(ref _nextCallbackTimeStopwatchTicks, _periodStopwatchTicks);
                     // we may loop around again in case the event should have been raised more than once
                 }
                 else
                 {
                     // this should cause the loop to stop, but only AFTER we invoke the callback
                     _nextCallbackTimeStopwatchTicks = Timeout.Infinite;
+                }
+                // only execute once?
+                if (_executeOnlyOnce)
+                {
+                    // disable further signal invocations
+                    _registeredWaitHandle.Unregister(_ManualResetEvent);
                 }
                 if (_executionContext != null)
                 {
@@ -977,14 +1049,14 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Cancels a registered wait operation issued by the <see cref="System.Threading.ThreadPool.RegisterWaitForSingleObject{System.Threading.WaitHandle,System.Threading.WaitOrTimerCallback,System.Object,System.UInt32,System.Boolean}"/>.
+        /// Cancels a registered wait operation issued by the <see cref="System.Threading.ThreadPool.RegisterWaitForSingleObject(System.Threading.WaitHandle,System.Threading.WaitOrTimerCallback,System.Object,System.UInt32,System.Boolean)"/>.
         /// method.
         /// </summary>
         /// <param name="waitObject">The <see cref="System.Threading.WaitHandle"/> to be signaled.</param>
         /// <returns>true if the function succeeds; otherwise, false.</returns>
         public bool Unregister(WaitHandle waitObject)
         {
-            bool ret = _waitHandle.Unregister(waitObject);
+            bool ret = _registeredWaitHandle.Unregister(waitObject);
             if (_clock != null)
             {
                 _clock.TimeChanged -= OnAmbientClockProviderTimeChanged;
@@ -997,36 +1069,108 @@ namespace AmbientServices
     /// </summary>
     public static class AmbientThreadPool
     {
+        /// <summary>
+        /// Registers a delegate to wait for a <see cref="System.Threading.WaitHandle"/>, specifying a 32-bit signed integer for the time-out in milliseconds.
+        /// </summary>
+        /// <param name="waitHandle">Registers a delegate to wait for a System.Threading.WaitHandle, specifying a 32-bit signed integer for the time-out in milliseconds.</param>
+        /// <param name="callback">The System.Threading.WaitOrTimerCallback delegate to call when the waitObject parameter is signaled.</param>
+        /// <param name="state">The object that is passed to the delegate.</param>
+        /// <param name="millisecondTimeoutInterval">The time-out in milliseconds. If the millisecondsTimeOutInterval parameter is 0 (zero), the function tests the object's state and returns immediately. If millisecondsTimeOutInterval is -1, the function's time-out interval never elapses.</param>
+        /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
+        /// <returns>The System.Threading.RegisteredWaitHandle that encapsulates the native handle.</returns>
         public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, int millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
+        /// <summary>
+        /// Registers a delegate to wait for a <see cref="System.Threading.WaitHandle"/>, specifying a 32-bit unsigned integer for the time-out in milliseconds.
+        /// </summary>
+        /// <param name="waitHandle">Registers a delegate to wait for a System.Threading.WaitHandle, specifying a 32-bit signed integer for the time-out in milliseconds.</param>
+        /// <param name="callback">The System.Threading.WaitOrTimerCallback delegate to call when the waitObject parameter is signaled.</param>
+        /// <param name="state">The object that is passed to the delegate.</param>
+        /// <param name="millisecondTimeoutInterval">The time-out in milliseconds. If the millisecondsTimeOutInterval parameter is 0 (zero), the function tests the object's state and returns immediately. If millisecondsTimeOutInterval is -1, the function's time-out interval never elapses.</param>
+        /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
+        /// <returns>The System.Threading.RegisteredWaitHandle that encapsulates the native handle.</returns>
         [CLSCompliant(false)]
         public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
+        /// <summary>
+        /// Registers a delegate to wait for a <see cref="System.Threading.WaitHandle"/>, specifying a 64-bit signed integer for the time-out in milliseconds.
+        /// </summary>
+        /// <param name="waitHandle">Registers a delegate to wait for a System.Threading.WaitHandle, specifying a 32-bit signed integer for the time-out in milliseconds.</param>
+        /// <param name="callback">The System.Threading.WaitOrTimerCallback delegate to call when the waitObject parameter is signaled.</param>
+        /// <param name="state">The object that is passed to the delegate.</param>
+        /// <param name="millisecondTimeoutInterval">The time-out in milliseconds. If the millisecondsTimeOutInterval parameter is 0 (zero), the function tests the object's state and returns immediately. If millisecondsTimeOutInterval is -1, the function's time-out interval never elapses.</param>
+        /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
+        /// <returns>The System.Threading.RegisteredWaitHandle that encapsulates the native handle.</returns>
         public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
+        /// <summary>
+        /// Registers a delegate to wait for a <see cref="System.Threading.WaitHandle"/>, specifying a <see cref="TimeSpan"/> for the time-out.
+        /// </summary>
+        /// <param name="waitHandle">Registers a delegate to wait for a System.Threading.WaitHandle, specifying a 32-bit signed integer for the time-out in milliseconds.</param>
+        /// <param name="callback">The System.Threading.WaitOrTimerCallback delegate to call when the waitObject parameter is signaled.</param>
+        /// <param name="state">The object that is passed to the delegate.</param>
+        /// <param name="timeoutInterval">The time-out represented by a <see cref="System.TimeSpan"/>. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
+        /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
+        /// <returns>The System.Threading.RegisteredWaitHandle that encapsulates the native handle.</returns>
         public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, TimeSpan timeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, timeoutInterval, executeOnlyOnce);
         }
+        /// <summary>
+        /// Registers a delegate to wait for a <see cref="System.Threading.WaitHandle"/>, specifying a 32-bit signed integer value for the time-out in milliseconds. This method does not propagate the calling stack to the worker thread.
+        /// </summary>
+        /// <param name="waitHandle">The <see cref="System.Threading.WaitHandle"/> to register. Use a <see cref="System.Threading.WaitHandle"/> other than <see cref="System.Threading.Mutex"/>.</param>
+        /// <param name="callback">The delegate to call when the waitObject parameter is signaled.</param>
+        /// <param name="state">The object that is passed to the delegate.</param>
+        /// <param name="millisecondTimeoutInterval">The time-out represented by a System.TimeSpan. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
+        /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
+        /// <returns>The <see cref="System.Threading.RegisteredWaitHandle"/> object that can be used to cancel the registered wait operation.</returns>
         public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, int millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
+        /// <summary>
+        /// Registers a delegate to wait for a <see cref="System.Threading.WaitHandle"/>, specifying a 32-bit unsigned integer value for the time-out in milliseconds. This method does not propagate the calling stack to the worker thread.
+        /// </summary>
+        /// <param name="waitHandle">The <see cref="System.Threading.WaitHandle"/> to register. Use a <see cref="System.Threading.WaitHandle"/> other than <see cref="System.Threading.Mutex"/>.</param>
+        /// <param name="callback">The delegate to call when the waitObject parameter is signaled.</param>
+        /// <param name="state">The object that is passed to the delegate.</param>
+        /// <param name="millisecondTimeoutInterval">The time-out represented by a System.TimeSpan. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
+        /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
+        /// <returns>The <see cref="System.Threading.RegisteredWaitHandle"/> object that can be used to cancel the registered wait operation.</returns>
         [CLSCompliant(false)]
         public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
+        /// <summary>
+        /// Registers a delegate to wait for a <see cref="System.Threading.WaitHandle"/>, specifying a 64-bit signed integer value for the time-out in milliseconds. This method does not propagate the calling stack to the worker thread.
+        /// </summary>
+        /// <param name="waitHandle">The <see cref="System.Threading.WaitHandle"/> to register. Use a <see cref="System.Threading.WaitHandle"/> other than <see cref="System.Threading.Mutex"/>.</param>
+        /// <param name="callback">The delegate to call when the waitObject parameter is signaled.</param>
+        /// <param name="state">The object that is passed to the delegate.</param>
+        /// <param name="millisecondTimeoutInterval">The time-out represented by a System.TimeSpan. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
+        /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
+        /// <returns>The <see cref="System.Threading.RegisteredWaitHandle"/> object that can be used to cancel the registered wait operation.</returns>
         public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
+        /// <summary>
+        /// Registers a delegate to wait for a <see cref="System.Threading.WaitHandle"/>, specifying a <see cref="System.TimeSpan"/> value for the time-out. This method does not propagate the calling stack to the worker thread.
+        /// </summary>
+        /// <param name="waitHandle">The <see cref="System.Threading.WaitHandle"/> to register. Use a <see cref="System.Threading.WaitHandle"/> other than <see cref="System.Threading.Mutex"/>.</param>
+        /// <param name="callback">The delegate to call when the waitObject parameter is signaled.</param>
+        /// <param name="state">The object that is passed to the delegate.</param>
+        /// <param name="timeoutInterval">The time-out represented by a <see cref="System.TimeSpan"/>. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
+        /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
+        /// <returns>The <see cref="System.Threading.RegisteredWaitHandle"/> object that can be used to cancel the registered wait operation.</returns>
         public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, TimeSpan timeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, timeoutInterval, executeOnlyOnce);

@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Version>0.0.1</Version>
+    <Copyright>2020</Copyright>
+    <Authors>James Ivie</Authors>
+    <Company>James Ivie</Company>
+    <Description>An MIT-licensed library that adds ambient services for performance tracking.  One service provides high-performance counters for tracking real-time statistics, another provides scope-sensitive tracking of bottlenecks, and a third does scope-sensitive service profiling.</Description>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>C:\Users\james\AmbientServices.Performance\AmbientServices.Performance\AmbientServices.Performance.xml</DocumentationFile>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="AmbientServices" Version="2.0.35" />
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="System.Collections.Immutable" Version="1.7.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AmbientServices\AmbientServices.csproj" />
+  </ItemGroup>
+</Project>

@@ -95,67 +95,77 @@ namespace AmbientServices
             // time to eject?
             while ((System.Threading.Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
             {
-                // removing at least one timed item (and all expired items)
-                TimedQueueEntry qEntry;
-                while (_timedQueue.TryDequeue(out qEntry))
+                EjectOneTimed();
+                EjectOneUntimed();
+            }
+        }
+
+        private void EjectOneTimed()
+        {
+            // removing at least one timed item (and all expired items)
+            TimedQueueEntry qEntry;
+            while (_timedQueue.TryDequeue(out qEntry))
+            {
+                // can we find this item in the cache?
+                CacheEntry entry;
+                if (_cache.TryGetValue(qEntry.Key, out entry))
                 {
-                    // can we find this item in the cache?
-                    CacheEntry entry;
-                    if (_cache.TryGetValue(qEntry.Key, out entry))
+                    // is the expiration still the same?
+                    if (qEntry.Expiration == entry.Expiration)
                     {
-                        // is the expiration still the same?
-                        if (qEntry.Expiration == entry.Expiration)
-                        {
-                            // remove it from the cache, even though it may not have expired yet because it's time to eject something
-                            _cache.TryRemove(qEntry.Key, out entry);
-                        }
-                        else // else the item was refreshed, so we should ignore this entry and go around again
-                        {
-                            continue;
-                        }
+                        // remove it from the cache, even though it may not have expired yet because it's time to eject something
+                        _cache.TryRemove(qEntry.Key, out entry);
                     }
-                    // else we couldn't find the entry in the cache, so just move to the next entry
-                    else
+                    else // else the item was refreshed, so we should ignore this entry and go around again
                     {
                         continue;
                     }
-                    // peek at the next entry
-                    if (_timedQueue.TryPeek(out qEntry))
-                    {
-                        // has this entry expired? remove this one too, even though we didn't have to
-                        if (entry.Expiration < AmbientClock.UtcNow) continue;
-                        // else the entry hasn't expired and we either removed an entry above or skipped this code, so we can just fall through and exit the loop
-                    }
-                    // if we get here, there is no reason to look at another timed entry
-                    break;
                 }
-                // remove one untimed entry
-                string key;
-                while (_untimedQueue.TryDequeue(out key))
+                // else we couldn't find the entry in the cache, so just move to the next entry
+                else
                 {
-                    // can we find this item in the cache?
-                    CacheEntry entry;
-                    if (_cache.TryGetValue(key, out entry))
+                    continue;
+                }
+                // peek at the next entry
+                if (_timedQueue.TryPeek(out qEntry))
+                {
+                    // has this entry expired? remove this one too, even though we didn't have to
+                    if (entry.Expiration < AmbientClock.UtcNow) continue;
+                    // else the entry hasn't expired and we either removed an entry above or skipped this code, so we can just fall through and exit the loop
+                }
+                // if we get here, there is no reason to look at another timed entry
+                break;
+            }
+        }
+
+        private void EjectOneUntimed()
+        {
+            // remove one untimed entry
+            string key;
+            while (_untimedQueue.TryDequeue(out key))
+            {
+                // can we find this item in the cache?
+                CacheEntry entry;
+                if (_cache.TryGetValue(key, out entry))
+                {
+                    // is the expiration still the same (ie. untimed)?
+                    if (entry.Expiration == null)
                     {
-                        // is the expiration still the same (ie. untimed)?
-                        if (entry.Expiration == null)
-                        {
-                            // remove it from the cache
-                            _cache.TryRemove(key, out entry);
-                        }
-                        else // else the item was refreshed, so we should ignore this entry and go around again to remove another entry
-                        {
-                            continue;
-                        }
+                        // remove it from the cache
+                        _cache.TryRemove(key, out entry);
                     }
-                    // else we couldn't find the entry in the cache, so just move to the next entry
-                    else
+                    else // else the item was refreshed, so we should ignore this entry and go around again to remove another entry
                     {
                         continue;
                     }
-                    // if we get here, there is no reason to look at another untimed entry
-                    break;
                 }
+                // else we couldn't find the entry in the cache, so just move to the next entry
+                else
+                {
+                    continue;
+                }
+                // if we get here, there is no reason to look at another untimed entry
+                break;
             }
         }
 

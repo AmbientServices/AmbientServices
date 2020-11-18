@@ -15,6 +15,14 @@ By convention, AmbientServices should not be used for information that alters th
 For example, logging should never alter function outputs at all.  Caching may affect the output, but only by giving results that are slightly stale, and only in cases where there are already hidden inputs (like a database) anyway.  Some functions may measure the passage of time during processing and might record that information or change their outputs based on the duration of time passed, but callers should not be surprised when the passage of time is slower or faster than their expected "normal".  Settings (often stored in a configuration file) can alter the output of a function, but never in a way that the caller is concerned about.  In fact, the very concept of settings is in reality a type of parameter intended to affect functions without requiring the caller to be concerned with their specific values.  Progress tracking and cancellation may be useful for the caller, but never affects the output of the function other than aborting its processing altogether.
 
 
+# AmbientServices
+AmbientServices is a library that contains ambient services for monitoring system performance.
+Wouldn't it be nice if you could easily track how various parts of your system are performing all the time, not just when you run it with a profiler?
+Wouldn't it be wonderful if you could make a request to a third-party SaaS system and not just get the results you asked for, but performance information indicating what backend dependencies the request had to wait how long for, and how close any of those systems were to hitting their maximum possible performance?
+Wouldn't it be great to be able to see in near-real-time which of the backend systems you use has caused your system's responsiveness to tank?
+The system provided here allows you to track this information with little overhead and thereby provide it for consumers of your systems.
+
+
 # Getting Started
 In Visual Studio, use Manage Nuget Packages and search nuget.org for AmbientServices to add a package reference for this library.
 
@@ -628,6 +636,480 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     }
 }
 ```
+
+
+## AmbientStatistics
+The `IAmbientStatistics` interface abstracts the creation and gathering of statistics.  
+Each statistic keeps track of the measurement of one aspect of system performance, using a single number that holds an accumulated, minimum, maximum, or raw value.
+Statistics can be used to track memory allocated, time waited, minimum or maximum sizes or times, cache hits and misses, etc.
+Each statistic can be incremented or decremented, added-to, set to a new raw value, or conditionally set if it is a new minimum or maximum value.
+Ratios of two statistics or their changes can be used to track things like average sizes or times, events per second, bytes per second, cache hit ratios, etc.
+A statistic called `"ExecutionTime"` is defined by the system and holds the number of ticks elapsed since the process started.
+Ticks use the standard system Stopwatch.Frequency.  All operations are lock-free.  `Min` and `Max` statistics use an optimistic atomic update.
+
+### Helpers
+[//]: # (Settings)
+
+### Sample
+[//]: # (AmbientStatisticsSample)
+```csharp
+/// <summary>
+/// A class that represents a type of request.
+/// </summary>
+public class RequestType
+{
+    private static readonly ServiceReference<IAmbientStatistics> _AmbientStatisticsAccessor = Service.GetReference<IAmbientStatistics>();
+
+    private readonly IAmbientStatistic _pendingRequests;
+    private readonly IAmbientStatistic _totalRequests;
+    private readonly IAmbientStatistic _totalProcessingTime;
+    private readonly IAmbientStatistic _retries;
+    private readonly IAmbientStatistic _failures;
+    private readonly IAmbientStatistic _timeouts;
+
+    /// <summary>
+    /// Constructs a RequestType with the specified type name.
+    /// </summary>
+    /// <param name="typeName">The name of the request type.</param>
+    public RequestType(string typeName)
+    {
+        IAmbientStatistics ambientStatistics = _AmbientStatisticsAccessor.Provider;
+        _pendingRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-RequestsPending", "The number of requests currently executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _totalRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-TotalRequests", "The total number of requests that have finished executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(true, typeName + "-TotalProcessingTime", "The total time spent processing requests (only includes completed requests)", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _retries = ambientStatistics?.GetOrAddStatistic(false, typeName + "-Retries", "The total number of retries", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _failures = ambientStatistics?.GetOrAddStatistic(false, typeName + "-Failures", "The total number of failures", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _timeouts = ambientStatistics?.GetOrAddStatistic(false, typeName + "-Timeouts", "The total number of timeouts", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+    }
+    /// <summary>
+    /// Tracks a request by creating a <see cref="RequestTracker"/> which automatically counts the request and times its duration and allows the caller to report failures, timeouts, and retries.
+    /// </summary>
+    /// <returns>A <see cref="RequestTracker"/> instance that should be disposed when the request finishes processing.</returns>
+    public RequestTracker TrackRequest()
+    {
+        return new RequestTracker(this);
+    }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the number of pending requests.
+    /// </summary>
+    public IAmbientStatistic PendingRequests { get { return _pendingRequests; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of requests.
+    /// </summary>
+    public IAmbientStatistic TotalRequests { get { return _totalRequests; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total processing time.
+    /// </summary>
+    public IAmbientStatistic TotalProcessingTime { get { return _totalProcessingTime; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of retries.
+    /// </summary>
+    public IAmbientStatistic Retries { get { return _retries; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of failures.
+    /// </summary>
+    public IAmbientStatistic Failures { get { return _failures; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of timeouts.
+    /// </summary>
+    public IAmbientStatistic Timeouts { get { return _timeouts; } }
+}
+/// <summary>
+/// A request tracking object.
+/// </summary>
+public class RequestTracker : IDisposable
+{
+    private readonly RequestType _requestType;
+    private readonly AmbientStopwatch _stopwatch;
+    private bool _disposedValue;
+
+    internal RequestTracker(RequestType requestType)
+    {
+        _requestType = requestType;
+        _stopwatch = new AmbientStopwatch(true);
+        requestType.PendingRequests?.Increment();
+    }
+
+    /// <summary>
+    /// Reports a failure during the processing of the request.
+    /// </summary>
+    public void ReportFailure()
+    {
+        _requestType.Failures?.Increment();
+    }
+    /// <summary>
+    /// Reports a timeout during the processing of the request.
+    /// </summary>
+    public void ReportTimeout()
+    {
+        _requestType.Timeouts?.Increment();
+    }
+    /// <summary>
+    /// Reports a retry during the processing of the request.
+    /// </summary>
+    public void ReportRetry()
+    {
+        _requestType.Retries?.Increment();
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposedValue)
+        {
+            if (disposing)
+            {
+                _requestType.PendingRequests?.Add(-1);
+                _requestType.TotalRequests?.Increment();
+                _requestType.TotalProcessingTime?.Add(_stopwatch.ElapsedTicks);
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+            _disposedValue = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~RequestTracker()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    /// <summary>
+    /// Disposes of the RequestTracker, decrementing the pending request count and adding the time to the total time statistic.
+    /// </summary>
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+}
+/// <summary>
+/// A static class to report statistics in XML format.
+/// </summary>
+public static class StatisticsReporter
+{
+    private static readonly ServiceReference<IAmbientStatistics> _AmbientStatisticsAccessor = Service.GetReference<IAmbientStatistics>();
+    /// <summary>
+    /// Writes all statistics with their current values to the specified <see cref="XmlWriter"/>.
+    /// </summary>
+    /// <param name="writer">The <see cref="XmlWriter"/> to write the data to.</param>
+    public static void ToXml(XmlWriter writer)
+    {
+        writer.WriteStartElement("statistics");
+        foreach (IAmbientStatisticReader statistic in _AmbientStatisticsAccessor.Provider?.Statistics.Values ?? Array.Empty<IAmbientStatisticReader>())
+        {
+            writer.WriteStartElement("statistic");
+            writer.WriteAttributeString("id", statistic.Id);
+            writer.WriteAttributeString("value", statistic.SampleValue.ToString());
+            writer.WriteEndElement();
+        }
+        writer.WriteEndElement();
+    }
+}
+```
+
+### Default Provider
+The default provider implements the interface with thread-safe lock-free statistics instances, keeping all the information associated with each statistic.
+
+## AmbientBottleneckDetector
+The `AmbientBottleneckDetector` interface abstracts methods for measuring system bottlenecks and their utilization level in order to determine how close that part of the system is to maxing-out, so that scalability limits can be more accurately estimated.  
+
+### Helpers
+An instance of the `AmbientBottleneck` class is used to represent each bottleneck in the system.
+Each bottleneck has a unique string identifier, a description, an algorithm indicating how blocking occurs, and an optional limit and time window for that limit.
+When code enters the bottleneck, it calls `EnterBottleneck` on the `AmbientBottleneckDetector` object.
+This function returns a `AmbientBottleneckAccessRecord` instance which scopes access to the bottleneck.
+The Automatic property on `AmbientBottleneckDetector` identifies whether or not the timing of the scope of the `AmbientBottleneckAccessRecord` instance automatically sets the bottleneck usage, or whether the usage is set manually using `SetUsage` and/or `AddUsage` on the `AmbientBottleneckAccessRecord` instance.
+
+The `AmbientBottleneckSurveyorCoordinator` class provides access to surveyors for various contexts such as the current call context, the entire process, the current thread, and/or a rotating time window.  The surveyor distributes the access events to each of the applicable surveyors that have been created so they can track access within their context and provide survey results.
+
+### Settings
+`AmbientBottleneckTracker-DefaultAllow`: A `Regex` string used to match bottleneck identifiers that should be tracked.  By default, all bottlenecks are allowed.
+`AmbientBottleneckTracker-DefaultBlock`: A `Regex` string used to match bottleneck identifiers that should NOT be tracked.  By default, no bottlenecks are blocked.
+Blocking is applied after allowing, so if a bottleneck matches both expressions, it will be blocked.
+
+### Sample
+[//]: # (AmbientBottleneckDetectorSample)
+```csharp
+/// <summary>
+/// A class that holds a thread-safe queue which reports on the associated bottleneck.
+/// </summary>
+class GlobalQueue
+{
+    private static Mutex Mutex = new Mutex(false);
+    private static Queue<object> Queue = new Queue<object>();
+    private static readonly AmbientBottleneck GlobalQueueBottleneck = new AmbientBottleneck("GlobalQueue-Access", AmbientBottleneckUtilizationAlgorithm.Linear, true, "A bottleneck which only allows one accessor at a time.");
+
+    /// <summary>
+    /// Adds a new item to the queue.
+    /// </summary>
+    /// <param name="o">The object to add to the queue.</param>
+    public static void Enqueue(object o)
+    {
+        try
+        {
+            Mutex.WaitOne();
+            using (GlobalQueueBottleneck.EnterBottleneck())
+            {
+                Queue.Enqueue(o);
+            }
+        }
+        finally
+        {
+            Mutex.ReleaseMutex();
+        }
+    }
+    /// <summary>
+    /// Removes the oldest item from the queue.
+    /// </summary>
+    /// <returns>The oldest item in the queue.</returns>
+    /// <exception cref="InvalidOperationException">If the queue is empty.</exception>
+    public static object Dequeue()
+    {
+        try
+        {
+            Mutex.WaitOne();
+            using (GlobalQueueBottleneck.EnterBottleneck())
+            {
+                return Queue.Dequeue();
+            }
+        }
+        finally
+        {
+            Mutex.ReleaseMutex();
+        }
+    }
+}
+/// <summary>
+/// A class that access an EBS volume and reports on the associated bottleneck.
+/// </summary>
+class EbsAccessor
+{
+    private const int IopsPageSize = 16 * 1024;
+
+    private readonly string _volumePrefix;
+    private readonly AmbientBottleneck _bottleneck = new AmbientBottleneck("Ebs-Iops", AmbientBottleneckUtilizationAlgorithm.Linear, false, "A bottleneck which has a limit, but which is not based on access time.", 1000, TimeSpan.FromSeconds(1));
+
+    /// <summary>
+    /// Creates an EBS accessor for the specified volume.
+    /// </summary>
+    /// <param name="volumePrefix">The volume prefix, which will be prefixed onto <paramref name="ReadBytes.volumePrefix"/>"/> whenever a file is read from this volume.</param>
+    public EbsAccessor(string volumePrefix)
+    {
+        _volumePrefix = volumePrefix;
+    }
+
+    /// <summary>
+    /// Reads bytes from the specified location in the specified file.
+    /// </summary>
+    /// <param name="file">The file path (relative to the volume prefix specified in the constructor.</param>
+    /// <param name="fileOffset">The byte offset in the file where the read is to start.</param>
+    /// <param name="buffer">A buffer to put the data into.</param>
+    /// <param name="bufferOffset">The offset within the buffer where the read bytes should be placed.</param>
+    /// <param name="bytes">The number of bytes to attempt to read.</param>
+    /// <returns>The number of bytes that were actually read.</returns>
+    public int ReadBytes(string file, long fileOffset, byte[] buffer, int bufferOffset, int bytes)
+    {
+        string filePath = Path.Combine(_volumePrefix, file);
+        int bytesRead;
+        using (AmbientBottleneckAccessor access = _bottleneck.EnterBottleneck())
+        {
+            using (FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            {
+                f.Position = fileOffset;
+                bytesRead = f.Read(buffer, bufferOffset, bytes);
+            }
+            access.SetUsage(1, (bytesRead + IopsPageSize - 1) / IopsPageSize); // note that this approximation of IOPS won't be correct if the file is fragmented, and the lookup and opening of the file will likely use some IOPS as well--more accurate estmates can be obtained after long-term usage and comparison to AWS metrics
+        }
+        return bytesRead;
+    }
+}
+/// <summary>
+/// A class that collects bottleneck statistics and reports on them.
+/// </summary>
+class BottleneckReporter
+{
+    private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
+    private Dictionary<string, double> _mostRecentWindowTopBottlenecks;  // interlocked
+    private IDisposable _timeWindow;
+
+    /// <summary>
+    /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
+    /// </summary>
+    public BottleneckReporter()
+    {
+        _surveyor = new AmbientBottleneckSurveyorCoordinator();
+        _timeWindow = _surveyor.CreateTimeWindowSurveyor(TimeSpan.FromSeconds(60), OnMostRecentWindowClosed);
+    }
+
+    private Task OnMostRecentWindowClosed(IAmbientBottleneckSurvey analysis)
+    {
+        Dictionary<string, double> mostRecentWindowTopBottlenecks = new Dictionary<string, double>();
+        foreach (AmbientBottleneckAccessor record in analysis.GetMostUtilizedBottlenecks(10))
+        {
+            mostRecentWindowTopBottlenecks.Add(record.Bottleneck.Id, record.Utilization);
+        }
+        System.Threading.Interlocked.Exchange(ref _mostRecentWindowTopBottlenecks, mostRecentWindowTopBottlenecks);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets a dictionary containing the top 10 bottlenecks with their overall utilization for the most recent time window.
+    /// </summary>
+    public Dictionary<string, double> RecentBottleneckSummary
+    {
+        get
+        {
+            return _mostRecentWindowTopBottlenecks;
+        }
+    }
+}
+```
+
+### Default Provider
+The default provider implements the interface with thread-safe lock-free instances.
+
+## AmbientServiceProfiler
+The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on course-grained profiling.  
+This profiling can be used to determine how the time for a request, program, or time window was used.
+The code being profiled calls into the `IAmbientServiceProfiler` each time the executing system switches.
+A system identifier contains a main system name followed by various subsystem and result identifiers (of course results aren't available until the next system begins executing, so the profiler allows the service to update the system identifier after execution completes).
+The consumer of the service profiler may want to ignore some or all of the susbsystem and result parts of the identifier and can do so using the system group transform setting, which is a regular expression that matches only the desired pieces of the identifier, causing statistics from one or more subsystems and/or results to be grouped together.
+For example, a system identifier might be `SQL/Database:My-database/Table:User/Result:Failed`.
+The fully-detailed system identifier would allow the service profile consumer to distinguish how much time was spent waiting for SQL results that failed from those that timed out or succeeded, and those from one database and/or table from another.
+This level of information is usually too-detailed, so the consumer may want to group everything to just the top-level system, in which case, all SQL access, no matter which database or table, and no matter whether the operation was successful, timed out, or threw an exception, would all be grouped into a single profile entry.
+When no other system is executing, the service should set the system identifier to the empty string, which will also be tracked.
+Some systems may allow tracking of CPU time, so that could be another system identifier.
+As of .NET Core 3.1, it does not provide any way to track this, so the consumer can assume that the empty string system accounts for any remaining CPU time.
+Of course, this estimate will be wildly incorrect if the service, while running under the empty string system, calls something that blocks execution (such as waiting for a mutex or performing IO), or when the system CPU is high enough that available threads don't get scheduled.
+
+### Helpers
+The `AmbientServiceProfilerFactory` allows users to create service profilers for various contexts, including the current call context, rotating time windows of a given time span, or the process as a whole.
+The call context profiler and process-wide profiler implement the `IAmbientServiceProfile` interface, and the time window profiler calls an async delegate with an instance of that interface, each contains the profile for the context it came from.
+`IAmbientServiceProfile` provides access to a scope name and and enumeration of `AmbientServiceProfilerAccumulator` instance, each of which has the statistics for a given system or system group.
+
+### Settings
+`AmbientServiceProfilerFactory-DefaultSystemGroupTransform`: A `Regex` string used to transform the system identifier to a group identifier.
+The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.
+
+### Sample
+[//]: # (AmbientServiceProfilerSample)
+```csharp
+/// <summary>
+/// A class that access a SQL database and reports profiling information to the system profiling system.
+/// </summary>
+class SqlAccessor
+{
+    private static readonly ServiceReference<IAmbientServiceProfiler> _ServiceProfilerAccessor = Service.GetReference<IAmbientServiceProfiler>();
+
+    private readonly string _connectionString;
+    private readonly SqlConnection _connection;
+    private readonly string _systemIdPrefix;
+
+    /// <summary>
+    /// Creates a SQL accessor for the specified connection string.
+    /// </summary>
+    /// <param name="connectionString">A connection string with information on how to connect to a SQL Server database.</param>
+    public SqlAccessor(string connectionString)
+    {
+        _connectionString = connectionString;
+        _connection = new SqlConnection(connectionString);
+        _systemIdPrefix = $"SQL/Server:{_connection.DataSource}/Database:{_connection.Database}";
+    }
+
+    /// <summary>
+    /// Creates a <see cref="SqlCommand"/> that uses this connection.
+    /// </summary>
+    /// <returns>A <see cref="SqlCommand"/> for this connection.</returns>
+    public SqlCommand CreateCommand() { return _connection.CreateCommand(); }
+
+    private async Task<T> ExecuteAsync<T>(SqlCommand command, Func<CancellationToken, Task<T>> f, string table = null, CancellationToken cancel = default(CancellationToken))
+    {
+        string systemId = _systemIdPrefix + (string.IsNullOrEmpty(table) ? "" : $"/Table:{table}");
+        T ret;
+        try
+        {
+            _ServiceProfilerAccessor.Provider?.SwitchSystem(systemId);
+            ret = await f(cancel);
+            systemId = systemId + $"/Result:Success";
+        }
+        catch (Exception e)
+        {
+            if (e.Message.ToUpperInvariant().Contains("TIMEOUT")) systemId = systemId + $"/Result:Timeout";
+            else systemId = systemId + $"/Result:Error";
+            throw;
+        }
+        finally
+        {
+            _ServiceProfilerAccessor.Provider?.SwitchSystem(null, systemId);
+        }
+        return ret;
+    }
+
+    public Task<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    {
+        return ExecuteAsync<int>(command, command.ExecuteNonQueryAsync, table, cancel);
+    }
+    public Task<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    {
+        return ExecuteAsync<SqlDataReader>(command, command.ExecuteReaderAsync, table, cancel);
+    }
+    public Task<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    {
+        return ExecuteAsync<object>(command, command.ExecuteScalarAsync, table, cancel);
+    }
+    public Task<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    {
+        return ExecuteAsync<XmlReader>(command, command.ExecuteXmlReaderAsync, table, cancel);
+    }
+}
+/// <summary>
+/// A class that collects bottleneck statistics and reports on them.
+/// </summary>
+class ProfileReporter
+{
+    private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
+    private Dictionary<string, long> _mostRecentWindowServiceProfile;  // interlocked
+    private AmbientServiceProfilerFactory _factory;
+    private IDisposable _timeWindow;
+    /// <summary>
+    /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
+    /// </summary>
+    public ProfileReporter()
+    {
+        _factory = new AmbientServiceProfilerFactory();
+        _timeWindow = _factory.CreateTimeWindowProfiler(nameof(ProfileReporter), TimeSpan.FromMilliseconds(100), OnMostRecentWindowClosed);
+    }
+
+    private Task OnMostRecentWindowClosed(IAmbientServiceProfile profile)
+    {
+        Dictionary<string, long> serviceProfile = new Dictionary<string, long>();
+        foreach (AmbientServiceProfilerAccumulator record in profile.ProfilerStatistics)
+        {
+            serviceProfile.Add(record.Group, record.TotalStopwatchTicksUsed);
+        }
+        System.Threading.Interlocked.Exchange(ref _mostRecentWindowServiceProfile, serviceProfile);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets a dictionary containing the service profile for the most recent time window.
+    /// </summary>
+    public Dictionary<string, long> RecentProfile
+    {
+        get
+        {
+            return _mostRecentWindowServiceProfile;
+        }
+    }
+}
+```
+
+### Default Provider
+
 
 
 # Library Information

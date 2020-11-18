@@ -16,7 +16,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestAmbientServicesDelayedL
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AmbientServicesSamples", "AmbientServicesSamples\AmbientServicesSamples.csproj", "{B046E359-53D2-4B9B-950B-08A25FC97D17}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReflectionTypeLoadExceptionAssembly", "ReflectionTypeLoadExceptionAssembly\ReflectionTypeLoadExceptionAssembly.csproj", "{7336349D-57F3-4D26-82FF-AC48F91168EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReflectionTypeLoadExceptionAssembly", "ReflectionTypeLoadExceptionAssembly\ReflectionTypeLoadExceptionAssembly.csproj", "{7336349D-57F3-4D26-82FF-AC48F91168EA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
