@@ -6,10 +6,10 @@ using System.Runtime.InteropServices;
 
 namespace ReflectionTypeLoadExceptionAssembly
 {
-    public class UnloadableClass
+    public class ImpossibleToLoadClass
     {
 #pragma warning disable CS0626  // this function is specifically to CAUSE the issue being warned about
-        public static extern void UnloadableFunction();
+        public static extern void ImpossibleToLoadFunction();
 #pragma warning restore CS0626 
     }
 }

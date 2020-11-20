@@ -175,7 +175,7 @@ namespace TestAmbientServices
             Assert.IsTrue(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), Assembly.GetExecutingAssembly()));
         }
         [TestMethod]
-        public void UnloadableAssembly()
+        public void ReflectionTypeLoadException()
         {
             string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "ReflectionTypeLoadExceptionAssembly.dll");
             Type[] types = AmbientServices.AssemblyExtensions.GetLoadableTypes(Assembly.LoadFrom(dllPath)).ToArray();
