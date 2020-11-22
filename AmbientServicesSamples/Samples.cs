@@ -451,15 +451,15 @@ public interface IAmbientCallStack
 [DefaultAmbientService]
 class BasicAmbientCallStack : IAmbientCallStack
 {
-    static private AsyncLocal<ImmutableStack<string>> _Stack = new AsyncLocal<ImmutableStack<string>>();
+    static private AsyncLocal<ImmutableStack<string>> Stack = new AsyncLocal<ImmutableStack<string>>();
 
     static private ImmutableStack<string> GetStack()
     {
-        ImmutableStack<string> stack = _Stack.Value;
-        if (_Stack.Value == null)
+        ImmutableStack<string> stack = Stack.Value;
+        if (Stack.Value == null)
         {
             stack = ImmutableStack<string>.Empty;
-            _Stack.Value = stack;
+            Stack.Value = stack;
         }
         return stack;
     }
@@ -518,10 +518,10 @@ class BasicAmbientCallStack : IAmbientCallStack
 /// </summary>
 class Setup
 {
-    private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
+    private static readonly AmbientService<IAmbientCache> Cache = Ambient.GetService<IAmbientCache>();
     static Setup()
     {
-        _Cache.Global = null;
+        Cache.Global = null;
     }
 }
 #endregion
@@ -574,9 +574,9 @@ class AppConfigAmbientSettings : IAmbientSettingsSet
 /// </summary>
 class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
 {
-    private static readonly AmbientService<IAmbientSettingsSet> _Settings = Ambient.GetService<IAmbientSettingsSet>();
+    private static readonly AmbientService<IAmbientSettingsSet> SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
 
-    private readonly IAmbientSettingsSet _oldSettings;
+    private readonly IAmbientSettingsSet _oldSettingsSet;
     private readonly Dictionary<string, string> _overrides;
 
     /// <summary>
@@ -585,8 +585,8 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
     /// <param name="overrides">A Dictionary containing the key/value pairs to override.</param>
     public LocalAmbientSettingsOverride(Dictionary<string, string> overrides)
     {
-        _oldSettings = _Settings.Local;
-        _Settings.Override = this;
+        _oldSettingsSet = SettingsSet.Local;
+        SettingsSet.Override = this;
         _overrides = new Dictionary<string, string>();
     }
 
@@ -597,7 +597,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
     /// </summary>
     public void Dispose()
     {
-        _Settings.Override = _oldSettings;
+        SettingsSet.Override = _oldSettingsSet;
     }
 
     public string GetRawValue(string key)
@@ -607,7 +607,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
         {
             return value;
         }
-        return _oldSettings.GetRawValue(key);
+        return _oldSettingsSet.GetRawValue(key);
     }
     public object GetTypedValue(string key)
     {
@@ -629,7 +629,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
 /// </summary>
 public class RequestType
 {
-    private static readonly AmbientService<IAmbientStatistics> _AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
+    private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
 
     private readonly IAmbientStatistic _pendingRequests;
     private readonly IAmbientStatistic _totalRequests;
@@ -644,7 +644,7 @@ public class RequestType
     /// <param name="typeName">The name of the request type.</param>
     public RequestType(string typeName)
     {
-        IAmbientStatistics ambientStatistics = _AmbientStatistics.Local;
+        IAmbientStatistics ambientStatistics = AmbientStatistics.Local;
         _pendingRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-RequestsPending", "The number of requests currently executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
         _totalRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-TotalRequests", "The total number of requests that have finished executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
         _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(true, typeName + "-TotalProcessingTime", "The total time spent processing requests (only includes completed requests)", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
@@ -762,7 +762,7 @@ public class RequestTracker : IDisposable
 /// </summary>
 public static class StatisticsReporter
 {
-    private static readonly AmbientService<IAmbientStatistics> _AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
+    private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
     /// <summary>
     /// Writes all statistics with their current values to the specified <see cref="XmlWriter"/>.
     /// </summary>
@@ -770,7 +770,7 @@ public static class StatisticsReporter
     public static void ToXml(XmlWriter writer)
     {
         writer.WriteStartElement("statistics");
-        foreach (IAmbientStatisticReader statistic in _AmbientStatistics.Local?.Statistics.Values ?? Array.Empty<IAmbientStatisticReader>())
+        foreach (IAmbientStatisticReader statistic in AmbientStatistics.Local?.Statistics.Values ?? Array.Empty<IAmbientStatisticReader>())
         {
             writer.WriteStartElement("statistic");
             writer.WriteAttributeString("id", statistic.Id);
@@ -925,7 +925,7 @@ class BottleneckReporter
 /// </summary>
 class SqlAccessor
 {
-    private static readonly AmbientService<IAmbientServiceProfiler> _ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
+    private static readonly AmbientService<IAmbientServiceProfiler> ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
 
     private readonly string _connectionString;
     private readonly SqlConnection _connection;
@@ -954,7 +954,7 @@ class SqlAccessor
         T ret;
         try
         {
-            _ServiceProfiler.Local?.SwitchSystem(systemId);
+            ServiceProfiler.Local?.SwitchSystem(systemId);
             ret = await f(cancel);
             systemId = systemId + $"/Result:Success";
         }
@@ -966,7 +966,7 @@ class SqlAccessor
         }
         finally
         {
-            _ServiceProfiler.Local?.SwitchSystem(null, systemId);
+            ServiceProfiler.Local?.SwitchSystem(null, systemId);
         }
         return ret;
     }
@@ -995,15 +995,15 @@ class ProfileReporter
 {
     private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
     private Dictionary<string, long> _mostRecentWindowServiceProfile;  // interlocked
-    private AmbientServiceProfilerFactory _factory;
+    private AmbientServiceProfilerCoordinator _coordinator;
     private IDisposable _timeWindow;
     /// <summary>
     /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
     /// </summary>
     public ProfileReporter()
     {
-        _factory = new AmbientServiceProfilerFactory();
-        _timeWindow = _factory.CreateTimeWindowProfiler(nameof(ProfileReporter), TimeSpan.FromMilliseconds(100), OnMostRecentWindowClosed);
+        _coordinator = new AmbientServiceProfilerCoordinator();
+        _timeWindow = _coordinator.CreateTimeWindowProfiler(nameof(ProfileReporter), TimeSpan.FromMilliseconds(100), OnMostRecentWindowClosed);
     }
 
     private Task OnMostRecentWindowClosed(IAmbientServiceProfile profile)

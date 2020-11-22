@@ -7,52 +7,52 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     /// <summary>
-    /// A class that acts as a factory for service profilers.
+    /// A class that coordinates service profilers.
     /// </summary>
-    public class AmbientServiceProfilerFactory : IDisposable
+    public class AmbientServiceProfilerCoordinator : IDisposable
     {
         private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
         private static readonly AmbientService<IAmbientServiceProfiler> _AmbientServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
 
         private readonly IAmbientSetting<Regex> _defaultSystemGroupTransformSetting;
-        private readonly IAmbientServiceProfiler _eventCollector;
+        private readonly IAmbientServiceProfiler _eventBroadcaster;
         private readonly AsyncLocal<ScopeOnSystemSwitchedDistributor> _scopeDistributor;
         private bool _disposedValue;
 
         /// <summary>
-        /// Constructs an AmbientServiceProfilerFactory using settings obtained from the ambient settings set.
+        /// Constructs an AmbientServiceProfilerCoordinator using settings obtained from the ambient settings set.
         /// </summary>
-        public AmbientServiceProfilerFactory()
+        public AmbientServiceProfilerCoordinator()
             : this(_SettingsSet.Local)
         {
         }
         /// <summary>
-        /// Constructs an AmbientServiceProfilerFactory using the specified settings set.
+        /// Constructs an AmbientServiceProfilerCoordinator using the specified settings set.
         /// </summary>
         /// <param name="settingsSet"></param>
-        public AmbientServiceProfilerFactory(IAmbientSettingsSet settingsSet)
+        public AmbientServiceProfilerCoordinator(IAmbientSettingsSet settingsSet)
         {
-            _defaultSystemGroupTransformSetting = AmbientSettings.GetSetSetting<Regex>(settingsSet, nameof(AmbientServiceProfilerFactory) + "-DefaultSystemGroupTransform", 
+            _defaultSystemGroupTransformSetting = AmbientSettings.GetSetSetting<Regex>(settingsSet, nameof(AmbientServiceProfilerCoordinator) + "-DefaultSystemGroupTransform", 
                 @"A `Regex` string used to transform the system identifier to a group identifier.
 The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.", 
                 s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));
             _scopeDistributor = new AsyncLocal<ScopeOnSystemSwitchedDistributor>();
-            _eventCollector = _AmbientServiceProfiler.Local;
-            if (_eventCollector != null) _eventCollector.SystemSwitched += OnSystemSwitched;
+            _eventBroadcaster = _AmbientServiceProfiler.Local;
+            if (_eventBroadcaster != null) _eventBroadcaster.SystemSwitched += OnSystemSwitched;
         }
 
         /// <summary>
-        /// Notifies the service profiler of a system switch.
+        /// Notifies the service profiler coordinator of a system switch.
         /// </summary>
         /// <param name="sender">The sender of the event.</param>
         /// <param name="changes">The <see cref="AmbientServiceProfilerSystemSwitchedEvent"/> for this system switch.</param>
-        public void OnSystemSwitched(object sender, AmbientServiceProfilerSystemSwitchedEvent changes)
+        private void OnSystemSwitched(object sender, AmbientServiceProfilerSystemSwitchedEvent changes)
         {
             if (_scopeDistributor.Value == null) _scopeDistributor.Value = new ScopeOnSystemSwitchedDistributor();
             _scopeDistributor.Value.OnSystemSwitched(sender, changes);
         }
         /// <summary>
-        /// Creates a call context profiler.
+        /// Creates a service profiler which profiles the current call context.
         /// </summary>
         /// <param name="scopeName">A name of the call context to attach to the analyzer.</param>
         /// <param name="overrideSystemGroupTransformRegex">A <see cref="Regex"/> string to transform the system into a system group.</param>
@@ -89,8 +89,8 @@ The regular expression will attempt to match the system identifier, with the val
             return null;
         }
         /// <summary>
-        /// Creates a bottleneck survey which analyzes limit proximities for everything in the process until the process terminates. 
-        /// Note that this is only useful to determine the distribtion for an entire process from start to finish, which is not very useful if the process is very long-lived.
+        /// Creates a service profiler which profiles the entire process for the entire (remaining) duration of execution.
+        /// Note that this is only useful to determine the distribution for an entire process from start to finish, which is not very useful if the process is very long-lived.
         /// <see cref="CreateTimeWindowProfiler"/> is a better match in most situations.
         /// </summary>
         /// <param name="scopeName">A name for the contxt to attach to the analyzer.</param>
@@ -123,7 +123,7 @@ The regular expression will attempt to match the system identifier, with the val
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
-                    if (_eventCollector != null) _eventCollector.SystemSwitched -= OnSystemSwitched;
+                    if (_eventBroadcaster != null) _eventBroadcaster.SystemSwitched -= OnSystemSwitched;
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

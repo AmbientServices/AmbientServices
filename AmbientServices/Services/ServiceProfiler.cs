@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     /// <summary>
-    /// An interface that abstracts a service profiler.
+    /// An interface that abstracts a service profiler service.
     /// </summary>
     public interface IAmbientServiceProfiler
     {
