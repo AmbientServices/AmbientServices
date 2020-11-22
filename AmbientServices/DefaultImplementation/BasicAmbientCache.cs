@@ -7,27 +7,27 @@ using System.Threading.Tasks;
 
 namespace AmbientServices
 {
-    [DefaultAmbientServiceProvider]
-    internal class BasicAmbientCache : IAmbientCacheProvider
+    [DefaultAmbientService]
+    internal class BasicAmbientCache : IAmbientCache
     {
-        private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsAccessor = Service.GetReference<IAmbientSettingsProvider>();
+        private static readonly AmbientService<IAmbientSettingsSet> _Settings = Ambient.GetService<IAmbientSettingsSet>();
 
-        private readonly ProviderSetting<int> _callFrequencyToEject;
-        private readonly ProviderSetting<int> _countToEject;
+        private readonly IAmbientSetting<int> _callFrequencyToEject;
+        private readonly IAmbientSetting<int> _countToEject;
         private int _expireCount = 0;
         private ConcurrentQueue<TimedQueueEntry> _timedQueue = new ConcurrentQueue<TimedQueueEntry>();
         private ConcurrentQueue<string> _untimedQueue = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>();
 
         public BasicAmbientCache()
-            : this(_SettingsAccessor.Provider)
+            : this(_Settings.Local)
         {
         }
 
-        public BasicAmbientCache(IAmbientSettingsProvider settings)
+        public BasicAmbientCache(IAmbientSettingsSet settings)
         {
-            _callFrequencyToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-EjectFrequency", "The number of operations between cache ejections.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
-            _countToEject = new ProviderSetting<int>(settings, nameof(BasicAmbientCache) + "-ItemCount", "The maximum number of items to allow in the cache before ejecting items.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "1000");
+            _callFrequencyToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientCache) + "-EjectFrequency", "The number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
+            _countToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientCache) + "-ItemCount", "The maximum number of both timed and untimed items to allow in the cache before ejecting items.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "1000");
         }
 
         struct TimedQueueEntry

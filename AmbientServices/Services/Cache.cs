@@ -8,16 +8,16 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     /// <summary>
-    /// An interface that abstracts an ambient caching service provider.
+    /// An interface that abstracts an ambient caching service.
     /// </summary>
-    public interface IAmbientCacheProvider
+    public interface IAmbientCache
     {
         /// <summary>
         /// Retrieves the item with the specified key from the cache (if possible).
         /// </summary>
         /// <typeparam name="T">The type of the cached object.</typeparam>
         /// <param name="itemKey">The unique key used when the object was cached.</param>
-        /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some providers may ignore this value.</param>
+        /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some implementations may ignore this value.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// <returns>The cached object, or null if it was not found in the cache.</returns>
         Task<T> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class;

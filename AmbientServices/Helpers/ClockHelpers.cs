@@ -11,46 +11,46 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     /// <summary>
-    /// A static class that utilizes the ambient <see cref="IAmbientClockProvider"/> service provider if one is active, or the system clock if not.
+    /// A static class that utilizes the ambient <see cref="IAmbientClock"/> service if there is one, or the system clock if not.
     /// </summary>
     public static class AmbientClock
     {
-        private static readonly ServiceReference<IAmbientClockProvider> _Clock = Service.GetReference<IAmbientClockProvider>();
+        private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
         /// <summary>
         /// Gets whether or not the ambient clock is just the system clock.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static bool IsSystemClock { get { return _Clock.Provider == null; } }
+        public static bool IsSystemClock { get { return _Clock.Local == null; } }
         /// <summary>
         /// Gets the number of virtual ticks elapsed.  Ticks must be measured in units of <see cref="Stopwatch.Frequency"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static long Ticks { get { return _Clock.Provider?.Ticks ?? Stopwatch.GetTimestamp(); } }
+        public static long Ticks { get { return _Clock.Local?.Ticks ?? Stopwatch.GetTimestamp(); } }
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> indicating the amount of virtual time that has elapsed.  Often more convenient than <see cref="Ticks"/>, but based entirely on its value.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks((_Clock.Provider?.Ticks ?? Stopwatch.GetTimestamp()) * TimeSpan.TicksPerSecond / Stopwatch.Frequency); } }
+        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks((_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp()) * TimeSpan.TicksPerSecond / Stopwatch.Frequency); } }
         /// <summary>
         /// Gets the current virtual UTC <see cref="DateTime"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static DateTime UtcNow { get { return _Clock.Provider?.UtcDateTime ?? DateTime.UtcNow; } }
+        public static DateTime UtcNow { get { return _Clock.Local?.UtcDateTime ?? DateTime.UtcNow; } }
         /// <summary>
         /// Gets the current virtual local <see cref="DateTime"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static DateTime Now { get { return _Clock.Provider?.UtcDateTime.ToLocalTime() ?? DateTime.Now; } }
+        public static DateTime Now { get { return _Clock.Local?.UtcDateTime.ToLocalTime() ?? DateTime.Now; } }
         /// <summary>
         /// Creates an <see cref="AmbientCancellationTokenSource"/> that cancels after the specified timeout.
         /// </summary>
@@ -89,17 +89,17 @@ namespace AmbientServices
         /// <param name="skipTime">The amount of time to skip ahead.</param>
         public static void SkipAhead(TimeSpan skipTime)
         {
-            PausedAmbientClockProvider controllable = _Clock.ProviderOverride as PausedAmbientClockProvider;
+            PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null) controllable.SkipAhead(skipTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
         }
         sealed class ScopedClockPauser : IDisposable
         {
-            private IAmbientClockProvider _clockToRestore;
+            private IAmbientClock _clockToRestore;
 
             internal ScopedClockPauser()
             {
-                _clockToRestore = _Clock.ProviderOverride;
-                _Clock.ProviderOverride = new PausedAmbientClockProvider();
+                _clockToRestore = _Clock.Override;
+                _Clock.Override = new PausedAmbientClock();
             }
 
             #region IDisposable Support
@@ -111,7 +111,7 @@ namespace AmbientServices
                 {
                     if (disposing)
                     {
-                        _Clock.ProviderOverride = _clockToRestore;
+                        _Clock.Override = _clockToRestore;
                     }
                     _disposed = true;
                 }
@@ -126,7 +126,7 @@ namespace AmbientServices
         /// <summary>
         /// An ambient clock which only moves time forward when explicitly told to do so.
         /// </summary>
-        internal class PausedAmbientClockProvider : IAmbientClockProvider
+        internal class PausedAmbientClock : IAmbientClock
         {
 #if DEBUG
 #pragma warning disable CA1823
@@ -139,7 +139,7 @@ namespace AmbientServices
             /// <summary>
             /// Constructs an ambient clock that is paused at the current date-time and only moves time forward when explicitly told to do so.
             /// </summary>
-            public PausedAmbientClockProvider()
+            public PausedAmbientClock()
             {
                 _baseDateTime = DateTime.UtcNow;
                 _stopwatchTicks = 0;
@@ -170,7 +170,7 @@ namespace AmbientServices
             /// <remarks>
             /// This is used by <see cref="AmbientEventTimer"/> in order to know when the paused time changes and it's time to raise the timer's elapsed event.
             /// </remarks>
-            public event EventHandler<AmbientClockProviderTimeChangedEventArgs> TimeChanged;
+            public event EventHandler<AmbientClockTimeChangedEventArgs> TimeChanged;
 
             /// <summary>
             /// Moves the clock forward by the specified number of ticks.  Ticks are the same units as <see cref="Stopwatch"/> ticks, with <see cref="Stopwatch.Frequency"/> ticks per second.
@@ -179,13 +179,13 @@ namespace AmbientServices
             /// Note that negative times are allowed, but should only be used to test weird clock issues.
             /// </remarks>
             /// <param name="ticks">The number of ticks to move forward.</param>
-            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClockProvider.TimeChanged"/> is being raised.</remarks>
+            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClock.TimeChanged"/> is being raised.</remarks>
             public void SkipAhead(long ticks)
             {
                 long newTicks = System.Threading.Interlocked.Add(ref _stopwatchTicks, ticks);
                 long oldTicks = newTicks - ticks;
                 // notify any subscribers
-                TimeChanged?.Invoke(this, new AmbientClockProviderTimeChangedEventArgs { Clock = this, OldTicks = oldTicks, NewTicks = newTicks, OldUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, oldTicks), NewUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, newTicks) });
+                TimeChanged?.Invoke(this, new AmbientClockTimeChangedEventArgs { Clock = this, OldTicks = oldTicks, NewTicks = newTicks, OldUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, oldTicks), NewUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, newTicks) });
             }
         }
     }
@@ -199,13 +199,13 @@ namespace AmbientServices
     /// While not running, <see cref="ElapsedTicks"/> will return the same value, indicating the number of ticks that were previously accumulated after construction or the last call to <see cref="Reset"/> and while running.
     /// AmbientStopwatch is not thread-safe, but neither is <see cref="Stopwatch"/>.
     /// Threadsafe versions would be possible to implement but are much more complicated due to the race caused by the state, the start time, and the previously-accumulated ticks being stored separately.
-    /// AmbientStopwatch does not support changing the clock provider after construction.
+    /// AmbientStopwatch does not support changing the clock implementation after construction.
     /// </remarks>
     public sealed class AmbientStopwatch
     {
-        private static readonly ServiceReference<IAmbientClockProvider> _ClockProvider = Service.GetReference<IAmbientClockProvider>();
+        private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
 
-        private readonly IAmbientClockProvider _clock;
+        private readonly IAmbientClock _clock;
         private long _accumulatedTicks;
         private long _resumeTicks;
         private bool _running;
@@ -223,15 +223,15 @@ namespace AmbientServices
         /// </summary>
         /// <param name="run">Whether or not to start the stopwatch running.  Default is false (to match <see cref="Stopwatch"/>).</param>
         public AmbientStopwatch(bool run = false)
-            : this(_ClockProvider.Provider, run)
+            : this(_Clock.Local, run)
         {
         }
         /// <summary>
-        /// Constructs an AmbientStopwatch using a specfied <see cref="IAmbientClockProvider"/>.  This overload is mainly for testing functionality without depending on the ambient environment.
+        /// Constructs an AmbientStopwatch using a specfied <see cref="IAmbientClock"/>.  This overload is mainly for testing functionality without depending on the ambient environment.
         /// </summary>
-        /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use, or null to use the system clock.</param>
+        /// <param name="clock">The <see cref="IAmbientClock"/> to use, or null to use the system clock.</param>
         /// <param name="run">Whether or not the stopwatch should start in a running state (as opposed to a paused state).</param>
-        public AmbientStopwatch(IAmbientClockProvider clock, bool run = true)
+        public AmbientStopwatch(IAmbientClock clock, bool run = true)
         {
             _clock = clock;
             _resumeTicks = Ticks;
@@ -243,7 +243,7 @@ namespace AmbientServices
         /// <returns>A timestamp.</returns>
         public static long GetTimestamp()
         {
-            return _ClockProvider.Provider?.Ticks ?? Stopwatch.GetTimestamp();
+            return _Clock.Local?.Ticks ?? Stopwatch.GetTimestamp();
         }
         /// <summary>
         /// Gets the frequency of the stopwatch.
@@ -340,14 +340,14 @@ namespace AmbientServices
         private static readonly System.Reflection.ConstructorInfo _ElapsedEventArgsConstructor = typeof(System.Timers.ElapsedEventArgs).GetConstructor(
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null,
             new Type[] { typeof(long) }, null);
-        private static readonly ServiceReference<IAmbientClockProvider> _ClockAccessor = Service.GetReference<IAmbientClockProvider>();
+        private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
 
-        private readonly IAmbientClockProvider _clock;           // if this is null, everything falls through to the base class (ie. the system implementation)
+        private readonly IAmbientClock _clock;           // if this is null, everything falls through to the base class (ie. the system implementation)
         private long _periodStopwatchTicks;
         private long _nextRaiseStopwatchTicks;
         private int _autoReset;
         private int _enabled;
-        private LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockProviderTimeChangedEventArgs> _weakTimeChanged;
+        private LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockTimeChangedEventArgs> _weakTimeChanged;
         private EventHolder _eventHolder = new EventHolder();
 
         struct EventHolder
@@ -367,7 +367,7 @@ namespace AmbientServices
         /// The timer starts with <see cref="AutoReset"/> set to true and <see cref="Enabled"/> set to false.
         /// </summary>
         public AmbientEventTimer()
-            : this(_ClockAccessor.Provider, TimeSpan.FromMilliseconds(100))
+            : this(_Clock.Local, TimeSpan.FromMilliseconds(100))
         {
         }
         /// <summary>
@@ -376,7 +376,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="milliseconds">The number of milliseconds indicating how often the <see cref="Elapsed"/> event should be raised.</param>
         public AmbientEventTimer(double milliseconds)
-            : this(_ClockAccessor.Provider, TimeSpan.FromMilliseconds(milliseconds))
+            : this(_Clock.Local, TimeSpan.FromMilliseconds(milliseconds))
         {
         }
         /// <summary>
@@ -385,15 +385,15 @@ namespace AmbientServices
         /// </summary>
         /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be raised.</param>
         public AmbientEventTimer(TimeSpan period)
-            : this(_ClockAccessor.Provider, period)
+            : this(_Clock.Local, period)
         {
         }
         /// <summary>
         /// Constructs an AmbientEventTimer that will use the specified clock to determine when to raise the <see cref="Elapsed"/> event.
         /// The timer starts with <see cref="AutoReset"/> set to true and <see cref="Enabled"/> set to false.
         /// </summary>
-        /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
-        public AmbientEventTimer(IAmbientClockProvider clock)
+        /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
+        public AmbientEventTimer(IAmbientClock clock)
             : base()
         {
             _clock = clock;
@@ -404,8 +404,8 @@ namespace AmbientServices
                 base.Enabled = false;
 
                 long nowStopwatchTicks = clock.Ticks;
-                IAmbientClockProvider tempClock = clock;
-                _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockProviderTimeChangedEventArgs>(
+                IAmbientClock tempClock = clock;
+                _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockTimeChangedEventArgs>(
                     // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
                     this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
                 clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
@@ -419,9 +419,9 @@ namespace AmbientServices
         /// Constructs an AmbientEventTimer that will use the specified period and clock to determine when to raise the <see cref="Elapsed"/> event.
         /// The timer starts with <see cref="AutoReset"/> set to true and <see cref="Enabled"/> set to false.
         /// </summary>
-        /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
+        /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
         /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be raised.  If zero, the timer will not be enabled.  If non-zero, the timer will start immediately.</param>
-        public AmbientEventTimer(IAmbientClockProvider clock, TimeSpan period)
+        public AmbientEventTimer(IAmbientClock clock, TimeSpan period)
             : base(period.TotalMilliseconds)
         {
             _clock = clock;
@@ -432,8 +432,8 @@ namespace AmbientServices
                 base.Enabled = false;
 
                 long nowStopwatchTicks = clock.Ticks;
-                IAmbientClockProvider tempClock = clock;
-                _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockProviderTimeChangedEventArgs>(
+                IAmbientClock tempClock = clock;
+                _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockTimeChangedEventArgs>(
                     // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
                     this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
                 clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
@@ -444,12 +444,12 @@ namespace AmbientServices
             // else no clock, so use the base system timer
         }
         // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
-        private static void OnTimeChanged(AmbientEventTimer timer, object sender, AmbientClockProviderTimeChangedEventArgs e)
+        private static void OnTimeChanged(AmbientEventTimer timer, object sender, AmbientClockTimeChangedEventArgs e)
         {
             timer.OnTimeChanged(sender, e);
         }
         // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
-        private void OnTimeChanged(object _, AmbientClockProviderTimeChangedEventArgs e)
+        private void OnTimeChanged(object _, AmbientClockTimeChangedEventArgs e)
         {
             // there should be a clock if we get here
             System.Diagnostics.Debug.Assert(_clock != null && !((System.Timers.Timer)this).Enabled);
@@ -621,7 +621,7 @@ namespace AmbientServices
 #endif
         IDisposable
     {
-        private static readonly ServiceReference<IAmbientClockProvider> _ClockAccessor = Service.GetReference<IAmbientClockProvider>();
+        private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
         private static readonly ManualResetEvent _AlwaysSignaled = new ManualResetEvent(true);
         private static readonly object _UseTimerInstanceForStateIndicator = new object();
         private static long _TimerCount;
@@ -642,14 +642,14 @@ namespace AmbientServices
 
         private readonly TimerCallback _callback;
         private readonly object _state;
-        private readonly IAmbientClockProvider _clock;           // exactly one of _clock and _timer should be null
+        private readonly IAmbientClock _clock;           // exactly one of _clock and _timer should be null
         private readonly System.Threading.Timer _timer;
 
         private long _periodStopwatchTicks;
         private long _nextRaiseStopwatchTicks;
         private int _autoReset;
         private int _enabled;
-        private LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockProviderTimeChangedEventArgs> _weakTimeChanged;
+        private LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockTimeChangedEventArgs> _weakTimeChanged;
         private bool _disposed = false; // To detect redundant calls
 
         /// <summary>
@@ -657,7 +657,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
         public AmbientCallbackTimer(TimerCallback callback)
-            : this(_ClockAccessor.Provider, callback, _UseTimerInstanceForStateIndicator, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan)
+            : this(_Clock.Local, callback, _UseTimerInstanceForStateIndicator, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan)
         {
         }
         /// <summary>
@@ -668,7 +668,7 @@ namespace AmbientServices
         /// <param name="dueTime">The number of milliseconds to delay before calling the callback.  <see cref="Timeout.Infinite"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(TimerCallback callback, object state, int dueTime, int period)
-            : this(_ClockAccessor.Provider, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
+            : this(_Clock.Local, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
         {
         }
         /// <summary>
@@ -680,7 +680,7 @@ namespace AmbientServices
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
         [CLSCompliant(false)]
         public AmbientCallbackTimer(TimerCallback callback, object state, uint dueTime, uint period)
-            : this(_ClockAccessor.Provider, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
+            : this(_Clock.Local, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
         {
         }
         /// <summary>
@@ -691,7 +691,7 @@ namespace AmbientServices
         /// <param name="dueTime">The number of milliseconds to delay before calling the callback.  <see cref="Timeout.Infinite"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(TimerCallback callback, object state, long dueTime, long period)
-            : this(_ClockAccessor.Provider, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
+            : this(_Clock.Local, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
         {
         }
         /// <summary>
@@ -702,18 +702,18 @@ namespace AmbientServices
         /// <param name="dueTime">A <see cref="TimeSpan"/> indicating the number of milliseconds to delay before calling the callback.  <see cref="Timeout.InfiniteTimeSpan"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period)
-            : this(_ClockAccessor.Provider, callback, state, dueTime, period)
+            : this(_Clock.Local, callback, state, dueTime, period)
         {
         }
         /// <summary>
         /// Constructs an AmbientCallbackTimer using the ambient clock and the specified period.
         /// </summary>
-        /// <param name="clock">The <see cref="IAmbientClockProvider"/> to use to determine when to invoke the vallback.</param>
+        /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to invoke the callback.</param>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
         /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
         /// <param name="dueTime">A <see cref="TimeSpan"/> indicating the number of milliseconds to delay before calling the callback.  <see cref="Timeout.InfiniteTimeSpan"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
-        public AmbientCallbackTimer(IAmbientClockProvider clock, TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period)
+        public AmbientCallbackTimer(IAmbientClock clock, TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period)
         {
             if (callback == null) throw new ArgumentNullException(nameof(callback));
             if (dueTime != Timeout.InfiniteTimeSpan && dueTime.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(dueTime), "The dueTime parameter must not be negative unless it is Infinite!");
@@ -739,12 +739,12 @@ namespace AmbientServices
         }
 
         // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
-        private static void OnTimeChanged(AmbientCallbackTimer timer, object sender, AmbientClockProviderTimeChangedEventArgs e)
+        private static void OnTimeChanged(AmbientCallbackTimer timer, object sender, AmbientClockTimeChangedEventArgs e)
         {
             timer.OnTimeChanged(sender, e);
         }
         // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
-        private void OnTimeChanged(object _, AmbientClockProviderTimeChangedEventArgs e)
+        private void OnTimeChanged(object _, AmbientClockTimeChangedEventArgs e)
         {
             // there should be a clock and NOT a timer if we get here
             System.Diagnostics.Debug.Assert(_clock != null && _timer == null);
@@ -786,8 +786,8 @@ namespace AmbientServices
         {
             System.Threading.Interlocked.Increment(ref _TimerCount);
             long nowStopwatchTicks = _clock.Ticks;
-            IAmbientClockProvider tempClock = _clock;
-            _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockProviderTimeChangedEventArgs>(
+            IAmbientClock tempClock = _clock;
+            _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockTimeChangedEventArgs>(
                 // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
                 this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
             _clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
@@ -881,7 +881,7 @@ namespace AmbientServices
                 {
                     bool enabled = (_enabled != 0);
                     Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-                    // since notification when we have a clock provider is synchronous, there is no need to wait for full disposal
+                    // since notification when we have an ambient clock service is synchronous, there is no need to wait for full disposal
                     WaitHandle.SignalAndWait(waitHandle, _AlwaysSignaled);
                     // return whether or not we were already canceled
                     ret = enabled;
@@ -936,12 +936,12 @@ namespace AmbientServices
     /// </summary>
     public sealed class AmbientRegisteredWaitHandle
     {
-        private static readonly ServiceReference<IAmbientClockProvider> _Clock = Service.GetReference<IAmbientClockProvider>();
+        private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
         private static readonly ManualResetEvent _ManualResetEvent = new ManualResetEvent(true);
 
 
         private readonly RegisteredWaitHandle _registeredWaitHandle;
-        private readonly IAmbientClockProvider _clock;
+        private readonly IAmbientClock _clock;
         private readonly WaitOrTimerCallback _callback;
         private readonly bool _executeOnlyOnce;
         private readonly object _state;
@@ -967,7 +967,7 @@ namespace AmbientServices
         }
         private AmbientRegisteredWaitHandle(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce, bool safe)
         {
-            if ((_clock = _Clock.Provider) == null)
+            if ((_clock = _Clock.Local) == null)
             {
                 _registeredWaitHandle = safe
                     ? ThreadPool.RegisterWaitForSingleObject(waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce)
@@ -988,7 +988,7 @@ namespace AmbientServices
                 _nextCallbackTimeStopwatchTicks = (millisecondTimeoutInterval == Timeout.Infinite) ? Timeout.Infinite : (_clock.Ticks + timeoutIntervalStopwatchTicks);
                 _periodStopwatchTicks = executeOnlyOnce ? Timeout.Infinite : timeoutIntervalStopwatchTicks;
                 _executeOnlyOnce = executeOnlyOnce;
-                _clock.TimeChanged += OnAmbientClockProviderTimeChanged;
+                _clock.TimeChanged += OnAmbientClockTimeChanged;
             }
         }
 
@@ -1013,7 +1013,7 @@ namespace AmbientServices
             _callback(_state, false);
 
         }
-        private void OnAmbientClockProviderTimeChanged(object sender, AmbientClockProviderTimeChangedEventArgs eventArgs)
+        private void OnAmbientClockTimeChanged(object sender, AmbientClockTimeChangedEventArgs eventArgs)
         {
             // there should be a clock if we get here
             System.Diagnostics.Debug.Assert(_clock != null);
@@ -1059,7 +1059,7 @@ namespace AmbientServices
             bool ret = _registeredWaitHandle.Unregister(waitObject);
             if (_clock != null)
             {
-                _clock.TimeChanged -= OnAmbientClockProviderTimeChanged;
+                _clock.TimeChanged -= OnAmbientClockTimeChanged;
             }
             return ret;
         }

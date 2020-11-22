@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace AmbientServices
 {
-    [DefaultAmbientServiceProvider]
+    [DefaultAmbientService]
     class BasicAmbientBottleneckDetector : IAmbientBottleneckDetector
     {
         private readonly long BaselineStopwatchTimestamp = AmbientClock.Ticks;

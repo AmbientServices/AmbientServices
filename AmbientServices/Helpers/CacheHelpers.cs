@@ -7,19 +7,19 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     /// <summary>
-    /// A class that provides caching using either a specified cache provider or the ambient cache provider.
+    /// A class that provides caching using either a specified cache or the ambient cache.
     /// </summary>
     /// <typeparam name="TOWNER">The type that owns the items to be cached.</typeparam>
     public class AmbientCache<TOWNER>
     {
         private static readonly string DefaultCacheKeyPrefix = typeof(TOWNER).Name + "-";
-        private static readonly ServiceReference<IAmbientCacheProvider> _Cache = Service.GetReference<IAmbientCacheProvider>();
+        private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
 
-        private IAmbientCacheProvider _explicitProvider;
+        private IAmbientCache _explicitCache;
         private string _cacheKeyPrefix = DefaultCacheKeyPrefix;
 
         /// <summary>
-        /// Creates the AmbientCache using the ambient cache provider.
+        /// Creates the AmbientCache using the ambient cache service.
         /// </summary>
         /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
         public AmbientCache(string cacheKeyPrefix = null)
@@ -27,13 +27,13 @@ namespace AmbientServices
         {
         }
         /// <summary>
-        /// Creates the AmbientCache using the specified cache provider.
+        /// Creates the AmbientCache using the specified cache service.
         /// </summary>
-        /// <param name="provider">An explicit <see cref="IAmbientCacheProvider"/> to use.</param>
+        /// <param name="cache">An explicit <see cref="IAmbientCache"/> to use.</param>
         /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
-        public AmbientCache(IAmbientCacheProvider provider, string cacheKeyPrefix = null)
+        public AmbientCache(IAmbientCache cache, string cacheKeyPrefix = null)
         {
-            _explicitProvider = provider;
+            _explicitCache = cache;
             if (cacheKeyPrefix != null) _cacheKeyPrefix = cacheKeyPrefix;
         }
         /// <summary>
@@ -41,14 +41,14 @@ namespace AmbientServices
         /// </summary>
         /// <typeparam name="T">The type of the cached object.</typeparam>
         /// <param name="itemKey">The unique key used when the object was cached.</param>
-        /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some providers may ignore this value.</param>
+        /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some cache implementations may ignore this value.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// <returns>The cached object, or null if it was not found in the cache.</returns>
         public Task<T> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
-            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.Provider;
-            if (provider == null) return Task.FromResult<T>(null);
-            return provider.Retrieve<T>(_cacheKeyPrefix + itemKey, refresh, cancel);
+            IAmbientCache cache = _explicitCache ?? _Cache.Local;
+            if (cache == null) return Task.FromResult<T>(null);
+            return cache.Retrieve<T>(_cacheKeyPrefix + itemKey, refresh, cancel);
         }
         /// <summary>
         /// Stores the specified item in the cache.
@@ -65,9 +65,9 @@ namespace AmbientServices
         /// </remarks>
         public Task Store<T>(bool localOnly, string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
-            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.Provider;
-            if (provider == null) return Task.CompletedTask;
-            return provider.Store<T>(localOnly, _cacheKeyPrefix + itemKey, item, maxCacheDuration, expiration, cancel);
+            IAmbientCache cache = _explicitCache ?? _Cache.Local;
+            if (cache == null) return Task.CompletedTask;
+            return cache.Store<T>(localOnly, _cacheKeyPrefix + itemKey, item, maxCacheDuration, expiration, cancel);
         }
         /// <summary>
         /// Removes the specified item from the cache.
@@ -78,9 +78,9 @@ namespace AmbientServices
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         public Task Remove<T>(bool localOnly, string itemKey, CancellationToken cancel = default(CancellationToken))
         {
-            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.Provider;
-            if (provider == null) return Task.CompletedTask;
-            return provider.Remove<T>(localOnly, _cacheKeyPrefix + itemKey, cancel);
+            IAmbientCache cache = _explicitCache ?? _Cache.Local;
+            if (cache == null) return Task.CompletedTask;
+            return cache.Remove<T>(localOnly, _cacheKeyPrefix + itemKey, cancel);
         }
         /// <summary>
         /// Flushes everything from the cache.
@@ -89,9 +89,9 @@ namespace AmbientServices
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         public Task Clear(bool localOnly = true, CancellationToken cancel = default(CancellationToken))
         {
-            IAmbientCacheProvider provider = _explicitProvider ?? _Cache.Provider;
-            if (provider == null) return Task.CompletedTask;
-            return provider.Clear(localOnly, cancel);
+            IAmbientCache cache = _explicitCache ?? _Cache.Local;
+            if (cache == null) return Task.CompletedTask;
+            return cache.Clear(localOnly, cancel);
         }
     }
 }

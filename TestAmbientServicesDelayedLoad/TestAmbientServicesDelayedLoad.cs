@@ -6,7 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace TestAmbientServicesDelayedLoad
 {
-    [DefaultAmbientServiceProvider]
+    [DefaultAmbientService]
     public class DefaultLateAssignmentTest : ILateAssignmentTest
     {
         static public void Load()

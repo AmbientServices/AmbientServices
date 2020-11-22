@@ -1,7 +1,8 @@
 # Overview
-AmbientServices is an assembly that provides abstractions for basic services which are both universal and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those basic services.
+AmbientServices is a .NET library that provides abstractions for services which are both universal and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those services.
 
-These basic services include caching, clock, logging, progress/cancellation, and settings.  Interfaces for those services are provided here.
+## Basic Services
+The basic ambient services include caching, clock, logging, progress/cancellation, and settings.  Interfaces for those services are provided here.
 By accessing these services through the interfaces provided here, library authors can utilize new basic services as they become available without changing their external interface, and library consumers can use those libraries without having to provide dependencies for systems that they may or may not use.
 If consumers want the added benefits provided by a more complicated implementation of one or more of those services, they can provide a bridge to their own implementations of these basic services and register them with the AmbientServices service.
 With one simple registration, the services will automatically be utilized by every library that uses AmbientServices.
@@ -14,23 +15,29 @@ By convention, AmbientServices should not be used for information that alters th
 
 For example, logging should never alter function outputs at all.  Caching may affect the output, but only by giving results that are slightly stale, and only in cases where there are already hidden inputs (like a database) anyway.  Some functions may measure the passage of time during processing and might record that information or change their outputs based on the duration of time passed, but callers should not be surprised when the passage of time is slower or faster than their expected "normal".  Settings (often stored in a configuration file) can alter the output of a function, but never in a way that the caller is concerned about.  In fact, the very concept of settings is in reality a type of parameter intended to affect functions without requiring the caller to be concerned with their specific values.  Progress tracking and cancellation may be useful for the caller, but never affects the output of the function other than aborting its processing altogether.
 
+## Advanced Services
+Advanced ambient services provide detailed system performance monitoring.
+With them you can easily track how various parts of your system are performing all the time, not just when you run it with a profiler.
 
-# AmbientServices
-AmbientServices is a library that contains ambient services for monitoring system performance.
-Wouldn't it be nice if you could easily track how various parts of your system are performing all the time, not just when you run it with a profiler?
-Wouldn't it be wonderful if you could make a request to a third-party SaaS system and not just get the results you asked for, but performance information indicating what backend dependencies the request had to wait how long for, and how close any of those systems were to hitting their maximum possible performance?
-Wouldn't it be great to be able to see in near-real-time which of the backend systems you use has caused your system's responsiveness to tank?
-The system provided here allows you to track this information with little overhead and thereby provide it for consumers of your systems.
+The statistics service tracks statistics such as cache hits and misses, requests processed, time spent processing requests, etc., similar to windows performance counters, but with less complexity and better results when aggregating over time or across multiple systems.
+
+The bottleneck detector service tracks system bottlenecks, allowing you to determine how close your system is to overloading any particular bottleneck, allowing you to better predict scalability even before load testing.
+
+The service profiler allows you to determine wat backend systems used up all the wall clock time during the execution of a request, or during a particular time window.
+This information gives you insight into what optimizations would improve response times the most and by how much.
+
+Using the services, you can see performance issues in near-real-time and identify which backend systems or local bottlenecks caused those issues.
+Advanced ambient services allow you to track this information with little overhead and in turn provide it for consumers of your systems.
 
 
-# Getting Started
+## Getting Started
 In Visual Studio, use Manage Nuget Packages and search nuget.org for AmbientServices to add a package reference for this library.
 
 For .NET Core environments, use:
 `dotnet add package https://www.nuget.org/packages/AmbientServices/`
 
 
-# Built-in Basic Ambient Services
+# Service Descriptions
 
 ## AmbientCache
 
@@ -45,7 +52,7 @@ The `AmbientCache<TOWNER>` generic class provides a wrapper of the ambient cache
 ### Settings
 
 BasicAmbientCache-EjectFrequency: the number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.  Default is 100.
-BasicAmbientCache-ItemCount: the number of items (timed and untimed combined) to cache.  Default is 1000.
+BasicAmbientCache-ItemCount: the maximum number of both timed and untimed items to allow in the cache before ejecting items.  Default is 1000.
 
 
 ### Sample
@@ -191,7 +198,7 @@ There are no settings for this service.
 /// </summary>
 class DownloadAndUnzip
 {
-    private static readonly IAmbientProgressProvider AmbientProgress = Service.GetReference<IAmbientProgressProvider>().GlobalProvider;
+    private static readonly IAmbientProgressService AmbientProgress = Ambient.GetService<IAmbientProgressService>().Global;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -476,7 +483,7 @@ public interface IAmbientCallStack
 /// A basic implementation of <see cref="IAmbientCallStack"/>.
 /// A few enhancements could make these call stacks accessible remotely, which could be very handy for diagnosing what servers are busy doing.
 /// </summary>
-[DefaultAmbientServiceProvider]
+[DefaultAmbientService]
 class BasicAmbientCallStack : IAmbientCallStack
 {
     static private AsyncLocal<ImmutableStack<string>> _Stack = new AsyncLocal<ImmutableStack<string>>();
@@ -543,10 +550,10 @@ class BasicAmbientCallStack : IAmbientCallStack
 /// </summary>
 class Setup
 {
-    private static readonly ServiceReference<IAmbientCacheProvider> _CacheProvider = Service.GetReference<IAmbientCacheProvider>();
+    private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
     static Setup()
     {
-        _CacheProvider.GlobalProvider = null;
+        _Cache.Global = null;
     }
 }
 ```
@@ -555,22 +562,22 @@ class Setup
 [//]: # (OverrideAmbientServiceGlobalSample)
 ```csharp
 /// <summary>
-/// An application setup class that registers an implementation of <see cref="IAmbientSettingsProvider"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
+/// An application setup class that registers an implementation of <see cref="IAmbientSettingsSet"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
 /// </summary>
 class SetupApplication
 {
     static SetupApplication()
     {
-        ServiceReference<IAmbientSettingsProvider> SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
-        SettingsProvider.GlobalProvider = new AppConfigAmbientSettings();
+        AmbientService<IAmbientSettingsSet> SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
+        SettingsSet.Global = new AppConfigAmbientSettings();
     }
 }
 /// <summary>
-/// An implementation of <see cref="IAmbientSettingsProvider"/> that uses <see cref="Configuration.AppSettings"/> as the backend settings store.
+/// An implementation of <see cref="IAmbientSettingsSet"/> that uses <see cref="Configuration.AppSettings"/> as the backend settings store.
 /// </summary>
-class AppConfigAmbientSettings : IAmbientSettingsProvider
+class AppConfigAmbientSettings : IAmbientSettingsSet
 {
-    public string ProviderName => "AppConfig";
+    public string SetName => "AppConfig";
 
     public string GetRawValue(string key)
     {
@@ -589,13 +596,13 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
 [//]: # (OverrideAmbientServiceLocalSample)
 ```csharp
 /// <summary>
-/// An implementation of <see cref="IAmbientSettingsProvider"/> that overrides specific settings.
+/// An implementation of <see cref="IAmbientSettingsSet"/> that overrides specific settings.
 /// </summary>
-class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
+class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
 {
-    private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
+    private static readonly AmbientService<IAmbientSettingsSet> _Settings = Ambient.GetService<IAmbientSettingsSet>();
 
-    private readonly IAmbientSettingsProvider _oldSettings;
+    private readonly IAmbientSettingsSet _oldSettings;
     private readonly Dictionary<string, string> _overrides;
 
     /// <summary>
@@ -604,19 +611,19 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     /// <param name="overrides">A Dictionary containing the key/value pairs to override.</param>
     public LocalAmbientSettingsOverride(Dictionary<string, string> overrides)
     {
-        _oldSettings = _SettingsProvider.Provider;
-        _SettingsProvider.ProviderOverride = this;
+        _oldSettings = _Settings.Local;
+        _Settings.Override = this;
         _overrides = new Dictionary<string, string>();
     }
 
-    public string ProviderName => nameof(LocalAmbientSettingsOverride);
+    public string SetName => nameof(LocalAmbientSettingsOverride);
 
     /// <summary>
     /// Disposes of this instance, returning the ambient settings to their former value.
     /// </summary>
     public void Dispose()
     {
-        _SettingsProvider.ProviderOverride = _oldSettings;
+        _Settings.Override = _oldSettings;
     }
 
     public string GetRawValue(string key)
@@ -658,7 +665,7 @@ Ticks use the standard system Stopwatch.Frequency.  All operations are lock-free
 /// </summary>
 public class RequestType
 {
-    private static readonly ServiceReference<IAmbientStatistics> _AmbientStatisticsAccessor = Service.GetReference<IAmbientStatistics>();
+    private static readonly AmbientService<IAmbientStatistics> _AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
 
     private readonly IAmbientStatistic _pendingRequests;
     private readonly IAmbientStatistic _totalRequests;
@@ -673,7 +680,7 @@ public class RequestType
     /// <param name="typeName">The name of the request type.</param>
     public RequestType(string typeName)
     {
-        IAmbientStatistics ambientStatistics = _AmbientStatisticsAccessor.Provider;
+        IAmbientStatistics ambientStatistics = _AmbientStatistics.Local;
         _pendingRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-RequestsPending", "The number of requests currently executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
         _totalRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-TotalRequests", "The total number of requests that have finished executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
         _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(true, typeName + "-TotalProcessingTime", "The total time spent processing requests (only includes completed requests)", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
@@ -791,7 +798,7 @@ public class RequestTracker : IDisposable
 /// </summary>
 public static class StatisticsReporter
 {
-    private static readonly ServiceReference<IAmbientStatistics> _AmbientStatisticsAccessor = Service.GetReference<IAmbientStatistics>();
+    private static readonly AmbientService<IAmbientStatistics> _AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
     /// <summary>
     /// Writes all statistics with their current values to the specified <see cref="XmlWriter"/>.
     /// </summary>
@@ -799,7 +806,7 @@ public static class StatisticsReporter
     public static void ToXml(XmlWriter writer)
     {
         writer.WriteStartElement("statistics");
-        foreach (IAmbientStatisticReader statistic in _AmbientStatisticsAccessor.Provider?.Statistics.Values ?? Array.Empty<IAmbientStatisticReader>())
+        foreach (IAmbientStatisticReader statistic in _AmbientStatistics.Local?.Statistics.Values ?? Array.Empty<IAmbientStatisticReader>())
         {
             writer.WriteStartElement("statistic");
             writer.WriteAttributeString("id", statistic.Id);
@@ -1003,7 +1010,7 @@ The regular expression will attempt to match the system identifier, with the val
 /// </summary>
 class SqlAccessor
 {
-    private static readonly ServiceReference<IAmbientServiceProfiler> _ServiceProfilerAccessor = Service.GetReference<IAmbientServiceProfiler>();
+    private static readonly AmbientService<IAmbientServiceProfiler> _ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
 
     private readonly string _connectionString;
     private readonly SqlConnection _connection;
@@ -1032,7 +1039,7 @@ class SqlAccessor
         T ret;
         try
         {
-            _ServiceProfilerAccessor.Provider?.SwitchSystem(systemId);
+            _ServiceProfiler.Local?.SwitchSystem(systemId);
             ret = await f(cancel);
             systemId = systemId + $"/Result:Success";
         }
@@ -1044,7 +1051,7 @@ class SqlAccessor
         }
         finally
         {
-            _ServiceProfilerAccessor.Provider?.SwitchSystem(null, systemId);
+            _ServiceProfiler.Local?.SwitchSystem(null, systemId);
         }
         return ret;
     }

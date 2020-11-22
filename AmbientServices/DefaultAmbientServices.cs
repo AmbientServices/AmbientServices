@@ -9,38 +9,38 @@ using System.Text;
 namespace AmbientServices
 {
     /// <summary>
-    /// An attribute to identify classes implementing an ambient service default provider.
+    /// An attribute to identify classes implementing an ambient service default implementation.
     /// </summary>
     /// <remarks>
-    /// When applied to a class with a public empty constructor in any assembly, causes each interface implemented by that class to be registered as the default ambient service provider implementation, unless one already exists.
-    /// If another provider has already been registered, the new one will be ignored.
-    /// The class instance implementing the service provider will be constructed the first time it is requested.  
+    /// When applied to a class with a public empty constructor in any assembly, causes each interface implemented by that class to be registered as the default ambient service implementation, unless one already exists.
+    /// If another implementation has already been registered, the new one will be ignored.
+    /// The class instance implementing the service implementation will be constructed the first time it is requested.  
     /// In some rare situations where multiple threads attempt the initialization simultaneously, the constructor may be called more than once.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Class)]
-    public class DefaultAmbientServiceProviderAttribute : Attribute
+    public class DefaultAmbientServiceAttribute : Attribute
     {
         private IEnumerable<Type> _registrationInterfaces;
 
         /// <summary>
-        /// Constructs a DefaultAmbientServiceProviderAttribute.
+        /// Constructs a DefaultAmbientServiceAttribute.
         /// </summary>
-        public DefaultAmbientServiceProviderAttribute()
+        public DefaultAmbientServiceAttribute()
         {
         }
         /// <summary>
-        /// Constructs a DefaultAmbientServiceProviderAttribute that is limited to one specific interface, even if multiple interfaces are directly implemented.
+        /// Constructs a DefaultAmbientServiceAttribute that is limited to one specific interface, even if multiple interfaces are directly implemented.
         /// </summary>
         /// <param name="registrationInterface">An interface type to use for the registration instead of all the interfaces implemented by the class.</param>
-        public DefaultAmbientServiceProviderAttribute(Type registrationInterface)
+        public DefaultAmbientServiceAttribute(Type registrationInterface)
         {
             _registrationInterfaces = new Type[] { registrationInterface };
         }
         /// <summary>
-        /// Constructs a DefaultAmbientServiceProviderAttribute that is limited to the listed interfaces, even if other interfaces are directly implemented.
+        /// Constructs a DefaultAmbientServiceAttribute that is limited to the listed interfaces, even if other interfaces are directly implemented.
         /// </summary>
         /// <param name="registrationInterfaces">A params array of interface types to use for the registration instead of all the interfaces implemented by the class.</param>
-        public DefaultAmbientServiceProviderAttribute(params Type[] registrationInterfaces)
+        public DefaultAmbientServiceAttribute(params Type[] registrationInterfaces)
         {
             _registrationInterfaces = registrationInterfaces;
         }
@@ -51,31 +51,31 @@ namespace AmbientServices
         public IEnumerable<Type> RegistrationTypes { get { return _registrationInterfaces; } }
     }
     /// <summary>
-    /// An internal static class that collects default service provider implementations in every currently and subsequently loaded assembly.
+    /// An internal static class that collects default ambient service implementations in every currently and subsequently loaded assembly.
     /// </summary>
     static class DefaultAmbientServices
     {
-        private static readonly ConcurrentDictionary<Type, Type> _DefaultProviders = new ConcurrentDictionary<Type, Type>();
+        private static readonly ConcurrentDictionary<Type, Type> _DefaultImplementations = new ConcurrentDictionary<Type, Type>();
         private static Assembly _ThisAssembly = Assembly.GetExecutingAssembly();
 
         static DefaultAmbientServices()
         {
             foreach (Type type in AllLoadedReferringTypes())
             {
-                AddDefaultProvider(type);
+                AddDefaultImplementation(type);
             }
             AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
         }
 
-        private static void AddDefaultProvider(Type type)
+        private static void AddDefaultImplementation(Type type)
         {
-            DefaultAmbientServiceProviderAttribute attribute = type.GetCustomAttribute<DefaultAmbientServiceProviderAttribute>();
+            DefaultAmbientServiceAttribute attribute = type.GetCustomAttribute<DefaultAmbientServiceAttribute>();
             if (attribute != null && type.GetConstructor(Type.EmptyTypes) != null)
             {
                 IEnumerable<Type> registrationInterfaces = attribute.RegistrationTypes ?? type.GetInterfaces();
                 foreach (Type iface in registrationInterfaces)
                 {
-                    _DefaultProviders.TryAdd(iface, type);
+                    _DefaultImplementations.TryAdd(iface, type);
                 }
             }
         }
@@ -87,10 +87,10 @@ namespace AmbientServices
             // does this assembly reference THIS assembly?
             if (assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
             {
-                // check every type in this assembly to see if the type indicates a default service provider
+                // check every type in this assembly to see if the type indicates a default service implementation
                 foreach (Type type in assembly.GetLoadableTypes())
                 {
-                    AddDefaultProvider(type);
+                    AddDefaultImplementation(type);
                 }
             }
         }
@@ -105,7 +105,7 @@ namespace AmbientServices
         {
             if (!iface.IsInterface) throw new ArgumentException("The specified type is not an interface type!", nameof(iface));
             Type impType;
-            if (_DefaultProviders.TryGetValue(iface, out impType))
+            if (_DefaultImplementations.TryGetValue(iface, out impType))
             {
                 System.Diagnostics.Debug.Assert(iface.IsAssignableFrom(impType));
                 return impType;

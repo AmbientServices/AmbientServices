@@ -8,8 +8,8 @@ namespace TestAmbientServices
     [TestClass]
     public class TestStatistics
     {
-        private static readonly ServiceReference<IAmbientStatistics> _AmbientStatisticsAccessor = Service.GetReference<IAmbientStatistics>();
-        private static readonly IAmbientStatistics AmbientStatistics = _AmbientStatisticsAccessor.Provider;
+        private static readonly AmbientService<IAmbientStatistics> _AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
+        private static readonly IAmbientStatistics AmbientStatistics = _AmbientStatistics.Local;
 
         [TestMethod]
         public void AmbientPerformanceMetricsBasic()

@@ -214,7 +214,7 @@ public static class AssemblyLoggingExtensions
 /// </summary>
 class DownloadAndUnzip
 {
-    private static readonly IAmbientProgressProvider AmbientProgress = Service.GetReference<IAmbientProgressProvider>().GlobalProvider;
+    private static readonly IAmbientProgressService AmbientProgress = Ambient.GetService<IAmbientProgressService>().Global;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -448,7 +448,7 @@ public interface IAmbientCallStack
 /// A basic implementation of <see cref="IAmbientCallStack"/>.
 /// A few enhancements could make these call stacks accessible remotely, which could be very handy for diagnosing what servers are busy doing.
 /// </summary>
-[DefaultAmbientServiceProvider]
+[DefaultAmbientService]
 class BasicAmbientCallStack : IAmbientCallStack
 {
     static private AsyncLocal<ImmutableStack<string>> _Stack = new AsyncLocal<ImmutableStack<string>>();
@@ -518,10 +518,10 @@ class BasicAmbientCallStack : IAmbientCallStack
 /// </summary>
 class Setup
 {
-    private static readonly ServiceReference<IAmbientCacheProvider> _CacheProvider = Service.GetReference<IAmbientCacheProvider>();
+    private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
     static Setup()
     {
-        _CacheProvider.GlobalProvider = null;
+        _Cache.Global = null;
     }
 }
 #endregion
@@ -533,22 +533,22 @@ class Setup
 
 #region OverrideAmbientServiceGlobalSample
 /// <summary>
-/// An application setup class that registers an implementation of <see cref="IAmbientSettingsProvider"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
+/// An application setup class that registers an implementation of <see cref="IAmbientSettingsSet"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
 /// </summary>
 class SetupApplication
 {
     static SetupApplication()
     {
-        ServiceReference<IAmbientSettingsProvider> SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
-        SettingsProvider.GlobalProvider = new AppConfigAmbientSettings();
+        AmbientService<IAmbientSettingsSet> SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
+        SettingsSet.Global = new AppConfigAmbientSettings();
     }
 }
 /// <summary>
-/// An implementation of <see cref="IAmbientSettingsProvider"/> that uses <see cref="Configuration.AppSettings"/> as the backend settings store.
+/// An implementation of <see cref="IAmbientSettingsSet"/> that uses <see cref="Configuration.AppSettings"/> as the backend settings store.
 /// </summary>
-class AppConfigAmbientSettings : IAmbientSettingsProvider
+class AppConfigAmbientSettings : IAmbientSettingsSet
 {
-    public string ProviderName => "AppConfig";
+    public string SetName => "AppConfig";
 
     public string GetRawValue(string key)
     {
@@ -570,13 +570,13 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
 
 #region OverrideAmbientServiceLocalSample
 /// <summary>
-/// An implementation of <see cref="IAmbientSettingsProvider"/> that overrides specific settings.
+/// An implementation of <see cref="IAmbientSettingsSet"/> that overrides specific settings.
 /// </summary>
-class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
+class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
 {
-    private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsProvider = Service.GetReference<IAmbientSettingsProvider>();
+    private static readonly AmbientService<IAmbientSettingsSet> _Settings = Ambient.GetService<IAmbientSettingsSet>();
 
-    private readonly IAmbientSettingsProvider _oldSettings;
+    private readonly IAmbientSettingsSet _oldSettings;
     private readonly Dictionary<string, string> _overrides;
 
     /// <summary>
@@ -585,19 +585,19 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     /// <param name="overrides">A Dictionary containing the key/value pairs to override.</param>
     public LocalAmbientSettingsOverride(Dictionary<string, string> overrides)
     {
-        _oldSettings = _SettingsProvider.Provider;
-        _SettingsProvider.ProviderOverride = this;
+        _oldSettings = _Settings.Local;
+        _Settings.Override = this;
         _overrides = new Dictionary<string, string>();
     }
 
-    public string ProviderName => nameof(LocalAmbientSettingsOverride);
+    public string SetName => nameof(LocalAmbientSettingsOverride);
 
     /// <summary>
     /// Disposes of this instance, returning the ambient settings to their former value.
     /// </summary>
     public void Dispose()
     {
-        _SettingsProvider.ProviderOverride = _oldSettings;
+        _Settings.Override = _oldSettings;
     }
 
     public string GetRawValue(string key)
@@ -629,7 +629,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
 /// </summary>
 public class RequestType
 {
-    private static readonly ServiceReference<IAmbientStatistics> _AmbientStatisticsAccessor = Service.GetReference<IAmbientStatistics>();
+    private static readonly AmbientService<IAmbientStatistics> _AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
 
     private readonly IAmbientStatistic _pendingRequests;
     private readonly IAmbientStatistic _totalRequests;
@@ -644,7 +644,7 @@ public class RequestType
     /// <param name="typeName">The name of the request type.</param>
     public RequestType(string typeName)
     {
-        IAmbientStatistics ambientStatistics = _AmbientStatisticsAccessor.Provider;
+        IAmbientStatistics ambientStatistics = _AmbientStatistics.Local;
         _pendingRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-RequestsPending", "The number of requests currently executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
         _totalRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-TotalRequests", "The total number of requests that have finished executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
         _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(true, typeName + "-TotalProcessingTime", "The total time spent processing requests (only includes completed requests)", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
@@ -762,7 +762,7 @@ public class RequestTracker : IDisposable
 /// </summary>
 public static class StatisticsReporter
 {
-    private static readonly ServiceReference<IAmbientStatistics> _AmbientStatisticsAccessor = Service.GetReference<IAmbientStatistics>();
+    private static readonly AmbientService<IAmbientStatistics> _AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
     /// <summary>
     /// Writes all statistics with their current values to the specified <see cref="XmlWriter"/>.
     /// </summary>
@@ -770,7 +770,7 @@ public static class StatisticsReporter
     public static void ToXml(XmlWriter writer)
     {
         writer.WriteStartElement("statistics");
-        foreach (IAmbientStatisticReader statistic in _AmbientStatisticsAccessor.Provider?.Statistics.Values ?? Array.Empty<IAmbientStatisticReader>())
+        foreach (IAmbientStatisticReader statistic in _AmbientStatistics.Local?.Statistics.Values ?? Array.Empty<IAmbientStatisticReader>())
         {
             writer.WriteStartElement("statistic");
             writer.WriteAttributeString("id", statistic.Id);
@@ -925,7 +925,7 @@ class BottleneckReporter
 /// </summary>
 class SqlAccessor
 {
-    private static readonly ServiceReference<IAmbientServiceProfiler> _ServiceProfilerAccessor = Service.GetReference<IAmbientServiceProfiler>();
+    private static readonly AmbientService<IAmbientServiceProfiler> _ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
 
     private readonly string _connectionString;
     private readonly SqlConnection _connection;
@@ -954,7 +954,7 @@ class SqlAccessor
         T ret;
         try
         {
-            _ServiceProfilerAccessor.Provider?.SwitchSystem(systemId);
+            _ServiceProfiler.Local?.SwitchSystem(systemId);
             ret = await f(cancel);
             systemId = systemId + $"/Result:Success";
         }
@@ -966,7 +966,7 @@ class SqlAccessor
         }
         finally
         {
-            _ServiceProfilerAccessor.Provider?.SwitchSystem(null, systemId);
+            _ServiceProfiler.Local?.SwitchSystem(null, systemId);
         }
         return ret;
     }

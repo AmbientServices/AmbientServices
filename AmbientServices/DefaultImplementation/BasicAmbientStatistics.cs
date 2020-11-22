@@ -6,7 +6,7 @@ using System.Text;
 
 namespace AmbientServices
 {
-    [DefaultAmbientServiceProvider]
+    [DefaultAmbientService]
     class BasicAmbientStatistics : IAmbientStatistics
     {
         private readonly ProcessExecutionTimeStatistic _executionTime;

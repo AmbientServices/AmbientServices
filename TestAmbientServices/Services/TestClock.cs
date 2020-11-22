@@ -11,19 +11,19 @@ using System.Threading.Tasks;
 namespace TestAmbientServices
 {
     /// <summary>
-    /// A class that holds tests for <see cref="IAmbientClockProvider"/>.
+    /// A class that holds tests for <see cref="IAmbientClock"/>.
     /// </summary>
     [TestClass]
     public class TestClock
     {
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void PausedClock()
         {
-            AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();
-            AmbientClockProviderTimeChangedEventArgs eventArgs = null;
+            AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
+            AmbientClockTimeChangedEventArgs eventArgs = null;
             clock.TimeChanged += (s,e) => { Assert.AreEqual(s, clock); eventArgs = e; };
             clock.SkipAhead(10000);
             Assert.IsNotNull(eventArgs);
@@ -35,7 +35,7 @@ namespace TestAmbientServices
         }
 
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task ClockSystem()
@@ -70,7 +70,7 @@ namespace TestAmbientServices
             Assert.IsTrue(startElapsed <= testElapsed && testElapsed <= endElapsed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task ClockPausedRelativeToSystem()
@@ -100,7 +100,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task ClockPaused()
@@ -122,12 +122,12 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task ClockOverrideNull()
         {
-            using (new LocalProviderScopedOverride<IAmbientClockProvider>(null))
+            using (new ScopedLocalServiceOverride<IAmbientClock>(null))
             {
                 long startTicks = AmbientClock.Ticks;
                 TimeSpan startElapsed = AmbientClock.Elapsed;
@@ -148,7 +148,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task StopwatchTest()
@@ -169,12 +169,12 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task StopwatchSystem()
         {
-            using (new LocalProviderScopedOverride<IAmbientClockProvider>(null))
+            using (new ScopedLocalServiceOverride<IAmbientClock>(null))
             {
                 AmbientStopwatch stopwatch = new AmbientStopwatch(false);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
@@ -189,7 +189,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task StopwatchPauseResumeReset()
@@ -216,7 +216,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void StopwatchEmulation()
@@ -243,12 +243,12 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task StopwatchSystemPauseResumeReset()
         {
-            using (new LocalProviderScopedOverride<IAmbientClockProvider>(null))
+            using (new ScopedLocalServiceOverride<IAmbientClock>(null))
             {
                 AmbientStopwatch stopwatch = new AmbientStopwatch(false);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
@@ -271,7 +271,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task CancellationTokenSource()
@@ -283,7 +283,7 @@ namespace TestAmbientServices
             Assert.IsTrue(timeoutSource.IsCancellationRequested);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task PausedCancellationTokenSource()
@@ -310,7 +310,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerAutoRestartAndEnabled()
@@ -337,7 +337,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerSystem()
@@ -368,7 +368,7 @@ namespace TestAmbientServices
             Assert.IsTrue(disposed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerAmbientClock()
@@ -392,7 +392,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerAmbientClockNoSubscriber()
@@ -412,7 +412,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerDisposeBeforeRaised()
@@ -424,12 +424,12 @@ namespace TestAmbientServices
             using (AmbientEventTimer timer = new AmbientEventTimer(TimeSpan.FromMilliseconds(Int32.MaxValue))) { }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerExplicitClockAutoStartAutoReset()
         {
-            AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();
+            AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
             int elapsed = 0;
             int disposed = 0;
             using (AmbientEventTimer timer = new AmbientEventTimer(clock, TimeSpan.FromMilliseconds(100)))
@@ -452,7 +452,7 @@ namespace TestAmbientServices
             Assert.AreEqual(1, disposed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerAmbientClockStartPaused()
@@ -478,12 +478,12 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerExplicitClock()
         {
-            AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();
+            AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
             int elapsed = 0;
             int disposed = 0;
             using (AmbientEventTimer timer = new AmbientEventTimer(clock))
@@ -501,12 +501,12 @@ namespace TestAmbientServices
             Assert.AreEqual(1, disposed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void EventTimerExplicitClockStartStop()
         {
-            AmbientClock.PausedAmbientClockProvider clock = new AmbientClock.PausedAmbientClockProvider();
+            AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
             int elapsed = 0;
             int disposed = 0;
             using (AmbientEventTimer timer = new AmbientEventTimer(clock))
@@ -528,7 +528,7 @@ namespace TestAmbientServices
             Assert.AreEqual(1, disposed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task EventTimerSystemClock()
@@ -555,7 +555,7 @@ namespace TestAmbientServices
             Assert.AreEqual(1, disposed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task EventTimerSystemClockStartStop()
@@ -586,7 +586,7 @@ namespace TestAmbientServices
             Assert.AreEqual(1, disposed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public async Task EventTimerSystemClockAutoStart()
@@ -610,7 +610,7 @@ namespace TestAmbientServices
             Assert.AreEqual(1, disposed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void CallbackTimerBasic()
@@ -751,7 +751,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void CallbackTimerDisposeBeforeRaised()
@@ -766,7 +766,7 @@ namespace TestAmbientServices
             Assert.AreEqual(0, invocations);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void CallbackTimerDisposeWithWait()
@@ -787,7 +787,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void CallbackTimerArgumentExceptions()
@@ -807,7 +807,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic1()
@@ -826,7 +826,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic2()
@@ -844,7 +844,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic3()
@@ -863,7 +863,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic4()
@@ -882,7 +882,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic5()
@@ -902,7 +902,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic6()
@@ -922,7 +922,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic7()
@@ -942,7 +942,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic8()
@@ -962,7 +962,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic9()
@@ -982,7 +982,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic10()
@@ -1004,7 +1004,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerBasic11()
@@ -1026,7 +1026,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerDisposeWithWait()
@@ -1044,7 +1044,7 @@ namespace TestAmbientServices
             Assert.IsTrue(mre.WaitOne(0));
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SystemCallbackTimerArgumentExceptions()
@@ -1061,7 +1061,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void UnsafeRegisterWaitForSingleObject()
@@ -1142,7 +1142,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SafeRegisterWaitForSingleObject()
@@ -1223,7 +1223,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void UnsafeRegisterWaitForSingleObjectSystem()
@@ -1247,7 +1247,7 @@ namespace TestAmbientServices
             Assert.AreEqual(1, timedOutInvocations);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SafeRegisterWaitForSingleObjectSystem()
@@ -1271,7 +1271,7 @@ namespace TestAmbientServices
             Assert.AreEqual(1, timedOutInvocations);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void UnsafeRegisterWaitForSingleObjectOneShot()
@@ -1352,7 +1352,7 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientClockProvider"/>.
+        /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
         public void SafeRegisterWaitForSingleObjectOneShot()

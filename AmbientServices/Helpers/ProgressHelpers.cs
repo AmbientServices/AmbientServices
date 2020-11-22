@@ -10,14 +10,14 @@ namespace AmbientServices
     /// </summary>
     public class AmbientCancellationTokenSource : IDisposable
     {
-        private static readonly ServiceReference<IAmbientClockProvider> _ClockProviderAccessor = Service.GetReference<IAmbientClockProvider>();
+        private static readonly AmbientService<IAmbientClock> _AmbientClock = Ambient.GetService<IAmbientClock>();
         private static readonly CancellationToken _AlreadyCancelled = AlreadyCancelledToken();
         private static CancellationToken AlreadyCancelledToken()
         {
             CancellationTokenSource source = new CancellationTokenSource(); source.Cancel(); return source.Token;
         }
 
-        private IAmbientClockProvider _clockProvider;
+        private IAmbientClock _clock;
         private CancellationTokenSource _tokenSource;
         private AmbientEventTimer _ambientTimer;
 
@@ -34,18 +34,18 @@ namespace AmbientServices
         /// </summary>
         /// <param name="timeout">A <see cref="TimeSpan"/> indicating how long to wait before timing out.</param>
         public AmbientCancellationTokenSource(TimeSpan timeout)
-            : this(_ClockProviderAccessor.Provider, timeout)
+            : this(_AmbientClock.Local, timeout)
         {
         }
         /// <summary>
         /// Constructs an ambient cancellation token source using the specified clock.
         /// </summary>
-        /// <param name="clockProvider">The <see cref="IAmbientClockProvider"/> to use for the token source.</param>
+        /// <param name="clock">The <see cref="IAmbientClock"/> to use for the token source.</param>
         /// <param name="timeout">An optional timeout indicating how long before the associated cancellation token should be cancelled.</param>
-        public AmbientCancellationTokenSource(IAmbientClockProvider clockProvider, TimeSpan? timeout = null)
+        public AmbientCancellationTokenSource(IAmbientClock clock, TimeSpan? timeout = null)
         {
-            _clockProvider = clockProvider;
-            if (clockProvider != null)
+            _clock = clock;
+            if (clock != null)
             {
                 _tokenSource = new CancellationTokenSource();
                 if (timeout != null)

@@ -8,7 +8,7 @@ using System.Text;
 namespace AmbientServices
 {
     /// <summary>
-    /// An static class that utilizes the <see cref="IAmbientClockProvider"/> if one is registered, or the system clock if not.
+    /// An static class that utilizes the <see cref="IAmbientClock"/> if one is registered, or the system clock if not.
     /// </summary>
     public static class AmbientSettings
     {
@@ -18,33 +18,33 @@ namespace AmbientServices
         public static IEnumerable<IAmbientSettingInfo> AmbientSettingsInfo { get { return SettingsRegistry.DefaultRegistry.Settings; } }
         /// <summary>
         /// Construct a setting instance.  
-        /// If a non-null provider is specified, the setting will be attached to that, otherwise the ambient settings provider will be used.
+        /// If a non-null settings set is specified, the setting will be attached to that, otherwise the ambient settings set will be used.
         /// Never returns a setting whose value is always the default value.
         /// </summary>
-        /// <param name="provider">The <see cref="IAmbientSettingsProvider"/> to get the setting value from.  If null, returns an setting attached to the ambient settings provider.</param>
+        /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, returns an setting attached to the ambient settings set.</param>
         /// <param name="key">A key string identifying the setting.</param>
         /// <param name="description">A description of the setting.</param>
         /// <param name="convert">A delegate that takes a string and returns the type.</param>
         /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
-        public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsProvider provider, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            return (provider == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, convert, defaultValueString) : (IAmbientSetting<T>)GetProviderSetting<T>(provider, key, description, convert, defaultValueString);
+            return (settingsSet == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, convert, defaultValueString) : (IAmbientSetting<T>)GetSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
         }
         /// <summary>
-        /// Construct a setting instance that uses a specific settings provider and caches the setting with the specified key, converting it from a string using the specified delegate.
+        /// Construct a setting instance that uses a specific settings set and caches the setting with the specified key, converting it from a string using the specified delegate.
         /// </summary>
-        /// <param name="provider">The <see cref="IAmbientSettingsProvider"/> to get the setting value from.  If null, the setting will always contain the default value.</param>
+        /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, the setting will always contain the default value.</param>
         /// <param name="key">A key string identifying the setting.</param>
         /// <param name="description">A description of the setting.</param>
         /// <param name="convert">A delegate that takes a string and returns the type.</param>
         /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
-        public static IAmbientSetting<T> GetProviderSetting<T>(IAmbientSettingsProvider provider, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public static IAmbientSetting<T> GetSetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            return new ProviderSetting<T>(provider, key, description, convert, defaultValueString);
+            return new SettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
         }
         /// <summary>
         /// Construct an ambient setting instance that caches the setting with the specified key, converting it from a string using the specified delegate.
-        /// Settings will be gathered from the ambient local provider, if one exists.
+        /// Settings will be gathered from the ambient local settings set, if one exists.
         /// </summary>
         /// <param name="key">A key string identifying the setting.</param>
         /// <param name="description">A description of the setting.</param>
@@ -63,7 +63,7 @@ namespace AmbientServices
     public interface IAmbientSetting<T>
     {
         /// <summary>
-        /// Gets the current value of the setting (cached from the value given by the provider).
+        /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
         T Value { get; }
     }
@@ -89,17 +89,17 @@ namespace AmbientServices
         /// </summary>
         DateTime LastUsed { get; }
         /// <summary>
-        /// Gets the default value that is used when the value is not found in the settings provider.
+        /// Gets the default value that is used when the value is not found in the settings set.
         /// </summary>
         object DefaultValue { get; }
         /// <summary>
         /// Converts the setting value from the specified string to a typed value.
-        /// The implementor may cache the value being generated if the provider is the global provider.
+        /// The implementor may cache the value being generated if the settings set is the global settings set.
         /// </summary>
-        /// <param name="provider">The provider asking for the setting value.</param>
+        /// <param name="settingsSet">The settings set asking for the setting value.</param>
         /// <param name="value">The typed value for the setting.</param>
         /// <returns>The typed value for the setting.</returns>
-        object Convert(IAmbientSettingsProvider provider, string value);
+        object Convert(IAmbientSettingsSet settingsSet, string value);
     }
     /// <summary>
     /// A global registry for settings that includes their keys, descriptions, last used time, conversion functions, and default values.
@@ -193,13 +193,13 @@ namespace AmbientServices
             return _settings.TryGetValue(key, out wrSetting) ? (wrSetting.TryGetTarget(out setting) ? setting : null) : null;
         }
         /// <summary>
-        /// An event the is raised when a new setting is registered, allowing settings providers to call the setting's conversion function to get a strongly-typed value.
+        /// An event the is raised when a new setting is registered, allowing settings sets to call the setting's conversion function to get a strongly-typed value.
         /// </summary>
         public event EventHandler<IAmbientSettingInfo> SettingRegistered;
     }
     class SettingInfo<T> : IAmbientSettingInfo
     {
-        protected static readonly ServiceReference<IAmbientSettingsProvider> _SettingsAccessor = ServiceReference<IAmbientSettingsProvider>.Instance;
+        protected static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
 
         private readonly string _key;
         private readonly string _description;
@@ -250,12 +250,12 @@ namespace AmbientServices
         object IAmbientSettingInfo.DefaultValue => _defaultValue;
 
         /// <summary>
-        /// Converts the specified value for the specified provider.
+        /// Converts the specified value for the specified settings set.
         /// </summary>
-        /// <param name="provider">The <see cref="IAmbientSettingsProvider"/> for the provider making the conversion.</param>
+        /// <param name="setttingsSet">The <see cref="IAmbientSettingsSet"/> for the implementation doing the conversion.</param>
         /// <param name="value">The string value for the setting.</param>
         /// <returns>A typed value created from the string value.</returns>
-        public object Convert(IAmbientSettingsProvider provider, string value)
+        public object Convert(IAmbientSettingsSet setttingsSet, string value)
         {
             T ret;
             try
@@ -268,8 +268,8 @@ namespace AmbientServices
                 ret = _defaultValue;
             }
 #pragma warning restore CA1031 
-            // is this provider this setting's provider or the global provider
-            if (provider == _SettingsAccessor.GlobalProvider)
+            // is this settings set the one for this setting or is it the global settings set?
+            if (setttingsSet == _SettingsSet.Global)
             {
                 System.Threading.Interlocked.Exchange(ref _globalValue, ret);
             }
@@ -298,7 +298,7 @@ namespace AmbientServices
             // if we didn't break, we're done but the existing value is the max, not this one
         }
         /// <summary>
-        /// Gets the current value of the setting (cached from the value given by the provider).
+        /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
         public object GlobalValue
         {
@@ -309,41 +309,41 @@ namespace AmbientServices
             }
         }
     }
-    class ProviderSetting<T> : IAmbientSetting<T>
+    class SettingsSetSetting<T> : IAmbientSetting<T>
     {
-        protected static readonly ServiceReference<IAmbientSettingsProvider> _SettingsAccessor = ServiceReference<IAmbientSettingsProvider>.Instance;
+        protected static readonly AmbientService<IAmbientSettingsSet> _AmbientSettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
 
-        protected readonly ServiceReference<IAmbientSettingsProvider> _accessor;
+        protected readonly AmbientService<IAmbientSettingsSet> _settingsSet;
         protected readonly SettingInfo<T> _settingBase;
-        private readonly IAmbientSettingsProvider _fixedProvider;
+        private readonly IAmbientSettingsSet _fixedSettingsSet;
 
-        public ProviderSetting(IAmbientSettingsProvider fixedProvider, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public SettingsSetSetting(IAmbientSettingsSet fixedSettingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
             _settingBase = new SettingInfo<T>(key, description, convert, defaultValueString);
-            _fixedProvider = fixedProvider;
+            _fixedSettingsSet = fixedSettingsSet;
         }
 
-        internal ProviderSetting(ServiceReference<IAmbientSettingsProvider> accessor, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        internal SettingsSetSetting(AmbientService<IAmbientSettingsSet> settings, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
             _settingBase = new SettingInfo<T>(key, description, convert, defaultValueString);
-            _accessor = accessor;
+            _settingsSet = settings;
         }
         /// <summary>
-        /// Gets the current value of the setting (cached from the value given by the provider).
+        /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
         public virtual T Value
         {
             get
             {
                 _settingBase.UpdateLastUsed();
-                if (_accessor != null)
+                if (_settingsSet != null)
                 {
-                    object value = _accessor.Provider?.GetTypedValue(_settingBase.Key);
+                    object value = _settingsSet.Local?.GetTypedValue(_settingBase.Key);
                     return (value == null) ? _settingBase.DefaultValue : (T)value;
                 }
-                else if (_fixedProvider != null)
+                else if (_fixedSettingsSet != null)
                 {
-                    object value = _fixedProvider.GetTypedValue(_settingBase.Key);
+                    object value = _fixedSettingsSet.GetTypedValue(_settingBase.Key);
                     return (value == null) ? _settingBase.DefaultValue : (T)value;
                 }
                 else
@@ -353,38 +353,38 @@ namespace AmbientServices
             }
         }
     }
-    class AmbientSetting<T> : ProviderSetting<T>
+    class AmbientSetting<T> : SettingsSetSetting<T>
     {
         public AmbientSetting(string key, string description, Func<string, T> convert, string defaultValueString = null)
-            : base((IAmbientSettingsProvider)null, key, description, convert, defaultValueString)
+            : base((IAmbientSettingsSet)null, key, description, convert, defaultValueString)
         {
         }
 
-        internal AmbientSetting(ServiceReference<IAmbientSettingsProvider> accessor, string key, string description, Func<string, T> convert, string defaultValueString = null)
-            : base(accessor, key, description, convert, defaultValueString)
+        internal AmbientSetting(AmbientService<IAmbientSettingsSet> settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+            : base(settingsSet, key, description, convert, defaultValueString)
         {
         }
 
         /// <summary>
-        /// Gets the current value of the setting, either from the call-context-local settings provider overide, or the cached value from the global provider.
+        /// Gets the current value of the setting, either from the call-context-local settings set overide, or the cached value from the global settings set.
         /// </summary>
         public override T Value
         {
             get
             {
-                ServiceReference<IAmbientSettingsProvider> accessor = _accessor ?? _SettingsAccessor;
-                // is there a local provider override?
-                IAmbientSettingsProvider localProviderOverride = accessor.ProviderOverride;
-                if (localProviderOverride != null)
+                AmbientService<IAmbientSettingsSet> settingsSet = _settingsSet ?? _AmbientSettingsSet;
+                // is there a local settings set override?
+                IAmbientSettingsSet localSettingsSetOverride = settingsSet.Override;
+                if (localSettingsSetOverride != null)
                 {
                     _settingBase.UpdateLastUsed();
-                    object value = localProviderOverride.GetTypedValue(_settingBase.Key);
+                    object value = localSettingsSetOverride.GetTypedValue(_settingBase.Key);
                     return (value == null) ? _settingBase.DefaultValue : (T)value;
                 }
-                // is there a local provider suppression?
-                IAmbientSettingsProvider localProvider = accessor.Provider;
-                if (localProvider == null) return _settingBase.DefaultValue;
-                // fall through to the base (global provider)
+                // is there a local settings set suppression?
+                IAmbientSettingsSet localSettingsSet = settingsSet.Local;
+                if (localSettingsSet == null) return _settingBase.DefaultValue;
+                // fall through to the base (global settings set)
                 return base.Value;
             }
         }

@@ -12,7 +12,7 @@ namespace AmbientServices
     /// </summary>
     public class AmbientBottleneck
     {
-        private static readonly ServiceReference<IAmbientBottleneckDetector> _BottleneckDetectorAccessor = Service.GetReference<IAmbientBottleneckDetector>(out _BottleneckDetectorAccessor);
+        private static readonly AmbientService<IAmbientBottleneckDetector> _BottleneckDetector = Ambient.GetService<IAmbientBottleneckDetector>(out _BottleneckDetector);
         /// <summary>
         /// The identifier for the bottleneck.  The identifier is used in combination with regular expressions to filter which bottlenecks are tracked and analyzed.
         /// </summary>
@@ -67,7 +67,7 @@ namespace AmbientServices
         /// <returns>An <see cref="AmbientBottleneckAccessor"/> that should be disposed when exiting the bottleneck.</returns>
         public AmbientBottleneckAccessor EnterBottleneck()
         {
-            return _BottleneckDetectorAccessor.Provider?.EnterBottleneck(this);
+            return _BottleneckDetector.Local?.EnterBottleneck(this);
         }
         /// <summary>
         /// Gets a string that represents this object.
@@ -109,8 +109,8 @@ namespace AmbientServices
     /// </summary>
     public class AmbientBottleneckSurveyorCoordinator : IDisposable
     {
-        private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsAccessor = Service.GetReference<IAmbientSettingsProvider>();
-        private static readonly ServiceReference<IAmbientBottleneckDetector> _AmbientBottleneckDetectorAccessor = Service.GetReference<IAmbientBottleneckDetector>();
+        private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
+        private static readonly AmbientService<IAmbientBottleneckDetector> _AmbientBottleneckDetector = Ambient.GetService<IAmbientBottleneckDetector>();
 
         private readonly IAmbientSetting<Regex> _defaultAllowSetting;
         private readonly IAmbientSetting<Regex> _defaultBlockSetting;
@@ -120,25 +120,25 @@ namespace AmbientServices
         private bool _disposedValue;
 
         /// <summary>
-        /// Constructs a AmbientBottleneckTracker using the ambient settings provider.
+        /// Constructs a AmbientBottleneckTracker using the ambient settings set.
         /// </summary>
         public AmbientBottleneckSurveyorCoordinator()
-            : this(_SettingsAccessor.Provider)
+            : this(_SettingsSet.Local)
         {
         }
         /// <summary>
-        /// Constructs a AmbientBottleneckTracker using the specified settings provider.
+        /// Constructs a AmbientBottleneckTracker using the specified settings set.
         /// </summary>
-        /// <param name="settingsProvider">An <see cref="IAmbientSettingsProvider"/> to get settings from.</param>
-        public AmbientBottleneckSurveyorCoordinator(IAmbientSettingsProvider settingsProvider)
+        /// <param name="settingsSet">An <see cref="IAmbientSettingsSet"/> to get settings from.</param>
+        public AmbientBottleneckSurveyorCoordinator(IAmbientSettingsSet settingsSet)
         {
-            _defaultAllowSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultAllow",
+            _defaultAllowSetting = AmbientSettings.GetSetting<Regex>(settingsSet, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultAllow",
                 @"A `Regex` string used to match bottleneck identifiers that should be tracked.  By default, all bottlenecks are allowed.",
                 s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));
-            _defaultBlockSetting = AmbientSettings.GetSetting<Regex>(settingsProvider, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultBlock",
+            _defaultBlockSetting = AmbientSettings.GetSetting<Regex>(settingsSet, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultBlock",
                 @"A `Regex` string used to match bottleneck identifiers that should NOT be tracked.  By default, no bottlenecks are blocked.",
                 s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));
-            _bottleneckDetector = _AmbientBottleneckDetectorAccessor.Provider;
+            _bottleneckDetector = _AmbientBottleneckDetector.Local;
             _callContextSurveyor = new CallContextSurveyManager(_bottleneckDetector);
             _threadSurveyor = new ThreadSurveyManager(_bottleneckDetector);
         }

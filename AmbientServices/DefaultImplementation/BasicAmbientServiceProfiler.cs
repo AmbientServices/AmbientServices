@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace AmbientServices
 {
-    [DefaultAmbientServiceProvider]
+    [DefaultAmbientService]
     class BasicAmbientServiceProfiler : IAmbientServiceProfiler
     {
         private AsyncLocal<CallContextActiveSystemData> _activeSystem;

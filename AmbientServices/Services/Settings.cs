@@ -5,14 +5,14 @@ using System.Text;
 namespace AmbientServices
 {
     /// <summary>
-    /// A interface that abstracts an ambient settings provider.
+    /// A interface that abstracts a set of ambient settings.
     /// </summary>
-    public interface IAmbientSettingsProvider
+    public interface IAmbientSettingsSet
     {
         /// <summary>
-        /// Gets the name of the settings provider so that a settings consumer can know where a changed setting value came from.
+        /// Gets the name of the set of settings so that a settings consumer can know where a changed setting value came from.
         /// </summary>
-        string ProviderName { get; }
+        string SetName { get; }
         /// <summary>
         /// Gets the current raw value for the setting with the specified key, or null if the setting is not set.
         /// </summary>
@@ -27,9 +27,9 @@ namespace AmbientServices
         object GetTypedValue(string key);
     }
     /// <summary>
-    /// An interface that may or may not also be implemented by an ambient settings provider.
+    /// An interface that may or may not also be implemented by an ambient settings set implementation.
     /// </summary>
-    public interface IMutableAmbientSettingsProvider : IAmbientSettingsProvider
+    public interface IMutableAmbientSettingsSet : IAmbientSettingsSet
     {
         /// <summary>
         /// Changes the specified setting.

@@ -11,8 +11,8 @@ namespace AmbientServices
     /// </summary>
     public class AmbientServiceProfilerFactory : IDisposable
     {
-        private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsAccessor = Service.GetReference<IAmbientSettingsProvider>();
-        private static readonly ServiceReference<IAmbientServiceProfiler> _AmbientServiceProfilerEventCollector = Service.GetReference<IAmbientServiceProfiler>();
+        private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
+        private static readonly AmbientService<IAmbientServiceProfiler> _AmbientServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
 
         private readonly IAmbientSetting<Regex> _defaultSystemGroupTransformSetting;
         private readonly IAmbientServiceProfiler _eventCollector;
@@ -20,24 +20,24 @@ namespace AmbientServices
         private bool _disposedValue;
 
         /// <summary>
-        /// Constructs an AmbientServiceProfilerFactory using settings obtained from the ambient settings provider.
+        /// Constructs an AmbientServiceProfilerFactory using settings obtained from the ambient settings set.
         /// </summary>
         public AmbientServiceProfilerFactory()
-            : this(_SettingsAccessor.Provider)
+            : this(_SettingsSet.Local)
         {
         }
         /// <summary>
-        /// Constructs an AmbientServiceProfilerFactory using the specified settings provider.
+        /// Constructs an AmbientServiceProfilerFactory using the specified settings set.
         /// </summary>
-        /// <param name="settingsProvider"></param>
-        public AmbientServiceProfilerFactory(IAmbientSettingsProvider settingsProvider)
+        /// <param name="settingsSet"></param>
+        public AmbientServiceProfilerFactory(IAmbientSettingsSet settingsSet)
         {
-            _defaultSystemGroupTransformSetting = AmbientSettings.GetProviderSetting<Regex>(settingsProvider, nameof(AmbientServiceProfilerFactory) + "-DefaultSystemGroupTransform", 
+            _defaultSystemGroupTransformSetting = AmbientSettings.GetSetSetting<Regex>(settingsSet, nameof(AmbientServiceProfilerFactory) + "-DefaultSystemGroupTransform", 
                 @"A `Regex` string used to transform the system identifier to a group identifier.
 The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.", 
                 s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));
             _scopeDistributor = new AsyncLocal<ScopeOnSystemSwitchedDistributor>();
-            _eventCollector = _AmbientServiceProfilerEventCollector.Provider;
+            _eventCollector = _AmbientServiceProfiler.Local;
             if (_eventCollector != null) _eventCollector.SystemSwitched += OnSystemSwitched;
         }
 
@@ -59,7 +59,7 @@ The regular expression will attempt to match the system identifier, with the val
         /// <returns>A <see cref="IAmbientServiceProfile"/> that will profile systems executed in this call context, or null if there is no ambient service profiler event collector.  Note that the returned object is NOT thread-safe.</returns>
         public IAmbientServiceProfile CreateCallContextProfiler(string scopeName, string overrideSystemGroupTransformRegex = null)
         {
-            IAmbientServiceProfiler metrics = _AmbientServiceProfilerEventCollector.Provider;
+            IAmbientServiceProfiler metrics = _AmbientServiceProfiler.Local;
             if (metrics != null)
             {
                 Regex groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
@@ -79,7 +79,7 @@ The regular expression will attempt to match the system identifier, with the val
         /// <returns>A <see cref="IDisposable"/> that scopes the collection of the profiles.</returns>
         public IDisposable CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientServiceProfile, Task> onWindowComplete, string overrideSystemGroupTransformRegex = null)
         {
-            IAmbientServiceProfiler metrics = _AmbientServiceProfilerEventCollector.Provider;
+            IAmbientServiceProfiler metrics = _AmbientServiceProfiler.Local;
             if (metrics != null)
             {
                 Regex groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
@@ -103,7 +103,7 @@ The regular expression will attempt to match the system identifier, with the val
         /// </remarks>
         public IAmbientServiceProfile CreateProcessProfiler(string scopeName, string overrideSystemGroupTransformRegex = null)
         {
-            IAmbientServiceProfiler metrics = _AmbientServiceProfilerEventCollector.Provider;
+            IAmbientServiceProfiler metrics = _AmbientServiceProfiler.Local;
             if (metrics != null)
             {
                 Regex groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);

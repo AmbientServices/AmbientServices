@@ -31,9 +31,9 @@ namespace AmbientServicesSamples
 
     class CallStackTest
     {
-        private static readonly ServiceReference<IAmbientCallStack> _CallStackProvider = Service.GetReference<IAmbientCallStack>();
+        private static readonly AmbientService<IAmbientCallStack> _AmbientCallStack = Ambient.GetService<IAmbientCallStack>();
 
-        private static IAmbientCallStack _CallStack = _CallStackProvider.GlobalProvider;
+        private static IAmbientCallStack _CallStack = _AmbientCallStack.Global;
         public static void OuterFunc()
         {
             Debug.WriteLine("Before outer push:");

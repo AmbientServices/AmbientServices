@@ -7,42 +7,42 @@ using System.Text;
 namespace AmbientServices
 {
     /// <summary>
-    /// A basic settings provider that may be used for unit test dependency injection.
+    /// A basic settings set implementation that may be used for unit test dependency injection.
     /// </summary>
-    [DefaultAmbientServiceProvider(typeof(IAmbientSettingsProvider))]
-    public class BasicAmbientSettingsProvider : IMutableAmbientSettingsProvider
+    [DefaultAmbientService(typeof(IAmbientSettingsSet))]
+    public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
     {
         private readonly string _name;
-        private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IAmbientSettingInfo> _weakSettingRegistered;
+        private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object, IAmbientSettingInfo> _weakSettingRegistered;
         private ConcurrentDictionary<string, string> _rawValues;
         private ConcurrentDictionary<string, object> _typedValues;
 
         /// <summary>
-        /// Constructs a new empty ambient settings provider.
+        /// Constructs a new empty ambient settings set.
         /// </summary>
-        public BasicAmbientSettingsProvider()
-            : this (nameof(BasicAmbientSettingsProvider))
+        public BasicAmbientSettingsSet()
+            : this (nameof(BasicAmbientSettingsSet))
         {
         }
         /// <summary>
-        /// Constructs a new ambient settings provider with the specified values.
+        /// Constructs a new ambient settings set with the specified values.
         /// </summary>
-        /// <param name="name">The name of the provider.</param>
-        public BasicAmbientSettingsProvider(string name)
+        /// <param name="name">The name of the set.</param>
+        public BasicAmbientSettingsSet(string name)
         {
             _name = name;
             _rawValues = new ConcurrentDictionary<string, string>();
             _typedValues = new ConcurrentDictionary<string, object>();
-            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IAmbientSettingInfo>(
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object, IAmbientSettingInfo>(
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
             SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
         /// <summary>
-        /// Constructs a new ambient settings provider with the specified values.
+        /// Constructs a new ambient settings set with the specified values.
         /// </summary>
-        /// <param name="name">The name of the provider.</param>
-        /// <param name="values">A set of name-value pairs to use for the initial values for the provider.</param>
-        public BasicAmbientSettingsProvider(string name, IDictionary<string, string> values)
+        /// <param name="name">The name of the set.</param>
+        /// <param name="values">A set of name-value pairs to use for the initial values for the set.</param>
+        public BasicAmbientSettingsSet(string name, IDictionary<string, string> values)
         {
             _name = name;
             _rawValues = new ConcurrentDictionary<string, string>(values);
@@ -55,25 +55,25 @@ namespace AmbientServices
                     _typedValues[key] = (ps != null) ? ps.Convert(this, values[key]) : values[key];
                 }
             }
-            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsProvider, object, IAmbientSettingInfo>(
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object, IAmbientSettingInfo>(
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
             SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
-        static void NewSettingRegistered(BasicAmbientSettingsProvider settingsProvider, object sender, IAmbientSettingInfo setting)
+        static void NewSettingRegistered(BasicAmbientSettingsSet settingsSet, object sender, IAmbientSettingInfo setting)
         {
             // is there a value for this setting?
             string value;
-            if (settingsProvider._rawValues.TryGetValue(setting.Key, out value))
+            if (settingsSet._rawValues.TryGetValue(setting.Key, out value))
             {
                 // get the typed value
-                settingsProvider._typedValues[setting.Key] = setting.Convert(settingsProvider, value);
+                settingsSet._typedValues[setting.Key] = setting.Convert(settingsSet, value);
             }
         }
 
         /// <summary>
-        /// Gets the name of the settings provider so that a settings consumer can know where a changed setting value came from.
+        /// Gets the name of the settings set so that a settings consumer can know where a changed setting value came from.
         /// </summary>
-        public string ProviderName => _name;
+        public string SetName => _name;
         /// <summary>
         /// Gets the current raw (string) value for the specified key, or null if the setting is not set.
         /// </summary>

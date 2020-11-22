@@ -10,21 +10,21 @@ using System.Threading.Tasks;
 namespace TestAmbientServices
 {
     /// <summary>
-    /// A class that holds tests for <see cref="IAmbientLoggerProvider"/>.
+    /// A class that holds tests for <see cref="IAmbientLogger"/>.
     /// </summary>
     [TestClass]
     public class TestLogger
     {
-        private static readonly ServiceReference<IAmbientLoggerProvider> _LoggerProvider = Service.GetReference<IAmbientLoggerProvider>(out _LoggerProvider);
-        private static readonly ServiceReference<IAmbientSettingsProvider> _SettingsProvider = Service.GetReference<IAmbientSettingsProvider>(out _SettingsProvider);
+        private static readonly AmbientService<IAmbientLogger> _Logger = Ambient.GetService<IAmbientLogger>(out _Logger);
+        private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>(out _SettingsSet);
 
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public void LogFilterTypeCategoryAllow()
         {
-            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(LogFilterTypeCategoryAllow));
+            BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(LogFilterTypeCategoryAllow));
             settings.ChangeSetting(nameof(LogFilterTypeCategoryAllow) + "-" + nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
             settings.ChangeSetting(nameof(LogFilterTypeCategoryAllow) + "-" + nameof(AmbientLogFilter) + "-TypeAllow", ".*[Aa]llow.*");
             settings.ChangeSetting(nameof(LogFilterTypeCategoryAllow) + "-" + nameof(AmbientLogFilter) + "-TypeBlock", null);
@@ -38,12 +38,12 @@ namespace TestAmbientServices
             Assert.IsTrue(filter.IsCategoryBlocked("test"));
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public void LogFilterTypeCategoryBlock()
         {
-            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(LogFilterTypeCategoryBlock));
+            BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(LogFilterTypeCategoryBlock));
             settings.ChangeSetting(nameof(LogFilterTypeCategoryBlock) + "-" + nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
             settings.ChangeSetting(nameof(LogFilterTypeCategoryBlock) + "-" + nameof(AmbientLogFilter) + "-TypeAllow", null);
             settings.ChangeSetting(nameof(LogFilterTypeCategoryBlock) + "-" + nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
@@ -57,12 +57,12 @@ namespace TestAmbientServices
             Assert.IsTrue(filter.IsCategoryBlocked("testblock"));
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public void LogFilterTypeCategoryAllowBlock()
         {
-            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(LogFilterTypeCategoryAllowBlock));
+            BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(LogFilterTypeCategoryAllowBlock));
             settings.ChangeSetting(nameof(LogFilterTypeCategoryAllowBlock) + "-" + nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
             settings.ChangeSetting(nameof(LogFilterTypeCategoryAllowBlock) + "-" + nameof(AmbientLogFilter) + "-TypeAllow", ".*[Aa]llow.*");
             settings.ChangeSetting(nameof(LogFilterTypeCategoryAllowBlock) + "-" + nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
@@ -78,12 +78,12 @@ namespace TestAmbientServices
             Assert.IsFalse(filter.IsCategoryBlocked("testallow"));
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public void LogFilterBlock()
         {
-            BasicAmbientSettingsProvider settings = new BasicAmbientSettingsProvider(nameof(LogFilterBlock));
+            BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(LogFilterBlock));
             settings.ChangeSetting(nameof(LogFilterBlock) + "-" + nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Information.ToString());
             settings.ChangeSetting(nameof(LogFilterBlock) + "-" + nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
             settings.ChangeSetting(nameof(LogFilterBlock) + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
@@ -103,7 +103,7 @@ namespace TestAmbientServices
             Assert.IsTrue(filter.IsBlocked(AmbientLogLevel.Trace, "testBlock", null));
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public async Task LoggerDefault()
@@ -117,15 +117,15 @@ namespace TestAmbientServices
             logger.Log("Exception during test", new ApplicationException());
             logger.Log(() => "Exception during test", new ApplicationException());
             logger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
-            await _LoggerProvider.GlobalProvider.Flush();
+            await _Logger.Global.Flush();
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public void LoggerNone()
         {
-            using (new LocalProviderScopedOverride<IAmbientLoggerProvider>(null))
+            using (new ScopedLocalServiceOverride<IAmbientLogger>(null))
             {
                 AmbientLogger<TestLogger> logger = new AmbientLogger<TestLogger>();
                 logger.Log(new ApplicationException());
@@ -139,16 +139,16 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public async Task LoggerExplicitSettings()
         {
-            BasicAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider("LoggerSettingsTest");
-            settingsProvider.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Error.ToString());
-            settingsProvider.ChangeSetting(nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
-            settingsProvider.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
-            AmbientLogger<AllowedLoggerType> logger = new AmbientLogger<AllowedLoggerType>(_LoggerProvider.GlobalProvider, settingsProvider);
+            BasicAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet("LoggerSettingsTest");
+            settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Error.ToString());
+            settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
+            settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
+            AmbientLogger<AllowedLoggerType> logger = new AmbientLogger<AllowedLoggerType>(_Logger.Global, settingsSet);
             logger.Log(new ApplicationException());
             logger.Log(new ApplicationException(), "category", AmbientLogLevel.Information);
             logger.Log("test message");
@@ -161,19 +161,19 @@ namespace TestAmbientServices
             logger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
             logger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
             logger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
-            await _LoggerProvider.GlobalProvider.Flush();
+            await _Logger.Global.Flush();
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public async Task LoggerSettings()
         {
-            BasicAmbientSettingsProvider settingsProvider = new BasicAmbientSettingsProvider("LoggerSettingsTest");
-            settingsProvider.ChangeSetting(nameof(BasicAmbientLogger) + "-LogLevel", AmbientLogLevel.Error.ToString());
-            settingsProvider.ChangeSetting(nameof(BasicAmbientLogger) + "-TypeFilter", "AllowedLoggerType");
-            settingsProvider.ChangeSetting(nameof(BasicAmbientLogger) + "-CategoryFilter", "AllowedCategory");
-            using (LocalProviderScopedOverride<IAmbientSettingsProvider> o = new LocalProviderScopedOverride<IAmbientSettingsProvider>(settingsProvider))
+            BasicAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet("LoggerSettingsTest");
+            settingsSet.ChangeSetting(nameof(BasicAmbientLogger) + "-LogLevel", AmbientLogLevel.Error.ToString());
+            settingsSet.ChangeSetting(nameof(BasicAmbientLogger) + "-TypeFilter", "AllowedLoggerType");
+            settingsSet.ChangeSetting(nameof(BasicAmbientLogger) + "-CategoryFilter", "AllowedCategory");
+            using (ScopedLocalServiceOverride<IAmbientSettingsSet> o = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
             {
                 AmbientLogger<AllowedLoggerType> logger = new AmbientLogger<AllowedLoggerType>();
                 logger.Log(new ApplicationException());
@@ -192,16 +192,16 @@ namespace TestAmbientServices
                 testlogger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
                 testlogger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
 
-                await _LoggerProvider.Provider.Flush();
+                await _Logger.Local.Flush();
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientLoggerProvider"/>.
+        /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
         public void LoggerArgumentExceptions()
         {
-            AmbientLogger<TestLogger> logger = new AmbientLogger<TestLogger>(_LoggerProvider.GlobalProvider);
+            AmbientLogger<TestLogger> logger = new AmbientLogger<TestLogger>(_Logger.Global);
             Func<string> nullLambda = null;
             Exception nullException = null;
             Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda, "category", AmbientLogLevel.Information));
