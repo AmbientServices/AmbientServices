@@ -70,7 +70,7 @@ namespace AmbientServices
         private static void AddDefaultImplementation(Type type)
         {
             DefaultAmbientServiceAttribute attribute = type.GetCustomAttribute<DefaultAmbientServiceAttribute>();
-            if (attribute != null && type.GetConstructor(Type.EmptyTypes) != null)
+            if (attribute != null && type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)
             {
                 IEnumerable<Type> registrationInterfaces = attribute.RegistrationTypes ?? type.GetInterfaces();
                 foreach (Type iface in registrationInterfaces)

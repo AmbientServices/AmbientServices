@@ -32,7 +32,7 @@ namespace AmbientServices
         /// <param name="settingsSet"></param>
         public AmbientServiceProfilerCoordinator(IAmbientSettingsSet settingsSet)
         {
-            _defaultSystemGroupTransformSetting = AmbientSettings.GetSetSetting<Regex>(settingsSet, nameof(AmbientServiceProfilerCoordinator) + "-DefaultSystemGroupTransform", 
+            _defaultSystemGroupTransformSetting = AmbientSettings.GetSettingsSetSetting<Regex>(settingsSet, nameof(AmbientServiceProfilerCoordinator) + "-DefaultSystemGroupTransform", 
                 @"A `Regex` string used to transform the system identifier to a group identifier.
 The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.", 
                 s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));

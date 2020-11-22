@@ -12,16 +12,21 @@ namespace AmbientServices
     [DefaultAmbientService(typeof(IAmbientSettingsSet))]
     public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
     {
+        /// <summary>
+        /// The set name of the default settings set.
+        /// </summary>
+        public const string DefaultSetName = "Default";
+
         private readonly string _name;
         private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object, IAmbientSettingInfo> _weakSettingRegistered;
         private ConcurrentDictionary<string, string> _rawValues;
         private ConcurrentDictionary<string, object> _typedValues;
 
         /// <summary>
-        /// Constructs a new empty ambient settings set.
+        /// Constructs the default ambient settings set.
         /// </summary>
-        public BasicAmbientSettingsSet()
-            : this (nameof(BasicAmbientSettingsSet))
+        internal BasicAmbientSettingsSet()
+            : this (DefaultSetName)
         {
         }
         /// <summary>

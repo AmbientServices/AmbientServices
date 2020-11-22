@@ -28,7 +28,7 @@ namespace AmbientServices
         /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
         public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            return (settingsSet == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, convert, defaultValueString) : (IAmbientSetting<T>)GetSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
+            return (settingsSet == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, convert, defaultValueString) : (IAmbientSetting<T>)GetSettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
         }
         /// <summary>
         /// Construct a setting instance that uses a specific settings set and caches the setting with the specified key, converting it from a string using the specified delegate.
@@ -38,7 +38,7 @@ namespace AmbientServices
         /// <param name="description">A description of the setting.</param>
         /// <param name="convert">A delegate that takes a string and returns the type.</param>
         /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
-        public static IAmbientSetting<T> GetSetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public static IAmbientSetting<T> GetSettingsSetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
             return new SettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
         }
@@ -66,6 +66,11 @@ namespace AmbientServices
         /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
         T Value { get; }
+        /// <summary>
+        /// Gets the current value of the setting along with the name of the set that the value came from (or null if the default value was used).
+        /// </summary>
+        /// <returns>The current value of the setting along with the name of the set that the value came from (or null if the default value was used).</returns>
+        (T, string) GetValueWithSetName();
     }
     /// <summary>
     /// An abstraction that provides access to a setting's description and last time used.
@@ -156,7 +161,7 @@ namespace AmbientServices
                 // raise the registered event
                 SettingRegistered?.Invoke(null, setting);
                 return;
-            // the loop and exception is nearly impossible to cover in tests
+                // the loop and exception is nearly impossible to cover in tests
             } while (loopCount++ < 10);
             throw new TimeoutException("Timeout attempting to register setting!");
         }
@@ -197,6 +202,22 @@ namespace AmbientServices
         /// </summary>
         public event EventHandler<IAmbientSettingInfo> SettingRegistered;
     }
+    /// <summary>
+    /// An immutable class that contains a typed setting value and the settings set it came from.
+    /// </summary>
+    /// <typeparam name="T">The type for the setting.</typeparam>
+    class SettingsSetSettingValue<T>
+    {
+        public T Value { get; private set; }
+        public IAmbientSettingsSet SettingsSet { get; private set; }
+
+        public SettingsSetSettingValue(T value, IAmbientSettingsSet settingsSet)
+        {
+            this.Value = value;
+            this.SettingsSet = settingsSet;
+        }
+    }
+
     class SettingInfo<T> : IAmbientSettingInfo
     {
         protected static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
@@ -207,7 +228,7 @@ namespace AmbientServices
         private readonly T _defaultValue;
         private readonly Func<string, T> _convert;
         private long _lastUsedTicks = DateTime.MinValue.Ticks;      // interlocked
-        private object _globalValue;                                // interlocked
+        private SettingsSetSettingValue<T> _globalSetAndValue;      // interlocked
 
         public SettingInfo(string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
@@ -252,10 +273,10 @@ namespace AmbientServices
         /// <summary>
         /// Converts the specified value for the specified settings set.
         /// </summary>
-        /// <param name="setttingsSet">The <see cref="IAmbientSettingsSet"/> for the implementation doing the conversion.</param>
+        /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> for the implementation doing the conversion.</param>
         /// <param name="value">The string value for the setting.</param>
         /// <returns>A typed value created from the string value.</returns>
-        public object Convert(IAmbientSettingsSet setttingsSet, string value)
+        public object Convert(IAmbientSettingsSet settingsSet, string value)
         {
             T ret;
             try
@@ -269,9 +290,9 @@ namespace AmbientServices
             }
 #pragma warning restore CA1031 
             // is this settings set the one for this setting or is it the global settings set?
-            if (setttingsSet == _SettingsSet.Global)
+            if (settingsSet == _SettingsSet.Global)
             {
-                System.Threading.Interlocked.Exchange(ref _globalValue, ret);
+                System.Threading.Interlocked.Exchange(ref _globalSetAndValue, new SettingsSetSettingValue<T>(ret, settingsSet));
             }
             return ret;
         }
@@ -300,12 +321,23 @@ namespace AmbientServices
         /// <summary>
         /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
-        public object GlobalValue
+        public T GlobalValue
         {
             get
             {
                 UpdateLastUsed();
-                return _globalValue;
+                return (_globalSetAndValue != null) ? _globalSetAndValue.Value : _defaultValue;
+            }
+        }
+        /// <summary>
+        /// Gets the current value of the setting and the settings set it came from (cached from the value given by the settings set).
+        /// </summary>
+        public SettingsSetSettingValue<T> GlobalSetAndValue
+        {
+            get
+            {
+                UpdateLastUsed();
+                return _globalSetAndValue;
             }
         }
     }
@@ -314,19 +346,42 @@ namespace AmbientServices
         protected static readonly AmbientService<IAmbientSettingsSet> _AmbientSettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
 
         protected readonly AmbientService<IAmbientSettingsSet> _settingsSet;
-        protected readonly SettingInfo<T> _settingBase;
+        protected readonly SettingInfo<T> _settingInfo;
         private readonly IAmbientSettingsSet _fixedSettingsSet;
 
         public SettingsSetSetting(IAmbientSettingsSet fixedSettingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            _settingBase = new SettingInfo<T>(key, description, convert, defaultValueString);
+            _settingInfo = new SettingInfo<T>(key, description, convert, defaultValueString);
             _fixedSettingsSet = fixedSettingsSet;
         }
 
         internal SettingsSetSetting(AmbientService<IAmbientSettingsSet> settings, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            _settingBase = new SettingInfo<T>(key, description, convert, defaultValueString);
+            _settingInfo = new SettingInfo<T>(key, description, convert, defaultValueString);
             _settingsSet = settings;
+        }
+        protected IAmbientSettingsSet GetValueSet()
+        {
+            _settingInfo.UpdateLastUsed();
+            if (_settingsSet != null)
+            {
+                return _settingsSet.Local;
+            }
+            else if (_fixedSettingsSet != null)
+            {
+                return _fixedSettingsSet;
+            }
+            return null;
+        }
+        protected T GetValueFromSet(IAmbientSettingsSet set)
+        {
+            object value = set.GetTypedValue(_settingInfo.Key);
+            return (value == null) ? _settingInfo.DefaultValue : (T)value;
+        }
+        protected (T, string) GetValueAndSet(IAmbientSettingsSet set)
+        {
+            object value = set?.GetTypedValue(_settingInfo.Key);
+            return (value == null) ? (_settingInfo.DefaultValue, null) : ((T)value, set.SetName);
         }
         /// <summary>
         /// Gets the current value of the setting (cached from the value given by the settings set).
@@ -335,22 +390,21 @@ namespace AmbientServices
         {
             get
             {
-                _settingBase.UpdateLastUsed();
-                if (_settingsSet != null)
-                {
-                    object value = _settingsSet.Local?.GetTypedValue(_settingBase.Key);
-                    return (value == null) ? _settingBase.DefaultValue : (T)value;
-                }
-                else if (_fixedSettingsSet != null)
-                {
-                    object value = _fixedSettingsSet.GetTypedValue(_settingBase.Key);
-                    return (value == null) ? _settingBase.DefaultValue : (T)value;
-                }
-                else
-                {
-                    return (_settingBase.GlobalValue == null) ? _settingBase.DefaultValue : (T)_settingBase.GlobalValue;
-                }
+                IAmbientSettingsSet set = GetValueSet();
+                return (set != null)
+                    ? GetValueFromSet(set)
+                    : _settingInfo.GlobalValue;
             }
+        }
+        /// <summary>
+        /// Gets the current value of the setting along with the name of the set that the value came from (or null if the default value was used).
+        /// Note that this function may be significantly slower than <see cref="Value"/>.
+        /// </summary>
+        /// <returns>The current value of the setting along with the name of the set that the value came from (or null if the default value was used).</returns>
+        public virtual (T, string) GetValueWithSetName()
+        {
+            IAmbientSettingsSet set = GetValueSet();
+            return GetValueAndSet(set);
         }
     }
     class AmbientSetting<T> : SettingsSetSetting<T>
@@ -365,27 +419,50 @@ namespace AmbientServices
         {
         }
 
+        private IAmbientSettingsSet GetAmbientValueSet()
+        {
+            _settingInfo.UpdateLastUsed();
+            AmbientService<IAmbientSettingsSet> settingsSet = _settingsSet ?? _AmbientSettingsSet;
+            // is there a local settings set override?
+            IAmbientSettingsSet localSettingsSetOverride = settingsSet.Override;
+            if (localSettingsSetOverride != null) return localSettingsSetOverride;
+            // is there a local settings set suppression?
+            IAmbientSettingsSet localSettingsSet = settingsSet.Local;
+            return (localSettingsSet != null)
+                ? GetValueSet() // fall through to the base (global settings set)
+                : null;  // use the default value
+        }
+
         /// <summary>
-        /// Gets the current value of the setting, either from the call-context-local settings set overide, or the cached value from the global settings set.
+        /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
         public override T Value
         {
             get
             {
-                AmbientService<IAmbientSettingsSet> settingsSet = _settingsSet ?? _AmbientSettingsSet;
-                // is there a local settings set override?
-                IAmbientSettingsSet localSettingsSetOverride = settingsSet.Override;
-                if (localSettingsSetOverride != null)
-                {
-                    _settingBase.UpdateLastUsed();
-                    object value = localSettingsSetOverride.GetTypedValue(_settingBase.Key);
-                    return (value == null) ? _settingBase.DefaultValue : (T)value;
-                }
-                // is there a local settings set suppression?
-                IAmbientSettingsSet localSettingsSet = settingsSet.Local;
-                if (localSettingsSet == null) return _settingBase.DefaultValue;
-                // fall through to the base (global settings set)
-                return base.Value;
+                IAmbientSettingsSet set = GetAmbientValueSet();
+                return (set != null)
+                    ? GetValueFromSet(set)
+                    : _settingInfo.GlobalValue;
+            }
+        }
+        /// <summary>
+        /// Gets the current value of the setting along with the name of the set that the value came from (or null if the default value was used).
+        /// Note that this function may be significantly slower than <see cref="Value"/>.
+        /// </summary>
+        /// <returns>The current value of the setting along with the name of the set that the value came from (or null if the default value was used).</returns>
+        public override (T, string) GetValueWithSetName()
+        {
+            IAmbientSettingsSet set = GetAmbientValueSet();
+            if (set != null) return GetValueAndSet(set);
+            SettingsSetSettingValue<T> setAndValue = _settingInfo.GlobalSetAndValue;
+            if (setAndValue != null)
+            {
+                return (setAndValue.Value, setAndValue.SettingsSet.SetName);
+            }
+            else
+            {
+                return (_settingInfo.DefaultValue, null);
             }
         }
     }

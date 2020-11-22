@@ -233,7 +233,12 @@ namespace AmbientServices
     /// <typeparam name="T">The concrete type of the service.</typeparam>
     class DefaultServiceImplementation<T> where T : class
     {
-        private static T _ImplementationSingleton = Activator.CreateInstance<T>();
+        private static T _ImplementationSingleton = CreateInstance();
+        private static T CreateInstance()
+        {
+            ConstructorInfo ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            return (T)ci.Invoke(Array.Empty<object>());
+        }
         public static T GetImplementation() { return _ImplementationSingleton; }
     }
     /// <summary>
@@ -345,17 +350,17 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Gets or sets the implementation.
+        /// Sets the implementation.
         /// If set to null, suppresses the default implementation (so that the getter returns null).
-        /// When setting the implementation, overwrites any previous implementation and raises the <see cref="ServiceChanged"/> event either on this thread or another thread asynchronously.
         /// Thread-safe.
         /// </summary>
         public T Service
         {
-            get
-            {
-                return _localOverride as T;
-            }
+            // this isn't currently needed, but if it is, just uncomment this code
+            //get
+            //{
+            //    return _localOverride as T;
+            //}
             set
             {
                 _localOverride = value ?? SuppressedImplementation;
