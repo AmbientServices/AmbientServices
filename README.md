@@ -981,7 +981,8 @@ class BottleneckReporter
 ```
 
 ### Default Implementation
-The default implementation uses thread-safe lock-free instances.
+The default implementation uses thread-safe lock-free instances.  
+In order to effectively users must strike a balance between conservative estimates of bottleneck saturation vs. having only inaccurate top bottlenecks in summaries.
 
 ## AmbientServiceProfiler
 The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on course-grained profiling.  
@@ -1120,7 +1121,8 @@ class ProfileReporter
 ```
 
 ### Default Implementation
-
+The default implementation uses thread-safe lock-free instances.  
+Each system switch is transformed according to the setting and then distributed to all the profilers the switch applies to.
 
 
 # Library Information
@@ -1136,3 +1138,10 @@ AmbientServices is written in C#, using .NET Standard 2.0.  Unit tests are writt
 The code can be built using either Microsoft Visual Studio 2017+, Microsoft Visual Studio Code, or .NET Core command-line utilities.
 
 Binaries are available at https://www.nuget.org/packages/AmbientServices.
+
+## Contributions
+Contributions are welcome under the following conditions:
+1. no new assembly dependencies are introduced
+2. code coverage by unit tests cover all new lines and conditions whenever possible
+3. documentation is updated appropriately
+4. style for code and documentation contributions remains consistent
