@@ -10,16 +10,16 @@ namespace AmbientServices
     /// </summary>
     public class AmbientCancellationTokenSource : IDisposable
     {
-        private static readonly ServiceAccessor<IAmbientClockProvider> _ClockProviderAccessor = Service.GetAccessor<IAmbientClockProvider>();
+        private static readonly AmbientService<IAmbientClock> _AmbientClock = Ambient.GetService<IAmbientClock>();
         private static readonly CancellationToken _AlreadyCancelled = AlreadyCancelledToken();
         private static CancellationToken AlreadyCancelledToken()
         {
             CancellationTokenSource source = new CancellationTokenSource(); source.Cancel(); return source.Token;
         }
 
-        private IAmbientClockProvider _clockProvider;
+        private IAmbientClock _clock;
         private CancellationTokenSource _tokenSource;
-        private AmbientTimer _ambientTimer;
+        private AmbientEventTimer _ambientTimer;
 
         /// <summary>
         /// Constructs an ambient cancellation token source using a system <see cref="CancellationTokenSource"/>.
@@ -34,24 +34,24 @@ namespace AmbientServices
         /// </summary>
         /// <param name="timeout">A <see cref="TimeSpan"/> indicating how long to wait before timing out.</param>
         public AmbientCancellationTokenSource(TimeSpan timeout)
-            : this(_ClockProviderAccessor.LocalProvider, timeout)
+            : this(_AmbientClock.Local, timeout)
         {
         }
         /// <summary>
         /// Constructs an ambient cancellation token source using the specified clock.
         /// </summary>
-        /// <param name="clockProvider">The <see cref="IAmbientClockProvider"/> to use for the token source.</param>
+        /// <param name="clock">The <see cref="IAmbientClock"/> to use for the token source.</param>
         /// <param name="timeout">An optional timeout indicating how long before the associated cancellation token should be cancelled.</param>
-        public AmbientCancellationTokenSource(IAmbientClockProvider clockProvider, TimeSpan? timeout = null)
+        public AmbientCancellationTokenSource(IAmbientClock clock, TimeSpan? timeout = null)
         {
-            _clockProvider = clockProvider;
-            if (clockProvider != null)
+            _clock = clock;
+            if (clock != null)
             {
                 _tokenSource = new CancellationTokenSource();
                 if (timeout != null)
                 {
-                    _ambientTimer = new AmbientTimer(timeout.Value);
-                    System.EventHandler<AmbientTimerElapsedEventHandler> handler = null;
+                    _ambientTimer = new AmbientEventTimer(timeout.Value);
+                    System.Timers.ElapsedEventHandler handler = null;
                     handler = (source, e)
                         =>
                     {
@@ -59,7 +59,8 @@ namespace AmbientServices
                         _tokenSource.Cancel();
                         _ambientTimer.Dispose();
                     };
-                    _ambientTimer.Elapsed += handler;
+                    _ambientTimer.Elapsed += handler;   // note that the handler will keep the timer and the token source alive until the event is raised, but the event is only raised once anyway, and there is no need to unsubscribe because the owner of the event is disposed when the event is triggered anyway
+                    _ambientTimer.Enabled = true;
                 }
             }
             else

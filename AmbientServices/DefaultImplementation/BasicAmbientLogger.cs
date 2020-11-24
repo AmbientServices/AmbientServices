@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 
 namespace AmbientServices
 {
-    [DefaultAmbientServiceProvider]
-    internal class BasicAmbientLogger : IAmbientLoggerProvider
+    [DefaultAmbientService]
+    internal class BasicAmbientLogger : IAmbientLogger
     {
         public BasicAmbientLogger()
         {

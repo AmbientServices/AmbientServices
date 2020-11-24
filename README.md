@@ -1,7 +1,8 @@
 # Overview
-AmbientServices is an assembly that provides abstractions for basic services which are both universal and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those basic services.
+AmbientServices is a .NET library that provides abstractions for services which are both universal and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those services.
 
-These basic services include caching, clock, logging, progress/cancellation, and settings.  Interfaces for those services are provided here.
+## Basic Services
+The basic ambient services include caching, clock, logging, progress/cancellation, and settings.  Interfaces for those services are provided here.
 By accessing these services through the interfaces provided here, library authors can utilize new basic services as they become available without changing their external interface, and library consumers can use those libraries without having to provide dependencies for systems that they may or may not use.
 If consumers want the added benefits provided by a more complicated implementation of one or more of those services, they can provide a bridge to their own implementations of these basic services and register them with the AmbientServices service.
 With one simple registration, the services will automatically be utilized by every library that uses AmbientServices.
@@ -14,31 +15,41 @@ By convention, AmbientServices should not be used for information that alters th
 
 For example, logging should never alter function outputs at all.  Caching may affect the output, but only by giving results that are slightly stale, and only in cases where there are already hidden inputs (like a database) anyway.  Some functions may measure the passage of time during processing and might record that information or change their outputs based on the duration of time passed, but callers should not be surprised when the passage of time is slower or faster than their expected "normal".  Settings (often stored in a configuration file) can alter the output of a function, but never in a way that the caller is concerned about.  In fact, the very concept of settings is in reality a type of parameter intended to affect functions without requiring the caller to be concerned with their specific values.  Progress tracking and cancellation may be useful for the caller, but never affects the output of the function other than aborting its processing altogether.
 
+## Advanced Services
+Advanced ambient services provide detailed system performance monitoring.
+With them you can easily track how various parts of your system are performing all the time, not just when you run it with a profiler.
 
-# Getting Started
+The statistics service can be used to track statistics such as cache hits and misses, requests processed, time spent processing requests, etc., similar to windows performance counters, but with less complexity, fewer limits, cross-platform support, and better results when aggregating over time or across multiple systems.
+
+The bottleneck detector service tracks system bottlenecks, allowing you to determine how close your system is to overloading any particular bottleneck, allowing you to better predict scalability even before load testing.
+
+The service profiler allows you to determine what backend systems used up all the wall clock time for a particular process, during the execution of a request, or during a particular time window.
+This information gives you insight into what optimizations would improve response times the most and by how much.
+
+Using these services, you can see performance issues in near-real-time and identify which backend systems or local bottlenecks caused those issues.
+Advanced ambient services allow you to track this information with little overhead and in turn provide it for consumers of your systems.
+
+
+## Getting Started
 In Visual Studio, use Manage Nuget Packages and search nuget.org for AmbientServices to add a package reference for this library.
 
 For .NET Core environments, use:
 `dotnet add package https://www.nuget.org/packages/AmbientServices/`
 
 
-# Built-in Basic Ambient Services
+# Service Descriptions
 
 ## AmbientCache
-
-The ambient cache interface abstracts a simple cache of the type that is universally applicable.  Some items are cached for a specific amount of time, others are cached indefinitely.  Items cached temporarily may have their expiration time extended or shortened each time they are retrieved or updated.  Both types of items may expire from the cache at any time according to cache limits and/or memory capacity.  Items may be removed from the cache manually at any time.  
+The ambient cache interface abstracts a very simple cache of the type that is universally applicable.  Some items are cached for a specific amount of time, others are cached indefinitely.  Items cached temporarily may have their expiration time extended or shortened each time they are retrieved or updated.  Both types of items may expire from the cache at any time according to cache limits and/or memory capacity.  Items may be removed from the cache manually at any time.  
 
 In order to prevent unexpected alteration of outputs, care must be taken to ensure that cached items are based entierly on the inputs.  For functions that are not "pure" (database queries for example), the results should always be based entirely on the inputs and either the current state of the database or some previous state (when it uses cached results).  For example, if the cache key does not contain all the inputs identifying the item being cached, completely different results could be obtained depending on the order in which calls to the cache were made.  This is true of all caches and naturally every cache user and implementor understands that this type of usage is erroneous and must be avoided.
 
 ### Helpers
-
-The ```AmbientCache<TOWNER>``` generic class provides a wrapper of the ambient cache that attaches the owner type name as a prefix for each cache key to prevent cross-class cache key conflicts, and ignores calls when there is no cache provider or it has been suppressed.
+The `AmbientCache<TOWNER>` generic class provides a wrapper of the ambient cache that attaches the owner type name as a prefix for each cache key to prevent cross-class cache key conflicts, and ignores calls when there is no ambient cache or it has been suppressed.
 
 ### Settings
-
 BasicAmbientCache-EjectFrequency: the number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.  Default is 100.
-BasicAmbientCache-ItemCount: the number of items (timed and untimed combined) to cache.  Default is 1000.
-
+BasicAmbientCache-ItemCount: the maximum number of both timed and untimed items to allow in the cache before ejecting items.  Default is 1000.
 
 ### Sample
 [//]: # (AmbientCacheSample)
@@ -98,27 +109,25 @@ class UserManager
     }
 }
 ```
-### Default Provider
-The default provider has a small local-only cache using a very simple implementation.
+### Default Implementation
+The default implementation has a small local-only cache using a very simple implementation.
 
 ## AmbientLogger
-
-The ambient logger interface abstracts a simple logging system of the type that is universally applicable.  The provider implementation simply receives strings to log and flushes them when called.
+The ambient logger interface abstracts a simple logging system of the type that is universally applicable.  The logger simply receives strings to log and flushes them when called.
 
 Logging should never affect control flow or results.  The only side-effect should be transparent to the caller.  Every user and implementor should understand this implied part of the logging interface contract.
 
 ### Helpers
-
-The ```AmbientLogger<TOWNER>``` generic class provides a wrapper of the ambient cache that attaches the owner type, a severity level, and a category to each message and filters them according to settings from the ambient or specified settings.  Overloads that take a message-generating lambda are also provided.  These overloads should be used when generating the log message from the provided input data is expensive and the caller wants to avoid that expense when the message is going to be filtered anyway.
+The `AmbientLogger<TOWNER>` generic class provides a wrapper of the ambient cache that attaches the owner type, a severity level, and a category to each message and filters them according to settings from the ambient or specified settings.  Overloads that take a message-generating lambda are also provided.  These overloads should be used when generating the log message from the provided input data is expensive and the caller wants to avoid that expense when the message is going to be filtered anyway.
 
 ### Settings
-
-AmbientLogger-Format: A format string that controls what entries in the log look like where {0} is the entry time, {1} is the level, {2} is the log owner type, {3} is the category, and {4} is the message.  Default is {0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}.
-AmbientLogFilter-LogLevel: the AmbientLogLevel above which logs will be filtered (entries at this level and below will be logged).  Default is Information.
-AmbientLogFilter-TypeAllow: A regular expression indicating which type(s) are allowed to be logged.  Default is null, meaning all types are allowed.
-AmbientLogFilter-TypeBlock: A regular expression indicating which type(s) should be blocked from being logged.  Default is null, meaning no types should be blocked.
-AmbientLogFilter-CategoryAllow: A regular expression indicating which categorie(s) are allowed to be logged.  Default is null, meaning all categories are allowed.
-AmbientLogFilter-CategoryBlock: A regular expression indicating which categorie(s) should be blocked from being logged.  Default is null, meaning no categories should be blocked.
+`AmbientLogger-Format`: A format string that controls what entries in the log look like where {0} is the entry time, {1} is the level, {2} is the log owner type, {3} is the category, and {4} is the message.  Default is {0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}.
+`AmbientLogFilter-LogLevel`: The AmbientLogLevel above which logs will be filtered (entries at this level and below will be logged).  Default is Information.
+`AmbientLogFilter-TypeAllow`: A regular expression indicating which type(s) are allowed to be logged.  Default is null, meaning all types are allowed.
+`AmbientLogFilter-TypeBlock`: A regular expression indicating which type(s) should be blocked from being logged.  Default is null, meaning no types should be blocked.
+`AmbientLogFilter-CategoryAllow`: A regular expression indicating which categorie(s) are allowed to be logged.  Default is null, meaning all categories are allowed.
+`AmbientLogFilter-CategoryBlock`: A regular expression indicating which categorie(s) should be blocked from being logged.  Default is null, meaning no categories should be blocked.
+Blocking is applied after allowing, so if a type or category matches both expressions, it will be blocked.
 
 ### Sample
 [//]: # (AmbientLoggerSample)
@@ -158,21 +167,18 @@ public static class AssemblyLoggingExtensions
     }
 }
 ```
-### Default Provider
-The default provider asynchronously buffers the log messages and flushes them in batches out to the System Diagnostics Trace (which would slow code dramatically if each log message was written synchronously).
+### Default Implementation
+The default implementation asynchronously buffers the log messages and flushes them in batches out to the System Diagnostics Trace (which would slow code dramatically if each log message was written synchronously).
 
 ## AmbientProgress
-
 The ambient progress interface abstracts a simple context-following progress tracker of the type that is universally applicable.  Progress tracking tracks the proportion of an operation that has completed processing and the item currently being processed and provides easy aggregation of subprocess progress.  The ambient context is checked for cancellation each time the progress is updated or parts are started or completed.
 
-Progress tracking should never affect control flow or results, except in the event of a cancellation, in which case there are no functional results.  Naturally consumers and providers should avoid any usage or implementation to the contrary.
+Progress tracking should never affect control flow or results, except in the event of a cancellation, in which case there are no functional results.  Naturally both consumers and services should avoid any usage or implementation to the contrary.
 
 ### Helpers
-
-The only helper class here is ```AmbientCancellationTokenSource```, which is a superset of the framework's ```CancellationTokenSource``` that can raise cancellation using an ambient clock.
+The only helper class here is `AmbientCancellationTokenSource`, which is a superset of the framework's `CancellationTokenSource` that can raise cancellation using an ambient clock.
 
 ### Settings
-
 There are no settings for this service.
 
 ### Sample
@@ -183,7 +189,7 @@ There are no settings for this service.
 /// </summary>
 class DownloadAndUnzip
 {
-    private static readonly IAmbientProgressProvider AmbientProgress = Service.GetAccessor<IAmbientProgressProvider>().GlobalProvider;
+    private static readonly IAmbientProgressService AmbientProgress = Ambient.GetService<IAmbientProgressService>().Global;
 
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
@@ -248,8 +254,8 @@ class DownloadAndUnzip
     }
 }
 ```
-### Default Provider
-The default provider tracks progress and provides access to the data, but does not output the progress information anywhere.
+### Default Implementation
+The default implementation tracks progress and provides access to the data, but does not output the progress information anywhere.
 
 ## AmbientClock
 
@@ -257,13 +263,29 @@ The ambient clock interface abstracts a system clock.  Artificial clock control 
 
 Clocks, of course, are generally counter to the goals of purely functional programming, and even in imperative programming, it makes sense that functions that aren't obviously time-dependent should not have their outputs unexpectedly affected by the clock.  One such acceptable usage is logging with timestamps.  Another acceptable usage is timeouts.  For all programs, clocks could indirectly appear to be frozen if the CPU is unexpectedly fast or the system clock has an unexpectedly low resolution.  Correspondingly, clocks could appear to skip ahead if the system CPU is overloaded and the thread doesn't get scheduled or if the system goes to sleep or hibernates and then later resumes.  The artificial clock AmbientClock provides simply allows an upstream service consumer to simulate those conditions for both unit and integration testing purposes.  These are important edge cases to test for systems that need a high degree of reliability and graceful degredation.  
 
-Clocks should never go backwards.  Provider implementors must ensure this holds true.
+Clocks should never go backwards.  Ambient clock service implementors must ensure this holds true.
 
 ### Helpers
 
-The ```AmbientClock``` static class provides an abstraction that automatically uses the system clock if there is no registered provider.  It also provides a ```Pause``` function that allows the caller to temporarily pause time as seen by the ambient clock.  The ```SkipAhead``` function allows the caller to move the paused clock forward (ignored if the clock is not paused).  ```AmbientClock``` can also issue an ```AmbientCancellationToken``` that is cancelled by the ambient clock provider.
-The ```AmbientStopwatch``` class provides a time measuring class similar to the framework's ```Stopwatch``` class, but pauses when the ambient clock is paused.
-The ```AmbientTimer``` class provides a callback similar to the framework's ```Timer``` class, but follows the ambient clock.
+The `AmbientClock` static class provides an abstraction that automatically uses the system clock if there is no registered clock service.  It also provides a `Pause` function that allows the caller to temporarily pause time as seen by the ambient clock.  The `SkipAhead` function allows the caller to move the paused clock forward (ignored if the clock is not paused).  `AmbientClock` can also issue an `AmbientCancellationToken` that is cancelled by the ambient clock service.
+The `AmbientStopwatch` class provides a time measuring class similar to the framework's `Stopwatch` class, but pauses when the ambient clock is paused.
+The `AmbientTimer` class provides a callback similar to the framework's `Timer` class, but follows the ambient clock.
+
+### Usage
+Converting a project to use `AmbientClock` begins with changing all references to `DateTime.UtcNow` to `AmbientClock.UtcNow`, `Stopwatch` to `AmbientStopwatch`, and `System.Timers.Timer` to `AmbientTimer`.  This should not affect anything at all.  Next, in unit tests that are sensitive to timing, add the following code:
+```
+using (AmbientClock.Pause())
+{
+
+    // beginning of test here--no time will appear to pass while this code executes
+
+    // move the ambient clock ahead such that it will appear to the system that exactly 100ms has passed
+    AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+
+    // more test code here--no time will appear to pass while this code executes, but 100ms will appear to have elapsed since the first part of the code ran
+
+}
+```
 
 ### Sample
 [//]: # (AmbientClockSample)
@@ -323,28 +345,35 @@ public class TimeDependentServiceTest
     }
 }
 ```
-### Default Provider
-There is no default provider.  This causes the helper classes to use the system clock.
+### Default Implementation
+There is no default implementation, but an implementation intended for use as a local override is provided.  The lack of default implementation causes the helper classes to use the system clock.
 
 ## AmbientSettings
+The ambient settings interface abstracts a simple string-based settings set.  Each setting has a value identified by a unique string.  The value of the setting is always a string, but each setting may be converted to a desired type by specifying a delegate that converts the string into the desired strongly-typed value.
+Often the value for a setting may change on the fly, so the value exposed by the helper class might change after initialization.  Users can also subscribe to an event that notifies them when the value for a setting changes, in case they need to do something more complicated than just parsing the new value.  Value change event notifications may arrive asynchronously on any thread at any time, so users must not depend on the notification occurring before they get an updated value.  
+A call-context-specific override can be used for some settings, but of course no change notifications can occur when the value changes due to setting a call-context-local settings set or changes of the value within a call-context-local settings set (where would the notification go?).
 
-The ambient settings interface abstracts a simple string-based settings accessor.  Each setting has a value identified by a unique string.  The value of the setting is always a string, but each setting may be converted to a desired type by specifying a delegate that converts the string into the desired strongly-typed value.
-Often a settings values may change on the fly, so the value exposed by the helper class might change after initialization.  Users can also subscribe to an event that notifies them when the value for a setting changes, in case they need to do something more complicated than just parsing the new value.  Value change event notifications may arrive asynchronously on any thread at any time, so users must no depend on the notification occurring before they get an updated value.  
-A call-context-specific override can be used for some settings, but of course no change notifications can occur when the value changes due to setting a call-context-local provider or changes of the value within a call-context-local provider (where would the notification go?).
+Settings set implementations may or may not provide post-initialization settings value updates but if they do, they should also raise the notifications.
 
-Providers may or may not provide post-initialization settings value updates but if they do, they should also raise the notifications.
+Among other things, the ambient settings system is designed to provide sensible access to settings and notification of changes during system startup and shutdown.  
+For example, at the beginning of startup, the settings just use default values.  
+At some point, the global settings set can be replaced with a settings set implementatoin that reads from a local configuration, and then later on with an implementation that reads settings from a centralized settings store.  
+Users of settings don't need to bother with knowing where the settings come from, only that they might change during system startup.  
+This is especially useful for things like logging.  
+Errors that occur before the location of shared logs is determined (that location might be stored in a central database) can be stored in the event log or local file system as desired.  
+Once the centralized settings are hooked up, logging can automatically switch to a remote log store indicated in the centralized settings store.  
+No centralized (and often complicated) "startup" code is required for this kind of transition, just a subscription to the change event for a log configuration setting.
+Most code can (and usuall should) use the default ambient settings set, which will automatically transition from basic settings sets implementations to more complicated ones as initialization progresses and more complicated implementations become available for use.
 
-Among other things, the ambient settings system is designed to provide sensible access to settings and notification of changes during system startup and shutdown.  For example, at the beginning of startup, the settings just use default values.  At some point, the global provider can be replaced with a provider that reads from a local configuration, and then later on with a provider that reads settings from a centralized settings store.  Users of settings don't need to bother with knowing where the settings come from, only that they might change during system startup.  This is especially useful for things like logging.  Errors that occur before the location of shared logs is determined (that location might be stored in a central database) can be stored in the event log or local file system as desired.  Once the centralized settings are hooked up, logging can automatically switch to a remote provider indicated in the centralized settings store.  No central (and often complicated) "startup" code is required for this kind of transition.  Code can (and should) automatically use the default or local settings until the central settings become available.
-
-Settings by their very nature must be considered inputs for the purposes of functional programming.  They are by definition not passed on the stack (otherwise, they're just insanely-overpopulated collections of parameters someone decided to call "settings").
+Settings by their very nature must be considered inputs for the purposes of functional programming.  
+They are by definition not passed on the stack (otherwise, they're just insanely-overpopulated collections of parameters someone decided to call "settings").
 
 ### Helpers
-
-The ```IAmbientSetting<T>``` generic helper interface provides access to a type-converted setting and an event to notify subscribers when the setting value changes.
-The ```AmbientSettings``` static class is used to construct an ```IAmbientSetting<T>``` for the caller.  Settings provided by ```AmbientSettings``` can be "provider" settings whose value comes from an explicit provider specified during construction, or "ambient" settings whose value comes from the default ambient provider (even if there is a local override in the call-context when the value is retrieved).
+The `IAmbientSetting<T>` generic helper interface provides access to a type-converted setting and an event to notify subscribers when the setting value changes.
+The `AmbientSettings` static class is used to construct an `IAmbientSetting<T>` for the caller.  
+Settings provided by `AmbientSettings` can be "settings set" settings whose value comes from an explicit settings set specified during construction, or "ambient" settings whose value comes from the default ambient settings set (even if there is a local override in the call-context when the value is retrieved).
 
 ### Settings
-
 There are no settings for this service.
 
 ### Sample
@@ -355,8 +384,8 @@ There are no settings for this service.
 /// </summary>
 class BufferPool
 {
-    private static readonly IAmbientSetting<int> MaxTotalBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", s => Int32.Parse(s), 1000 * 1000);
-    private static readonly IAmbientSetting<int> DefaultBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-DefaultBufferBytes", s => Int32.Parse(s), 8000);
+    private static readonly IAmbientSetting<int> MaxTotalBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", "The maximum total number of bytes to use for all the allocated buffers.  The default value is 1MB.", s => Int32.Parse(s), "1000000");
+    private static readonly IAmbientSetting<int> DefaultBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-BufferBytes", "The number of bytes to allocate for each buffer.  The default value is 8000 bytes.", s => Int32.Parse(s), "8000");
 
     private SizedBufferRecycler _recycler;  // interlocked
 
@@ -398,17 +427,7 @@ class BufferPool
     /// </summary>
     public BufferPool()
     {
-        DefaultBufferBytes.ValueChanged += _DefaultBufferBytes_SettingValueChanged;
-        int bufferBytes = DefaultBufferBytes.Value;
-        _recycler = new SizedBufferRecycler(bufferBytes);
-    }
-
-    private void _DefaultBufferBytes_SettingValueChanged(object sender, EventArgs e)
-    {
-        // yes, there may be a race condition here depending on the implementation of the settings value changed event, but that would only happen if the setting changed twice very quickly, and even so, it would only result in buffers not getting recycled correctly
-        // this could be handled by rechecking the value every time we get a new buffer, but for now it's just not worth it
-        SizedBufferRecycler newRecycler = new SizedBufferRecycler(DefaultBufferBytes.Value);
-        System.Threading.Interlocked.Exchange(ref _recycler, newRecycler);
+        _recycler = new SizedBufferRecycler(DefaultBufferBytes.Value);
     }
 
     /// <summary>
@@ -432,9 +451,12 @@ class BufferPool
     }
 }
 ```
-### Default Provider
-The default provider just uses the default value as the initial value.  An alternate interface, ```IMutableAmbientSettings```, can be used to change the settings values in this implementation.  Other service implementations may or may not support changing settings values and may or may not support this interface to do so.  The simplicity of this abstraction is due to the wide variety of settings systems available.  Since the interface is only one function, implementing a bridge to Configuration.AppSettings or some other more appropriate settings repository is very simple.
-
+### Default Implementation
+The default implementation just uses a local initally-empty ConcurrentDictionary to keep track of settings values, so the default settings values will be used unless the default settings set is altered.  
+An alternate interface, `IMutableAmbientSettings`, extends `IAmbientSettingsSet` and adds methods to change the settings values in this implementation.  
+Other service implementations may or may not support changing settings values and may or may not support this interface to do so.  
+The simplicity of this abstraction is due to the wide variety of settings systems available and the fact that nearly all use cases can be handled using this abstraction.  
+Since the interface is only one function, implementing a bridge to Configuration.AppSettings or some other more appropriate settings repository is very simple.
 
 # Customizing Ambient Services
 
@@ -462,18 +484,18 @@ public interface IAmbientCallStack
 /// A basic implementation of <see cref="IAmbientCallStack"/>.
 /// A few enhancements could make these call stacks accessible remotely, which could be very handy for diagnosing what servers are busy doing.
 /// </summary>
-[DefaultAmbientServiceProvider]
+[DefaultAmbientService]
 class BasicAmbientCallStack : IAmbientCallStack
 {
-    static private AsyncLocal<ImmutableStack<string>> _Stack = new AsyncLocal<ImmutableStack<string>>();
+    static private AsyncLocal<ImmutableStack<string>> Stack = new AsyncLocal<ImmutableStack<string>>();
 
     static private ImmutableStack<string> GetStack()
     {
-        ImmutableStack<string> stack = _Stack.Value;
-        if (_Stack.Value == null)
+        ImmutableStack<string> stack = Stack.Value;
+        if (Stack.Value == null)
         {
             stack = ImmutableStack<string>.Empty;
-            _Stack.Value = stack;
+            Stack.Value = stack;
         }
         return stack;
     }
@@ -529,10 +551,10 @@ class BasicAmbientCallStack : IAmbientCallStack
 /// </summary>
 class Setup
 {
-    private static readonly ServiceAccessor<IAmbientCacheProvider> _CacheProvider = Service.GetAccessor<IAmbientCacheProvider>();
+    private static readonly AmbientService<IAmbientCache> Cache = Ambient.GetService<IAmbientCache>();
     static Setup()
     {
-        _CacheProvider.GlobalProvider = null;
+        Cache.Global = null;
     }
 }
 ```
@@ -541,30 +563,32 @@ class Setup
 [//]: # (OverrideAmbientServiceGlobalSample)
 ```csharp
 /// <summary>
-/// An application setup class that registers an implementation of <see cref="IAmbientSettingsProvider"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
+/// An application setup class that registers an implementation of <see cref="IAmbientSettingsSet"/> that uses <see cref="Configuration.AppSettings"/> for the settings as the ambient service.
 /// </summary>
 class SetupApplication
 {
     static SetupApplication()
     {
-        ServiceAccessor<IAmbientSettingsProvider> SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
-        SettingsProvider.GlobalProvider = new AppConfigAmbientSettings();
+        AmbientService<IAmbientSettingsSet> SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
+        SettingsSet.Global = new AppConfigAmbientSettings();
     }
 }
 /// <summary>
-/// An implementation of <see cref="IAmbientSettingsProvider"/> that uses <see cref="Configuration.AppSettings"/> as the backend settings store.
+/// An implementation of <see cref="IAmbientSettingsSet"/> that uses <see cref="Configuration.AppSettings"/> as the backend settings store.
 /// </summary>
-class AppConfigAmbientSettings : IAmbientSettingsProvider
+class AppConfigAmbientSettings : IAmbientSettingsSet
 {
-    public string ProviderName => "AppConfig";
+    public string SetName => "AppConfig";
 
-#pragma warning disable CS0067  // System.Configuration.ConfigurationManager has no refresh/reload capability
-    public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
-#pragma warning restore CS0067
-
-    public string GetSetting(string key)
+    public string GetRawValue(string key)
     {
         return System.Configuration.ConfigurationManager.AppSettings[key];
+    }
+    public object GetTypedValue(string key)
+    {
+        string rawValue = System.Configuration.ConfigurationManager.AppSettings[key];
+        IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
     }
 }
 ```
@@ -573,13 +597,13 @@ class AppConfigAmbientSettings : IAmbientSettingsProvider
 [//]: # (OverrideAmbientServiceLocalSample)
 ```csharp
 /// <summary>
-/// An implementation of <see cref="IAmbientSettingsProvider"/> that overrides specific settings.
+/// An implementation of <see cref="IAmbientSettingsSet"/> that overrides specific settings.
 /// </summary>
-class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
+class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
 {
-    private static readonly ServiceAccessor<IAmbientSettingsProvider> _SettingsProvider = Service.GetAccessor<IAmbientSettingsProvider>();
+    private static readonly AmbientService<IAmbientSettingsSet> SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
 
-    private readonly IAmbientSettingsProvider _oldSettings;
+    private readonly IAmbientSettingsSet _oldSettingsSet;
     private readonly Dictionary<string, string> _overrides;
 
     /// <summary>
@@ -588,36 +612,517 @@ class LocalAmbientSettingsOverride : IAmbientSettingsProvider, IDisposable
     /// <param name="overrides">A Dictionary containing the key/value pairs to override.</param>
     public LocalAmbientSettingsOverride(Dictionary<string, string> overrides)
     {
-        _oldSettings = _SettingsProvider.LocalProvider;
-        _SettingsProvider.LocalProviderOverride = this;
+        _oldSettingsSet = SettingsSet.Local;
+        SettingsSet.Override = this;
         _overrides = new Dictionary<string, string>();
     }
 
-    public string ProviderName => nameof(LocalAmbientSettingsOverride);
-
-#pragma warning disable CS0067  // there is no need for refreshing settings in the local call context (where would the events go anyway?)
-    public event EventHandler<AmbientSettingsChangedEventArgs> SettingsChanged;
-#pragma warning restore CS0067
+    public string SetName => nameof(LocalAmbientSettingsOverride);
 
     /// <summary>
     /// Disposes of this instance, returning the ambient settings to their former value.
     /// </summary>
     public void Dispose()
     {
-        _SettingsProvider.LocalProviderOverride = _oldSettings;
+        SettingsSet.Override = _oldSettingsSet;
     }
 
-    public string GetSetting(string key)
+    public string GetRawValue(string key)
     {
         string value;
         if (_overrides.TryGetValue(key, out value))
         {
             return value;
         }
-        return _oldSettings.GetSetting(key);
+        return _oldSettingsSet.GetRawValue(key);
+    }
+    public object GetTypedValue(string key)
+    {
+        string rawValue = GetRawValue(key);
+        IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
     }
 }
 ```
+
+
+## AmbientStatistics
+The `IAmbientStatistics` interface abstracts the creation and gathering of statistics.  
+Each statistic keeps track of the measurement of one aspect of system performance, using a single number that holds an accumulated, minimum, maximum, or raw value.
+Statistics can be used to track memory allocated, time waited, minimum or maximum sizes or times, cache hits and misses, etc.
+Each statistic can be incremented or decremented, added-to, set to a new raw value, or conditionally set if it is a new minimum or maximum value.
+Ratios of two statistics or their changes can be used to track things like average sizes or times, events per second, bytes per second, cache hit ratios, etc.
+A statistic named `"ExecutionTime"` is defined by the system and holds the number of ticks elapsed since the process started.
+Ticks are in terms of the standard system Stopwatch.Frequency.  All operations are lock-free.  `Min` and `Max` statistics use an optimistic atomic update loop.
+
+### Helpers
+The `IAmbientStatisticReader` interface provides read access to an individual statistic.
+The `IAmbientStatistic` interface extends `IAmbientStatisticReader` interface and adds functions to update the value for the statistic.
+
+### Sample
+[//]: # (AmbientStatisticsSample)
+```csharp
+/// <summary>
+/// A class that represents a type of request.
+/// </summary>
+public class RequestType
+{
+    private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
+
+    private readonly IAmbientStatistic _pendingRequests;
+    private readonly IAmbientStatistic _totalRequests;
+    private readonly IAmbientStatistic _totalProcessingTime;
+    private readonly IAmbientStatistic _retries;
+    private readonly IAmbientStatistic _failures;
+    private readonly IAmbientStatistic _timeouts;
+
+    /// <summary>
+    /// Constructs a RequestType with the specified type name.
+    /// </summary>
+    /// <param name="typeName">The name of the request type.</param>
+    public RequestType(string typeName)
+    {
+        IAmbientStatistics ambientStatistics = AmbientStatistics.Local;
+        _pendingRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-RequestsPending", "The number of requests currently executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _totalRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-TotalRequests", "The total number of requests that have finished executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(true, typeName + "-TotalProcessingTime", "The total time spent processing requests (only includes completed requests)", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _retries = ambientStatistics?.GetOrAddStatistic(false, typeName + "-Retries", "The total number of retries", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _failures = ambientStatistics?.GetOrAddStatistic(false, typeName + "-Failures", "The total number of failures", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+        _timeouts = ambientStatistics?.GetOrAddStatistic(false, typeName + "-Timeouts", "The total number of timeouts", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
+    }
+    /// <summary>
+    /// Tracks a request by creating a <see cref="RequestTracker"/> which automatically counts the request and times its duration and allows the caller to report failures, timeouts, and retries.
+    /// </summary>
+    /// <returns>A <see cref="RequestTracker"/> instance that should be disposed when the request finishes processing.</returns>
+    public RequestTracker TrackRequest()
+    {
+        return new RequestTracker(this);
+    }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the number of pending requests.
+    /// </summary>
+    public IAmbientStatistic PendingRequests { get { return _pendingRequests; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of requests.
+    /// </summary>
+    public IAmbientStatistic TotalRequests { get { return _totalRequests; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total processing time.
+    /// </summary>
+    public IAmbientStatistic TotalProcessingTime { get { return _totalProcessingTime; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of retries.
+    /// </summary>
+    public IAmbientStatistic Retries { get { return _retries; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of failures.
+    /// </summary>
+    public IAmbientStatistic Failures { get { return _failures; } }
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of timeouts.
+    /// </summary>
+    public IAmbientStatistic Timeouts { get { return _timeouts; } }
+}
+/// <summary>
+/// A request tracking object.
+/// </summary>
+public class RequestTracker : IDisposable
+{
+    private readonly RequestType _requestType;
+    private readonly AmbientStopwatch _stopwatch;
+    private bool _disposedValue;
+
+    internal RequestTracker(RequestType requestType)
+    {
+        _requestType = requestType;
+        _stopwatch = new AmbientStopwatch(true);
+        requestType.PendingRequests?.Increment();
+    }
+
+    /// <summary>
+    /// Reports a failure during the processing of the request.
+    /// </summary>
+    public void ReportFailure()
+    {
+        _requestType.Failures?.Increment();
+    }
+    /// <summary>
+    /// Reports a timeout during the processing of the request.
+    /// </summary>
+    public void ReportTimeout()
+    {
+        _requestType.Timeouts?.Increment();
+    }
+    /// <summary>
+    /// Reports a retry during the processing of the request.
+    /// </summary>
+    public void ReportRetry()
+    {
+        _requestType.Retries?.Increment();
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposedValue)
+        {
+            if (disposing)
+            {
+                _requestType.PendingRequests?.Add(-1);
+                _requestType.TotalRequests?.Increment();
+                _requestType.TotalProcessingTime?.Add(_stopwatch.ElapsedTicks);
+            }
+
+            // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+            // TODO: set large fields to null
+            _disposedValue = true;
+        }
+    }
+
+    // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+    // ~RequestTracker()
+    // {
+    //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+    //     Dispose(disposing: false);
+    // }
+
+    /// <summary>
+    /// Disposes of the RequestTracker, decrementing the pending request count and adding the time to the total time statistic.
+    /// </summary>
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+}
+/// <summary>
+/// A static class to report statistics in XML format.
+/// </summary>
+public static class StatisticsReporter
+{
+    private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
+    /// <summary>
+    /// Writes all statistics with their current values to the specified <see cref="XmlWriter"/>.
+    /// </summary>
+    /// <param name="writer">The <see cref="XmlWriter"/> to write the data to.</param>
+    public static void ToXml(XmlWriter writer)
+    {
+        writer.WriteStartElement("statistics");
+        foreach (IAmbientStatisticReader statistic in AmbientStatistics.Local?.Statistics.Values ?? Array.Empty<IAmbientStatisticReader>())
+        {
+            writer.WriteStartElement("statistic");
+            writer.WriteAttributeString("id", statistic.Id);
+            writer.WriteAttributeString("value", statistic.SampleValue.ToString());
+            writer.WriteEndElement();
+        }
+        writer.WriteEndElement();
+    }
+}
+```
+
+### Default Implementation
+The default implementation uses thread-safe lock-free statistics instances, keeping all the information associated with each statistic.
+
+## AmbientBottleneckDetector
+The `IAmbientBottleneckDetector` interface provides access to a function to measure access to a bottleneck and events that the are used to track usage over time.  
+The gathered data can be used to determine how close that part of the system is to maxing-out, so that scalability limits can be more accurately estimated.  
+
+### Helpers
+An instance of the `AmbientBottleneck` class is used to represent each bottleneck in the system.
+Each bottleneck has a unique string identifier, a description, an algorithm indicating how blocking occurs, and an optional limit and time window for that limit.
+When code enters the bottleneck, it calls `EnterBottleneck` on the `AmbientBottleneck` object.
+This function returns an `AmbientBottleneckAccessor` instance which scopes access to the bottleneck.
+The Automatic property on `AmbientBottleneck` identifies whether or not the timing of the scope of the `AmbientBottleneckAccessor` instance automatically sets the bottleneck usage, or whether the usage is set manually using `SetUsage` and/or `AddUsage` on the `AmbientBottleneckAccessor` instance.
+
+The `AmbientBottleneckSurveyorCoordinator` class provides access to surveyors for various contexts such as the current call context, the entire process, the current thread, and/or a rotating time window.  
+The surveyor coordinator collects the bottleneck usage events and distributes them to each of the applicable surveyors that have been created so they can track access within their context and provide survey results.
+
+### Settings
+`AmbientBottleneckSurveyorCoordinator-DefaultAllow`: A `Regex` string used to match bottleneck identifiers that should be tracked.  By default, all bottlenecks are allowed.
+`AmbientBottleneckSurveyorCoordinator-DefaultBlock`: A `Regex` string used to match bottleneck identifiers that should NOT be tracked.  By default, no bottlenecks are blocked.
+Blocking is applied after allowing, so if a bottleneck matches both expressions, it will be blocked.
+
+### Sample
+[//]: # (AmbientBottleneckDetectorSample)
+```csharp
+/// <summary>
+/// A class that holds a thread-safe queue which reports on the associated bottleneck.
+/// </summary>
+class GlobalQueue
+{
+    private static Mutex Mutex = new Mutex(false);
+    private static Queue<object> Queue = new Queue<object>();
+    private static readonly AmbientBottleneck GlobalQueueBottleneck = new AmbientBottleneck("GlobalQueue-Access", AmbientBottleneckUtilizationAlgorithm.Linear, true, "A bottleneck which only allows one accessor at a time.");
+
+    /// <summary>
+    /// Adds a new item to the queue.
+    /// </summary>
+    /// <param name="o">The object to add to the queue.</param>
+    public static void Enqueue(object o)
+    {
+        try
+        {
+            Mutex.WaitOne();
+            using (GlobalQueueBottleneck.EnterBottleneck())
+            {
+                Queue.Enqueue(o);
+            }
+        }
+        finally
+        {
+            Mutex.ReleaseMutex();
+        }
+    }
+    /// <summary>
+    /// Removes the oldest item from the queue.
+    /// </summary>
+    /// <returns>The oldest item in the queue.</returns>
+    /// <exception cref="InvalidOperationException">If the queue is empty.</exception>
+    public static object Dequeue()
+    {
+        try
+        {
+            Mutex.WaitOne();
+            using (GlobalQueueBottleneck.EnterBottleneck())
+            {
+                return Queue.Dequeue();
+            }
+        }
+        finally
+        {
+            Mutex.ReleaseMutex();
+        }
+    }
+}
+/// <summary>
+/// A class that access an EBS volume and reports on the associated bottleneck.
+/// </summary>
+class EbsAccessor
+{
+    private const int IopsPageSize = 16 * 1024;
+
+    private readonly string _volumePrefix;
+    private readonly AmbientBottleneck _bottleneck = new AmbientBottleneck("Ebs-Iops", AmbientBottleneckUtilizationAlgorithm.Linear, false, "A bottleneck which has a limit, but which is not based on access time.", 1000, TimeSpan.FromSeconds(1));
+
+    /// <summary>
+    /// Creates an EBS accessor for the specified volume.
+    /// </summary>
+    /// <param name="volumePrefix">The volume prefix, which will be prefixed onto <paramref name="ReadBytes.volumePrefix"/>"/> whenever a file is read from this volume.</param>
+    public EbsAccessor(string volumePrefix)
+    {
+        _volumePrefix = volumePrefix;
+    }
+
+    /// <summary>
+    /// Reads bytes from the specified location in the specified file.
+    /// </summary>
+    /// <param name="file">The file path (relative to the volume prefix specified in the constructor.</param>
+    /// <param name="fileOffset">The byte offset in the file where the read is to start.</param>
+    /// <param name="buffer">A buffer to put the data into.</param>
+    /// <param name="bufferOffset">The offset within the buffer where the read bytes should be placed.</param>
+    /// <param name="bytes">The number of bytes to attempt to read.</param>
+    /// <returns>The number of bytes that were actually read.</returns>
+    public int ReadBytes(string file, long fileOffset, byte[] buffer, int bufferOffset, int bytes)
+    {
+        string filePath = Path.Combine(_volumePrefix, file);
+        int bytesRead;
+        using (AmbientBottleneckAccessor access = _bottleneck.EnterBottleneck())
+        {
+            using (FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            {
+                f.Position = fileOffset;
+                bytesRead = f.Read(buffer, bufferOffset, bytes);
+            }
+            access.SetUsage(1, (bytesRead + IopsPageSize - 1) / IopsPageSize); // note that this approximation of IOPS won't be correct if the file is fragmented, and the lookup and opening of the file will likely use some IOPS as well--more accurate estmates can be obtained after long-term usage and comparison to AWS metrics
+        }
+        return bytesRead;
+    }
+}
+/// <summary>
+/// A class that collects bottleneck statistics and reports on them.
+/// </summary>
+class BottleneckReporter
+{
+    private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
+    private Dictionary<string, double> _mostRecentWindowTopBottlenecks;  // interlocked
+    private IDisposable _timeWindow;
+
+    /// <summary>
+    /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
+    /// </summary>
+    public BottleneckReporter()
+    {
+        _surveyor = new AmbientBottleneckSurveyorCoordinator();
+        _timeWindow = _surveyor.CreateTimeWindowSurveyor(TimeSpan.FromSeconds(60), OnMostRecentWindowClosed);
+    }
+
+    private Task OnMostRecentWindowClosed(IAmbientBottleneckSurvey analysis)
+    {
+        Dictionary<string, double> mostRecentWindowTopBottlenecks = new Dictionary<string, double>();
+        foreach (AmbientBottleneckAccessor record in analysis.GetMostUtilizedBottlenecks(10))
+        {
+            mostRecentWindowTopBottlenecks.Add(record.Bottleneck.Id, record.Utilization);
+        }
+        System.Threading.Interlocked.Exchange(ref _mostRecentWindowTopBottlenecks, mostRecentWindowTopBottlenecks);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets a dictionary containing the top 10 bottlenecks with their overall utilization for the most recent time window.
+    /// </summary>
+    public Dictionary<string, double> RecentBottleneckSummary
+    {
+        get
+        {
+            return _mostRecentWindowTopBottlenecks;
+        }
+    }
+}
+```
+
+### Default Implementation
+The default implementation uses thread-safe lock-free instances.  
+In order to effectively users must strike a balance between conservative estimates of bottleneck saturation vs. having only inaccurate top bottlenecks in summaries.
+
+## AmbientServiceProfiler
+The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on course-grained profiling.  
+This profiling can be used to determine how the time for a request, program, or time window was used.
+The code being profiled calls into the `IAmbientServiceProfiler` each time the system that is executing switches.
+A system identifier contains a main system name followed by various subsystem and result identifiers (of course results aren't available until the next system begins executing, so the profiler allows the service to update the system identifier after execution completes).
+The consumer of the service profiler may want to ignore some or all of the susbsystem and result parts of the identifier and can do so using the system group transform setting, which is a regular expression that matches only the desired pieces of the identifier, causing statistics from one or more subsystems and/or results to be grouped together.
+For example, a system identifier might be `SQL/Database:My-database/Table:User/Result:Failed`.
+The fully-detailed system identifier would allow the service profile consumer to distinguish how much time was spent waiting for SQL results that failed from those that timed out or succeeded, and those from one database and/or table from another.
+This level of information is usually too-detailed, so the consumer may want to group everything to just the top-level system, in which case, all SQL access, no matter which database or table, and no matter whether the operation was successful, timed out, or threw an exception, would all be grouped into a single profile entry.
+When no other system is executing, the service should set the system identifier to the empty string, which will also be tracked.
+Some systems may allow tracking of CPU time, so that could be another system identifier.
+As of .NET Core 3.1, it does not provide any way to track this, so the consumer can assume that the empty string system accounts for any remaining CPU time.
+Of course, this estimate will be wildly incorrect if the service, while running under the empty string system, calls something that blocks execution (such as waiting for a mutex or performing IO), or when the system CPU is high enough that available threads don't get scheduled.
+
+### Helpers
+The `AmbientServiceProfilerCoordinator` allows users to create service profilers for various contexts, including the current call context, rotating time windows of a given time span, or the process as a whole.
+The call context profiler and process-wide profiler implement the `IAmbientServiceProfile` interface, and the time window profiler calls an async delegate with an instance of that interface, each contains the profile for the context it came from.
+`IAmbientServiceProfile` provides access to a scope name and and enumeration of `AmbientServiceProfilerAccumulator` instance, each of which has the statistics for a given system or system group.
+
+### Settings
+`AmbientServiceProfilerCoordinator-DefaultSystemGroupTransform`: A `Regex` string used to transform the system identifier to a group identifier.
+The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.
+
+### Sample
+[//]: # (AmbientServiceProfilerSample)
+```csharp
+/// <summary>
+/// A class that access a SQL database and reports profiling information to the system profiling system.
+/// </summary>
+class SqlAccessor
+{
+    private static readonly AmbientService<IAmbientServiceProfiler> ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
+
+    private readonly string _connectionString;
+    private readonly SqlConnection _connection;
+    private readonly string _systemIdPrefix;
+
+    /// <summary>
+    /// Creates a SQL accessor for the specified connection string.
+    /// </summary>
+    /// <param name="connectionString">A connection string with information on how to connect to a SQL Server database.</param>
+    public SqlAccessor(string connectionString)
+    {
+        _connectionString = connectionString;
+        _connection = new SqlConnection(connectionString);
+        _systemIdPrefix = $"SQL/Server:{_connection.DataSource}/Database:{_connection.Database}";
+    }
+
+    /// <summary>
+    /// Creates a <see cref="SqlCommand"/> that uses this connection.
+    /// </summary>
+    /// <returns>A <see cref="SqlCommand"/> for this connection.</returns>
+    public SqlCommand CreateCommand() { return _connection.CreateCommand(); }
+
+    private async Task<T> ExecuteAsync<T>(SqlCommand command, Func<CancellationToken, Task<T>> f, string table = null, CancellationToken cancel = default(CancellationToken))
+    {
+        string systemId = _systemIdPrefix + (string.IsNullOrEmpty(table) ? "" : $"/Table:{table}");
+        T ret;
+        try
+        {
+            ServiceProfiler.Local?.SwitchSystem(systemId);
+            ret = await f(cancel);
+            systemId = systemId + $"/Result:Success";
+        }
+        catch (Exception e)
+        {
+            if (e.Message.ToUpperInvariant().Contains("TIMEOUT")) systemId = systemId + $"/Result:Timeout";
+            else systemId = systemId + $"/Result:Error";
+            throw;
+        }
+        finally
+        {
+            ServiceProfiler.Local?.SwitchSystem(null, systemId);
+        }
+        return ret;
+    }
+
+    public Task<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    {
+        return ExecuteAsync<int>(command, command.ExecuteNonQueryAsync, table, cancel);
+    }
+    public Task<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    {
+        return ExecuteAsync<SqlDataReader>(command, command.ExecuteReaderAsync, table, cancel);
+    }
+    public Task<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    {
+        return ExecuteAsync<object>(command, command.ExecuteScalarAsync, table, cancel);
+    }
+    public Task<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    {
+        return ExecuteAsync<XmlReader>(command, command.ExecuteXmlReaderAsync, table, cancel);
+    }
+}
+/// <summary>
+/// A class that collects bottleneck statistics and reports on them.
+/// </summary>
+class ProfileReporter
+{
+    private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
+    private Dictionary<string, long> _mostRecentWindowServiceProfile;  // interlocked
+    private AmbientServiceProfilerCoordinator _coordinator;
+    private IDisposable _timeWindow;
+    /// <summary>
+    /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
+    /// </summary>
+    public ProfileReporter()
+    {
+        _coordinator = new AmbientServiceProfilerCoordinator();
+        _timeWindow = _coordinator.CreateTimeWindowProfiler(nameof(ProfileReporter), TimeSpan.FromMilliseconds(100), OnMostRecentWindowClosed);
+    }
+
+    private Task OnMostRecentWindowClosed(IAmbientServiceProfile profile)
+    {
+        Dictionary<string, long> serviceProfile = new Dictionary<string, long>();
+        foreach (AmbientServiceProfilerAccumulator record in profile.ProfilerStatistics)
+        {
+            serviceProfile.Add(record.Group, record.TotalStopwatchTicksUsed);
+        }
+        System.Threading.Interlocked.Exchange(ref _mostRecentWindowServiceProfile, serviceProfile);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets a dictionary containing the service profile for the most recent time window.
+    /// </summary>
+    public Dictionary<string, long> RecentProfile
+    {
+        get
+        {
+            return _mostRecentWindowServiceProfile;
+        }
+    }
+}
+```
+
+### Default Implementation
+The default implementation uses thread-safe lock-free instances.  
+Each system switch is transformed according to the setting and then distributed to all the profilers the switch applies to.
 
 
 # Library Information
@@ -633,3 +1138,10 @@ AmbientServices is written in C#, using .NET Standard 2.0.  Unit tests are writt
 The code can be built using either Microsoft Visual Studio 2017+, Microsoft Visual Studio Code, or .NET Core command-line utilities.
 
 Binaries are available at https://www.nuget.org/packages/AmbientServices.
+
+## Contributions
+Contributions are welcome under the following conditions:
+1. no new assembly dependencies are introduced
+2. code coverage by unit tests cover all new lines and conditions whenever possible
+3. documentation is updated appropriately
+4. style for code and documentation contributions remains consistent

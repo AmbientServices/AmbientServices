@@ -11,7 +11,7 @@ namespace AmbientServices
     /// </summary>
     /// <typeparam name="TTYPETOWEAKEN">The type that is being weakly referenced.</typeparam>
     /// <typeparam name="TEVENTARG1">The first argument for the event handler (usually the sender object).</typeparam>
-    /// <typeparam name="TEVENTARG2">The second argument for the event handler (usually the event args).</typeparam>
+    /// <typeparam name="TEVENTARG2">The second argument for the event handler (usually, but not necessarily a <see cref="EventArgs"/> or the TEventArgs from <see cref="EventHandler{TEventArgs}"/>).</typeparam>
     class LazyUnsubscribeWeakEventListenerProxy<TTYPETOWEAKEN, TEVENTARG1, TEVENTARG2> where TTYPETOWEAKEN : class
     {
         private readonly WeakReference<TTYPETOWEAKEN> _weakSubscriber;
@@ -54,7 +54,7 @@ namespace AmbientServices
             else
             {
                 // the subscriber is dead, so unsubscribe us (that way we'll go away too)
-                _staticUnsubscribe(this);
+                Unsubscribe();
             }
         }
     }
