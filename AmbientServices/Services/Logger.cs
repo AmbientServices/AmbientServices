@@ -42,7 +42,7 @@ namespace AmbientServices
     /// <summary>
     /// An interface that abstracts a simple logging service.
     /// </summary>
-    public interface IAmbientLoggerProvider
+    public interface IAmbientLogger
     {
         /// <summary>
         /// Logs the specified message.
@@ -50,7 +50,7 @@ namespace AmbientServices
         /// <param name="message">The message to log.</param>
         void Log(string message);
         /// <summary>
-        /// Flushes the log messages to the provider.
+        /// Flushes the log messages to the logger service.
         /// </summary>
         Task Flush(CancellationToken cancel = default(CancellationToken));
     }

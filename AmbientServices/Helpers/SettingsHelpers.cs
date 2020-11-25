@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
@@ -7,293 +8,462 @@ using System.Text;
 namespace AmbientServices
 {
     /// <summary>
+    /// An static class that utilizes the <see cref="IAmbientClock"/> if one is registered, or the system clock if not.
+    /// </summary>
+    public static class AmbientSettings
+    {
+        /// <summary>
+        /// Gets an enumeration of <see cref="IAmbientSettingInfo"/> with descriptions and the last time used for all ambient settings.
+        /// </summary>
+        public static IEnumerable<IAmbientSettingInfo> AmbientSettingsInfo { get { return SettingsRegistry.DefaultRegistry.Settings; } }
+        /// <summary>
+        /// Construct a setting instance.  
+        /// If a non-null settings set is specified, the setting will be attached to that, otherwise the ambient settings set will be used.
+        /// Never returns a setting whose value is always the default value.
+        /// </summary>
+        /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, returns an setting attached to the ambient settings set.</param>
+        /// <param name="key">A key string identifying the setting.</param>
+        /// <param name="description">A description of the setting.</param>
+        /// <param name="convert">A delegate that takes a string and returns the type.</param>
+        /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
+        public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        {
+            return (settingsSet == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, convert, defaultValueString) : (IAmbientSetting<T>)GetSettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
+        }
+        /// <summary>
+        /// Construct a setting instance that uses a specific settings set and caches the setting with the specified key, converting it from a string using the specified delegate.
+        /// </summary>
+        /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, the setting will always contain the default value.</param>
+        /// <param name="key">A key string identifying the setting.</param>
+        /// <param name="description">A description of the setting.</param>
+        /// <param name="convert">A delegate that takes a string and returns the type.</param>
+        /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
+        public static IAmbientSetting<T> GetSettingsSetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        {
+            return new SettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
+        }
+        /// <summary>
+        /// Construct an ambient setting instance that caches the setting with the specified key, converting it from a string using the specified delegate.
+        /// Settings will be gathered from the ambient local settings set, if one exists.
+        /// </summary>
+        /// <param name="key">A key string identifying the setting.</param>
+        /// <param name="description">A description of the setting.</param>
+        /// <param name="convert">A delegate that takes a string and returns the type.</param>
+        /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
+        public static IAmbientSetting<T> GetAmbientSetting<T>(string key, string description, Func<string, T> convert, string defaultValueString = null)
+        {
+            return new AmbientSetting<T>(key, description, convert, defaultValueString);
+        }
+    }
+
+    /// <summary>
     /// An abstraction of a setting that holds a strongly-typed value and provides an event to notify the user of changes to the setting value.
     /// </summary>
     /// <typeparam name="T">The type represented by the the setting.</typeparam>
     public interface IAmbientSetting<T>
     {
         /// <summary>
-        /// Gets the current value of the setting (cached from the value given by the provider).
+        /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
         T Value { get; }
         /// <summary>
-        /// An event that will notify subscribers when a setting value changes.  
-        /// Note that <see cref="Value"/> will be updated regardless of whether or not this event is utilized.
-        /// This event is so that the subscriber *knows* when the value changes, in case something else needs to be done as a result of the change.
+        /// Gets the current value of the setting along with the name of the set that the value came from (or null if the default value was used).
         /// </summary>
-        /// <remarks>
-        /// Users MUST NOT rely on this event getting raised before (or even after) updated values are returned by <see cref="Value"/>.
-        /// Because this event may be raised asynchronously, multiple raisings of the event might be received out-of-order.
-        /// As a result, the new value is not sent.  The subscriber should get the latest value and use that (and handle any resulting race conditions).
-        /// </remarks>
-        event EventHandler<EventArgs> ValueChanged;
+        /// <returns>The current value of the setting along with the name of the set that the value came from (or null if the default value was used).</returns>
+        (T, string) GetValueWithSetName();
     }
     /// <summary>
-    /// An static class that utilizes the <see cref="IAmbientClockProvider"/> if one is registered, or the system clock if not.
+    /// An abstraction that provides access to a setting's description and last time used.
     /// </summary>
-    public static class AmbientSettings
+    public interface IAmbientSettingInfo
     {
         /// <summary>
-        /// Construct a setting instance.  
-        /// If a non-null provider is specified, the setting will be attached to that, otherwise the ambient settings provider will be used.
-        /// Never returns a setting whose value is always the default value.
+        /// Gets the setting key.
         /// </summary>
-        /// <param name="provider">The <see cref="IAmbientSettingsProvider"/> to get the setting value from.  If null, returns an setting attached to the ambient settings provider.</param>
-        /// <param name="key">A key string identifying the setting.</param>
-        /// <param name="convert">A delegate that takes a string and returns the type.</param>
-        /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.</param>
-        public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsProvider provider, string key, Func<string, T> convert, T defaultValue = default(T))
+        string Key { get; }
+        /// <summary>
+        /// Gets the default value for the setting.
+        /// </summary>
+        string DefaultValueString { get; }
+        /// <summary>
+        /// Gets a description of the setting.
+        /// </summary>
+        string Description { get; }
+        /// <summary>
+        /// Gets the last time the setting's value was retrieved.
+        /// </summary>
+        DateTime LastUsed { get; }
+        /// <summary>
+        /// Gets the default value that is used when the value is not found in the settings set.
+        /// </summary>
+        object DefaultValue { get; }
+        /// <summary>
+        /// Converts the setting value from the specified string to a typed value.
+        /// The implementor may cache the value being generated if the settings set is the global settings set.
+        /// </summary>
+        /// <param name="settingsSet">The settings set asking for the setting value.</param>
+        /// <param name="value">The typed value for the setting.</param>
+        /// <returns>The typed value for the setting.</returns>
+        object Convert(IAmbientSettingsSet settingsSet, string value);
+    }
+    /// <summary>
+    /// A global registry for settings that includes their keys, descriptions, last used time, conversion functions, and default values.
+    /// </summary>
+    public class SettingsRegistry
+    {
+        private static SettingsRegistry _DefaultRegistry = new SettingsRegistry();
+        /// <summary>
+        /// Gets the default registry.
+        /// </summary>
+        public static SettingsRegistry DefaultRegistry { get { return _DefaultRegistry; } }
+
+
+        private ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>>();
+        /// <summary>
+        /// Registers an <see cref="IAmbientSettingInfo"/> in the global registry.
+        /// </summary>
+        /// <param name="setting">The <see cref="IAmbientSettingInfo"/> to register.</param>
+        public void Register(IAmbientSettingInfo setting)
         {
-            return (provider == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, convert, defaultValue) : (IAmbientSetting<T>)GetProviderSetting<T>(provider, key, convert, defaultValue);
+            if (setting == null) throw new ArgumentNullException(nameof(setting));
+            WeakReference<IAmbientSettingInfo> newReference = new WeakReference<IAmbientSettingInfo>(setting);
+            WeakReference<IAmbientSettingInfo> existingReference;
+            int loopCount = 0;
+            do
+            {
+                IAmbientSettingInfo existingSetting;
+                existingReference = _settings.GetOrAdd(setting.Key, newReference);
+                // did we NOT succeed?
+                if (newReference != existingReference)
+                {
+                    // is the old one gone?
+                    if (!existingReference.TryGetTarget(out existingSetting))
+                    {
+                        // overwrite that one--were we NOT able to overwrite it?
+                        if (!_settings.TryUpdate(setting.Key, newReference, existingReference))
+                        { // the inside of this loop is nearly impossible to cover in tests
+                            // wait a bit and try again
+                            System.Threading.Thread.Sleep((int)Math.Pow(2, loopCount + 1));
+                            continue;
+                        } // else we successfully overwrote it and there is no need to look for a conflict
+                        existingSetting = setting;
+                    }
+                    // the old one is still there, so we need to check for a conflict
+                    string existingDescription = existingSetting.Description ?? "<null>";
+                    string description = setting.Description ?? "<null>";
+                    string existingDefaultValueString = existingSetting.DefaultValueString ?? "<null>";
+                    string defaultValueString = setting.DefaultValueString ?? "<null>";
+                    if (!String.Equals(existingDescription, description, StringComparison.Ordinal) || !String.Equals(existingDefaultValueString, defaultValueString, StringComparison.Ordinal))
+                    {
+                        throw new ArgumentException($"A setting with the key {setting.Key} has already been registered ({existingDescription} vs {description} or {existingDefaultValueString} vs {defaultValueString})!");
+                    } // else we didn't succeed, but it doesn't look like there is a conflict anyway, so we're probably fine
+                } // else we succeeded
+                // raise the registered event
+                SettingRegistered?.Invoke(null, setting);
+                return;
+                // the loop and exception is nearly impossible to cover in tests
+            } while (loopCount++ < 10);
+            throw new TimeoutException("Timeout attempting to register setting!");
         }
         /// <summary>
-        /// Construct a setting instance that uses a specific settings provider and caches the setting with the specified key, converting it from a string using the specified delegate.
-        /// Settings changes caused by a setting value change within the specified provider will raise the <see cref="IAmbientSetting{T}.ValueChanged"/> event and will be reflected in the value returned by the <see cref="IAmbientSetting{T}.Value"/> property, 
-        /// but no provider changes or overrides will.
+        /// Gets an enumeration of all the settings in the system.
         /// </summary>
-        /// <param name="provider">The <see cref="IAmbientSettingsProvider"/> to get the setting value from.  If null, the setting will always contain the default value.</param>
-        /// <param name="key">A key string identifying the setting.</param>
-        /// <param name="convert">A delegate that takes a string and returns the type.</param>
-        /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.</param>
-        public static IAmbientSetting<T> GetProviderSetting<T>(IAmbientSettingsProvider provider, string key, Func<string, T> convert, T defaultValue = default(T))
+        public IEnumerable<IAmbientSettingInfo> Settings
         {
-            return new ProviderSetting<T>(provider, key, convert, defaultValue);
+            get
+            {
+                foreach (KeyValuePair<string, WeakReference<IAmbientSettingInfo>> s in _settings)
+                {
+                    IAmbientSettingInfo setting;
+                    if (s.Value.TryGetTarget(out setting))
+                    {
+                        yield return setting;
+                    }
+                    else
+                    {
+                        _settings.TryRemove(s.Key, out _);
+                    }
+                }
+            }
         }
         /// <summary>
-        /// Construct an ambient setting instance that caches the setting with the specified key, converting it from a string using the specified delegate.
-        /// Settings will be gathered from the ambient local provider, even if it changes after construction.
-        /// The <see cref="IAmbientSetting{T}.ValueChanged"/> event will be raised if the setting changes due to the global provider changing or the value within the global provider changing, 
-        /// but will not be raised if a local override is applied or a setting changes there.  
-        /// This is due to the fact that the settings instance isn't owned by any particular call context.
-        /// In these cases, the value returned by <see cref="IAmbientSetting{T}.Value"/> will be different from the most recent value received by event subscribers.
+        /// Attempts to get the <see cref="IAmbientSettingInfo"/> for the specified settings key.
         /// </summary>
-        /// <param name="key">A key string identifying the setting.</param>
-        /// <param name="convert">A delegate that takes a string and returns the type.</param>
-        /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.  Defaults to default(T).</param>
-        public static IAmbientSetting<T> GetAmbientSetting<T>(string key, Func<string, T> convert, T defaultValue = default(T))
+        /// <param name="key">The key for the setting.</param>
+        /// <returns>An <see cref="IAmbientSettingInfo"/> for the specified setting.</returns>
+        public IAmbientSettingInfo TryGetSetting(string key)
         {
-            return new AmbientSetting<T>(key, convert, defaultValue);
+            WeakReference<IAmbientSettingInfo> wrSetting;
+            IAmbientSettingInfo setting;
+            return _settings.TryGetValue(key, out wrSetting) ? (wrSetting.TryGetTarget(out setting) ? setting : null) : null;
+        }
+        /// <summary>
+        /// An event the is raised when a new setting is registered, allowing settings sets to call the setting's conversion function to get a strongly-typed value.
+        /// </summary>
+        public event EventHandler<IAmbientSettingInfo> SettingRegistered;
+    }
+    /// <summary>
+    /// An immutable class that contains a typed setting value and the settings set it came from.
+    /// </summary>
+    /// <typeparam name="T">The type for the setting.</typeparam>
+    class SettingsSetSettingValue<T>
+    {
+        public T Value { get; private set; }
+        public IAmbientSettingsSet SettingsSet { get; private set; }
+
+        public SettingsSetSettingValue(T value, IAmbientSettingsSet settingsSet)
+        {
+            this.Value = value;
+            this.SettingsSet = settingsSet;
         }
     }
 
-    /// <summary>
-    /// A class used to cache and access a strongly-typed setting and provide notification when the setting changes.
-    /// </summary>
-    /// <typeparam name="T">The type represented by the the setting.</typeparam>
-    class ProviderSetting<T> : IAmbientSetting<T>
+    class SettingInfo<T> : IAmbientSettingInfo
     {
+        protected static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
+
         private readonly string _key;
+        private readonly string _description;
+        private readonly string _defaultValueString;
         private readonly T _defaultValue;
         private readonly Func<string, T> _convert;
-        private readonly IAmbientSettingsProvider _provider;
-        private readonly LazyUnsubscribeWeakEventListenerProxy<ProviderSetting<T>, object, AmbientSettingsChangedEventArgs> _weakValueChanged;
+        private long _lastUsedTicks = DateTime.MinValue.Ticks;      // interlocked
+        private SettingsSetSettingValue<T> _globalSetAndValue;      // interlocked
 
-        private string _currentStringValue;                 // interlocked
-        private object _currentValue;                       // interlocked
-
-
-        internal string Key { get { return _key; } }
-        internal T DefaultValue { get { return _defaultValue; } }
-        internal Func<string, T> Convert { get { return _convert; } }
-        internal string StringValue { get { return _currentStringValue; } }
-        internal IAmbientSettingsProvider Provider { get { return _provider; } }
-
-        /// <summary>
-        /// Construct a setting instance that uses a specific settings provider and caches the setting with the specified key, converting it from a string using the specified delegate.
-        /// Settings changes caused by a setting value change within the specified provider will raise the <see cref="ValueChanged"/> event and in <see cref="Value"/>, 
-        /// but no provider changes or overrides will.
-        /// </summary>
-        /// <param name="provider">The <see cref="IAmbientSettingsProvider"/> to get the setting value from.</param>
-        /// <param name="key">A key string identifying the setting.</param>
-        /// <param name="convert">A delegate that takes a string and returns the type.</param>
-        /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.</param>
-        public ProviderSetting(IAmbientSettingsProvider provider, string key, Func<string, T> convert, T defaultValue = default(T))
+        public SettingInfo(string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
             if (convert == null)
             {
                 if (typeof(T) != typeof(string)) throw new ArgumentNullException(nameof(convert));
                 convert = s => (T)(object)s;
             }
-            _provider = provider;
             _key = key;
-            _defaultValue = defaultValue;
+            _description = description;
             _convert = convert;
-            string initialValue = provider?.GetSetting(key);
-            _currentStringValue = initialValue;
-            _currentValue = string.IsNullOrEmpty(initialValue) ? defaultValue : convert(initialValue);
-            if (provider != null)
-            {
-                IAmbientSettingsProvider tempProvider = provider; // without using this, the unsubscribe delegate below causes the instance to leak
-                Action<ProviderSetting<T>, object, AmbientSettingsChangedEventArgs> staticUnsubscribe = StaticUnderlyingSettingValueChanged;
-                _weakValueChanged = new LazyUnsubscribeWeakEventListenerProxy<ProviderSetting<T>, object, AmbientSettingsChangedEventArgs>(
-                        this, StaticUnderlyingSettingValueChanged, wvc => tempProvider.SettingsChanged -= wvc.WeakEventHandler);
-                _provider.SettingsChanged += _weakValueChanged.WeakEventHandler;
-            }
+            _defaultValueString = defaultValueString;
+            _defaultValue = convert(defaultValueString);
+            SettingsRegistry.DefaultRegistry.Register(this);
         }
-        static void StaticUnderlyingSettingValueChanged(ProviderSetting<T> setting, object sender, AmbientSettingsChangedEventArgs e)
+
+        /// <summary>
+        /// Gets the setting key.
+        /// </summary>
+        public string Key { get { return _key; } }
+        /// <summary>
+        /// Gets a description of the setting.
+        /// </summary>
+        public string Description { get { return _description; } }
+        /// <summary>
+        /// Gets the last time the setting's value was retrieved.
+        /// </summary>
+        public DateTime LastUsed { get { return new DateTime(_lastUsedTicks); } }
+        /// <summary>
+        /// Gets the default value for the setting.
+        /// </summary>
+        public string DefaultValueString => _defaultValueString;
+        /// <summary>
+        /// Gets the typed default value.
+        /// </summary>
+        public T DefaultValue => _defaultValue;
+        /// <summary>
+        /// Gets the untyped default value.
+        /// </summary>
+        object IAmbientSettingInfo.DefaultValue => _defaultValue;
+
+        /// <summary>
+        /// Converts the specified value for the specified settings set.
+        /// </summary>
+        /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> for the implementation doing the conversion.</param>
+        /// <param name="value">The string value for the setting.</param>
+        /// <returns>A typed value created from the string value.</returns>
+        public object Convert(IAmbientSettingsSet settingsSet, string value)
         {
-            // is the provider notifying us *not* our *current* provider? (it may be a former provider and still be attached)
-            if (!Object.ReferenceEquals(sender, setting._provider)) return;
-            setting.UnderlyingSettingValueChanged(sender, e);
-        }
-        private void UnderlyingSettingValueChanged(object _, AmbientSettingsChangedEventArgs e)
-        {
-            // was either *this* setting changed or *all* settings changed?
-            if (e.Keys == null || e.Keys.Contains(_key))
+            T ret;
+            try
             {
-                // get the new value
-                string newStringValue = _provider.GetSetting(_key);
-                // did the value really change?
-                if (newStringValue != _currentStringValue)
-                {
-                    // update the value and notify subscribers
-                    System.Threading.Interlocked.Exchange(ref _currentStringValue, newStringValue);
-                    T newValue = (newStringValue == null) ? _defaultValue : _convert(newStringValue);
-                    System.Threading.Interlocked.Exchange(ref _currentValue, newValue);
-                    ValueChanged?.Invoke(this, EventArgs.Empty);
-                }
+                ret = _convert(value);
             }
+#pragma warning disable CA1031 
+            catch
+            {
+                ret = _defaultValue;
+            }
+#pragma warning restore CA1031 
+            // is this settings set the one for this setting or is it the global settings set?
+            if (settingsSet == _SettingsSet.Global)
+            {
+                System.Threading.Interlocked.Exchange(ref _globalSetAndValue, new SettingsSetSettingValue<T>(ret, settingsSet));
+            }
+            return ret;
         }
         /// <summary>
-        /// Gets the current value of the setting (cached from the value given by the provider).
+        /// Updates the last used time for this setting to the current time.
         /// </summary>
-        public T Value
+        public void UpdateLastUsed()
+        {
+            long accessTime = DateTime.UtcNow.Ticks;
+            long oldValue = _lastUsedTicks;
+            // loop attempting to put it in until we win the race
+            while (accessTime > oldValue)
+            {
+                // try to put in our value--did we win the race?
+                if (oldValue == System.Threading.Interlocked.CompareExchange(ref _lastUsedTicks, accessTime, oldValue))
+                {
+                    // we're done and we were the new max
+                    break;
+                }
+                // NOTE: this loop is nondeterministic when running with multiple threads, so code coverage may not cover these lines, and it's not possible to force this condition
+                // update our value
+                oldValue = _lastUsedTicks;
+            }
+            // if we didn't break, we're done but the existing value is the max, not this one
+        }
+        /// <summary>
+        /// Gets the current value of the setting (cached from the value given by the settings set).
+        /// </summary>
+        public T GlobalValue
         {
             get
             {
-                return (T)_currentValue;
+                UpdateLastUsed();
+                return (_globalSetAndValue != null) ? _globalSetAndValue.Value : _defaultValue;
             }
         }
         /// <summary>
-        /// An event that will notify subscribers when a setting value changes.  
-        /// Note that <see cref="Value"/> will be updated regardless of whether or not this event is utilized.
-        /// This event is so that the subscriber *knows* when the value changes, in case something else needs to be done as a result of the change.
+        /// Gets the current value of the setting and the settings set it came from (cached from the value given by the settings set).
         /// </summary>
-        /// <remarks>
-        /// Users MUST NOT rely on this event getting raised before (or even after) updated values are returned by <see cref="Value"/>.
-        /// Because this event may be raised asynchronously, multiple raises of the event might be received out-of-order.
-        /// As a result, the new value is not sent.  The subscriber should get the latest value and use that (and handle any resulting race conditions).
-        /// </remarks>
-        public event EventHandler<EventArgs> ValueChanged;
+        public SettingsSetSettingValue<T> GlobalSetAndValue
+        {
+            get
+            {
+                UpdateLastUsed();
+                return _globalSetAndValue;
+            }
+        }
     }
-    /// <summary>
-    /// A class used to cache and access a strongly-typed ambient setting and provide notification when the setting changes.
-    /// </summary>
-    /// <typeparam name="T">The type contained in the setting.</typeparam>
-    /// <remarks>
-    /// An ambient setting is one that may be updated within the global provider, or may come from a local service override.
-    /// Change notifications can be received by subscribing to <see cref="ValueChanged"/>, but this is only raised when the global value changes.
-    /// </remarks>
-    class AmbientSetting<T> : IAmbientSetting<T>
+    class SettingsSetSetting<T> : IAmbientSetting<T>
     {
-        private readonly ServiceAccessor<IAmbientSettingsProvider> _ambientSettings;
-        private readonly LazyUnsubscribeWeakEventListenerProxy<AmbientSetting<T>, object, EventArgs> _weakAmbientProviderChanged;
+        protected static readonly AmbientService<IAmbientSettingsSet> _AmbientSettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
 
-        private readonly object _changeNotificationLock = new object();
-        private ProviderSetting<T> _providerSetting;        // interlocked
-        private LazyUnsubscribeWeakEventListenerProxy<AmbientSetting<T>, object, EventArgs> _weakValueChanged;      // interlocked
+        protected readonly AmbientService<IAmbientSettingsSet> _settingsSet;
+        protected readonly SettingInfo<T> _settingInfo;
+        private readonly IAmbientSettingsSet _fixedSettingsSet;
 
-        internal AmbientSetting(ServiceAccessor<IAmbientSettingsProvider> ambientSettings, string key, Func<string, T> convert, T defaultValue = default(T))
+        public SettingsSetSetting(IAmbientSettingsSet fixedSettingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            _ambientSettings = ambientSettings;
-            _providerSetting = new ProviderSetting<T>(_ambientSettings.LocalProvider, key, convert, defaultValue);
-            SubscribeToProviderSettingChanges(_providerSetting);
-            _weakAmbientProviderChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientSetting<T>, object, EventArgs>(
-                    this, GlobalProviderChanged, luwf => _ambientSettings.GlobalProviderChanged -= luwf.WeakEventHandler);
-            _ambientSettings.GlobalProviderChanged += _weakAmbientProviderChanged.WeakEventHandler;
+            _settingInfo = new SettingInfo<T>(key, description, convert, defaultValueString);
+            _fixedSettingsSet = fixedSettingsSet;
         }
-        private void SubscribeToProviderSettingChanges(ProviderSetting<T> providerSetting)
+
+        internal SettingsSetSetting(AmbientService<IAmbientSettingsSet> settings, string key, string description, Func<string, T> convert, string defaultValueString = null)
         {
-            System.Threading.Interlocked.Exchange(ref _weakValueChanged, new LazyUnsubscribeWeakEventListenerProxy<AmbientSetting<T>, object, EventArgs>(
-                    this, UnderlyingSettingValueChanged, wvc => providerSetting.ValueChanged -= wvc.WeakEventHandler));
-            providerSetting.ValueChanged += _weakValueChanged.WeakEventHandler;
+            _settingInfo = new SettingInfo<T>(key, description, convert, defaultValueString);
+            _settingsSet = settings;
         }
-        /// <summary>
-        /// Construct an ambient setting instance that caches the setting with the specified key, converting it from a string using the specified delegate.
-        /// Settings will be gathered from the ambient local provider, even if it changes after construction.
-        /// The <see cref="ValueChanged"/> event will be raised if the setting changes due to the global provider changing or the value within the global provider changing, 
-        /// but will not be raised if a local override is applied or a setting changes there.  
-        /// This is due to the fact that the settings instance isn't owned by any particular call context.
-        /// In these cases, the value returned by <see cref="Value"/> will be different from the most recent value received by event subscribers.
-        /// </summary>
-        /// <param name="key">A key string identifying the setting.</param>
-        /// <param name="convert">A delegate that takes a string and returns the type.</param>
-        /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.  Defaults to default(T).</param>
-        public AmbientSetting(string key, Func<string, T> convert, T defaultValue = default(T))
-            : this (Service.GetAccessor<IAmbientSettingsProvider>(), key, convert, defaultValue)
+        protected IAmbientSettingsSet GetValueSet()
         {
-        }
-        static void UnderlyingSettingValueChanged(AmbientSetting<T> setting, object sender, EventArgs e)
-        {
-            // is the provider notifying us *not* our *current* provider? (it may be a former provider and still be attached)
-            if (!Object.ReferenceEquals(sender, setting._providerSetting)) return;
-            setting.ValueChanged?.Invoke(setting, e);
-        }
-        private static void GlobalProviderChanged(AmbientSetting<T> setting, object sender, EventArgs e)
-        {
-            setting.GlobalProviderChanged(sender, e);
-        }
-        private void GlobalProviderChanged(object _, EventArgs e)
-        {
-            bool notify = false;
-            // I generally prefer lock-free constructs whenever possible, but in this case we need to
-            // lock here to make sure we get the latest settings value to compare to
-            // without the lock this could get called twice when two updates happen very quickly or when the system is under heavy load
-            // and the two threads could execute in such a way that the first updated global provider is retreived on one thread,
-            // but then the thread is interrupted and a second change is made and goes through the entire notification process.
-            // Sometime later, when the first thread resumes and without the lock, it would overwrite the current setting values with the first version,
-            // leaving things in an incorrect state
-            // note that we are careful here to avoid calling out to outside code that might lock (the event subscribers) while the lock is held
-            lock (_changeNotificationLock)
+            _settingInfo.UpdateLastUsed();
+            if (_settingsSet != null)
             {
-                IAmbientSettingsProvider newProvider = _ambientSettings.GlobalProvider;
-                // is the provider different from our current provider?
-                if (newProvider != _providerSetting.Provider)
-                {
-                    // get the current setting value
-                    string oldStringValue = _providerSetting.StringValue;
-                    // make a new setting attached to the new settings provider
-                    ProviderSetting<T> newSetting = new ProviderSetting<T>(newProvider, _providerSetting.Key, _providerSetting.Convert, _providerSetting.DefaultValue);
-                    System.Threading.Interlocked.Exchange(ref _providerSetting, newSetting);
-                    // subscribe to value changes to this
-                    SubscribeToProviderSettingChanges(_providerSetting);
-                    // has the value changed?
-                    string newStringValue = newSetting.StringValue;
-                    if (oldStringValue != newStringValue) notify = true;
-                }
+                return _settingsSet.Local;
             }
-            if (notify) ValueChanged?.Invoke(this, EventArgs.Empty);
+            else if (_fixedSettingsSet != null)
+            {
+                return _fixedSettingsSet;
+            }
+            return null;
+        }
+        protected T GetValueFromSet(IAmbientSettingsSet set)
+        {
+            object value = set.GetTypedValue(_settingInfo.Key);
+            return (value == null) ? _settingInfo.DefaultValue : (T)value;
+        }
+        protected (T, string) GetValueAndSet(IAmbientSettingsSet set)
+        {
+            object value = set?.GetTypedValue(_settingInfo.Key);
+            return (value == null) ? (_settingInfo.DefaultValue, null) : ((T)value, set.SetName);
         }
         /// <summary>
-        /// Gets the current value of the setting.
-        /// If using 
+        /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
-        public T Value
+        public virtual T Value
         {
             get
             {
-                IAmbientSettingsProvider local = _ambientSettings.LocalProvider;
-                // local override eliminates the settings provider?
-                if (local == null) return _providerSetting.DefaultValue;
-                IAmbientSettingsProvider localProvider = _ambientSettings.LocalProvider;
-                // is the local override the same provider we already have?
-                if (localProvider == _providerSetting.Provider) return _providerSetting.Value;
-                // use the value from the local service override
-                string providerValue = localProvider.GetSetting(_providerSetting.Key);
-                if (providerValue == null) return _providerSetting.DefaultValue;
-                return _providerSetting.Convert(providerValue);
+                IAmbientSettingsSet set = GetValueSet();
+                return (set != null)
+                    ? GetValueFromSet(set)
+                    : _settingInfo.GlobalValue;
             }
         }
         /// <summary>
-        /// An event that will notify subscribers when a setting value changes.  
-        /// Note that <see cref="Value"/> will be updated regardless of whether or not this event is utilized.
-        /// This event is so that the subscriber *knows* when the value changes, in case something else needs to be done as a result of the change.
+        /// Gets the current value of the setting along with the name of the set that the value came from (or null if the default value was used).
+        /// Note that this function may be significantly slower than <see cref="Value"/>.
         /// </summary>
-        /// <remarks>
-        /// Users MUST NOT rely on this event getting raised before (or even after) updated values are returned by <see cref="Value"/>.
-        /// Because this event may be raised asynchronously, multiple raises of the event might be received out-of-order.
-        /// As a result, the new value is not sent.  The subscriber should get the latest value from the settings provider and use that, handling any race conditions in the process.
-        /// </remarks>
-        public event EventHandler<EventArgs> ValueChanged;
+        /// <returns>The current value of the setting along with the name of the set that the value came from (or null if the default value was used).</returns>
+        public virtual (T, string) GetValueWithSetName()
+        {
+            IAmbientSettingsSet set = GetValueSet();
+            return GetValueAndSet(set);
+        }
+    }
+    class AmbientSetting<T> : SettingsSetSetting<T>
+    {
+        public AmbientSetting(string key, string description, Func<string, T> convert, string defaultValueString = null)
+            : base((IAmbientSettingsSet)null, key, description, convert, defaultValueString)
+        {
+        }
+
+        internal AmbientSetting(AmbientService<IAmbientSettingsSet> settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+            : base(settingsSet, key, description, convert, defaultValueString)
+        {
+        }
+
+        private IAmbientSettingsSet GetAmbientValueSet()
+        {
+            _settingInfo.UpdateLastUsed();
+            AmbientService<IAmbientSettingsSet> settingsSet = _settingsSet ?? _AmbientSettingsSet;
+            // is there a local settings set override?
+            IAmbientSettingsSet localSettingsSetOverride = settingsSet.Override;
+            if (localSettingsSetOverride != null) return localSettingsSetOverride;
+            // is there a local settings set suppression?
+            IAmbientSettingsSet localSettingsSet = settingsSet.Local;
+            return (localSettingsSet != null)
+                ? GetValueSet() // fall through to the base (global settings set)
+                : null;  // use the default value
+        }
+
+        /// <summary>
+        /// Gets the current value of the setting (cached from the value given by the settings set).
+        /// </summary>
+        public override T Value
+        {
+            get
+            {
+                IAmbientSettingsSet set = GetAmbientValueSet();
+                return (set != null)
+                    ? GetValueFromSet(set)
+                    : _settingInfo.GlobalValue;
+            }
+        }
+        /// <summary>
+        /// Gets the current value of the setting along with the name of the set that the value came from (or null if the default value was used).
+        /// Note that this function may be significantly slower than <see cref="Value"/>.
+        /// </summary>
+        /// <returns>The current value of the setting along with the name of the set that the value came from (or null if the default value was used).</returns>
+        public override (T, string) GetValueWithSetName()
+        {
+            IAmbientSettingsSet set = GetAmbientValueSet();
+            if (set != null) return GetValueAndSet(set);
+            SettingsSetSettingValue<T> setAndValue = _settingInfo.GlobalSetAndValue;
+            if (setAndValue != null)
+            {
+                return (setAndValue.Value, setAndValue.SettingsSet.SetName);
+            }
+            else
+            {
+                return (_settingInfo.DefaultValue, null);
+            }
+        }
     }
 }

@@ -4,14 +4,14 @@ using System.Threading;
 namespace AmbientServices
 {
     /// <summary>
-    /// A class that holds values related to the <see cref="IAmbientClockProvider.OnTimeChanged"/> event.
+    /// A class that holds values related to the <see cref="IAmbientClock.TimeChanged"/> event.
     /// </summary>
-    public class AmbientClockProviderTimeChangedEventArgs
+    public class AmbientClockTimeChangedEventArgs
     {
         /// <summary>
-        /// Gets or sets the <see cref="IAmbientClockProvider"/> that raised the event.
+        /// Gets or sets the <see cref="IAmbientClock"/> that raised the event.
         /// </summary>
-        public IAmbientClockProvider Clock { get; set; }
+        public IAmbientClock Clock { get; set; }
         /// <summary>
         /// The old number of elapsed ticks.
         /// </summary>
@@ -32,7 +32,7 @@ namespace AmbientServices
     /// <summary>
     /// An interface that abstracts an ambient clock which can be overridden in order to provide a different resolution or to artificially manipulate the current date-time and timing.
     /// </summary>
-    public interface IAmbientClockProvider
+    public interface IAmbientClock
     {
         /// <summary>
         /// Gets the number of ticks elapsed.  Ticks must be measured in units of <see cref="System.Diagnostics.Stopwatch.Frequency"/>.
@@ -49,8 +49,8 @@ namespace AmbientServices
         /// </remarks>
         DateTime UtcDateTime { get; }
         /// <summary>
-        /// An event indicating that the ambient clock's time has changed.
+        /// An event that is raised when the ambient clock's time is changed.
         /// </summary>
-        event EventHandler<AmbientClockProviderTimeChangedEventArgs> OnTimeChanged;
+        event EventHandler<AmbientClockTimeChangedEventArgs> TimeChanged;
     }
 }

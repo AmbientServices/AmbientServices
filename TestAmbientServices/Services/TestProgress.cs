@@ -10,20 +10,20 @@ using System.Threading.Tasks;
 namespace TestAmbientServices
 {
     /// <summary>
-    /// A class that holds tests for <see cref="IAmbientProgressProvider"/>.
+    /// A class that holds tests for <see cref="IAmbientProgressService"/>.
     /// </summary>
     [TestClass]
     public class TestProgress
     {
-        private static readonly ServiceAccessor<IAmbientProgressProvider> _ProgressProvider = Service.GetAccessor<IAmbientProgressProvider>();
+        private static readonly AmbientService<IAmbientProgressService> _ProgressService = Ambient.GetService<IAmbientProgressService>();
 
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void Progress()
         {
-            IAmbientProgressProvider ambientProgress = _ProgressProvider.GlobalProvider;
+            IAmbientProgressService ambientProgress = _ProgressService.Global;
             IAmbientProgress progress = ambientProgress.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.Update(0.01f);
@@ -43,12 +43,12 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void ProgressIndependence()
         {
-            IAmbientProgressProvider ambientProgress = _ProgressProvider.GlobalProvider;
+            IAmbientProgressService ambientProgress = _ProgressService.Global;
             IAmbientProgress progress = ambientProgress.Progress;
             OtherThreadContext c = new OtherThreadContext();
             Thread t = new Thread(c.OtherThread);
@@ -65,57 +65,57 @@ namespace TestAmbientServices
             public SemaphoreSlim Done { get; } = new SemaphoreSlim(0);
             public void OtherThread()
             {
-                OtherProgress = _ProgressProvider.GlobalProvider.Progress;
+                OtherProgress = _ProgressService.Global.Progress;
                 OtherThreadProgressMatches = (OtherProgress == MainProgress);
                 Done.Release();
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void ProgressPartStack()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.05f, 0.10f))
             {
-                Assert.AreNotEqual(progress, ambientProgressProvider.Progress);
+                Assert.AreNotEqual(progress, ambientProgressService.Progress);
             }
-            Assert.AreEqual(progress, ambientProgressProvider.Progress);
+            Assert.AreEqual(progress, ambientProgressService.Progress);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void ProgressPart()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.05f, 0.05f, "prefix-"))
             {
-                IAmbientProgress subprogress = ambientProgressProvider.Progress;
+                IAmbientProgress subprogress = ambientProgressService.Progress;
                 Assert.AreEqual(0.0f, subprogress.PortionComplete);
-                Assert.AreNotEqual(progress, ambientProgressProvider.Progress);
+                Assert.AreNotEqual(progress, ambientProgressService.Progress);
                 subprogress.Update(.5f, "subitem");
                 Assert.AreEqual(0.5f, subprogress.PortionComplete);
                 Assert.AreEqual("subitem", subprogress.ItemCurrentlyBeingProcessed);
                 Assert.AreEqual(0.075f, progress.PortionComplete);
                 Assert.AreEqual("prefix-subitem", progress.ItemCurrentlyBeingProcessed);
             }
-            Assert.AreEqual(progress, ambientProgressProvider.Progress);
+            Assert.AreEqual(progress, ambientProgressService.Progress);
             Assert.AreEqual(0.10f, progress.PortionComplete);
             Assert.AreEqual("prefix-subitem", progress.ItemCurrentlyBeingProcessed);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void ProgressThread()
         {
-            IAmbientProgressProvider ambientProgress = _ProgressProvider.GlobalProvider;
+            IAmbientProgressService ambientProgress = _ProgressService.Global;
             IAmbientProgress progress = ambientProgress.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.Update(0.25f, "main");
@@ -131,211 +131,211 @@ namespace TestAmbientServices
             Assert.AreEqual(0.33f, progress.PortionComplete);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionCompleteTooLowError()
         {
-            IAmbientProgressProvider ambientProgress = _ProgressProvider.GlobalProvider;
+            IAmbientProgressService ambientProgress = _ProgressService.Global;
             IAmbientProgress progress = ambientProgress.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.Update(-.01f);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionCompleteTooHighError()
         {
-            IAmbientProgressProvider ambientProgress = _ProgressProvider.GlobalProvider;
+            IAmbientProgressService ambientProgress = _ProgressService.Global;
             IAmbientProgress progress = ambientProgress.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.Update(1.01f);
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PartPortionCompleteTooLowError()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.01f, 0.02f))
             {
-                IAmbientProgress subprogress = ambientProgressProvider.Progress;
+                IAmbientProgress subprogress = ambientProgressService.Progress;
                 subprogress.Update(-.01f);
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PartPortionCompleteTooHighError()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.01f, 0.02f))
             {
-                IAmbientProgress subprogress = ambientProgressProvider.Progress;
+                IAmbientProgress subprogress = ambientProgressService.Progress;
                 subprogress.Update(1.01f);
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void StartPortionTooLowError()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(-0.01f, 1.0f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void StartPortionTooHighError()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.0f, 1.01f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionPartTooLowError()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(1.0f, -0.01f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionPartTooHighError()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(1.0f, 1.01f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionTooLargeError()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.5f, 0.73f))
             {
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void PartStackCorruption()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.13f);
-            IDisposable subProgress2 = ambientProgressProvider.Progress.TrackPart(0.05f, 0.24f);
-            IDisposable subProgress3 = ambientProgressProvider.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress2 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress3 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
             Assert.ThrowsException<InvalidOperationException>(() => subProgress1.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress3.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress2.Dispose());
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void PartStackCorruption2()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.13f);
-            IDisposable subProgress2 = ambientProgressProvider.Progress.TrackPart(0.05f, 0.24f);
-            IDisposable subProgress3 = ambientProgressProvider.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress2 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress3 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
             Assert.ThrowsException<InvalidOperationException>(() => subProgress1.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress2.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress3.Dispose());
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void PartStackCorruption3()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.13f);
-            IDisposable subProgress2 = ambientProgressProvider.Progress.TrackPart(0.05f, 0.24f);
-            IDisposable subProgress3 = ambientProgressProvider.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress2 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress3 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
             Assert.ThrowsException<InvalidOperationException>(() => subProgress2.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress3.Dispose());
             subProgress1.Dispose();
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void PartStackCorruption4()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.13f);
-            IDisposable subProgress2 = ambientProgressProvider.Progress.TrackPart(0.05f, 0.24f);
-            IDisposable subProgress3 = ambientProgressProvider.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress2 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress3 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
             Assert.ThrowsException<InvalidOperationException>(() => subProgress2.Dispose());
             subProgress1.Dispose();
             Assert.ThrowsException<InvalidOperationException>(() => subProgress3.Dispose());
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void GetCancellationToken()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             CancellationToken token = progress.CancellationToken;
             Assert.IsNotNull(token);
 
-            using (LocalServiceScopedOverride<IAmbientProgressProvider> LocalServiceOverride = new LocalServiceScopedOverride<IAmbientProgressProvider>(null))
+            using (ScopedLocalServiceOverride<IAmbientProgressService> LocalServiceOverride = new ScopedLocalServiceOverride<IAmbientProgressService>(null))
             {
-                IAmbientProgress noProgress = _ProgressProvider.LocalProvider?.Progress;
+                IAmbientProgress noProgress = _ProgressService.Local?.Progress;
                 CancellationToken cancel = noProgress?.CancellationToken ?? default(CancellationToken);
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void CancellationTokenSource()
         {
-            IAmbientProgress progress = _ProgressProvider.LocalProvider.Progress;
+            IAmbientProgress progress = _ProgressService.Local.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (AmbientClock.Pause())
             {
@@ -401,16 +401,16 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void SubProgressCancellationTokenSource()
         {
-            IAmbientProgress progress = _ProgressProvider.LocalProvider.Progress;
+            IAmbientProgress progress = _ProgressService.Local.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.0f, 1.0f))
             {
-                IAmbientProgress subprogress = _ProgressProvider.LocalProvider.Progress;
+                IAmbientProgress subprogress = _ProgressService.Local.Progress;
                 using (AmbientClock.Pause())
                 {
                     subprogress.ResetCancellation(TimeSpan.FromMilliseconds(100));
@@ -440,12 +440,12 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void Cancellation()
         {
-            IAmbientProgress progress = _ProgressProvider.LocalProvider.Progress;
+            IAmbientProgress progress = _ProgressService.Local.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (AmbientClock.Pause())
             {
@@ -455,21 +455,21 @@ namespace TestAmbientServices
                 Assert.IsFalse(tokenSource.IsCancellationRequested);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                 Assert.IsTrue(tokenSource.IsCancellationRequested);
-                Assert.ThrowsException<OperationCanceledException>(() => _ProgressProvider.LocalProvider.Progress.ThrowIfCancelled());
+                Assert.ThrowsException<OperationCanceledException>(() => _ProgressService.Local.Progress.ThrowIfCancelled());
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void SubProgressCancellation()
         {
-            IAmbientProgress progress = _ProgressProvider.LocalProvider.Progress;
+            IAmbientProgress progress = _ProgressService.Local.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.CancellationToken.ThrowIfCancellationRequested();
             using (progress.TrackPart(0.0f, 1.0f))
             {
-                IAmbientProgress subprogress = _ProgressProvider.LocalProvider.Progress;
+                IAmbientProgress subprogress = _ProgressService.Local.Progress;
                 using (AmbientClock.Pause())
                 {
                     subprogress.ResetCancellation(TimeSpan.FromMilliseconds(104));
@@ -478,18 +478,18 @@ namespace TestAmbientServices
                     Assert.IsFalse(tokenSource.IsCancellationRequested);
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(106));
                     Assert.IsTrue(tokenSource.IsCancellationRequested);
-                    Assert.ThrowsException<OperationCanceledException>(() => _ProgressProvider.LocalProvider.Progress.ThrowIfCancelled());
+                    Assert.ThrowsException<OperationCanceledException>(() => _ProgressService.Local.Progress.ThrowIfCancelled());
                 }
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void CancellationToken()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             if (progress.GetType().Name == "SubProgress")
             {
@@ -499,30 +499,36 @@ namespace TestAmbientServices
             CancellationToken token = progress.CancellationToken;
             Assert.IsFalse(token.IsCancellationRequested);
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.11f);
-            using (ambientProgressProvider.Progress.TrackPart(0.05f, 0.07f))
+            using (ambientProgressService.Progress.TrackPart(0.05f, 0.07f))
             {
-                token = ambientProgressProvider.Progress.CancellationToken;
+                token = ambientProgressService.Progress.CancellationToken;
                 Assert.IsFalse(token.IsCancellationRequested);
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void Dispose()
         {
-            using (Progress progress = new Progress(new BasicAmbientProgressProvider()))
+            using (Progress progress = new Progress(new BasicAmbientProgress()))
             {
                 progress.Dispose(); // dispose here so we can test double-dispose
+                progress.ResetCancellation();
+            }
+            using (Progress progress = new Progress(new BasicAmbientProgress()))
+            {
+                progress.Dispose(); // dispose here so we can test double-dispose
+                progress.ResetCancellation(TimeSpan.FromMilliseconds(0));
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void SubProgressDispose()
         {
-            BasicAmbientProgressProvider ambientProgress = new BasicAmbientProgressProvider();
+            BasicAmbientProgress ambientProgress = new BasicAmbientProgress();
             using (Progress progress = new Progress(ambientProgress))
             {
                 using (Progress subprogress = new Progress(ambientProgress, progress, 0.0f, 1.0f))
@@ -532,18 +538,18 @@ namespace TestAmbientServices
             }
         }
         /// <summary>
-        /// Performs tests on <see cref="IAmbientProgressProvider"/>.
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void DisposeTopLevelProgress()
         {
-            IAmbientProgressProvider ambientProgressProvider = _ProgressProvider.GlobalProvider;
-            IAmbientProgress progress = ambientProgressProvider.Progress;
+            IAmbientProgressService ambientProgressService = _ProgressService.Global;
+            IAmbientProgress progress = ambientProgressService.Progress;
             using (progress as IDisposable)
             {
             }
             // this should create a new progress
-            progress = ambientProgressProvider.Progress;
+            progress = ambientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.05f, 0.13f))
             {

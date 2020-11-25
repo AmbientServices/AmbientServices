@@ -5,12 +5,12 @@ using System.Threading;
 
 namespace AmbientServices
 {
-    [DefaultAmbientServiceProvider]
-    internal class BasicAmbientProgressProvider : IAmbientProgressProvider
+    [DefaultAmbientService]
+    internal class BasicAmbientProgress : IAmbientProgressService
     {
         private readonly AsyncLocal<Progress> _progress;
 
-        public BasicAmbientProgressProvider()
+        public BasicAmbientProgress()
         {
             _progress = new AsyncLocal<Progress>();
         }
@@ -88,7 +88,7 @@ namespace AmbientServices
     }
     class Progress : IAmbientProgress, IDisposable
     {
-        private readonly BasicAmbientProgressProvider _tracker;
+        private readonly BasicAmbientProgress _tracker;
         private readonly IAmbientProgress _parentProgress;
         private readonly string _prefix;
         private AmbientCancellationTokenSource _cancelSource;       // Note that this should never be null
@@ -99,13 +99,13 @@ namespace AmbientServices
         private string _currentItem;
         private bool _disposed;
 
-        public Progress(BasicAmbientProgressProvider provider)
-             : this (provider, null, 0.0f, 1.0f, null, false)
+        public Progress(BasicAmbientProgress progress)
+             : this (progress, null, 0.0f, 1.0f, null, false)
         {
         }
-        public Progress(BasicAmbientProgressProvider provider, IAmbientProgress parentProgress, float startPortion, float portionPart, string prefix = null, bool inheritCancellationSource = true)
+        public Progress(BasicAmbientProgress progressService, IAmbientProgress parentProgress, float startPortion, float portionPart, string prefix = null, bool inheritCancellationSource = true)
         {
-            _tracker = provider;
+            _tracker = progressService;
             _prefix = prefix ?? "";
             _currentItem = "";
             if (startPortion < 0.0 || startPortion > 1.0) throw new ArgumentOutOfRangeException(nameof(startPortion), "The start portion must be between 0.0 and 1.0, inclusive!");
@@ -114,7 +114,7 @@ namespace AmbientServices
             _parentProgress = parentProgress;
             _startPortion = startPortion;
             _portionPart = portionPart;
-            if (_inheritedCancelSource = inheritCancellationSource)
+            if (_inheritedCancelSource = inheritCancellationSource) // note that this is an ASSIGNMENT in addition to a test
             {
                 _cancelSource = parentProgress.CancellationTokenSource;
             }
@@ -122,7 +122,7 @@ namespace AmbientServices
             {
                 _cancelSource = new AmbientCancellationTokenSource();
             }
-            provider.PushSubProgress(this);
+            progressService.PushSubProgress(this);
         }
 
         public void ResetCancellation(TimeSpan timeout)
