@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Diagnostics;
 
-namespace TestAmbientServices
+namespace AmbientServices.Test
 {
     [TestClass]
     public class TestStatistics

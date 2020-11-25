@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TestAmbientServices
+namespace AmbientServices.Test
 {
     /// <summary>
     /// An exception that indicates that a probable infinite loop was detected and aborted.

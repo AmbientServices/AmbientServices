@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 
 [assembly: System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 
-namespace TestAmbientServicesDelayedLoad
+namespace AmbientServices.Test.DelayedLoad
 {
     [DefaultAmbientService]
     public class DefaultLateAssignmentTest : ILateAssignmentTest

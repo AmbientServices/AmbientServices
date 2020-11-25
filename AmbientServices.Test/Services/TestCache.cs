@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TestAmbientServices
+namespace AmbientServices.Test
 {
     /// <summary>
     /// A class that holds tests for <see cref="IAmbientCache"/>.

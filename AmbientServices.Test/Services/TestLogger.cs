@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace TestAmbientServices
+namespace AmbientServices.Test
 {
     /// <summary>
     /// A class that holds tests for <see cref="IAmbientLogger"/>.

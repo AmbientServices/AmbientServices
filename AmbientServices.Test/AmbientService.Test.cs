@@ -4,7 +4,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 
-namespace TestAmbientServices
+namespace AmbientServices.Test
 {
     interface IJunk
     { }
@@ -140,7 +140,7 @@ namespace TestAmbientServices
         {
             string path = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             // NOW load the assembly (this should register the default implementation)
-            Assembly assembly = Assembly.LoadFile(path + "\\TestAmbientServicesDelayedLoad.dll");
+            Assembly assembly = Assembly.LoadFile(path + "\\AmbientServices.Test.DelayedLoad.dll");
         }
         [TestMethod]
         public void TypesFromException()
@@ -160,7 +160,7 @@ namespace TestAmbientServices
         [TestMethod]
         public void ReflectionTypeLoadException()
         {
-            string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "ReflectionTypeLoadExceptionAssembly.dll");
+            string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "ReflectionTypeLoadException.Assembly.dll");
             Type[] types = AmbientServices.AssemblyExtensions.GetLoadableTypes(Assembly.LoadFrom(dllPath)).ToArray();
         }
         [TestMethod]
