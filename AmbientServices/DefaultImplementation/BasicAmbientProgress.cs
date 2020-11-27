@@ -127,9 +127,9 @@ namespace AmbientServices
 
         public void ResetCancellation(TimeSpan timeout)
         {
-            AmbientCancellationTokenSource cancelSource = AmbientClock.CreateCancellationTokenSource(timeout);
+            AmbientCancellationTokenSource cancelSource = new AmbientCancellationTokenSource(timeout);
             // dispose of any previously-held cancellation token source and swap in the new one
-            if (!_inheritedCancelSource) _cancelSource?.Dispose();
+            if (!_inheritedCancelSource) _cancelSource.Dispose();
             _inheritedCancelSource = false;
             _cancelSource = cancelSource;
         }
@@ -137,7 +137,7 @@ namespace AmbientServices
         {
             AmbientCancellationTokenSource cancelSource = (cancellationTokenSource == null) ? new AmbientCancellationTokenSource(null) :  new AmbientCancellationTokenSource(cancellationTokenSource);
             // dispose of any previously-held cancellation token source and swap in the new one
-            if (!_inheritedCancelSource) _cancelSource?.Dispose();
+            if (!_inheritedCancelSource) _cancelSource.Dispose();
             _inheritedCancelSource = false;
             _cancelSource = cancelSource;
         }
@@ -183,8 +183,7 @@ namespace AmbientServices
                 // make sure the parent knows we're done
                 _parentProgress?.Update(_startPortion + _portionPart);
 
-                _cancelSource?.Dispose();   // note that this will cancel any associated tokens!
-                _cancelSource = null;
+                _cancelSource.Dispose();   // note that this will cancel any associated tokens!
             }
         }
         internal bool Disposed { get { return _disposed; } }

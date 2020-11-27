@@ -56,6 +56,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="timeout">A <see cref="TimeSpan"/> indicating how long to wait before timing out.</param>
         /// <returns>An <see cref="AmbientCancellationTokenSource"/> that will cancel after the specified timeout (if any).</returns>
+        [Obsolete("Use new AmbientCancellationTokenSource directly")]
         public static AmbientCancellationTokenSource CreateCancellationTokenSource(TimeSpan timeout)
         {
             return new AmbientCancellationTokenSource(timeout);
@@ -65,6 +66,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="cancellationTokenSource">An optional <see cref="CancellationTokenSource"/> from the framework to use.  If null (the default), creates a cancellation token source that must be manually cancelled.</param>
         /// <returns>An <see cref="AmbientCancellationTokenSource"/> for the specified <see cref="CancellationTokenSource"/>.</returns>
+        [Obsolete("Use new AmbientCancellationTokenSource directly")]
         public static AmbientCancellationTokenSource CreateCancellationTokenSource(CancellationTokenSource cancellationTokenSource = null)
         {
             return new AmbientCancellationTokenSource(cancellationTokenSource);
@@ -91,6 +93,103 @@ namespace AmbientServices
         {
             PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null) controllable.SkipAhead(skipTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
+        }
+        /// <summary>
+        /// The ambient clock equivalent of <see cref="Thread.Sleep(int)"/>.
+        /// If the clock is paused, skips the virtual clock forward by the specified number of milliseconds, otherwise calls <see cref="Thread.Sleep(int)"/>.
+        /// </summary>
+        /// <remarks>
+        /// Note that negative times are allowed, but should only be used to test weird clock issues.
+        /// </remarks>
+        /// <param name="millisecondsToSleep">The number of milliseconds to sleep.</param>
+        public static void ThreadSleep(int millisecondsToSleep)
+        {
+            PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
+            if (controllable != null)
+            {
+                controllable.SkipAhead(millisecondsToSleep * Stopwatch.Frequency / 1000);
+            }
+            else
+            {
+                Thread.Sleep(millisecondsToSleep);
+            }
+        }
+        /// <summary>
+        /// The ambient clock equivalent of <see cref="Thread.Sleep(TimeSpan)"/>.
+        /// Skips a paused clock ahead the specified amount of time.
+        /// If the clock is paused, skips the virtual clock forward by the specified amount, otherwise calls <see cref="Thread.Sleep(TimeSpan)"/>.
+        /// </summary>
+        /// <remarks>
+        /// Note that negative times are allowed, but should only be used to test weird clock issues.
+        /// </remarks>
+        /// <param name="skipTime">The amount of time to skip ahead.</param>
+        public static void ThreadSleep(TimeSpan skipTime)
+        {
+            ThreadSleep((int)skipTime.TotalMilliseconds);
+        }
+        /// <summary>
+        /// Asynchronously delays for a specified amount of time.
+        /// </summary>
+        /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
+        private static Task Delay(long millisecondsToDelay)
+        {
+            PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
+            if (controllable != null)
+            {
+                controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
+                return Task.Delay(0);
+            }
+            else
+            {
+                return Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay));
+            }
+        }
+        /// <summary>
+        /// Asynchronously delays for a specified amount of time.
+        /// </summary>
+        /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
+        public static Task TaskDelay(int millisecondsToDelay)
+        {
+            return Delay((long)millisecondsToDelay);
+        }
+        /// <summary>
+        /// Asynchronously delays for a specified amount of time.
+        /// </summary>
+        /// <param name="delayTime">The amount of time to skip ahead.</param>
+        public static Task TaskDelay(TimeSpan delayTime)
+        {
+            return Delay((long)delayTime.TotalMilliseconds);
+        }
+        private static Task Delay(long millisecondsToDelay, CancellationToken cancel)
+        {
+            PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
+            if (controllable != null)
+            {
+                controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
+                return Task.Delay(0, cancel);
+            }
+            else
+            {
+                return Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay), cancel);
+            }
+        }
+        /// <summary>
+        /// Asynchronously delays for a specified amount of time.
+        /// </summary>
+        /// <param name="millisecondsToDelay">The number of milliseconds to delay</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to cancel the delay.</param>
+        public static Task TaskDelay(int millisecondsToDelay, CancellationToken cancel)
+        {
+            return Delay((long)millisecondsToDelay, cancel);
+        }
+        /// <summary>
+        /// Asynchronously delays for a specified amount of time.
+        /// </summary>
+        /// <param name="delayTime">The amount of time to skip ahead.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to cancel the delay.</param>
+        public static Task TaskDelay(TimeSpan delayTime, CancellationToken cancel)
+        {
+            return Delay((long)delayTime.TotalMilliseconds, cancel);
         }
         sealed class ScopedClockPauser : IDisposable
         {
@@ -186,6 +285,18 @@ namespace AmbientServices
                 long oldTicks = newTicks - ticks;
                 // notify any subscribers
                 TimeChanged?.Invoke(this, new AmbientClockTimeChangedEventArgs { Clock = this, OldTicks = oldTicks, NewTicks = newTicks, OldUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, oldTicks), NewUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, newTicks) });
+            }
+            /// <summary>
+            /// Moves the clock forward by the specified amount of time.
+            /// </summary>
+            /// <remarks>
+            /// Note that negative times are allowed, but should only be used to test weird clock issues.
+            /// </remarks>
+            /// <param name="time">A <see cref="TimeSpan"/> indicating how much to move forward.</param>
+            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClock.TimeChanged"/> is being raised.</remarks>
+            public void SkipAhead(TimeSpan time)
+            {
+                SkipAhead(time.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
             }
         }
     }
@@ -605,6 +716,18 @@ namespace AmbientServices
                     _eventHolder.Elapsed -= value;
                 }
             }
+        }
+        /// <summary>
+        /// Disposes of this instance.  Call this base class when overriding.
+        /// </summary>
+        /// <param name="disposing">Whether or not the instance is being disposed (as opposed to finalized).</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (_clock != null)
+            {
+                Enabled = false;
+            }
+            base.Dispose(disposing);
         }
     }
     /// <summary>

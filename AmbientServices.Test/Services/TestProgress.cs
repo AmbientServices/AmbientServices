@@ -38,8 +38,15 @@ namespace AmbientServices.Test
             progress.Update(0.04f, "");
             Assert.AreEqual(0.04f, progress.PortionComplete);
             Assert.AreEqual("", progress.ItemCurrentlyBeingProcessed);
-            using (progress.TrackPart(0.05f, 0.10f))
+            using (progress.TrackPart(0.05f, 0.10f, null, true))
             {
+                IAmbientProgress subprogress = ambientProgress.Progress;
+                subprogress.ResetCancellation(TimeSpan.FromMilliseconds(5));
+            }
+            using (progress.TrackPart(0.10f, 0.15f, null, false))
+            {
+                IAmbientProgress subprogress = ambientProgress.Progress;
+                subprogress.ResetCancellation(TimeSpan.FromMilliseconds(5));
             }
         }
         /// <summary>
@@ -519,7 +526,7 @@ namespace AmbientServices.Test
             using (Progress progress = new Progress(new BasicAmbientProgress()))
             {
                 progress.Dispose(); // dispose here so we can test double-dispose
-                progress.ResetCancellation(TimeSpan.FromMilliseconds(0));
+                progress.ResetCancellation();
             }
         }
         /// <summary>
