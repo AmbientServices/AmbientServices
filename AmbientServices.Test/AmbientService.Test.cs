@@ -27,7 +27,6 @@ namespace AmbientServices.Test
         private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
         private static readonly AmbientService<IJunk> _Junk = Ambient.GetService<IJunk>();
         private static readonly AmbientService<ILocalTest> _LocalTest = Ambient.GetService<ILocalTest>();
-        private static readonly AmbientService<ILateAssignmentTest> _LateAssignmentTest = Ambient.GetService<ILateAssignmentTest>();
         private static readonly AmbientService<ITest1> _Test1 = Ambient.GetService<ITest1>();
         private static readonly AmbientService<ITest2> _Test2 = Ambient.GetService<ITest2>();
         private static readonly AmbientService<IGlobalOverrideTest> _GlobalOverrideTest = Ambient.GetService<IGlobalOverrideTest>();
@@ -114,54 +113,6 @@ namespace AmbientServices.Test
                 Assert.AreEqual(oldGlobal, o.OldGlobal);
                 Assert.AreEqual(oldLocalOverride, o.OldOverride);
             }
-        }
-        [TestMethod]
-        public void NoOpAssemblyOnLoad()
-        {
-            using (new ScopedLocalServiceOverride<IAmbientLogger>(null))
-            {
-                AssemblyLoader.OnLoad(Assembly.GetExecutingAssembly());
-            }
-        }
-        [TestMethod]
-        public void AssemblyLoadAndLateAssignment()
-        {
-            // try to get this one now
-            ILateAssignmentTest test = _LateAssignmentTest.Global;
-            Assert.IsNull(test, test?.ToString());
-
-            LateAssignment();
-
-            // NOW this should be available
-            test = _LateAssignmentTest.Global;
-            Assert.IsNotNull(test);
-        }
-        private void LateAssignment()
-        {
-            string path = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            // NOW load the assembly (this should register the default implementation)
-            Assembly assembly = Assembly.LoadFile(path + "\\AmbientServices.Test.DelayedLoad.dll");
-        }
-        [TestMethod]
-        public void TypesFromException()
-        {
-            ReflectionTypeLoadException ex = new ReflectionTypeLoadException(new Type[] { typeof(string) }, new Exception[0]);
-            Assert.AreEqual(1, AmbientServices.AssemblyExtensions.TypesFromException(ex).Count());
-            ex = new ReflectionTypeLoadException(new Type[] { typeof(string), null }, new Exception[0]);
-            Assert.AreEqual(1, AmbientServices.AssemblyExtensions.TypesFromException(ex).Count());
-        }
-        [TestMethod]
-        public void DoesAssemblyReferToAssembly()
-        {
-            Assert.IsFalse(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(typeof(System.ValueTuple).Assembly, Assembly.GetExecutingAssembly()));
-            Assert.IsTrue(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), typeof(IAmbientCache).Assembly));
-            Assert.IsTrue(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), Assembly.GetExecutingAssembly()));
-        }
-        [TestMethod]
-        public void ReflectionTypeLoadException()
-        {
-            string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "ReflectionTypeLoadException.Assembly.dll");
-            Type[] types = AmbientServices.AssemblyExtensions.GetLoadableTypes(Assembly.LoadFrom(dllPath)).ToArray();
         }
         [TestMethod]
         public void TwoInterfacesOneInstance()
