@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace AmbientServices.Test
 {
     /// <summary>
-    /// A class that holds tests for date time extension methods.
+    /// A class that holds tests for enum extension methods.
     /// </summary>
     [TestClass]
     public class TestEnumExtensions

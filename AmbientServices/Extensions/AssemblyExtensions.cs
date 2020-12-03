@@ -18,10 +18,11 @@ namespace AmbientServices
         /// <param name="assembly">The assembly to attempt to enumerate types from.</param>
         /// <returns>An enumeration of <see cref="Type"/>s.</returns>
         [DebuggerNonUserCode]
-        internal static IEnumerable<Type> GetLoadableTypes(this System.Reflection.Assembly assembly)
+        public static IEnumerable<Type> GetLoadableTypes(this System.Reflection.Assembly assembly)
         {
             try
             {
+                if (assembly == null) throw new ArgumentNullException(nameof(assembly));
                 return assembly.GetTypes();
             }
             catch (ReflectionTypeLoadException ex)
@@ -37,6 +38,7 @@ namespace AmbientServices
         /// <returns>The list of types that *are* loadable, as obtained from the exception.</returns>
         internal static IEnumerable<Type> TypesFromException(ReflectionTypeLoadException ex)
         {
+            if (ex == null) throw new ArgumentNullException(nameof(ex));
             return ex.Types.Where(t => t != null);
         }
         /// <summary>
@@ -45,8 +47,9 @@ namespace AmbientServices
         /// <param name="assembly">The assembly to check.</param>
         /// <param name="referredToAssembly">The referred to assembly to look for.</param>
         /// <returns><b>true</b> if <paramref name="assembly"/> refers to <paramref name="referredToAssembly"/>.</returns>
-        internal static bool DoesAssemblyReferToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
+        public static bool DoesAssemblyReferToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
         {
+            if (assembly == null) throw new ArgumentNullException(nameof(assembly));
             return (assembly == referredToAssembly || assembly.GetReferencedAssemblies().FirstOrDefault(a => a.FullName == referredToAssembly.FullName) != null);
         }
     }

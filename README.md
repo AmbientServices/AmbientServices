@@ -1141,7 +1141,8 @@ Binaries are available at https://www.nuget.org/packages/AmbientServices.
 
 ## Contributions
 Contributions are welcome under the following conditions:
-1. no new assembly dependencies are introduced
-2. code coverage by unit tests cover all new lines and conditions whenever possible
-3. documentation is updated appropriately
-4. style for code and documentation contributions remains consistent
+1. enhancements are consistent with the overall scope of the project
+2. no new assembly dependencies are introduced
+3. code coverage by unit tests cover all new lines and conditions whenever possible
+4. documentation is updated appropriately
+5. style for code and documentation contributions remains consistent
