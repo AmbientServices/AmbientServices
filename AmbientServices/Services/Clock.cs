@@ -6,7 +6,9 @@ namespace AmbientServices
     /// <summary>
     /// A class that holds values related to the <see cref="IAmbientClock.TimeChanged"/> event.
     /// </summary>
+#pragma warning disable CA1711
     public class AmbientClockTimeChangedEventArgs
+#pragma warning restore CA1711
     {
         /// <summary>
         /// Gets or sets the <see cref="IAmbientClock"/> that raised the event.

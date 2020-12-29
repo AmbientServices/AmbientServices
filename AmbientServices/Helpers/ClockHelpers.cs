@@ -202,7 +202,7 @@ namespace AmbientServices
             }
 
             #region IDisposable Support
-            private bool _disposed = false; // to detect redundant calls
+            private bool _disposed; // to detect redundant calls
 
             private void Dispose(bool disposing)
             {
@@ -324,7 +324,9 @@ namespace AmbientServices
         /// <summary>
         /// Returns a newly constructed <see cref="AmbientStopwatch"/> that has been started.
         /// </summary>
+#pragma warning disable CA1711
         public static AmbientStopwatch StartNew()
+#pragma warning restore CA1711
         {
             return new AmbientStopwatch(true);
         }
@@ -459,7 +461,7 @@ namespace AmbientServices
         private int _autoReset;
         private int _enabled;
         private LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockTimeChangedEventArgs> _weakTimeChanged;
-        private EventHolder _eventHolder = new EventHolder();
+        private EventHolder _eventHolder;
 
         struct EventHolder
         {
@@ -773,7 +775,7 @@ namespace AmbientServices
         private int _autoReset;
         private int _enabled;
         private LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockTimeChangedEventArgs> _weakTimeChanged;
-        private bool _disposed = false; // To detect redundant calls
+        private bool _disposed; // To detect redundant calls
 
         /// <summary>
         /// Constructs an AmbientCallbackTimer using the ambient clock.  The timer will not be set to call he callback.

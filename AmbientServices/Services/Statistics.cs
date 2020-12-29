@@ -60,23 +60,27 @@ namespace AmbientServices
         /// <summary>
         /// The aggregation should sum the values.  Any statistics that use <see cref="IAmbientStatistic.Increment"/> or <see cref="IAmbientStatistic.Add"/> should probably use this type of aggregation.
         /// </summary>
-        Sum,
+        None = 0,
+        /// <summary>
+        /// The aggregation should sum the values.  Any statistics that use <see cref="IAmbientStatistic.Increment"/> or <see cref="IAmbientStatistic.Add"/> should probably use this type of aggregation.
+        /// </summary>
+        Sum = 1,
         /// <summary>
         /// The aggregation should average the values.  Statistics that use <see cref="IAmbientStatistic.SetValue"/> might use this type of aggregation.
         /// </summary>
-        Average,
+        Average = 2,
         /// <summary>
         /// The aggregation should take the least of the values.  Statistics that use <see cref="IAmbientStatistic.SetMin"/> would likely use this type of aggregation.
         /// </summary>
-        Min,
+        Min = 4,
         /// <summary>
         /// The aggregation should take the greatest of the values.  Statistics that use <see cref="IAmbientStatistic.SetMax"/> would likely use this type of aggregation.
         /// </summary>
-        Max,
+        Max = 8,
         /// <summary>
         /// The aggregation should take the most recent value.  Statistics that use <see cref="IAmbientStatistic.SetValue"/> might use this type of aggregation.
         /// </summary>
-        MostRecent,
+        MostRecent = 16,
     }
     /// <summary>
     /// An enumeration indicating how missing (null) samples should be handled, usually on the client side (perhaps on the server side if the server is generating higher-level statistics).

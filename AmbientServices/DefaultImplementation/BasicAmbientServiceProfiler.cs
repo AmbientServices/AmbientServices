@@ -213,7 +213,7 @@ namespace AmbientServices
                 foreach (AmbientServiceProfilerAccumulator accumulator in _stopwatchTicksUsedByGroup.Select(kvp => new AmbientServiceProfilerAccumulator(kvp.Key, kvp.Value.Item1, kvp.Value.Item2)))
                 {
                     // is this accumulator the same as the current one?
-                    if (String.Equals(accumulator.Group, _currentGroup, StringComparison.InvariantCulture))
+                    if (String.Equals(accumulator.Group, _currentGroup, StringComparison.Ordinal))
                     {
                         skipCurrent = true;
                         yield return new AmbientServiceProfilerAccumulator(accumulator.Group, accumulator.TotalStopwatchTicksUsed + currentTicks, accumulator.ExecutionCount + 1);

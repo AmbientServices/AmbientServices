@@ -20,11 +20,13 @@ namespace AmbientServices
         /// <summary>
         /// An event that is raised whenever <see cref="EnterBottleneck"/> is called to enter a bottleneck.
         /// </summary>
+#pragma warning disable CA1003  // AmbientBottleneckAccessor is not JUST for the event args, and allocating a class that wraps it would seriously affect performance
         event EventHandler<AmbientBottleneckAccessor> BottleneckEntered;
         /// <summary>
         /// An event that is raised whenever the <see cref="AmbientBottleneckAccessor"/> returned by <see cref="EnterBottleneck"/> gets disposed, indicating that the bottleneck access is complete.
         /// </summary>
         event EventHandler<AmbientBottleneckAccessor> BottleneckExited;
+#pragma warning restore CA1003
     }
     /// <summary>
     /// An enumeration of possible bottleneck types.

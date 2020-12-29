@@ -18,7 +18,7 @@ namespace AmbientServices
     /// In some rare situations where multiple threads attempt the initialization simultaneously, the constructor may be called more than once.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Class)]
-    public class DefaultAmbientServiceAttribute : Attribute
+    public sealed class DefaultAmbientServiceAttribute : Attribute
     {
         private IEnumerable<Type> _registrationInterfaces;
 
@@ -28,6 +28,7 @@ namespace AmbientServices
         public DefaultAmbientServiceAttribute()
         {
         }
+#pragma warning disable CA1019
         /// <summary>
         /// Constructs a DefaultAmbientServiceAttribute that is limited to one specific interface, even if multiple interfaces are directly implemented.
         /// </summary>
@@ -44,6 +45,7 @@ namespace AmbientServices
         {
             _registrationInterfaces = registrationInterfaces;
         }
+#pragma warning restore CA1019
         /// <summary>
         /// Gets the interface types indicating which services are implemented by the class the attribute is applied to.  
         /// If null, all interfaces that are directly implemented by the class should be used.

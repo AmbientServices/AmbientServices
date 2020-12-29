@@ -37,7 +37,9 @@ namespace AmbientServices
         /// Note that we break the normal style of inheriting the event arguments from <see cref="EventArgs"/> in order to avoid an allocation here.  
         /// Performance is critical for this.
         /// </summary>
+#pragma warning disable CA1003  // this event is performance-critical, allocating heap memory for an EventArgs class would impact performance
         event EventHandler<AmbientServiceProfilerSystemSwitchedEvent> SystemSwitched;
+#pragma warning restore CA1003
     }
     /// <summary>
     /// A struct that contains the data about a profiler system changed event.
@@ -97,13 +99,13 @@ namespace AmbientServices
         /// <summary>
         /// Compares this value to another one to see if they are logically equivalent.
         /// </summary>
-        /// <param name="that">The other <see cref="AmbientServiceProfilerSystemSwitchedEvent"/> to compare to this one.</param>
-        /// <returns>true if <paramref name="that"/> has the same value, false if it has a different value.</returns>
-        public bool Equals(AmbientServiceProfilerSystemSwitchedEvent that)
+        /// <param name="other">The other <see cref="AmbientServiceProfilerSystemSwitchedEvent"/> to compare to this one.</param>
+        /// <returns>true if <paramref name="other"/> has the same value, false if it has a different value.</returns>
+        public bool Equals(AmbientServiceProfilerSystemSwitchedEvent other)
         {
-            return String.Equals(RevisedOldSystem, that.RevisedOldSystem, StringComparison.Ordinal) && String.Equals(NewSystem, NewSystem, StringComparison.Ordinal)
-                && OldSystemStartStopwatchTimestamp.Equals(that.OldSystemStartStopwatchTimestamp)
-                && NewSystemStartStopwatchTimestamp.Equals(that.NewSystemStartStopwatchTimestamp);
+            return String.Equals(RevisedOldSystem, other.RevisedOldSystem, StringComparison.Ordinal) && String.Equals(NewSystem, NewSystem, StringComparison.Ordinal)
+                && OldSystemStartStopwatchTimestamp.Equals(other.OldSystemStartStopwatchTimestamp)
+                && NewSystemStartStopwatchTimestamp.Equals(other.NewSystemStartStopwatchTimestamp);
         }
         /// <summary>
         /// Checks to see if the specified <see cref="AmbientServiceProfilerSystemSwitchedEvent"/> are logically equivalent.
