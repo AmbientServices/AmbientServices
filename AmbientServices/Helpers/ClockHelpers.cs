@@ -324,7 +324,7 @@ namespace AmbientServices
         /// <summary>
         /// Returns a newly constructed <see cref="AmbientStopwatch"/> that has been started.
         /// </summary>
-#pragma warning disable CA1711
+#pragma warning disable CA1711  // the analyzer incorrectly thinks this method is a replacement to Start, but it is not--it literally starts a *new* stopwatch (exactly like the framework itself)
         public static AmbientStopwatch StartNew()
 #pragma warning restore CA1711
         {

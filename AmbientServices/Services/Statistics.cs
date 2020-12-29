@@ -21,7 +21,7 @@ namespace AmbientServices
         /// <returns>A <see cref="IAmbientStatisticReader"/> the caller can use to read the statistic.</returns>
         IAmbientStatisticReader ReadStatistic(string id);
         /// <summary>
-        /// Adds or updates a statistic with the specified identifier, description, and attributes.
+        /// Adds or updates a statistic with the specified identifier, description, and properties.
         /// </summary>
         /// <param name="timeBased">Whether or not this statistic is a time-based statistic.</param>
         /// <param name="id">A dash-delimited identifier for the statistic.</param>
