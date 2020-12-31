@@ -64,11 +64,8 @@ namespace AmbientServices.Test
                 using (StatusAuditorAuditExceptionTest test = new StatusAuditorAuditExceptionTest(nameof(StatusAuditorAuditExceptionTest)))
                 {
                     Assert.AreEqual("StatusAuditorAuditExceptionTest", test.TargetSystem);
-                    // keep giving up our thread in the hope that the thread pool will run the initial audit
-                    for (int count = 0; count < 50 && String.Equals(test.LatestResults?.Report?.Alert?.AuditAlertCode ?? "Pending", "Pending"); ++count)
-                    {
-                        System.Threading.Thread.Sleep(count);
-                    }
+                    // run the initial audit manually and synchronously
+                    test.InitialAudit(null);
                 }
             }
         }
@@ -80,11 +77,8 @@ namespace AmbientServices.Test
                 using (StatusAuditorAuditNeverRunTest test = new StatusAuditorAuditNeverRunTest(nameof(StatusAuditorAuditNeverRunTest)))
                 {
                     Assert.AreEqual("StatusAuditorAuditNeverRunTest", test.TargetSystem);
-                    // keep giving up our thread in the hope that the thread pool will run the initial audit
-                    for (int count = 0; count < 50 && String.Equals(test.LatestResults?.Report?.Alert?.AuditAlertCode ?? "Pending", "Pending"); ++count)
-                    {
-                        System.Threading.Thread.Sleep(count);
-                    }
+                    // run the initial audit manually and synchronously
+                    test.InitialAudit(null);
                 }
             }
         }

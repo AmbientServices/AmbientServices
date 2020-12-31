@@ -221,6 +221,16 @@ namespace AmbientServices
             _children.Add(new StatusResultsBuilder(child));
         }
         /// <summary>
+        /// Adds a child node with the specified name and returns the corresponding <see cref="StatusResultsBuilder"/>.
+        /// </summary>
+        /// <param name="childName">The name of the child node to add.</param>
+        public StatusResultsBuilder AddChild(string childName)
+        {
+            StatusResultsBuilder childNode = new StatusResultsBuilder(childName);
+            _children.Add(childNode);
+            return childNode;
+        }
+        /// <summary>
         /// Records an exception alert.
         /// </summary>
         /// <param name="severity">A positive number greater than or equal to 0.0 indicating the relative severity of the failure.  (Will be subtracted from <see cref="StatusRating.Fail"/> for the associated status rating).  Defaults to 0.5.</param>

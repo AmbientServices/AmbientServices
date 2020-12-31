@@ -47,14 +47,14 @@ namespace AmbientServices.Test
                 Assert.IsFalse(String.IsNullOrEmpty(att.Value));
 
                 HashSet<StatusResults> test = new HashSet<StatusResults>();
-                StatusResults c1 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == "TestHeterogenousExplicitRating");
+                StatusResults c1 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestHeterogenousExplicitRating));
                 Assert.IsNotNull(c1);
                 Assert.IsNotNull(c1.Report);
                 Assert.IsNotNull(c1.Report.Alert.Rating);
                 Assert.IsFalse(string.IsNullOrEmpty(c1.ToString()));
                 test.Add(c1);
 
-                StatusResults c2 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == "TestHomogeneousExplicitFailure");
+                StatusResults c2 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestHomogeneousExplicitFailure));
                 Assert.IsNotNull(c2);
                 Assert.IsNotNull(c2.Report);
                 Assert.IsNotNull(c2.Report.Alert.Rating);
@@ -62,7 +62,7 @@ namespace AmbientServices.Test
                 Assert.IsFalse(string.IsNullOrEmpty(c2.ToString()));
                 test.Add(c2);
 
-                StatusResults c3 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == "TestMachineConstant");
+                StatusResults c3 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestMachineConstantStatus));
                 Assert.IsNotNull(c3);
                 Assert.IsNull(c3.Report);
                 Assert.IsFalse(string.IsNullOrEmpty(c3.ToString()));
@@ -102,7 +102,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task StatusExceptions()
         {
-            Status s = new Status();
+            Status s = new Status(false);
             await s.Start();
             Assert.ThrowsException<InvalidOperationException>(() => s.Start());
             Assert.ThrowsException<ArgumentNullException>(() => Status.IsTestableStatusCheckerClass(null));
@@ -110,9 +110,48 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task StatusEmpty()
         {
-            Status s = new Status();
+            Status s = new Status(false);
             await s.Start();
             await s.Stop();
+        }
+        [TestMethod]
+        public async Task StatusStartStop()
+        {
+            Status s = new Status(true);
+            await s.Start();
+            await s.Stop();
+        }
+        [TestMethod]
+        public async Task StatusAddRemoveChecker()
+        {
+            Status s = new Status(false);
+            using (TestMachineConstantStatus checkerToAdd = new TestMachineConstantStatus())
+            {
+                s.AddCheckerOrAuditor(checkerToAdd);
+                await s.Start();
+                await s.Stop();
+                s.RemoveCheckerOrAuditor(checkerToAdd);
+            }
+            using (TestMachineConstantStatus checkerToAdd = new TestMachineConstantStatus())
+            {
+                s.AddCheckerOrAuditor(checkerToAdd);
+                await s.Start();
+                await s.Stop();
+                s.RemoveCheckerOrAuditor(checkerToAdd);
+            }
+        }
+        [TestMethod]
+        public async Task StatusAuditAfterDisposal()
+        {
+            Status s = new Status(false);
+            using (TestConstantAuditResults auditorToAdd = new TestConstantAuditResults(null, nameof(StatusAuditAfterDisposal), StatusRating.Okay, nameof(StatusAuditAfterDisposal), "Terse", "Details"))
+            {
+                s.AddCheckerOrAuditor(auditorToAdd);
+                await s.Start();
+                await s.Stop();
+                s.RemoveCheckerOrAuditor(auditorToAdd);
+                auditorToAdd.InitialAudit(null);
+            }
         }
     }
     internal class TestMachineConstantStatus : StatusChecker
@@ -120,7 +159,7 @@ namespace AmbientServices.Test
         private readonly StatusResults _results;
 
         public TestMachineConstantStatus()
-            : base("TestMachineConstant")
+            : base(nameof(TestMachineConstantStatus))
         {
             StatusResultsBuilder sb = new StatusResultsBuilder(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
             sb.AddProperty("MachineName", Environment.MachineName);
@@ -136,10 +175,10 @@ namespace AmbientServices.Test
     }
     internal class TestAlwaysPending : StatusChecker
     {
-        private readonly StatusResults _results = StatusResults.GetPendingResults(null, "TestAlwaysPending");
+        private readonly StatusResults _results = StatusResults.GetPendingResults(null, nameof(TestAlwaysPending));
 
         public TestAlwaysPending()
-            : base("TestAlwaysPending")
+            : base(nameof(TestAlwaysPending))
         {
             SetLatestResults(_results);
         }
@@ -153,7 +192,7 @@ namespace AmbientServices.Test
     {
         private readonly StatusResults _results;
         public TestNotApplicableStatus()
-            : base("TestNotApplicable")
+            : base(nameof(TestNotApplicableStatus))
         {
             StatusResultsBuilder sb = new StatusResultsBuilder(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
             _results = sb.FinalResults;
@@ -168,14 +207,14 @@ namespace AmbientServices.Test
     internal class TestAuditableStatusNoChildren : StatusAuditor
     {
         public TestAuditableStatusNoChildren()
-            : base("TestAuditableStatusNoChildren", TimeSpan.FromSeconds(3))
+            : base(nameof(TestAuditableStatusNoChildren), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
         protected internal override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
-            statusBuilder.TargetSystem = "TestAuditableStatusNoChildren";
+            statusBuilder.TargetSystem = nameof(TestAuditableStatusNoChildren);
             statusBuilder.AddProperty("nc1", "a");
             statusBuilder.AddProperty("nc2", "b");
             statusBuilder.AddProperty("nc2", AmbientClock.UtcNow.AddMinutes(-3));
@@ -203,7 +242,7 @@ namespace AmbientServices.Test
         protected internal override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
-            statusBuilder.TargetSystem = "TestAuditableStatusNoChildren";
+            statusBuilder.TargetSystem = nameof(TestConstantAuditResults);
             if (_rating <= StatusRating.Fail)
             {
                 statusBuilder.AddFailure(_auditCode, _terse, _details, _rating);
@@ -222,7 +261,7 @@ namespace AmbientServices.Test
     internal class TestIrrelevantException : StatusAuditor
     {
         public TestIrrelevantException()
-            : base("TestIrrelevantException", TimeSpan.FromSeconds(3))
+            : base(nameof(TestIrrelevantException), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -230,7 +269,7 @@ namespace AmbientServices.Test
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
             StatusResultsBuilder child = new StatusResultsBuilder("IrrelevantChild");
-            child.AddException(new ExpectedException("TestIrrelevantException"));
+            child.AddException(new ExpectedException(nameof(TestIrrelevantException)));
             statusBuilder.AddChild(child);
             return Task.CompletedTask;
         }
@@ -238,8 +277,8 @@ namespace AmbientServices.Test
     /// <summary>
     /// A class which does a simulated audit similar to what a disk volume might report.
     /// </summary>
-    [DefaultPropertyThresholds("AvailableBytes", 1000000000.0, 10000000000.0, 100000000000.0, StatusThresholdNature.HighIsGood)]
-    [DefaultPropertyThresholds("AvailablePercent", 1.0, 2.5, 5.0, StatusThresholdNature.HighIsGood)]
+    [DefaultPropertyThresholds("AvailableBytes", 1000000000.0f, 10000000000.0f, 100000000000.0f, StatusThresholdNature.HighIsGood)]
+    [DefaultPropertyThresholds("AvailablePercent", 1.0f, 2.5f, 5.0f, StatusThresholdNature.HighIsGood)]
     class SampleVolumeAuditor
     {
         private readonly string _targetSystem;
@@ -341,7 +380,7 @@ namespace AmbientServices.Test
         };
 
         public TestHeterogenousNoExplicitRating()
-            : base("TestHeterogenousNoExplicitRating", TimeSpan.FromSeconds(3))
+            : base(nameof(TestHeterogenousNoExplicitRating), TimeSpan.FromSeconds(3))
         {
         }
 
@@ -371,7 +410,7 @@ namespace AmbientServices.Test
         };
 
         public TestHeterogenousExplicitRating()
-            : base("TestHeterogenousExplicitRating", TimeSpan.FromSeconds(3))
+            : base(nameof(TestHeterogenousExplicitRating), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -399,7 +438,7 @@ namespace AmbientServices.Test
     internal class TestHeterogenousOnlyExplicit : StatusAuditor
     {
         public TestHeterogenousOnlyExplicit()
-            : base("TestHeterogenousOnlyExplicit", TimeSpan.FromSeconds(3))
+            : base(nameof(TestHeterogenousOnlyExplicit), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -416,7 +455,7 @@ namespace AmbientServices.Test
     internal class TestSuperlativeExplicit : StatusAuditor
     {
         public TestSuperlativeExplicit()
-            : base("TestSuperlativeExplicit", TimeSpan.FromSeconds(3))
+            : base(nameof(TestSuperlativeExplicit), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -430,7 +469,7 @@ namespace AmbientServices.Test
     internal class TestHeterogenousNoExplicit : StatusAuditor
     {
         public TestHeterogenousNoExplicit()
-            : base("TestHeterogenousNoExplicit", TimeSpan.FromSeconds(3))
+            : base(nameof(TestHeterogenousNoExplicit), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -448,7 +487,7 @@ namespace AmbientServices.Test
             new SampleVolumeAuditor ("OperatingSystem", @"C:\Windows"),
         };
         public TestHomogeneousExplicitFailure()
-            : base("TestHomogeneousExplicitFailure", TimeSpan.FromSeconds(10))
+            : base(nameof(TestHomogeneousExplicitFailure), TimeSpan.FromSeconds(10))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -468,7 +507,7 @@ namespace AmbientServices.Test
         private StatusResults _alwaysFailing;
         private StatusResults _alwaysCatastrophic;
         public TestHomogeneousWithFailure()
-            : base("TestHomogeneousWithFailure", TimeSpan.FromSeconds(10))
+            : base(nameof(TestHomogeneousWithFailure), TimeSpan.FromSeconds(10))
         {
             _alwaysSuperlative = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysSuperlative", StatusRating.Superlative, "TestSuperlativeCode", null, null);
             _alwaysOkay = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysOkay", StatusRating.Okay, "TestOkayCode", null, null);
@@ -493,7 +532,7 @@ namespace AmbientServices.Test
         private StatusResults _alwaysFailing1;
         private StatusResults _alwaysFailing2;
         public TestHomogeneousWithMultipleFailure()
-            : base("TestHomogeneousWithMultipleFailure", TimeSpan.FromSeconds(10))
+            : base(nameof(TestHomogeneousWithMultipleFailure), TimeSpan.FromSeconds(10))
         {
             _alwaysFailing1 = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysFailing1", StatusRating.Fail, "TestFailCode", "test-fail", "This status node always fails!");
             _alwaysFailing2 = StatusResultsBuilder.CreateRawStatusResults("Child2AlwaysFailing2", StatusRating.Fail, "TestFailCode", "test-fail", "This status node always fails!");
@@ -512,7 +551,7 @@ namespace AmbientServices.Test
         private StatusResults _alwaysAlerting1;
         private StatusResults _alwaysAlerting2;
         public TestHomogeneousWithMultipleAlert()
-            : base("TestHomogeneousWithMultipleAlert", TimeSpan.FromSeconds(10))
+            : base(nameof(TestHomogeneousWithMultipleAlert), TimeSpan.FromSeconds(10))
         {
             _alwaysAlerting1 = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysAlerting1", StatusRating.Alert, "TestAlertCode", "test-alert1", "This status node always alerts!");
             _alwaysAlerting2 = StatusResultsBuilder.CreateRawStatusResults("Child2AlwaysAlerting2", StatusRating.Alert, "TestAlertCode", "test-alert2", "This status node always alerts!");
@@ -529,7 +568,7 @@ namespace AmbientServices.Test
     internal class TestDeepFailure : StatusAuditor
     {
         public TestDeepFailure()
-            : base("TestDeepFailure", TimeSpan.FromSeconds(3))
+            : base(nameof(TestDeepFailure), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -537,7 +576,7 @@ namespace AmbientServices.Test
         {
             if (level == 0)
             {
-                statusBuilder.AddFailure("TestDeepFailure", "test-TestDeepFailure", "This is the deep failure", 0.5f);
+                statusBuilder.AddFailure(nameof(TestDeepFailure), "test-" + nameof(TestDeepFailure), "This is the deep failure", 0.5f);
             }
             else
             {
@@ -555,7 +594,7 @@ namespace AmbientServices.Test
     internal class TestMultipleSource : StatusAuditor
     {
         public TestMultipleSource()
-            : base("TestMultipleSource", TimeSpan.FromSeconds(3))
+            : base(nameof(TestMultipleSource), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -563,15 +602,15 @@ namespace AmbientServices.Test
         {
             if (sourceNumber < 3)
             {
-                statusBuilder.AddOkay("TestMultipleSource", "test-TestMultipleSourceOkay", "This is the multiple source okay", 0.5f);
+                statusBuilder.AddOkay(nameof(TestMultipleSource), "test-" + nameof(TestMultipleSource) + "Okay", "This is the multiple source okay", 0.5f);
             }
             else if (sourceNumber < 6)
             {
-                statusBuilder.AddAlert("TestMultipleSource", "test-TestMultipleSourceAlert", "This is the multiple source alert", 0.5f);
+                statusBuilder.AddAlert(nameof(TestMultipleSource), "test-" + nameof(TestMultipleSource) + "Alert", "This is the multiple source alert", 0.5f);
             }
             else
             {
-                statusBuilder.AddFailure("TestMultipleSource", "test-TestMultipleSourceFail", "This is the multiple source failure", 0.5f);
+                statusBuilder.AddFailure(nameof(TestMultipleSource), "test-" + nameof(TestMultipleSource) + "Fail", "This is the multiple source failure", 0.5f);
             }
             statusBuilder.SourceSystem = "Source " + sourceNumber.ToString();
         }
@@ -592,7 +631,7 @@ namespace AmbientServices.Test
     internal class TestDeepMultipleSource : StatusAuditor
     {
         public TestDeepMultipleSource()
-            : base("TestDeepMultipleSource", TimeSpan.FromSeconds(3))
+            : base(nameof(TestDeepMultipleSource), TimeSpan.FromSeconds(3))
         {
         }
         protected internal override bool Applicable { get { return true; } }
@@ -603,15 +642,15 @@ namespace AmbientServices.Test
                 statusBuilder.NatureOfSystem = StatusNatureOfSystem.Leaf;
                 if (sourceNumber < 3)
                 {
-                    statusBuilder.AddOkay("TestDeepMultipleSource", "test-TestMultipleSourceOkay", "This is the multiple source okay", 0.5f);
+                    statusBuilder.AddOkay(nameof(TestDeepMultipleSource), "test-" + nameof(TestMultipleSource) + "Okay", "This is the multiple source okay", 0.5f);
                 }
                 else if (sourceNumber < 6)
                 {
-                    statusBuilder.AddAlert("TestDeepMultipleSource", "test-TestMultipleSourceAlert", "This is the multiple source alert", 0.5f);
+                    statusBuilder.AddAlert(nameof(TestDeepMultipleSource), "test-" + nameof(TestMultipleSource) + "Alert", "This is the multiple source alert", 0.5f);
                 }
                 else
                 {
-                    statusBuilder.AddFailure("TestDeepMultipleSource", "test-TestMultipleSourceFail", "This is the multiple source failure", 0.5f);
+                    statusBuilder.AddFailure(nameof(TestDeepMultipleSource), "test-" + nameof(TestMultipleSource) + "Fail", "This is the multiple source failure", 0.5f);
                 }
             }
             else
@@ -634,6 +673,18 @@ namespace AmbientServices.Test
                 statusBuilder.AddChild(childBuilder.FinalResults);
             }
             return Task.CompletedTask;
+        }
+    }
+    internal class TestAuditException : StatusAuditor
+    {
+        public TestAuditException()
+            : base(nameof(TestAuditException), TimeSpan.FromSeconds(3))
+        {
+        }
+        protected internal override bool Applicable { get { return true; } }
+        protected internal override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        {
+            throw new ExpectedException(nameof(TestAuditException));
         }
     }
 }

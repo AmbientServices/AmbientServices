@@ -333,7 +333,6 @@ namespace AmbientServices
 
             _frequencyTicks = baselineAuditFrequency.Ticks;
             _nextAuditTime = AmbientClock.UtcNow.AddMilliseconds(10).Ticks;
-            System.Threading.ThreadPool.QueueUserWorkItem(new WaitCallback(InitialAudit));  // queue the initial status test to run immediately but on a threadpool thread
             // should we update periodically?
             if (baselineAuditFrequency < TimeSpan.MaxValue && baselineAuditFrequency > TimeSpan.FromTicks(0))
             {
@@ -359,7 +358,7 @@ namespace AmbientServices
         {
         }
 
-        private void InitialAudit(object sender)
+        internal void InitialAudit(object sender)
         {
             InternalAuditAsync().GetAwaiter().GetResult();
         }

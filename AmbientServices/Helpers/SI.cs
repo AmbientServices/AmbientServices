@@ -162,5 +162,20 @@ namespace AmbientServices
                 return ((positiveSign && number > 0.0) ? "+" : "") + number.ToString("N0" + digitsAfterDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture), culture.NumberFormat) + (longName ? " " : "") + postfix;
             }
         }
+        /// <summary>
+        /// Gets a string containing an abbreviated version of a number using the International System of Units (SI).
+        /// SI Units are exact decimal units, mostly powers of 1000.
+        /// </summary>
+        /// <param name="number">The number to output.</param>
+        /// <param name="maxCharacters">The maximum number of characters to use to represent the numeric part (if possible), including the decimal point.  Defaults to 4 (three significant digits).  When less than 4, the number may not be able to be represented in the specified number of characters (57 in 1 character, for example), in which case, it will use the minimum possible number of characters.</param>
+        /// <param name="postfix">A postfix string (for example, "B").</param>
+        /// <param name="longName">Whether or not to use the long version of the Si prefix (kilo, mega, etc.)</param>
+        /// <param name="positiveSign">Whether or not to includ a positive sign on positive numbers.</param>
+        /// <param name="culture">The <see cref="System.Globalization.CultureInfo"/> to use to format the number, defaults to the current thread culture.</param>
+        /// <returns>The SI representation of the number, for example for 5342432, the return value might be "5.34MB".</returns>
+        public static string ToSi(this float number, int maxCharacters = 4, string postfix = null, bool longName = false, bool positiveSign = false, System.Globalization.CultureInfo culture = null)
+        {
+            return ToSi((double)number, maxCharacters, postfix, longName, positiveSign, culture);
+        }
     }
 }

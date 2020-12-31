@@ -46,6 +46,16 @@ namespace AmbientServices.Test
             }
         }
         [TestMethod]
+        public void StatusResultsBuilderChildren()
+        {
+            using (AmbientClock.Pause())
+            {
+                StatusResultsBuilder test = new StatusResultsBuilder(nameof(StatusResultsBuilderChildren));
+                StatusResultsBuilder child = test.AddChild("Child");
+                Assert.AreEqual("Child", child.TargetSystem);
+            }
+        }
+        [TestMethod]
         public void StatusResultsBuilderProperties()
         {
             using (AmbientClock.Pause())

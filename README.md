@@ -1125,6 +1125,194 @@ The default implementation uses thread-safe lock-free instances.
 Each system switch is transformed according to the setting and then distributed to all the profilers the switch applies to.
 
 
+## Status
+The `Status` classes enable systems with automated background backend dependency status testing and aggregation of test results to generate concise status summary reports across backend systems and across server farms.
+Some backend systems contain static status information which is gathered by a class that inherits from the abstract `StatusChecker` class, others need to be tested periodically.
+The status for these systems is gathered by a class that inherits from the abstract `StatusAuditor` class.
+StatusChecker and StatusAuditor classes with empty public constructors are automatically detected, constructed, and added to the global list of checkers.
+Lazy construction and registration of status checkers is generally not a good idea, as detecting status issues as soon as possible during startup is preferable to detecting them only when the backend systems get initialized.
+Even so, such classes with non-empty or non-public constructors can be registered manually if desired.
+The status of each system is rated with a `StatusRating` floting-point number.
+Systems are rated in one of four ranges, `StatusRating.Fail`, `StatusRating.Alert`, `StatusRating.Okay`, and `StatusRating.Superlative`.
+Status rating numbers less than or equal to zero indicate that the corresponding system is in some degree of failure.
+Status rating numbers greater than zero and less than or equal to one indicate that the corresponding system is not failing, but is in a state that needs attention such that a system administrator should be alerted.
+Status rating numbers greater than one and less than or equal to two indicate that the corresponding system is working and no attention is needed.
+Status rating numbers greater than two indicate that the corresponding system is "superlative", ie. better than just okay.
+Systems that have not been tested yet are given a value of NaN.
+Ratings may be much worse (less) than the threshold for Fail, and much better (higher) than the threshold for Okay, but the status system doesn't distinguish between values less than failure or greater than okay.
+
+System status is indicated by a hierarchy of `StatusResults` objects, each containing the following properties:
+1. The source system (a string indicating the system that performed the audit).
+2. The target system (a slash-delimited string identifying the subsystem whose status is indicated).
+3. A `DateTime` indicating when the information was gathered.
+4. A list of key-value properties.
+5. Either a list of child nodes, along with a `StatusNatureOfSystem` indicating how the children are related to the parent and/or each other so that the system can automatically aggregate results, or
+6. A `StatusAuditReport` containing the following information about the audit:
+    1. A `DateTime` indicating when the audit started.
+    2. A `TimeSpan` indicating how long the audit took.
+    3. An optional `DateTime` indicating when the next audit will happen.
+    4. An optional `StatusAuditAlert` containing the following properties about an alert (if there is one):
+       1. A status rating number indicating the health of the system.
+       2. An alert audit code (a short string that is constant across alerts of this type).
+       3. A string containing a terse description of the problem, suitable for a plaintext SMS message.
+       4. A string containing a detailed description of the problem, suitable for email, web, or mobile application display.
+
+A summary across backend systems, or a full rollup across an entire server farm may also be generated.
+Such a summary will collate results based primarily on the target system (because that is almost always the way problems are detected), secondarily on the alert code.
+If some source systems are reporting issues and others are not, the summary will indicate the sources reporting each status range.
+When the rating is due to properties falling outside configured thresholds, the reported property value ranges will also be indicated.
+The summarization system is designed to provide the relevant information for operations staff as concisely as possible in both SMS and detailed form.
+For example, an SMS status alert might look like the following: 
+```
+🛑 FAIL @2:37 AM
+ AWS
+  RDS: [2]->Timeout
+  S3: [2]->Read Timeout
+  S3: [2]->Write Timeout
+  S3: [2]->Query Timeout
+⚠️ ALERT
+ AWS
+  ES: [3]->Slow Response
+```
+
+Note that the timestamp at the top is to help the receiver know when message delivery was significantly delayed (this happens more than you might think, and can be very disconcerting when alerts come in hours after the actual incident).
+In this example, /AWS would be the target name of a node that contains children for each of the systems within AWS (RDS, S3, and ES in this case).
+The leading slash indicates that AWS is a top-level target, so targets specified in any parent nodes should be ignored.
+RDS would be the target name of the node (for each source) that contains the failure information about RDS.
+[2] indicates the number of sources reporting the same alert code.
+When only one source reports an issue, the full source is indicated.
+
+The details will contain the corresponding detailed information, and a list of sources instead of just a count.
+The source is usually applied not by that system, but by the system gathering the results across the server farm.
+This is because when there are multiple levels of servers using the system, the system directly doing the testing may or may not be the source that system operators want to be reported.
+
+The timing of audits is determined algorithmically, but will always be between one tenth and four times the baseline audit frequency specified in the constructor.
+The time until the next audit is a function of the baseline audit frequency, the rating, and the duration of the previous audit.
+As status ratings degrade and audits speed up, the frequency is increased towards one tenth the baseline frequency.
+This algorithm prevents slow audits from consuming too many resources, but also speeds up recovery detection when possible.
+
+### Settings
+`StatusChecker-HistoryRetentionMinutes`: The maximum number of minutes to retain old `StatusResults`.  
+`StatusChecker-HistoryRetentionEntries`: The maximum number of old `StatusResults` entries to retain.
+
+### Sample
+[//]: # (StatusSample)
+```csharp
+/// <summary>
+/// A class that audits a specific drive.
+/// </summary>
+class DiskAuditor
+{
+    private readonly DriveInfo _driveInfo;
+    private readonly string _testPath;
+    private readonly bool _readonly;
+
+    /// <summary>
+    /// Constructs a disk auditor.
+    /// </summary>
+    /// <param name="driveName">The name of the drive to be audited.</param>
+    /// <param name="testPath">A path within the drive to be used for testing.</param>
+    /// <param name="readOnly">Whether or not the test should be readonly. (The program may not have write access to some paths and still want to audit them for space usage and reading).</param>
+    public DiskAuditor(string driveName, string testPath, bool readOnly)
+    {
+        _driveInfo = new DriveInfo(driveName);
+        _testPath = testPath;
+        _readonly = readOnly;
+    }
+    /// <summary>
+    /// Performs the disk audit, reporting results into <paramref name="statusBuilder"/>.
+    /// </summary>
+    /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to write the results into.</param>
+    /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
+    public async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    {
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.Leaf;
+        statusBuilder.AddProperty("_Path", _driveInfo.Name);
+        statusBuilder.AddProperty("_VolumeLabel", _driveInfo.VolumeLabel);
+        statusBuilder.AddProperty("DriveFormat", _driveInfo.DriveFormat);
+        statusBuilder.AddProperty("DriveType", _driveInfo.DriveType);
+        statusBuilder.AddProperty("AvailableFreeBytes", _driveInfo.AvailableFreeSpace);
+        statusBuilder.AddProperty("TotalFreeBytes", _driveInfo.TotalFreeSpace);
+        statusBuilder.AddProperty("TotalBytes", _driveInfo.TotalSize);
+        if (!string.IsNullOrEmpty(_testPath))
+        {
+            StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+            statusBuilder.AddChild(readBuilder);
+            try
+            {
+                // attempt to read a file (if one exists)
+                foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, _testPath)))
+                {
+                    AmbientStopwatch s = AmbientStopwatch.StartNew();
+                    using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        byte[] b = new byte[1];
+                        await fs.ReadAsync(b, 0, 1, cancel);
+                        await fs.FlushAsync();
+                        readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                        readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
+                    }
+                    break;
+                }
+            }
+            catch (Exception e)
+            {
+                readBuilder.AddException(e);
+            }
+            if (!_readonly)
+            {
+                StatusResultsBuilder writeBuilder = new StatusResultsBuilder("Write");
+                statusBuilder.AddChild(writeBuilder);
+                try
+                {
+                    // attempt to write a temporary file
+                    string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
+                    AmbientStopwatch s = AmbientStopwatch.StartNew();
+                    using (FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
+                    {
+                        byte[] b = new byte[1];
+                        await fs.WriteAsync(b, 0, 1);
+                        await fs.FlushAsync();
+                        readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                        writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
+                    }
+                }
+                catch (Exception e)
+                {
+                    writeBuilder.AddException(e);
+                }
+            }
+        }
+    }
+}
+/// <summary>
+/// An auditor for the local disk system.  This class will be automatically instantiated when <see cref="Status.Start"/> is called and disposed when <see cref="Status.Stop"/> is called.
+/// </summary>
+sealed class LocalDiskAuditor : StatusAuditor 
+{
+    private readonly bool _ready;
+    private readonly DiskAuditor _tempAuditor;
+    private readonly DiskAuditor _systemAuditor;
+
+    /// <summary>
+    /// Constructs the local disk auditor instance, which will audit the state of the local disk every 15 minutes (note that this frequency is to prevent the code from slowing down the unit tests; if this were used in the real world, one minute might be a better frequency).
+    /// </summary>
+    public LocalDiskAuditor() : base ("/LocalDisk", TimeSpan.FromMinutes(15))
+    {
+        _tempAuditor = new DiskAuditor(System.IO.Path.GetTempPath(), "", true);
+        _systemAuditor = new DiskAuditor(Environment.GetFolderPath(Environment.SpecialFolder.System), "", false);
+        _ready = true;
+    }
+    protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
+    protected override async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    {
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        await _tempAuditor.Audit(statusBuilder.AddChild("Temp"));
+        await _systemAuditor.Audit(statusBuilder.AddChild("System"));
+    }
+}
+```
+
 # Library Information
 
 ## Author and License

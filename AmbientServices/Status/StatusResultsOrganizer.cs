@@ -234,17 +234,17 @@ namespace AmbientServices
                 // no threshold? get the defaults
                 if (thresholds == null) thresholds = StatusPropertyThresholds.DefaultPropertyThresholds.GetThresholds(propertyPath);
                 // is there a numeric value for which thresholds can be applied?
-                double? minValue = null;
+                float? minValue = null;
                 if (!string.IsNullOrEmpty(propertyRange.MinValue))
                 {
-                    double d;
-                    if (double.TryParse(propertyRange.MinValue, out d)) minValue = d;
+                    float f;
+                    if (float.TryParse(propertyRange.MinValue, out f)) minValue = f;
                 }
-                double? maxValue = null;
+                float? maxValue = null;
                 if (!string.IsNullOrEmpty(propertyRange.MaxValue))
                 {
-                    double d;
-                    if (double.TryParse(propertyRange.MaxValue, out d)) maxValue = d;
+                    float f;
+                    if (float.TryParse(propertyRange.MaxValue, out f)) maxValue = f;
                 }
                 // are there thresholds AND range values?
                 if (thresholds != null && minValue != null && maxValue != null)

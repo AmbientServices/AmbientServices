@@ -16,15 +16,28 @@ namespace AmbientServices
         internal const string DefaultSource = "LOCALHOST";
         internal const string DefaultTarget = "Unknown Target";
 
-        private readonly static Status _DefaultInstance = new Status();
+        private readonly static Status _DefaultInstance = new Status(true);
         /// <summary>
-        /// Gets the base instance that contains the overall status.  Note that even the default instance must be started before checks and audits will occur.
+        /// Gets the base instance that contains the overall status and is initialized with all checkers and auditors with public empty constructors.  
+        /// Note that even the default instance must be started by calling <see cref="Start"/> before checks and audits will occur, and that does not happen automatically.
         /// </summary>
         public static Status DefaultInstance { get { return _DefaultInstance; } }
 
-        private ConcurrentBag<StatusChecker> _checkers = new ConcurrentBag<StatusChecker>();
+        private readonly bool _loadAllCheckers;
+        private ConcurrentHashSet<StatusChecker> _checkers = new ConcurrentHashSet<StatusChecker>();
         private int _shuttingDown;          // interlocked
         private int _started;               // interlocked
+
+        /// <summary>
+        /// Constructs a new Status instance which will keep track of status checkers and auditors and shut them down when instructed.
+        /// If <paramref name="loadAllCheckers"/> is true, constructs and registers all <see cref="StatusChecker"/> classes currently loaded and subsequently loaded so that status information may be gathered.
+        /// If <paramref name="loadAllCheckers"/> is false, constructs an empty collection of checkers which may be added to manually using <see cref="AddCheckerOrAuditor"/>.
+        /// </summary>
+        /// <param name="loadAllCheckers">Whether or not to load all checkers (and auditors) in all loaded assemblies and any assemblies that are subsequently loaded.</param>
+        public Status(bool loadAllCheckers)
+        {
+            _loadAllCheckers = loadAllCheckers;
+        }
 
         /// <summary>
         /// Checks to see whether or not we're started shutting down the status system.
@@ -32,7 +45,7 @@ namespace AmbientServices
         internal bool ShuttingDown { get { return _shuttingDown != 0; } }
 
         /// <summary>
-        /// Starts the status system for all <see cref="StatusChecker"/> classes currently loaded and subsequently loaded so that status information may be gathered.
+        /// Starts the status system.
         /// A call to Start must be matched by a call to <see cref="Stop"/> or else disposable items will not be disposed and DEBUG warnings may occur.
         /// Start may only be called once.
         /// </summary>
@@ -40,16 +53,46 @@ namespace AmbientServices
         public Task Start(CancellationToken cancel = default(CancellationToken))
         {
             if (System.Threading.Interlocked.Exchange(ref _started, 1) != 0) throw new InvalidOperationException("The Status system has already been started!");
-            // add checkers and auditors from all assemblies subsequently loaded
-            AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
-            // add checkers and auditors from all assemblies currently loaded
-            foreach (System.Reflection.Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            if (_loadAllCheckers)
             {
-                cancel.ThrowIfCancellationRequested();
-                // add checkers and auditors from this assembly
-                AddCheckersAndAuditors(assembly);
+                // add checkers and auditors from all assemblies subsequently loaded
+                AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
+                // add checkers and auditors from all assemblies currently loaded
+                foreach (System.Reflection.Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    cancel.ThrowIfCancellationRequested();
+                    // add checkers and auditors from this assembly
+                    AddCheckersAndAuditors(assembly);
+                }
             }
             return Task.CompletedTask;
+        }
+        /// <summary>
+        /// Stops the status system by disposing of all the status nodes.
+        /// </summary>
+        public async Task Stop()
+        {
+            // make sure everyone can tell we're shutting down
+            System.Threading.Interlocked.Exchange(ref _shuttingDown, 1);
+            // stop the timers on each node
+            foreach (StatusChecker checker in _checkers)
+            {
+                await checker.BeginStop().ConfigureAwait(false);
+            }
+            // wait for each one to stop
+            foreach (StatusChecker checker in _checkers)
+            {
+                await checker.FinishStop().ConfigureAwait(false);
+            }
+            // dispose each one
+            foreach (StatusChecker checker in _checkers)
+            {
+                checker.Dispose();
+            }
+            // now that we're done, reset everything back to where we were before we started
+            _checkers.Clear();
+            System.Threading.Interlocked.Exchange(ref _started, 0);
+            System.Threading.Interlocked.Exchange(ref _shuttingDown, 0);
         }
 
         private void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
@@ -71,7 +114,7 @@ namespace AmbientServices
                 {
                     if (IsTestableStatusCheckerClass(type))
                     {
-                        // construct an instance and add it to our list which will be disposed when we stop
+                        // construct an instance (it will be added to the list by the constructor)
                         StatusChecker checker = (StatusChecker)Activator.CreateInstance(type);
                         AddCheckerOrAuditor(checker);
                     }
@@ -79,12 +122,28 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Adds the specified checker.
+        /// Adds the specified checker or auditor to the global list.
         /// </summary>
         /// <param name="checker">The <see cref="StatusChecker"/> to add.</param>
-        private void AddCheckerOrAuditor(StatusChecker checker)
+        public void AddCheckerOrAuditor(StatusChecker checker)
         {
             _checkers.Add(checker);
+            // is this checker an auditor?
+            StatusAuditor auditor = checker as StatusAuditor;
+            if (auditor != null)
+            {
+                // kick off the initial audit (note that this cannot be done in the StatusAuditor constructor because it might run before the derived class constructor finishes)
+                System.Threading.ThreadPool.QueueUserWorkItem(new WaitCallback(auditor.InitialAudit));  // queue the initial status test to run immediately but on a threadpool thread
+            }
+        }
+        /// <summary>
+        /// Removes the specified checker or auditor from the global list.
+        /// No further audits will be scheduled, but no blocking wil occur if one is already in progress.
+        /// </summary>
+        /// <param name="checker">The <see cref="StatusChecker"/> to remove.</param>
+        public void RemoveCheckerOrAuditor(StatusChecker checker)
+        {
+            _checkers.Remove(checker);
         }
 
         private static float? Rating(StatusResults results)
@@ -128,7 +187,7 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Gets the <see cref="StatusAuditAlert"/> containing the full summarized results for the entire system.
+        /// Gets the <see cref="StatusAuditAlert"/> containing the full summarized results for the entire system, including systems that are okay.
         /// </summary>
         public StatusAuditAlert Summary
         {
@@ -170,29 +229,6 @@ namespace AmbientServices
                 StatusResults overallResults = new StatusResults(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
                 StatusAuditAlert alerts = overallResults.GetSummaryAlerts(true, StatusRating.Fail, false);
                 return alerts;
-            }
-        }
-        /// <summary>
-        /// Stops the status system by disposing of all the status nodes.
-        /// </summary>
-        public async Task Stop()
-        {
-            // make sure everyone can tell we're shutting down
-            System.Threading.Interlocked.Exchange(ref _shuttingDown, 1);
-            // stop the timers on each node
-            foreach (StatusChecker checker in _checkers)
-            {
-                await checker.BeginStop().ConfigureAwait(false);
-            }
-            // wait for each one to stop
-            foreach (StatusChecker checker in _checkers)
-            {
-                await checker.FinishStop().ConfigureAwait(false);
-            }
-            // dispose each one
-            foreach (StatusChecker checker in _checkers)
-            {
-                checker.Dispose();
             }
         }
         /// <summary>

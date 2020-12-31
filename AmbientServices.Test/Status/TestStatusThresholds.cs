@@ -19,62 +19,62 @@ namespace AmbientServices.Test
             StatusPropertyThresholds thresholds;
             StatusAuditAlert alert;
 
-            thresholds = new StatusPropertyThresholds(10.0, 20.0, 30.0);
+            thresholds = new StatusPropertyThresholds(10.0f, 20.0f, 30.0f);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Alert);
             Assert.IsTrue(alert.Rating < StatusRating.Okay);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
 
-            alert = thresholds.Rate("Property", 35.0);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Okay);
             Assert.IsTrue(alert.Terse.Contains(">"));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
 
 
-            thresholds = new StatusPropertyThresholds(30.0, 20.0, 10.0);
-            alert = thresholds.Rate("Property", 35.0);
+            thresholds = new StatusPropertyThresholds(30.0f, 20.0f, 10.0f);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Alert);
             Assert.IsTrue(alert.Rating < StatusRating.Okay);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Okay);
             Assert.IsTrue(alert.Rating < StatusRating.Superlative);
@@ -90,33 +90,33 @@ namespace AmbientServices.Test
 
 
 
-            thresholds = new StatusPropertyThresholds(null, 20.0, 30.0);
+            thresholds = new StatusPropertyThresholds(null, 20.0f, 30.0f);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Alert);
             Assert.IsTrue(alert.Rating < StatusRating.Okay);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
 
-            alert = thresholds.Rate("Property", 35.0);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Okay);
             Assert.IsTrue(alert.Rating < StatusRating.Superlative);
@@ -124,27 +124,27 @@ namespace AmbientServices.Test
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
 
 
-            thresholds = new StatusPropertyThresholds(null, 20.0, 10.0);
-            alert = thresholds.Rate("Property", 35.0);
+            thresholds = new StatusPropertyThresholds(null, 20.0f, 10.0f);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Alert);
             Assert.IsTrue(alert.Rating < StatusRating.Okay);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Okay);
             Assert.IsTrue(alert.Rating < StatusRating.Superlative);
@@ -160,32 +160,32 @@ namespace AmbientServices.Test
 
 
 
-            thresholds = new StatusPropertyThresholds(null, null, 30.0, StatusThresholdNature.HighIsGood);
+            thresholds = new StatusPropertyThresholds(null, null, 30.0f, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 35.0);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Okay);
             Assert.IsTrue(alert.Rating < StatusRating.Superlative);
@@ -193,26 +193,26 @@ namespace AmbientServices.Test
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
 
 
-            thresholds = new StatusPropertyThresholds(null, null, 10.0, StatusThresholdNature.LowIsGood);
-            alert = thresholds.Rate("Property", 35.0);
+            thresholds = new StatusPropertyThresholds(null, null, 10.0f, StatusThresholdNature.LowIsGood);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Okay);
             Assert.IsTrue(alert.Rating < StatusRating.Superlative);
@@ -228,59 +228,59 @@ namespace AmbientServices.Test
 
 
 
-            thresholds = new StatusPropertyThresholds(10.0, null, null, StatusThresholdNature.HighIsGood);
+            thresholds = new StatusPropertyThresholds(10.0f, null, null, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating < StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 35.0);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
 
-            thresholds = new StatusPropertyThresholds(30.0, null, null, StatusThresholdNature.LowIsGood);
-            alert = thresholds.Rate("Property", 35.0);
+            thresholds = new StatusPropertyThresholds(30.0f, null, null, StatusThresholdNature.LowIsGood);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
@@ -296,61 +296,61 @@ namespace AmbientServices.Test
 
 
 
-            thresholds = new StatusPropertyThresholds(10.0, 20.0, null, StatusThresholdNature.HighIsGood);
+            thresholds = new StatusPropertyThresholds(10.0f, 20.0f, null, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating < StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
 
-            alert = thresholds.Rate("Property", 35.0);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
 
 
-            thresholds = new StatusPropertyThresholds(30.0, 20.0, null, StatusThresholdNature.LowIsGood);
-            alert = thresholds.Rate("Property", 35.0);
+            thresholds = new StatusPropertyThresholds(30.0f, 20.0f, null, StatusThresholdNature.LowIsGood);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Alert);
             Assert.IsTrue(alert.Rating < StatusRating.Okay);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains(">="));
@@ -372,25 +372,25 @@ namespace AmbientServices.Test
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 35.0);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
@@ -398,25 +398,25 @@ namespace AmbientServices.Test
 
 
             thresholds = new StatusPropertyThresholds(null, null, null, StatusThresholdNature.LowIsGood);
-            alert = thresholds.Rate("Property", 35.0);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
@@ -431,62 +431,62 @@ namespace AmbientServices.Test
 
 
 
-            thresholds = new StatusPropertyThresholds(10.0, null, 30.0, StatusThresholdNature.HighIsGood);
+            thresholds = new StatusPropertyThresholds(10.0f, null, 30.0f, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating < StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("at or below"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains("<="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 35.0);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating >= StatusRating.Okay);
             Assert.IsTrue(alert.Terse.Contains(">"));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
 
 
-            thresholds = new StatusPropertyThresholds(30.0, null, 10.0, StatusThresholdNature.LowIsGood);
-            alert = thresholds.Rate("Property", 35.0);
+            thresholds = new StatusPropertyThresholds(30.0f, null, 10.0f, StatusThresholdNature.LowIsGood);
+            alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating <= StatusRating.Fail);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("at or above"));
 
-            alert = thresholds.Rate("Property", 25.0);
+            alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 15.0);
+            alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Fail);
             Assert.IsTrue(alert.Rating < StatusRating.Alert);
             Assert.IsTrue(alert.Terse.Contains(">="));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
 
-            alert = thresholds.Rate("Property", 5.0);
+            alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating > StatusRating.Okay);
             Assert.IsTrue(alert.Terse.Contains("<"));
@@ -501,15 +501,15 @@ namespace AmbientServices.Test
 
 
 
-            thresholds = new StatusPropertyThresholds(10.0, 20.0, 30.0);
-            alert = thresholds.Rate("Property", Double.MaxValue);
+            thresholds = new StatusPropertyThresholds(10.0f, 20.0f, 30.0f);
+            alert = thresholds.Rate("Property", Single.MaxValue);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating == StatusRating.Superlative);
             Assert.IsTrue(alert.Terse.Contains(">"));
             Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
 
-            thresholds = new StatusPropertyThresholds(10.0, 20.0, 30.0);
-            alert = thresholds.Rate("Property", Double.PositiveInfinity);
+            thresholds = new StatusPropertyThresholds(10.0f, 20.0f, 30.0f);
+            alert = thresholds.Rate("Property", Single.PositiveInfinity);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
             Assert.IsTrue(alert.Rating == StatusRating.Superlative);
             Assert.IsTrue(alert.Terse.Contains(">"));
@@ -521,32 +521,32 @@ namespace AmbientServices.Test
             StatusPropertyThresholds thresholds;
             StatusAuditAlert alert;
 
-            thresholds = new StatusPropertyThresholds(10.0, 20.0, 30.0);
-            for (double testLowValue = -5.0; testLowValue < 35.0; testLowValue += 5.0)
+            thresholds = new StatusPropertyThresholds(10.0f, 20.0f, 30.0f);
+            for (float testLowValue = -5.0f; testLowValue < 35.0f; testLowValue += 5.0f)
             {
-                for (double testHighValue = testLowValue; testHighValue < 35.0; testHighValue += 5.0)
+                for (float testHighValue = testLowValue; testHighValue < 35.0f; testHighValue += 5.0f)
                 {
-                    double significantValue = testLowValue;
+                    float significantValue = testLowValue;
                     StatusRatingRange expectedRatingRange;
-                    if (significantValue <= 10.0) expectedRatingRange = StatusRatingRange.Fail;
-                    else if (significantValue <= 20.0) expectedRatingRange = StatusRatingRange.Alert;
-                    else if (significantValue <= 30.0) expectedRatingRange = StatusRatingRange.Okay;
+                    if (significantValue <= 10.0f) expectedRatingRange = StatusRatingRange.Fail;
+                    else if (significantValue <= 20.0f) expectedRatingRange = StatusRatingRange.Alert;
+                    else if (significantValue <= 30.0f) expectedRatingRange = StatusRatingRange.Okay;
                     else expectedRatingRange = StatusRatingRange.Superlative;
                     alert = thresholds.Rate("Property", testLowValue, testHighValue);
                     Assert.AreEqual(expectedRatingRange, StatusRating.FindRange(alert.Rating));
                 }
             }
 
-            thresholds = new StatusPropertyThresholds(30.0, 20.0, 10.0);
-            for (double testLowValue = -5.0; testLowValue < 35.0; testLowValue += 5.0)
+            thresholds = new StatusPropertyThresholds(30.0f, 20.0f, 10.0f);
+            for (float testLowValue = -5.0f; testLowValue < 35.0f; testLowValue += 5.0f)
             {
-                for (double testHighValue = testLowValue; testHighValue < 35.0; testHighValue += 5.0)
+                for (float testHighValue = testLowValue; testHighValue < 35.0f; testHighValue += 5.0f)
                 {
-                    double significantValue = testHighValue;
+                    float significantValue = testHighValue;
                     StatusRatingRange expectedRatingRange;
-                    if (significantValue >= 30.0) expectedRatingRange = StatusRatingRange.Fail;
-                    else if (significantValue >= 20.0) expectedRatingRange = StatusRatingRange.Alert;
-                    else if (significantValue >= 10.0) expectedRatingRange = StatusRatingRange.Okay;
+                    if (significantValue >= 30.0f) expectedRatingRange = StatusRatingRange.Fail;
+                    else if (significantValue >= 20.0f) expectedRatingRange = StatusRatingRange.Alert;
+                    else if (significantValue >= 10.0f) expectedRatingRange = StatusRatingRange.Okay;
                     else expectedRatingRange = StatusRatingRange.Superlative;
                     alert = thresholds.Rate("Property", testLowValue, testHighValue);
                     Assert.AreEqual(expectedRatingRange, StatusRating.FindRange(alert.Rating));
@@ -556,11 +556,11 @@ namespace AmbientServices.Test
         [TestMethod]
         public void StatusThresholdsExceptions()
         {
-            Assert.ThrowsException<ArgumentException>(() => { StatusPropertyThresholds s = new StatusPropertyThresholds(2.0, 3.0, 1.0); });
+            Assert.ThrowsException<ArgumentException>(() => { StatusPropertyThresholds s = new StatusPropertyThresholds(2.0f, 3.0f, 1.0f); });
             //StatusThresholds thresholds;
             //StatusAuditAlert alert;
-//            thresholds = new StatusThresholds(1.0, 2.0, 3.0);
-//            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { alert = thresholds.Rate("Property", -0.0001); });
+//            thresholds = new StatusThresholds(1.0f, 2.0f, 3.0f);
+//            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { alert = thresholds.Rate("Property", -0.0f001); });
         }
         [TestMethod]
         public void DefaultPropertyThresholdsProperty()
@@ -574,49 +574,49 @@ namespace AmbientServices.Test
             property = typeof(DefaultPropertyThresholdsAttributeTestDeferTarget).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
             Assert.AreEqual("PropertyPathDeferTarget", property.PropertyPath);
             Assert.IsNull(property.DeferToType);
-            Assert.AreEqual(1.0, property.Thresholds.FailVsAlertThreshold);
-            Assert.AreEqual(2.0, property.Thresholds.AlertVsOkayThreshold);
-            Assert.AreEqual(3.0, property.Thresholds.OkayVsSuperlativeThreshold);
+            Assert.AreEqual(1.0f, property.Thresholds.FailVsAlertThreshold);
+            Assert.AreEqual(2.0f, property.Thresholds.AlertVsOkayThreshold);
+            Assert.AreEqual(3.0f, property.Thresholds.OkayVsSuperlativeThreshold);
             Assert.AreEqual(StatusThresholdNature.HighIsGood, property.Thresholds.Nature);
-            Assert.AreEqual(1.0, property.FailureThreshold);
-            Assert.AreEqual(2.0, property.AlertThreshold);
-            Assert.AreEqual(3.0, property.OkayThreshold);
+            Assert.AreEqual(1.0f, property.FailureThreshold);
+            Assert.AreEqual(2.0f, property.AlertThreshold);
+            Assert.AreEqual(3.0f, property.OkayThreshold);
             Assert.AreEqual(StatusThresholdNature.HighIsGood, property.ThresholdNature);
 
             property = typeof(DefaultPropertyThresholdsAttributeTestNoFailure).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
             Assert.AreEqual("PropertyPathNoFailure", property.PropertyPath);
             Assert.IsNull(property.DeferToType);
             Assert.IsNull(property.Thresholds.FailVsAlertThreshold);
-            Assert.AreEqual(2.0, property.Thresholds.AlertVsOkayThreshold);
-            Assert.AreEqual(1.0, property.Thresholds.OkayVsSuperlativeThreshold);
+            Assert.AreEqual(2.0f, property.Thresholds.AlertVsOkayThreshold);
+            Assert.AreEqual(1.0f, property.Thresholds.OkayVsSuperlativeThreshold);
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds.Nature);
-            Assert.IsTrue(double.IsNaN(property.FailureThreshold));
-            Assert.AreEqual(2.0, property.AlertThreshold);
-            Assert.AreEqual(1.0, property.OkayThreshold);
+            Assert.IsTrue(float.IsNaN(property.FailureThreshold));
+            Assert.AreEqual(2.0f, property.AlertThreshold);
+            Assert.AreEqual(1.0f, property.OkayThreshold);
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.ThresholdNature);
 
             property = typeof(DefaultPropertyThresholdsAttributeTestNoAlert).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
             Assert.AreEqual("PropertyPathNoAlert", property.PropertyPath);
             Assert.IsNull(property.DeferToType);
-            Assert.AreEqual(3.0, property.Thresholds.FailVsAlertThreshold);
+            Assert.AreEqual(3.0f, property.Thresholds.FailVsAlertThreshold);
             Assert.IsNull(property.Thresholds.AlertVsOkayThreshold);
-            Assert.AreEqual(1.0, property.Thresholds.OkayVsSuperlativeThreshold);
+            Assert.AreEqual(1.0f, property.Thresholds.OkayVsSuperlativeThreshold);
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds.Nature);
-            Assert.AreEqual(3.0, property.FailureThreshold);
-            Assert.IsTrue(double.IsNaN(property.AlertThreshold));
-            Assert.AreEqual(1.0, property.OkayThreshold);
+            Assert.AreEqual(3.0f, property.FailureThreshold);
+            Assert.IsTrue(float.IsNaN(property.AlertThreshold));
+            Assert.AreEqual(1.0f, property.OkayThreshold);
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.ThresholdNature);
 
             property = typeof(DefaultPropertyThresholdsAttributeTestNoOkay).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
             Assert.AreEqual("PropertyPathNoOkay", property.PropertyPath);
             Assert.IsNull(property.DeferToType);
-            Assert.AreEqual(3.0, property.Thresholds.FailVsAlertThreshold);
-            Assert.AreEqual(2.0, property.Thresholds.AlertVsOkayThreshold);
+            Assert.AreEqual(3.0f, property.Thresholds.FailVsAlertThreshold);
+            Assert.AreEqual(2.0f, property.Thresholds.AlertVsOkayThreshold);
             Assert.IsNull(property.Thresholds.OkayVsSuperlativeThreshold);
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds.Nature);
-            Assert.AreEqual(3.0, property.FailureThreshold);
-            Assert.AreEqual(2.0, property.AlertThreshold);
-            Assert.IsTrue(double.IsNaN(property.OkayThreshold));
+            Assert.AreEqual(3.0f, property.FailureThreshold);
+            Assert.AreEqual(2.0f, property.AlertThreshold);
+            Assert.IsTrue(float.IsNaN(property.OkayThreshold));
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.ThresholdNature);
 
             property = typeof(DefaultPropertyThresholdsAttributeTestNoThreshold).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
@@ -644,33 +644,33 @@ namespace AmbientServices.Test
         [TestMethod]
         public void StatusThresholdsDefaultPropertyThresholds()
         {
-            //[DefaultPropertyThresholds("AvailableBytes", 1000000000.0, 10000000000.0, 100000000000.0, StatusThresholdNature.HighIsGood)]
-            //[DefaultPropertyThresholds("AvailablePercent", 1.0, 2.5, 5.0, StatusThresholdNature.HighIsGood)]
+            //[DefaultPropertyThresholds("AvailableBytes", 1000000000.0f, 10000000000.0f, 100000000000.0f, StatusThresholdNature.HighIsGood)]
+            //[DefaultPropertyThresholds("AvailablePercent", 1.0f, 2.5f, 5.0f, StatusThresholdNature.HighIsGood)]
             //class SampleVolumeAuditor
 
             IStatusThresholdsRegistry defaultThresholds = StatusPropertyThresholds.DefaultPropertyThresholds;
-            Assert.AreEqual(1.0, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").FailVsAlertThreshold);
-            Assert.AreEqual(2.5, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").AlertVsOkayThreshold);
-            Assert.AreEqual(5.0, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").OkayVsSuperlativeThreshold);
+            Assert.AreEqual(1.0f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").FailVsAlertThreshold);
+            Assert.AreEqual(2.5f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").AlertVsOkayThreshold);
+            Assert.AreEqual(5.0f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").OkayVsSuperlativeThreshold);
         }
     }
     [DefaultPropertyThresholds("PropertyPathDeferSource", typeof(DefaultPropertyThresholdsAttributeTestDeferTarget))]
     class DefaultPropertyThresholdsAttributeDeferSource
     {
     }
-    [DefaultPropertyThresholds("PropertyPathDeferTarget", 1.0, 2.0, 3.0, StatusThresholdNature.HighIsGood)]
+    [DefaultPropertyThresholds("PropertyPathDeferTarget", 1.0f, 2.0f, 3.0f, StatusThresholdNature.HighIsGood)]
     class DefaultPropertyThresholdsAttributeTestDeferTarget
     {
     }
-    [DefaultPropertyThresholds("PropertyPathNoFailure", Double.NaN, 2.0, 1.0, StatusThresholdNature.LowIsGood)]
+    [DefaultPropertyThresholds("PropertyPathNoFailure", Single.NaN, 2.0f, 1.0f, StatusThresholdNature.LowIsGood)]
     class DefaultPropertyThresholdsAttributeTestNoFailure
     {
     }
-    [DefaultPropertyThresholds("PropertyPathNoAlert", 3.0, Double.NaN, 1.0, StatusThresholdNature.LowIsGood)]
+    [DefaultPropertyThresholds("PropertyPathNoAlert", 3.0f, Single.NaN, 1.0f, StatusThresholdNature.LowIsGood)]
     class DefaultPropertyThresholdsAttributeTestNoAlert
     {
     }
-    [DefaultPropertyThresholds("PropertyPathNoOkay", 3.0, 2.0, Double.NaN, StatusThresholdNature.LowIsGood)]
+    [DefaultPropertyThresholds("PropertyPathNoOkay", 3.0f, 2.0f, Single.NaN, StatusThresholdNature.LowIsGood)]
     class DefaultPropertyThresholdsAttributeTestNoOkay
     {
     }

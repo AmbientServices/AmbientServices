@@ -1029,3 +1029,120 @@ class ProfileReporter
     }
 }
 #endregion
+
+
+#region StatusSample
+/// <summary>
+/// A class that audits a specific drive.
+/// </summary>
+class DiskAuditor
+{
+    private readonly DriveInfo _driveInfo;
+    private readonly string _testPath;
+    private readonly bool _readonly;
+
+    /// <summary>
+    /// Constructs a disk auditor.
+    /// </summary>
+    /// <param name="driveName">The name of the drive to be audited.</param>
+    /// <param name="testPath">A path within the drive to be used for testing.</param>
+    /// <param name="readOnly">Whether or not the test should be readonly. (The program may not have write access to some paths and still want to audit them for space usage and reading).</param>
+    public DiskAuditor(string driveName, string testPath, bool readOnly)
+    {
+        _driveInfo = new DriveInfo(driveName);
+        _testPath = testPath;
+        _readonly = readOnly;
+    }
+    /// <summary>
+    /// Performs the disk audit, reporting results into <paramref name="statusBuilder"/>.
+    /// </summary>
+    /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to write the results into.</param>
+    /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
+    public async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    {
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.Leaf;
+        statusBuilder.AddProperty("_Path", _driveInfo.Name);
+        statusBuilder.AddProperty("_VolumeLabel", _driveInfo.VolumeLabel);
+        statusBuilder.AddProperty("DriveFormat", _driveInfo.DriveFormat);
+        statusBuilder.AddProperty("DriveType", _driveInfo.DriveType);
+        statusBuilder.AddProperty("AvailableFreeBytes", _driveInfo.AvailableFreeSpace);
+        statusBuilder.AddProperty("TotalFreeBytes", _driveInfo.TotalFreeSpace);
+        statusBuilder.AddProperty("TotalBytes", _driveInfo.TotalSize);
+        if (!string.IsNullOrEmpty(_testPath))
+        {
+            StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+            statusBuilder.AddChild(readBuilder);
+            try
+            {
+                // attempt to read a file (if one exists)
+                foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, _testPath)))
+                {
+                    AmbientStopwatch s = AmbientStopwatch.StartNew();
+                    using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        byte[] b = new byte[1];
+                        await fs.ReadAsync(b, 0, 1, cancel);
+                        await fs.FlushAsync();
+                        readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                        readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
+                    }
+                    break;
+                }
+            }
+            catch (Exception e)
+            {
+                readBuilder.AddException(e);
+            }
+            if (!_readonly)
+            {
+                StatusResultsBuilder writeBuilder = new StatusResultsBuilder("Write");
+                statusBuilder.AddChild(writeBuilder);
+                try
+                {
+                    // attempt to write a temporary file
+                    string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
+                    AmbientStopwatch s = AmbientStopwatch.StartNew();
+                    using (FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
+                    {
+                        byte[] b = new byte[1];
+                        await fs.WriteAsync(b, 0, 1);
+                        await fs.FlushAsync();
+                        readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                        writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
+                    }
+                }
+                catch (Exception e)
+                {
+                    writeBuilder.AddException(e);
+                }
+            }
+        }
+    }
+}
+/// <summary>
+/// An auditor for the local disk system.  This class will be automatically instantiated when <see cref="Status.Start"/> is called and disposed when <see cref="Status.Stop"/> is called.
+/// </summary>
+sealed class LocalDiskAuditor : StatusAuditor 
+{
+    private readonly bool _ready;
+    private readonly DiskAuditor _tempAuditor;
+    private readonly DiskAuditor _systemAuditor;
+
+    /// <summary>
+    /// Constructs the local disk auditor instance, which will audit the state of the local disk every 15 minutes (note that this frequency is to prevent the code from slowing down the unit tests; if this were used in the real world, one minute might be a better frequency).
+    /// </summary>
+    public LocalDiskAuditor() : base ("/LocalDisk", TimeSpan.FromMinutes(15))
+    {
+        _tempAuditor = new DiskAuditor(System.IO.Path.GetTempPath(), "", true);
+        _systemAuditor = new DiskAuditor(Environment.GetFolderPath(Environment.SpecialFolder.System), "", false);
+        _ready = true;
+    }
+    protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
+    protected override async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    {
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        await _tempAuditor.Audit(statusBuilder.AddChild("Temp"));
+        await _systemAuditor.Audit(statusBuilder.AddChild("System"));
+    }
+}
+#endregion

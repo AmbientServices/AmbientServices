@@ -377,8 +377,8 @@ namespace AmbientServices.Test
     /// <summary>
     /// A status node for the local disk storage.
     /// </summary>
-    [DefaultPropertyThresholds("TargetLeafWithNoReport.Attr1", 1000.0, 100.0, 10.0)]
-    [DefaultPropertyThresholds("TargetLeafWithNoReport.Attr2", 10.0, 100.0, 1000.0)]
+    [DefaultPropertyThresholds("TargetLeafWithNoReport.Attr1", 1000.0f, 100.0f, 10.0f)]
+    [DefaultPropertyThresholds("TargetLeafWithNoReport.Attr2", 10.0f, 100.0f, 1000.0f)]
     class ThresholdRegisterAuditor : StatusAuditor
     {
         /// <summary>
