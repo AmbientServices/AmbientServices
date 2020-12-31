@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AmbientServices.Samples
+namespace AmbientServices.Test.Samples
 {
     /// <summary>
     /// A class that holds tests for sample code.
@@ -20,10 +20,10 @@ namespace AmbientServices.Samples
     public class TestSamples
     {
         /// <summary>
-        /// Performs tests on the CallStackTest sample code.
+        /// Performs tests on the ambient call stack sample code.
         /// </summary>
         [TestMethod]
-        public void CallStackTestClass()
+        public void AmbientCallStack()
         {
             CallStackTest.OuterFunc();
         }
@@ -42,8 +42,9 @@ namespace AmbientServices.Samples
                     lda = new LocalDiskAuditor();
                     s.AddCheckerOrAuditor(lda);
                     await s.Start();
-                    // skip ahead to run it at least once
-                    AmbientClock.SkipAhead(TimeSpan.FromMinutes(20));
+                    // run the audit manually
+                    StatusResultsBuilder statusBuilder = new StatusResultsBuilder(lda);
+                    await lda.Audit(statusBuilder);
                 }
                 finally
                 {

@@ -80,10 +80,10 @@ namespace AmbientServices
         protected internal abstract bool Applicable { get; }
         /// <summary>
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
-        /// Note that this function may be called on multiple threads.
+        /// Note that this function may be called on multiple threads simultaneously.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        protected internal virtual Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        public virtual Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
         {
             return Task.FromResult(LatestResults);
         }

@@ -1244,15 +1244,23 @@ class DiskAuditor
                 foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, _testPath)))
                 {
                     AmbientStopwatch s = AmbientStopwatch.StartNew();
-                    using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    try
                     {
-                        byte[] b = new byte[1];
-                        await fs.ReadAsync(b, 0, 1, cancel);
-                        await fs.FlushAsync();
+                        using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            byte[] b = new byte[1];
+                            await fs.ReadAsync(b, 0, 1, cancel);
+                            await fs.FlushAsync();
+                        }
                         readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                         readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
+                        break;
                     }
-                    break;
+                    catch (IOException) // this will be thrown if the file cannot be accessed because it is open exclusively by another process (this happens a lot with temp files)
+                    {
+                        // just move on and try the next file
+                        continue;
+                    }
                 }
             }
             catch (Exception e)
@@ -1288,7 +1296,7 @@ class DiskAuditor
 /// <summary>
 /// An auditor for the local disk system.  This class will be automatically instantiated when <see cref="Status.Start"/> is called and disposed when <see cref="Status.Stop"/> is called.
 /// </summary>
-sealed class LocalDiskAuditor : StatusAuditor 
+public sealed class LocalDiskAuditor : StatusAuditor 
 {
     private readonly bool _ready;
     private readonly DiskAuditor _tempAuditor;
@@ -1299,12 +1307,15 @@ sealed class LocalDiskAuditor : StatusAuditor
     /// </summary>
     public LocalDiskAuditor() : base ("/LocalDisk", TimeSpan.FromMinutes(15))
     {
-        _tempAuditor = new DiskAuditor(System.IO.Path.GetTempPath(), "", true);
+        string tempPath = System.IO.Path.GetTempPath();
+        string tempDrive = Path.GetPathRoot(tempPath);
+        string tempPathRelative = tempPath.Substring(tempDrive.Length);
+        _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative,  true);
         _systemAuditor = new DiskAuditor(Environment.GetFolderPath(Environment.SpecialFolder.System), "", false);
         _ready = true;
     }
     protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
-    protected override async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    public override async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
         statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
         await _tempAuditor.Audit(statusBuilder.AddChild("Temp"));

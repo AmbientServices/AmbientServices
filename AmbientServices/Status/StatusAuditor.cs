@@ -358,7 +358,7 @@ namespace AmbientServices
         {
         }
 
-        internal void InitialAudit(object sender)
+        internal void InitialAudit(object _)
         {
             InternalAuditAsync().GetAwaiter().GetResult();
         }
@@ -370,7 +370,7 @@ namespace AmbientServices
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        sealed protected internal override Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        sealed public override Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
         {
             return InternalAuditAsync(true, cancel);
         }
@@ -454,16 +454,16 @@ namespace AmbientServices
             return TimeSpan.FromTicks(_frequencyTicks);
         }
         /// <summary>
-        /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
+        /// Computes the current status, filling in <paramref name="statusBuilder"/> with information about the status.
         /// </summary>
-        /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> that may be used to fill in audit information.</param>
+        /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to put the audit results into.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        protected internal abstract Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken));
+        public abstract Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Starts stopping any asynchronous activity.
         /// </summary>
-        protected internal override Task BeginStop()
+        protected internal sealed override Task BeginStop()
         {
             _auditTimer?.Stop();
             _backgroundCancelSource?.Cancel();
@@ -472,7 +472,7 @@ namespace AmbientServices
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
-        protected internal override Task FinishStop()
+        protected internal sealed override Task FinishStop()
         {
             return Task.CompletedTask;
         }

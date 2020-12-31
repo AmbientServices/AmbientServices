@@ -164,7 +164,7 @@ namespace AmbientServices.Test
             SetLatestResults(results);  // set the results twice so the first results (which are the same as the second) end up in the history
         }
         protected internal override bool Applicable { get { return true; } }
-        protected internal override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
             statusBuilder.TargetSystem = "TestAuditableStatusNoChildren";
@@ -199,7 +199,7 @@ namespace AmbientServices.Test
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
         }
         protected internal override bool Applicable { get { return true; } }
-        protected internal override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             throw new ExpectedException("This exception is expected!");
         }
@@ -214,7 +214,7 @@ namespace AmbientServices.Test
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
         }
         protected internal override bool Applicable { get { return true; } }
-        protected internal override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             return Task.CompletedTask;
         }

@@ -55,6 +55,7 @@ namespace AmbientServices
         }
         /// <summary>
         /// Constructs an empty StatusResultsBuilder, ready to fill with properties, children, and alerts.
+        /// <see cref="NatureOfSystem"/> start with a value of <see cref="StatusNatureOfSystem.ChildrenHeterogenous"/>.
         /// </summary>
         /// <param name="checker">The <see cref="StatusChecker"/> we are going to build results for.</param>
         public StatusResultsBuilder(StatusChecker checker)
@@ -67,6 +68,7 @@ namespace AmbientServices
         }
         /// <summary>
         /// Constructs a StatusResultsBuilder with a set of baseline properties.
+        /// <see cref="NatureOfSystem"/> start with a value of <see cref="StatusNatureOfSystem.ChildrenHeterogenous"/>.
         /// </summary>
         /// <param name="checker">The <see cref="StatusChecker"/> we are going to build results for.</param>
         /// <param name="baselineProperties">An enumeration of baseline <see cref="StatusProperty"/>s to initalize the property list with.</param>

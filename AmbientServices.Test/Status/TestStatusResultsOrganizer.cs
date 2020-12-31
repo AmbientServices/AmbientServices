@@ -400,7 +400,7 @@ namespace AmbientServices.Test
         /// </summary>
         /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> that may be used to fill in audit information.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        protected internal override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             return Task.CompletedTask;
         }
