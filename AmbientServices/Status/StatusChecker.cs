@@ -166,6 +166,7 @@ namespace AmbientServices
                 {
                     history = new ConcurrentQueue<StatusResults>();
                     ConcurrentQueue<StatusResults> result = Interlocked.CompareExchange(ref _statusResultsHistory, history, null);
+                    // this condition can only be hit if two threads enter this block of code and both try to update the status results history, so tests can only cover it inconsistently
                     if (result != null) history = result;
                 }
                 history.Enqueue(oldResults);
