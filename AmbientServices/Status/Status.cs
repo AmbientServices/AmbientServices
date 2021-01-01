@@ -160,6 +160,7 @@ namespace AmbientServices
         }
         /// <summary>
         /// Refreshes the status audits immediately.
+        /// Normally audits will be refreshed automatically in the background, but in some circumstances, users may want to force an immediate update.
         /// </summary>
         public async Task<StatusResults> RefreshAsync(CancellationToken cancel = default(CancellationToken))
         {

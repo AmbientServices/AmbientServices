@@ -79,9 +79,16 @@ namespace AmbientServices
         /// </summary>
         protected internal abstract bool Applicable { get; }
         /// <summary>
-        /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
-        /// Note that this function may be called on multiple threads simultaneously.
+        /// Computes the current status, returning a <see cref="StatusResults"/> containing information about the status.
         /// </summary>
+        /// <remarks>
+        /// Note that this function may be called on multiple threads simultaneously.
+        /// Unlike <see cref="StatusAuditor.Audit(StatusResultsBuilder, CancellationToken)"/>, this method returns <see cref="StatusResults"/> instead of taking a <see cref="StatusResultsBuilder"/> as a parameter.
+        /// The reason for this is that <see cref="StatusAuditor"/> runs on a timer and generates status data on the fly each time.
+        /// This function is only called once when the status system is started and then again whenever <see cref="Status.RefreshAsync(CancellationToken)"/> is called.
+        /// As a result, some <see cref="StatusChecker"/> implementations may build a <see cref="StatusResults"/> during initialization and return the same instance whenever this function is called.
+        /// The default implementation simply returns <see cref="LatestResults"/>.
+        /// </remarks>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
         public virtual Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
         {

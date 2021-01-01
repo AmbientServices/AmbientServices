@@ -455,6 +455,8 @@ namespace AmbientServices
         }
         /// <summary>
         /// Computes the current status, filling in <paramref name="statusBuilder"/> with information about the status.
+        /// Note that this function is only public instead of protected so that it can be unit tested more easily.
+        /// The status system calls this function internally.
         /// </summary>
         /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to put the audit results into.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
