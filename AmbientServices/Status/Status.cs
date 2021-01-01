@@ -17,6 +17,7 @@ namespace AmbientServices
         internal const string DefaultTarget = "Unknown Target";
 
         private readonly static Status _DefaultInstance = new Status(true);
+        internal readonly static AmbientLogger<Status> Logger = new AmbientLogger<Status>();
         /// <summary>
         /// Gets the base instance that contains the overall status and is initialized with all checkers and auditors with public empty constructors.  
         /// Note that even the default instance must be started by calling <see cref="Start"/> before checks and audits will occur, and that does not happen automatically.
@@ -52,6 +53,7 @@ namespace AmbientServices
         /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to stop the operation before it completes.</param>
         public Task Start(CancellationToken cancel = default(CancellationToken))
         {
+            Logger.Log("Starting", "InitTerm");
             if (System.Threading.Interlocked.Exchange(ref _started, 1) != 0) throw new InvalidOperationException("The Status system has already been started!");
             if (_loadAllCheckers)
             {
@@ -65,6 +67,7 @@ namespace AmbientServices
                     AddCheckersAndAuditors(assembly);
                 }
             }
+            Logger.Log("Started", "InitTerm");
             return Task.CompletedTask;
         }
         /// <summary>
@@ -72,6 +75,7 @@ namespace AmbientServices
         /// </summary>
         public async Task Stop()
         {
+            Logger.Log("Stopping", "InitTerm");
             // make sure everyone can tell we're shutting down
             System.Threading.Interlocked.Exchange(ref _shuttingDown, 1);
             // stop the timers on each node
@@ -89,6 +93,7 @@ namespace AmbientServices
             {
                 checker.Dispose();
             }
+            Logger.Log("Stopped", "InitTerm");
             // now that we're done, reset everything back to where we were before we started
             _checkers.Clear();
             System.Threading.Interlocked.Exchange(ref _started, 0);
@@ -127,6 +132,7 @@ namespace AmbientServices
         /// <param name="checker">The <see cref="StatusChecker"/> to add.</param>
         public void AddCheckerOrAuditor(StatusChecker checker)
         {
+            Logger.Log("Adding Checker: " + checker?.GetType().Name, "Registration");
             _checkers.Add(checker);
             // is this checker an auditor?
             StatusAuditor auditor = checker as StatusAuditor;
@@ -144,6 +150,7 @@ namespace AmbientServices
         public void RemoveCheckerOrAuditor(StatusChecker checker)
         {
             _checkers.Remove(checker);
+            Logger.Log("Removed Checker: " + checker?.GetType().Name, "Registration");
         }
 
         private static float? Rating(StatusResults results)
@@ -164,6 +171,7 @@ namespace AmbientServices
         /// </summary>
         public async Task<StatusResults> RefreshAsync(CancellationToken cancel = default(CancellationToken))
         {
+            Logger.Log("Explicit Refreshing", "Check");
             // asynchronously get the status of each system
             IEnumerable<Task<StatusResults>> checkerTasks = _checkers.Select(checker => checker.GetStatus(cancel));
             await Task.WhenAll(checkerTasks).ConfigureAwait(false);

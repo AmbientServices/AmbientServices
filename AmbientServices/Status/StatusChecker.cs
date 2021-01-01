@@ -71,6 +71,7 @@ namespace AmbientServices
         /// <param name="newResults">The new <see cref="StatusResults"/>.</param>
         protected void SetLatestResults(StatusResults newResults)
         {
+            Status.Logger.Log($"{newResults?.TargetSystemDisplayName}: {newResults?.Report?.Alert}", "Results");
             _resultsTracker.SetLatestResults(newResults);
         }
 
