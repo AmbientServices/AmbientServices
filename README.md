@@ -29,6 +29,10 @@ This information gives you insight into what optimizations would improve respons
 Using these services, you can see performance issues in near-real-time and identify which backend systems or local bottlenecks caused those issues.
 Advanced ambient services allow you to track this information with little overhead and in turn provide it for consumers of your systems.
 
+## Status
+The status system enables periodic background testing of backend systems, with summarization of overall process status and across both heterogenous and homogenous server farms.
+Status tests are automatically detected based on class inheritance and constructor signature, but tests only run after the system is explicitly started.
+
 
 ## Getting Started
 In Visual Studio, use Manage Nuget Packages and search nuget.org for AmbientServices to add a package reference for this library.

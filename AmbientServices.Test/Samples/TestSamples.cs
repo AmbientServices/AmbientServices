@@ -42,9 +42,10 @@ namespace AmbientServices.Test.Samples
                     lda = new LocalDiskAuditor();
                     s.AddCheckerOrAuditor(lda);
                     await s.Start();
-                    // run the audit manually
-                    StatusResultsBuilder statusBuilder = new StatusResultsBuilder(lda);
-                    await lda.Audit(statusBuilder);
+                    // run all the tests (just the one here) right now
+                    await s.RefreshAsync();
+                    StatusAuditAlert a = s.Summary;
+                    Assert.AreEqual(StatusRatingRange.Okay, StatusRating.FindRange(a.Rating));
                 }
                 finally
                 {
