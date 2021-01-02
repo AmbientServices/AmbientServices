@@ -186,7 +186,7 @@ namespace AmbientServices
         /// <param name="value">The value for the property.</param>
         public void AddProperty(string name, string value)
         {
-            _properties.Add(StatusProperty.Create(name, value));
+            _properties.Add(new StatusProperty(name, value));
         }
         /// <summary>
         /// Adds the specified property.

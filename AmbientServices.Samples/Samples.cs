@@ -622,6 +622,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
 
 
 
+
 #region AmbientStatisticsSample
 
 /// <summary>
@@ -782,6 +783,11 @@ public static class StatisticsReporter
 }
 #endregion
 
+
+
+
+
+
 #region AmbientBottleneckDetectorSample
 /// <summary>
 /// A class that holds a thread-safe queue which reports on the associated bottleneck.
@@ -919,6 +925,10 @@ class BottleneckReporter
 #endregion
 
 
+
+
+
+
 #region AmbientServiceProfilerSample
 /// <summary>
 /// A class that access a SQL database and reports profiling information to the system profiling system.
@@ -1029,6 +1039,11 @@ class ProfileReporter
     }
 }
 #endregion
+
+
+
+
+
 
 
 #region StatusSample
@@ -1154,6 +1169,24 @@ public sealed class LocalDiskAuditor : StatusAuditor
         statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
         await _tempAuditor.Audit(statusBuilder.AddChild("Temp"));
         await _systemAuditor.Audit(statusBuilder.AddChild("System"));
+    }
+}
+
+class Application
+{
+    /// <summary>
+    /// Starts the status system.
+    /// </summary>
+    public static async Task StartStatus()
+    {
+        await Status.DefaultInstance.Start();
+    }
+    /// <summary>
+    /// Stops the status system.
+    /// </summary>
+    public static async Task StopStatus()
+    {
+        await Status.DefaultInstance.Stop();
     }
 }
 #endregion

@@ -305,6 +305,7 @@ namespace AmbientServices
     {
         private readonly Status _status;
         private readonly TimeSpan _baselineAuditFrequency;
+        private readonly System.Timers.Timer _initialAuditTimer;    // only used until the initial audit happens, then disposed
 
         private AmbientCancellationTokenSource _backgroundCancelSource = new AmbientCancellationTokenSource(); // interlocked
         private AmbientEventTimer _auditTimer;  // interlocked
@@ -333,13 +334,22 @@ namespace AmbientServices
 
             _frequencyTicks = baselineAuditFrequency.Ticks;
             _nextAuditTime = AmbientClock.UtcNow.AddMilliseconds(10).Ticks;
+            // create a timer for the initial audit (we'll dispose of this one immediately as soon as that audit finishes)
+            _initialAuditTimer = new System.Timers.Timer(10);
+            _initialAuditTimer.Elapsed += InitialAuditTimer_Elapsed;
+            _initialAuditTimer.AutoReset = false;
             // should we update periodically?
             if (baselineAuditFrequency < TimeSpan.MaxValue && baselineAuditFrequency > TimeSpan.FromTicks(0))
             {
                 _auditTimer = new AmbientEventTimer(TimeSpan.FromTicks(_frequencyTicks).TotalMilliseconds);
                 _auditTimer.Elapsed += AuditTimer_Elapsed;
-                _auditTimer.AutoReset = false;  // note that the timer should remain stopped until we start it after the first audit happens
             }
+            else // other parts of the code assume that _auditTimer is not null, so we will create one here that we don't hook up to any event handler
+            {
+                _auditTimer = new AmbientEventTimer(Int32.MaxValue - 1);
+            }
+            _auditTimer.AutoReset = false;  
+            // note that the audit timer should remain stopped until we start it after the first audit happens
         }
 
         /// <summary>
@@ -358,13 +368,20 @@ namespace AmbientServices
         {
         }
 
-        internal void InitialAudit(object _)
+        internal void ScheduleInitialAudit()
         {
-            InternalAuditAsync().GetAwaiter().GetResult();
+            _initialAuditTimer.Enabled = true;
         }
-        private void AuditTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        internal async void InitialAuditTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            InternalAuditAsync(false, _backgroundCancelSource.Token).GetAwaiter().GetResult();
+            CancellationToken cancel = _backgroundCancelSource?.Token ?? default;
+            _initialAuditTimer.Enabled = false;
+            await InternalAuditAsync(false, cancel).ConfigureAwait(false);
+            _initialAuditTimer.Close();
+        }
+        private async void AuditTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            await InternalAuditAsync(false, _backgroundCancelSource.Token).ConfigureAwait(false);
         }
         /// <summary>
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
@@ -379,26 +396,33 @@ namespace AmbientServices
             StatusResultsBuilder builder = new StatusResultsBuilder(this);
             try
             {
-                // in case the timer went off more than once due to test (or overall system) slowness, disable the timer until we're done here
-                _auditTimer?.Stop();
-                // have we already shut down?  bail out now!
-                if (foreground) Interlocked.Increment(ref _foregroundAuditCount); else Interlocked.Increment(ref _backgroundAuditCount);   // NOTE: these audit counts are structs so using a ternary operator here doesn't do what you might think
-                // have we already shut down?  bail out now!
-                if (_status?.ShuttingDown ?? false) return null;
-                // call the derived object to get the status
-                await Audit(builder, cancel).ConfigureAwait(false);
-                // schedule the next audit
-                builder.NextAuditTime = ScheduleNextAudit(builder.WorstAlert == null ? (float?)null : builder.WorstAlert.Rating, builder.Elapsed);
-            }
+                try
+                {
+                    // in case the timer went off more than once due to test (or overall system) slowness, disable the timer until we're done here
+                    _auditTimer.Stop();
+                    // have we already shut down?  bail out now!
+                    if (foreground) Interlocked.Increment(ref _foregroundAuditCount); else Interlocked.Increment(ref _backgroundAuditCount);
+                    // call the derived object to get the status
+                    await Audit(builder, cancel).ConfigureAwait(false);
+                    // schedule the next audit
+                    builder.NextAuditTime = ScheduleNextAudit(builder.WorstAlert == null ? (float?)null : builder.WorstAlert.Rating, builder.Elapsed);
+                }
 #pragma warning disable CA1031  // we really DO want to catch ALL exceptions here--this is a status test, and the exception will be reported through the status system.  if we rethrew it, it would crash the program
-            catch (Exception ex)
+                catch (Exception ex)
 #pragma warning restore CA1031
-            {
-                builder.AddException(ex);
+                {
+                    builder.AddException(ex);
+                }
+                finally
+                {
+                    _auditTimer.Start();
+                }
             }
-            finally
+            catch (ObjectDisposedException)
             {
-                _auditTimer?.Start();
+                // ignore this exception--given the design of System.Timers.Timer, it's impossible to prevent
+                // it happens when an audit happens to get triggered just before shutdown/disposal
+                return null;
             }
             // get the results
             StatusResults newStatusResults = builder.FinalResults;
@@ -413,7 +437,7 @@ namespace AmbientServices
             System.Diagnostics.Debug.Assert(nextInterval.Ticks > 0);
             DateTime nextAudit = (nextInterval == TimeSpan.MaxValue) ? DateTime.MaxValue : AmbientClock.UtcNow + nextInterval;
             Interlocked.Exchange(ref _nextAuditTime, nextAudit.Ticks);
-            if (_auditTimer != null) _auditTimer.Interval = nextInterval.TotalMilliseconds;
+            _auditTimer.Interval = nextInterval.TotalMilliseconds;
             return nextAudit;
         }
         private TimeSpan AdjustedAuditInterval(float? rating, TimeSpan auditDuration)
@@ -467,7 +491,8 @@ namespace AmbientServices
         /// </summary>
         protected internal sealed override Task BeginStop()
         {
-            _auditTimer?.Stop();
+            _initialAuditTimer.Close();  // just in case--we must have shut down pretty quickly to get here without this timer already being closed
+            _auditTimer.Stop();
             _backgroundCancelSource?.Cancel();
             return Task.CompletedTask;
         }
@@ -487,11 +512,8 @@ namespace AmbientServices
             base.Dispose(disposing);
             if (disposing)
             {
-                if (_auditTimer != null)
-                {
-                    _auditTimer.Dispose();
-                    System.Threading.Interlocked.Exchange(ref _auditTimer, null);
-                }
+                _initialAuditTimer.Dispose();   // we've usually disposed of this timer, but not if we didn't call ScheduleInitialAudit
+                _auditTimer.Dispose();
                 if (_backgroundCancelSource != null)
                 {
                     _backgroundCancelSource.Dispose();

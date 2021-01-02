@@ -62,7 +62,7 @@ namespace AmbientServices.Test
             writer = new StatusNotificationWriter();
             StatusResults r = new StatusResults("Source", "Target", new StatusResults[0]);
             AggregatedAlert a = new AggregatedAlert(r);
-            a.PropertyRanges.Add(new StatusPropertyRange(StatusProperty.Create("property", "value1")));
+            a.PropertyRanges.Add(new StatusPropertyRange(new StatusProperty("property", "value1")));
             writer = new StatusNotificationWriter();
             writer.EnterStatusRange(a.AverageRating);
             writer.WriteAggregatedAlert(a);
@@ -77,7 +77,7 @@ namespace AmbientServices.Test
             writer = new StatusNotificationWriter();
             r = new StatusResults("Source", "Target", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5)));
             a = new AggregatedAlert(r);
-            a.PropertyRanges.Add(new StatusPropertyRange(StatusProperty.Create("property", "value1")));
+            a.PropertyRanges.Add(new StatusPropertyRange(new StatusProperty("property", "value1")));
             writer = new StatusNotificationWriter();
             writer.EnterStatusRange(a.AverageRating);
             writer.WriteAggregatedAlert(a);
@@ -92,9 +92,9 @@ namespace AmbientServices.Test
             writer = new StatusNotificationWriter();
             r = new StatusResults("Source1", "Target", new StatusResults[0]);
             a = new AggregatedAlert(r);
-            a.PropertyRanges.Add(new StatusPropertyRange(StatusProperty.Create("property", "value1")));
-            a.PropertyRanges.Add(new StatusPropertyRange(StatusProperty.Create("property", "value2")));
-            a.PropertyRanges.Add(new StatusPropertyRange(StatusProperty.Create("property", "value5")));
+            a.PropertyRanges.Add(new StatusPropertyRange(new StatusProperty("property", "value1")));
+            a.PropertyRanges.Add(new StatusPropertyRange(new StatusProperty("property", "value2")));
+            a.PropertyRanges.Add(new StatusPropertyRange(new StatusProperty("property", "value5")));
             r = new StatusResults("Source2", "Target", new StatusResults[0]);
             a.Aggregate(r);
             writer = new StatusNotificationWriter();

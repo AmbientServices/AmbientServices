@@ -53,7 +53,7 @@ namespace AmbientServices
         /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to stop the operation before it completes.</param>
         public Task Start(CancellationToken cancel = default(CancellationToken))
         {
-            Logger.Log("Starting", "InitTerm");
+            Logger.Log("Starting", "StartStop");
             if (System.Threading.Interlocked.Exchange(ref _started, 1) != 0) throw new InvalidOperationException("The Status system has already been started!");
             if (_loadAllCheckers)
             {
@@ -67,7 +67,7 @@ namespace AmbientServices
                     AddCheckersAndAuditors(assembly);
                 }
             }
-            Logger.Log("Started", "InitTerm");
+            Logger.Log("Started", "StartStop");
             return Task.CompletedTask;
         }
         /// <summary>
@@ -75,7 +75,7 @@ namespace AmbientServices
         /// </summary>
         public async Task Stop()
         {
-            Logger.Log("Stopping", "InitTerm");
+            Logger.Log("Stopping", "StartStop");
             // make sure everyone can tell we're shutting down
             System.Threading.Interlocked.Exchange(ref _shuttingDown, 1);
             // stop the timers on each node
@@ -93,7 +93,7 @@ namespace AmbientServices
             {
                 checker.Dispose();
             }
-            Logger.Log("Stopped", "InitTerm");
+            Logger.Log("Stopped", "StartStop");
             // now that we're done, reset everything back to where we were before we started
             _checkers.Clear();
             System.Threading.Interlocked.Exchange(ref _started, 0);
@@ -136,11 +136,8 @@ namespace AmbientServices
             _checkers.Add(checker);
             // is this checker an auditor?
             StatusAuditor auditor = checker as StatusAuditor;
-            if (auditor != null)
-            {
-                // kick off the initial audit (note that this cannot be done in the StatusAuditor constructor because it might run before the derived class constructor finishes)
-                System.Threading.ThreadPool.QueueUserWorkItem(new WaitCallback(auditor.InitialAudit));  // queue the initial status test to run immediately but on a threadpool thread
-            }
+            // kick off the initial audit (note that this cannot be done in the StatusAuditor constructor because it might run before the derived class constructor finishes)
+            auditor?.ScheduleInitialAudit();
         }
         /// <summary>
         /// Removes the specified checker or auditor from the global list.

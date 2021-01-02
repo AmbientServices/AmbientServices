@@ -150,7 +150,8 @@ namespace AmbientServices.Test
                 await s.Start();
                 await s.Stop();
                 s.RemoveCheckerOrAuditor(auditorToAdd);
-                auditorToAdd.InitialAudit(null);
+                // run the initial audit manually and synchronously
+                auditorToAdd.InitialAuditTimer_Elapsed(null, null);
             }
         }
     }

@@ -46,6 +46,7 @@ namespace AmbientServices
         {
             if (!_logFilter.IsBlocked(level, TypeName, category))
             {
+                if (!string.IsNullOrEmpty(category)) category = category + ":";
                 message = String.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, TypeName, category, message);
                 _logger.Log(message);
             }

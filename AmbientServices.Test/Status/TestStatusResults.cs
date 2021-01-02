@@ -15,7 +15,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void StatusPropertyClass()
         {
-            StatusProperty property = StatusProperty.Create("Property", "Value");
+            StatusProperty property = new StatusProperty("Property", "Value");
             string prop = property.ToString();
             Assert.IsTrue(prop.Contains("Property"));
             Assert.IsTrue(prop.Contains("Value"));
@@ -25,7 +25,7 @@ namespace AmbientServices.Test
         {
             StatusResults results;
 
-            results = new StatusResults("Source", "StatusTarget", AmbientClock.UtcNow, 1, new StatusProperty[] { StatusProperty.Create("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
+            results = new StatusResults("Source", "StatusTarget", AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
             Assert.AreEqual("Source", results.SourceSystem);
             Assert.AreEqual("Source", results.SourceSystemDisplayName);
             Assert.AreEqual("StatusTarget", results.TargetSystem);
@@ -33,7 +33,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(results.ToString().Contains("Source"));
             Assert.IsTrue(results.ToString().Contains("StatusTarget"));
 
-            results = new StatusResults("Source", "/", AmbientClock.UtcNow, 1, new StatusProperty[] { StatusProperty.Create("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
+            results = new StatusResults("Source", "/", AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
             Assert.AreEqual("Source", results.SourceSystem);
             Assert.AreEqual("Source", results.SourceSystemDisplayName);
             Assert.AreEqual("/", results.TargetSystem);
@@ -41,14 +41,14 @@ namespace AmbientServices.Test
             Assert.IsTrue(results.ToString().Contains("Source"));
             Assert.IsTrue(results.ToString().Contains("Overall"));
 
-            results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { StatusProperty.Create("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
+            results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
             Assert.IsNull(results.SourceSystem);
             Assert.AreEqual("Localhost", results.SourceSystemDisplayName);
             Assert.IsNull(results.TargetSystem);
             Assert.AreEqual("Unknown Target", results.TargetSystemDisplayName);
             Assert.IsTrue(results.ToString().Length == 0);
 
-            results = new StatusResults(null, "/SampleDisk.Temp", AmbientClock.UtcNow, 0, new StatusProperty[] { StatusProperty.Create("AvailablePercent", "2.2"), StatusProperty.Create("AvailableBytes", "1100000000.0") }, new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(3), AmbientClock.UtcNow.AddSeconds(2), new StatusAuditAlert(StatusRating.Okay - .0001f, "ALERT", "Alert", "AlertDetails")));
+            results = new StatusResults(null, "/SampleDisk.Temp", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "2.2"), new StatusProperty("AvailableBytes", "1100000000.0") }, new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(3), AmbientClock.UtcNow.AddSeconds(2), new StatusAuditAlert(StatusRating.Okay - .0001f, "ALERT", "Alert", "AlertDetails")));
             Assert.IsTrue(results.ToString().Length != 0);
         }
         [TestMethod]
@@ -56,7 +56,7 @@ namespace AmbientServices.Test
         {
             StatusResults results;
 
-            results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { StatusProperty.Create("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous,
+            results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous,
                 new StatusResults[]
                 {
                     new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {

@@ -68,11 +68,14 @@ namespace AmbientServices
         /// <summary>
         /// Sets the latest results.
         /// </summary>
-        /// <param name="newResults">The new <see cref="StatusResults"/>.</param>
+        /// <param name="newResults">The new <see cref="StatusResults"/>.  Note that null results will not be stored.</param>
         protected void SetLatestResults(StatusResults newResults)
         {
-            Status.Logger.Log($"{newResults?.TargetSystemDisplayName}: {newResults?.Report?.Alert}", "Results");
-            _resultsTracker.SetLatestResults(newResults);
+            if (newResults != null)
+            {
+                Status.Logger.Log($"{newResults.TargetSystemDisplayName}: {newResults.Report?.Alert}", "Results");
+                _resultsTracker.SetLatestResults(newResults);
+            }
         }
 
         /// <summary>

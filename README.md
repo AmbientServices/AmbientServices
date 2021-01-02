@@ -1326,6 +1326,24 @@ public sealed class LocalDiskAuditor : StatusAuditor
         await _systemAuditor.Audit(statusBuilder.AddChild("System"));
     }
 }
+
+class Application
+{
+    /// <summary>
+    /// Starts the status system.
+    /// </summary>
+    public static async Task StartStatus()
+    {
+        await Status.DefaultInstance.Start();
+    }
+    /// <summary>
+    /// Stops the status system.
+    /// </summary>
+    public static async Task StopStatus()
+    {
+        await Status.DefaultInstance.Stop();
+    }
+}
 ```
 
 # Library Information

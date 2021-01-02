@@ -69,13 +69,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="name">The name of the property.</param>
         /// <param name="value">The value of the property.</param>
-        private StatusProperty(string name, string value) { _name = name; _value = value; }
-        /// <summary>
-        /// Creates a <see cref="StatusProperty"/> with the specified name and value.
-        /// </summary>
-        /// <param name="name">The name of the property.</param>
-        /// <param name="value">The value of the property.</param>
-        public static StatusProperty Create(string name, string value) { return new StatusProperty(name, value); }
+        public StatusProperty(string name, string value) { _name = name; _value = value; }
         /// <summary>
         /// Creates a <see cref="StatusProperty"/> with the specified name and value.
         /// </summary>

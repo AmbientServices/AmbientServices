@@ -65,7 +65,7 @@ namespace AmbientServices.Test
                 {
                     Assert.AreEqual("StatusAuditorAuditExceptionTest", test.TargetSystem);
                     // run the initial audit manually and synchronously
-                    test.InitialAudit(null);
+                    test.InitialAuditTimer_Elapsed(null, null);
                 }
             }
         }
@@ -78,7 +78,7 @@ namespace AmbientServices.Test
                 {
                     Assert.AreEqual("StatusAuditorAuditNeverRunTest", test.TargetSystem);
                     // run the initial audit manually and synchronously
-                    test.InitialAudit(null);
+                    test.InitialAuditTimer_Elapsed(null, null);
                 }
             }
         }
