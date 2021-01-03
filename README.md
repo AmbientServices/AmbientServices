@@ -508,6 +508,7 @@ class BasicAmbientCallStack : IAmbientCallStack
     {
         ImmutableStack<string> stack = GetStack();
         stack = stack.Push(entry);
+        Stack.Value = stack;
         return new CallStackEntry(stack);
     }
 
@@ -532,7 +533,7 @@ class BasicAmbientCallStack : IAmbientCallStack
                 {
                     if (_stack != null)
                     {
-                        _stack.Pop();
+                        Stack.Value = _stack.Pop();
                         _stack = null;
                     }
                 }

@@ -63,30 +63,39 @@ namespace AmbientServices.Test.Samples
         private static IAmbientCallStack _CallStack = _AmbientCallStack.Global;
         public static void OuterFunc()
         {
-            Debug.WriteLine("Before outer push:");
             if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));
+            // somehow _CallStack is null here occasionally--how is this possible?!  Fail with more information in order to narrow it down
+            if (_CallStack == null)
+            {
+                Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local}");
+                Assert.Fail($"{GlobalServiceReference<IAmbientCallStack>.DefaultImplementation()}");
+                Assert.Fail($"{_AmbientCallStack.GlobalReference.LateAssignedDefaultServiceImplementation()}");
+                Assert.Fail($"{DefaultAmbientServices.TryFind(typeof(IAmbientCallStack)).Name},{new StackTrace()}");
+            }
+            Assert.IsFalse(String.Join(Environment.NewLine, _CallStack.Entries).Contains("OuterFunc"));
+            Assert.IsFalse(String.Join(Environment.NewLine, _CallStack.Entries).Contains("InnerFunc"));
             using (_CallStack.Scope("OuterFunc"))
             {
-                Debug.WriteLine("After outer push:");
-                if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));
+                Assert.IsTrue(String.Join(Environment.NewLine, _CallStack.Entries).Contains("OuterFunc"));
+                Assert.IsFalse(String.Join(Environment.NewLine, _CallStack.Entries).Contains("InnerFunc"));
                 InnerFunc();
-                Debug.WriteLine("After inner return:");
-                if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));
+                Assert.IsTrue(String.Join(Environment.NewLine, _CallStack.Entries).Contains("OuterFunc"));
+                Assert.IsFalse(String.Join(Environment.NewLine, _CallStack.Entries).Contains("InnerFunc"));
             }
-            Debug.WriteLine("After outer pop:");
-            if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));
+            Assert.IsFalse(String.Join(Environment.NewLine, _CallStack.Entries).Contains("OuterFunc"));
+            Assert.IsFalse(String.Join(Environment.NewLine, _CallStack.Entries).Contains("InnerFunc"));
         }
         private static void InnerFunc()
         {
-            Debug.WriteLine("Before inner push:");
-            if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));
+            Assert.IsTrue(String.Join(Environment.NewLine, _CallStack.Entries).Contains("OuterFunc"));
+            Assert.IsFalse(String.Join(Environment.NewLine, _CallStack.Entries).Contains("InnerFunc"));
             using (_CallStack.Scope("InnerFunc"))
             {
-                Debug.WriteLine("After inner push:");
-                if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));
+                Assert.IsTrue(String.Join(Environment.NewLine, _CallStack.Entries).Contains("OuterFunc"));
+                Assert.IsTrue(String.Join(Environment.NewLine, _CallStack.Entries).Contains("InnerFunc"));
             }
-            Debug.WriteLine("After inner pop:");
-            if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));
+            Assert.IsTrue(String.Join(Environment.NewLine, _CallStack.Entries).Contains("OuterFunc"));
+            Assert.IsFalse(String.Join(Environment.NewLine, _CallStack.Entries).Contains("InnerFunc"));
         }
     }
 }

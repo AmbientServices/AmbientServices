@@ -72,6 +72,10 @@ namespace AmbientServices
         /// </summary>
         private GlobalServiceReference<T> _globalReference = new GlobalServiceReference<T>();
 
+
+        // this is only internal instead of private so that we can diagnose issues in test cases
+        internal GlobalServiceReference<T> GlobalReference { get { return _globalReference; } }
+
         /// <summary>
         /// Gets the <see cref="LocalServiceReference{T}"/> for the service indicated by the type.
         /// This property must be used internally in order to ensure local initialization of the <see cref="AsyncLocal{T}"/>.
@@ -261,8 +265,8 @@ namespace AmbientServices
         {
             _service = DefaultImplementation();
         }
-
-        private static T DefaultImplementation()
+        // this is only internal instead of private in order to diagnose issues in test cases
+        internal static T DefaultImplementation()
         {
             Type impType = DefaultAmbientServices.TryFind(typeof(T));
             if (impType == null) return null;       // there is no default implementation (yet)
@@ -271,7 +275,8 @@ namespace AmbientServices
             T implementation = (T)mi.Invoke(null, Array.Empty<object>());
             return implementation;
         }
-        private T LateAssignedDefaultServiceImplementation()
+        // this is only internal instead of private in order to diagnose issues in test cases
+        internal T LateAssignedDefaultServiceImplementation()
         {
             T newDefaultImplementation = DefaultImplementation();
             // still no default implementation registered?  try again later

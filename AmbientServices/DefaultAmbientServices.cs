@@ -95,6 +95,7 @@ namespace AmbientServices
                     AddDefaultImplementation(type);
                 }
             }
+Debug.WriteLine("Assembly Loaded:" + assembly.GetName().Name);
         }
 
         /// <summary>

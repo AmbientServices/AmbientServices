@@ -691,7 +691,7 @@ namespace AmbientServices.Test
                 timer.AutoReset = true;
                 timer.Enabled = true;
                 await Task.Delay(3750);
-                Assert.IsTrue(elapsed >= 1 && elapsed <= 3, elapsed.ToString(), elapsed);        // this *should* be three if we have processing power available, but it can be less than 3 when it is not (as is often the case during unit tests), thus we are tolerant
+                Assert.IsTrue(elapsed >= 1 && elapsed <= 3, elapsed.ToString());        // this *should* be three if we have processing power available, but it can be less than 3 when it is not (as is often the case during unit tests), thus we are tolerant
                 Assert.AreEqual(0, disposed);           // this assertion failed once, but is very intermittent, not sure how this is possible
             }
             Assert.AreEqual(1, disposed);
