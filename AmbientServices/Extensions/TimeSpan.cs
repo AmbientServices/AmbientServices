@@ -10,6 +10,76 @@ namespace AmbientServices
     {
         private static readonly char[] Alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
         private static readonly char[] Numeric = "-0123456789. \t".ToCharArray();
+        private static readonly long TimeSpanToStopwatchMultiplier;
+        private static readonly long TimeSpanToStopwatchDivisor;
+        private static readonly double TimeSpanToStopwatchRatio;
+        private static readonly long StopwatchToTimeSpanMultiplier;
+        private static readonly long StopwatchToTimeSpanDivisor;
+        private static readonly double StopwatchToTimeSpanRatio;
+#pragma warning disable CA1810  // it should be faster in this case to do it this way because the values depend on each other
+        static TimeSpanExtensions()
+#pragma warning restore CA1810
+        {
+            ulong timeSpanTicksPerSecond = (ulong)TimeSpan.TicksPerSecond;
+            ulong stopwatchTicksPerSecond = (ulong)System.Diagnostics.Stopwatch.Frequency;
+            // adjust the multipliers and divisors to reduce the range of values that will cause overflow during conversion by removing all common divisors
+            ulong gcd = GCD(timeSpanTicksPerSecond, stopwatchTicksPerSecond);
+            TimeSpanToStopwatchMultiplier = (long)(timeSpanTicksPerSecond / gcd);
+            TimeSpanToStopwatchDivisor = (long)(stopwatchTicksPerSecond / gcd);
+            TimeSpanToStopwatchRatio = (double)TimeSpanToStopwatchMultiplier / (double)TimeSpanToStopwatchDivisor;
+            StopwatchToTimeSpanMultiplier = (long)(stopwatchTicksPerSecond / gcd);
+            StopwatchToTimeSpanDivisor = (long)(timeSpanTicksPerSecond / gcd);
+            StopwatchToTimeSpanRatio = (double)StopwatchToTimeSpanMultiplier / (double)StopwatchToTimeSpanDivisor;
+        }
+        internal static ulong GCD(ulong a, ulong b)
+        {
+            while (a != 0 && b != 0)
+            {
+                // the testability of this code depends on the values of system constants which cannot be altered by the test code
+                if (a > b) a %= b; else b %= a;
+            }
+            return a | b;
+        }
+        /// <summary>
+        /// Converts <see cref="TimeSpan"/> ticks to <see cref="System.Diagnostics.Stopwatch"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="Double"/> multipliation if not.
+        /// </summary>
+        /// <param name="timeSpanTicks">The number of <see cref="TimeSpan"/> ticks.</param>
+        /// <returns>The equivalent number of <see cref="System.Diagnostics.Stopwatch"/> ticks</returns>
+        public static long TimeSpanTicksToStopwatchTicks(long timeSpanTicks)
+        {
+            try
+            {
+                checked
+                {
+                    return timeSpanTicks * TimeSpanToStopwatchMultiplier / TimeSpanToStopwatchDivisor;
+                }
+            }
+            // the testability of this code depends on the values of system constants which cannot be altered by the test code
+            catch (OverflowException)
+            {
+                return (long)(timeSpanTicks * TimeSpanToStopwatchRatio);
+            }
+        }
+        /// <summary>
+        /// Converts <see cref="System.Diagnostics.Stopwatch"/> ticks to <see cref="TimeSpan"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="Double"/> multipliation if not.
+        /// </summary>
+        /// <param name="timeSpanTicks">The number of <see cref="System.Diagnostics.Stopwatch"/> ticks.</param>
+        /// <returns>The equivalent number of <see cref="TimeSpan"/> ticks</returns>
+        public static long StopwatchTicksToTimeSpanTicks(long timeSpanTicks)
+        {
+            try
+            {
+                checked
+                {
+                    return timeSpanTicks * StopwatchToTimeSpanMultiplier / StopwatchToTimeSpanDivisor;
+                }
+            }
+            // the testability of this code depends on the values of system constants which cannot be altered by the test code
+            catch (OverflowException)
+            {
+                return (long)(timeSpanTicks * StopwatchToTimeSpanRatio);
+            }
+        }
         /// <summary>
         /// Attempts to parse a string as a timespan.
         /// </summary>

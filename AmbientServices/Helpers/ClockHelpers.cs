@@ -260,7 +260,7 @@ namespace AmbientServices
 
             private static DateTime UtcDateTimeFromStopwatchTicks(DateTime baseUtcDateTime, long stopwatchTicks)
             {
-                return baseUtcDateTime.AddTicks(stopwatchTicks * TimeSpan.TicksPerSecond / Stopwatch.Frequency);
+                return baseUtcDateTime.AddTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(stopwatchTicks));
             }
 
             /// <summary>
@@ -296,7 +296,7 @@ namespace AmbientServices
             /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClock.TimeChanged"/> is being raised.</remarks>
             public void SkipAhead(TimeSpan time)
             {
-                SkipAhead(time.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
+                SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(time.Ticks));
             }
         }
     }

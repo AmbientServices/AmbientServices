@@ -182,8 +182,4 @@ namespace AmbientServices
             }
         }
     }
-    [AttributeUsage(AttributeTargets.All)]
-    sealed class ExcludeFromCoverageAttribute : Attribute
-    {
-    }
 }

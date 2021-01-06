@@ -95,7 +95,6 @@ namespace AmbientServices
                     AddDefaultImplementation(type);
                 }
             }
-Debug.WriteLine("Assembly Loaded:" + assembly.GetName().Name);
         }
 
         /// <summary>
@@ -144,8 +143,12 @@ Debug.WriteLine("Assembly Loaded:" + assembly.GetName().Name);
 
         internal static void OnLoad(Assembly assembly)
         {
-            Logger.Log(assembly.GetName().Name, "AssemblyLoad", AmbientLogLevel.Error);
+            Logger.Log(assembly.GetName().Name, "AssemblyLoad", AmbientLogLevel.Trace);
         }
+    }
+    [AttributeUsage(AttributeTargets.All)]
+    sealed class ExcludeFromCoverageAttribute : Attribute
+    {
     }
     /// <summary>
     /// An empty interface that needs to be in this assembly in order to get tested properly because the interface will be registered before the assembly that implements it is loaded.

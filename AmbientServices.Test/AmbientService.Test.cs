@@ -49,6 +49,7 @@ namespace AmbientServices.Test
         {
             ITest test = _Test.Global;
             Assert.IsNotNull(test);
+            Assert.AreEqual(_Test.GlobalReference.Service, _Test.Global);
             IAmbientLogger logger = _Logger.Global;
             Assert.IsNotNull(logger);
             AmbientLogger<TestAmbientService> serviceBrokerLogger = new AmbientLogger<TestAmbientService>(logger);

@@ -19,6 +19,7 @@ namespace AmbientServices.Test
         public async Task StatusClass()
         {
             await Status.DefaultInstance.Start();
+            Assert.IsFalse(Status.DefaultInstance.ShuttingDown);
             try
             {
                 DateTime start = AmbientClock.UtcNow;

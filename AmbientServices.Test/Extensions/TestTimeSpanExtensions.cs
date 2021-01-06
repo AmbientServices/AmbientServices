@@ -130,5 +130,12 @@ namespace AmbientServices.Test
             t = s.TryParseTimeSpan();
             Assert.AreEqual(TimeSpan.FromTicks(3287), t);
         }
+        [TestMethod]
+        public void GCD()
+        {
+            Assert.AreEqual(1UL, TimeSpanExtensions.GCD(53, 7));
+            Assert.AreEqual(5UL, TimeSpanExtensions.GCD(60, 5));
+            Assert.AreEqual(5UL, TimeSpanExtensions.GCD(35, 15));
+        }
     }
 }
