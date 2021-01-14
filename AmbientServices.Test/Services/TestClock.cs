@@ -1324,7 +1324,7 @@ namespace AmbientServices.Test
         /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
-        public void UnsafeRegisterWaitForSingleObjectSystem()
+        public void SystemUnsafeRegisterWaitForSingleObject()
         {
             AutoResetEvent are = new AutoResetEvent(false);
             int signaledInvocations = 0;
@@ -1348,7 +1348,7 @@ namespace AmbientServices.Test
         /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
-        public void SafeRegisterWaitForSingleObjectSystem()
+        public void SystemSafeRegisterWaitForSingleObject()
         {
             AutoResetEvent are = new AutoResetEvent(false);
             int signaledInvocations = 0;
