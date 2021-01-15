@@ -4,32 +4,19 @@ using System.Threading;
 namespace AmbientServices
 {
     /// <summary>
-    /// A class that holds values related to the <see cref="IAmbientClock.TimeChanged"/> event.
+    /// An interface that callers implement to receive ambient clock time changed notifications.
     /// </summary>
-#pragma warning disable CA1711
-    public class AmbientClockTimeChangedEventArgs
-#pragma warning restore CA1711
+    public interface IAmbientClockTimeChangedNotificationSink
     {
         /// <summary>
-        /// Gets or sets the <see cref="IAmbientClock"/> that raised the event.
+        /// Receives notification that the ambient clock time was changed.
         /// </summary>
-        public IAmbientClock Clock { get; set; }
-        /// <summary>
-        /// The old number of elapsed ticks.
-        /// </summary>
-        public long OldTicks { get; set; }
-        /// <summary>
-        /// The new number of elapsed ticks.
-        /// </summary>
-        public long NewTicks { get; set; }
-        /// <summary>
-        /// The old UTC <see cref="DateTime"/>.
-        /// </summary>
-        public DateTime OldUtcDateTime { get; set; }
-        /// <summary>
-        /// The new UTC <see cref="DateTime"/>.
-        /// </summary>
-        public DateTime NewUtcDateTime { get; set; }
+        /// <param name="clock">The <see cref="IAmbientClock"/> whose time was changed.</param>
+        /// <param name="oldTicks">The old number of elapsed ticks.</param>
+        /// <param name="newTicks">The new number of elapsed ticks.</param>
+        /// <param name="oldUtcDateTime">The old UTC <see cref="DateTime"/>.</param>
+        /// <param name="newUtcDateTime">The new UTC <see cref="DateTime"/>.</param>
+        void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime);
     }
     /// <summary>
     /// An interface that abstracts an ambient clock which can be overridden in order to provide a different resolution or to artificially manipulate the current date-time and timing.
@@ -51,8 +38,16 @@ namespace AmbientServices
         /// </remarks>
         DateTime UtcDateTime { get; }
         /// <summary>
-        /// An event that is raised when the ambient clock's time is changed.
+        /// Registers a time changed notification sink with this ambient clock.
         /// </summary>
-        event EventHandler<AmbientClockTimeChangedEventArgs> TimeChanged;
+        /// <param name="sink">An <see cref="IAmbientClockTimeChangedNotificationSink"/> that will receive notifications when the time is changed.</param>
+        /// <returns>true if the registration was successful, false if the specified sink was already registered.</returns>
+        bool RegisterTimeChangedNotificationSink(IAmbientClockTimeChangedNotificationSink sink);
+        /// <summary>
+        /// Deregisters a time changed notification sink with this ambient clock.
+        /// </summary>
+        /// <param name="sink">An <see cref="IAmbientClockTimeChangedNotificationSink"/> that will receive notifications when the time is changed.</param>
+        /// <returns>true if the deregistration was successful, false if the specified sink was not registered.</returns>
+        bool DeregisterTimeChangedNotificationSink(IAmbientClockTimeChangedNotificationSink sink);
     }
 }

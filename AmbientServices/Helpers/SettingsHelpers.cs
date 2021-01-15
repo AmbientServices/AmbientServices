@@ -285,7 +285,7 @@ namespace AmbientServices
             {
                 ret = _convert(value);
             }
-#pragma warning disable CA1031 
+#pragma warning disable CA1031 // this is a "do your best" kind of function, so we really do want to cactch all exceptions here
             catch
             {
                 ret = _defaultValue;

@@ -13,8 +13,7 @@ namespace AmbientServices
     [DefaultAmbientService]
     class BasicAmbientBottleneckDetector : IAmbientBottleneckDetector
     {
-        private readonly long BaselineStopwatchTimestamp = AmbientClock.Ticks;
-        private readonly long BaselineDateTimeTicks = AmbientClock.UtcNow.Ticks;
+        private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientBottleneckExitNotificationSink>();
 
         public BasicAmbientBottleneckDetector()
         {
@@ -23,32 +22,31 @@ namespace AmbientServices
         public AmbientBottleneckAccessor EnterBottleneck(AmbientBottleneck bottleneck)
         {
             AmbientBottleneckAccessor access = new AmbientBottleneckAccessor(this, bottleneck, AmbientClock.Ticks);
-            BottleneckEntered?.Invoke(this, access);
+            foreach (IAmbientBottleneckExitNotificationSink notificationSink in _notificationSinks)
+            {
+                IAmbientBottleneckEnterNotificationSink enterSink = notificationSink as IAmbientBottleneckEnterNotificationSink;
+                enterSink?.BottleneckEntered(access);
+            }
             return access;
         }
         internal void LeaveBottleneck(AmbientBottleneckAccessor ambientBottleneckAccess)
         {
-            BottleneckExited?.Invoke(this, ambientBottleneckAccess);
+            foreach (IAmbientBottleneckExitNotificationSink notificationSink in _notificationSinks)
+            {
+                notificationSink.BottleneckExited(ambientBottleneckAccess);
+            }
         }
 
-        public event EventHandler<AmbientBottleneckAccessor> BottleneckEntered;
-        public event EventHandler<AmbientBottleneckAccessor> BottleneckExited;
-
-        internal long StopwatchTimestampToDateTime(long stopwatchTimestamp)
+        public bool RegisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink)
         {
-            long stopwatchTicksAgo = BaselineStopwatchTimestamp - stopwatchTimestamp;
-            long dateTimeTicksAgo = stopwatchTicksAgo * TimeSpan.TicksPerSecond / Stopwatch.Frequency;
-            return BaselineDateTimeTicks - dateTimeTicksAgo;
+            return _notificationSinks.Add(sink);
         }
-
-        internal long DateTimeToStopwatchTimestamp(long dateTimeTicks)
+        public bool DeregisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink)
         {
-            long dateTimeTicksAgo = BaselineDateTimeTicks - dateTimeTicks;
-            long stopwatchTicksAgo = dateTimeTicksAgo * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
-            return BaselineStopwatchTimestamp - stopwatchTicksAgo;
+            return _notificationSinks.Remove(sink);
         }
     }
-    class CallContextSurveyManager : IDisposable
+    internal class CallContextSurveyManager : IAmbientBottleneckExitNotificationSink, IDisposable
     {
         private readonly IAmbientBottleneckDetector _bottleneckDetector;
         private readonly AsyncLocal<CallContextAccessNotificationDistributor> _callContextSurveyors;
@@ -59,8 +57,8 @@ namespace AmbientServices
             _callContextSurveyors = new AsyncLocal<CallContextAccessNotificationDistributor>();
             if (bottleneckDetector != null)
             {
-                bottleneckDetector.BottleneckExited += BottleneckDetector_BottleneckExited;
                 _bottleneckDetector = bottleneckDetector;
+                bottleneckDetector.RegisterAccessNotificationSink(this);
             }
         }
 
@@ -77,14 +75,14 @@ namespace AmbientServices
             }
         }
 
-        private void BottleneckDetector_BottleneckExited(object sender, AmbientBottleneckAccessor e)
+        void IAmbientBottleneckExitNotificationSink.BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            CallContextDistributor.OnBottleneckAccessEnded(sender, e);
+            CallContextDistributor.BottleneckExited(bottleneckAccessor);
         }
 
         internal IAmbientBottleneckSurveyor CreateCallContextSurveyor(string scopeName, Regex allow, Regex block)
         {
-            ScopeBottleneckSurveyor surveyor = new ScopeBottleneckSurveyor(scopeName, CallContextDistributor, allow, block);
+            ScopedBottleneckSurveyor surveyor = new ScopedBottleneckSurveyor(scopeName, CallContextDistributor, allow, block);
             return surveyor;
         }
 
@@ -94,10 +92,7 @@ namespace AmbientServices
             {
                 if (disposing)
                 {
-                    if (_bottleneckDetector != null)
-                    {
-                        _bottleneckDetector.BottleneckExited -= BottleneckDetector_BottleneckExited;
-                    }
+                    _bottleneckDetector?.DeregisterAccessNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -120,19 +115,30 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
     }
-    class CallContextAccessNotificationDistributor
+    class CallContextAccessNotificationDistributor : IAmbientBottleneckExitNotificationSink
     {
-        public event EventHandler<AmbientBottleneckAccessor> BottleneckExited;
+        private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientBottleneckExitNotificationSink>();
 
         public CallContextAccessNotificationDistributor()
         {
         }
-        public void OnBottleneckAccessEnded(object sender, AmbientBottleneckAccessor access)
+        public bool RegisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink)
         {
-            BottleneckExited?.Invoke(sender, access);
+            return _notificationSinks.Add(sink);
+        }
+        public bool DeregisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink)
+        {
+            return _notificationSinks.Remove(sink);
+        }
+        public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
+        {
+            foreach (IAmbientBottleneckExitNotificationSink notificationSink in _notificationSinks)
+            {
+                notificationSink.BottleneckExited(bottleneckAccessor);
+            }
         }
     }
-    class ScopeBottleneckSurveyor : IAmbientBottleneckSurveyor
+    class ScopedBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBottleneckExitNotificationSink
     {
         private readonly CallContextAccessNotificationDistributor _callContextDistributor;
         private readonly IAmbientBottleneckDetector _bottleneckDetector;
@@ -142,7 +148,7 @@ namespace AmbientServices
         private readonly Dictionary<string, AmbientBottleneckAccessor> _bottleneckAccesses;
         private bool _disposedValue;
 
-        public ScopeBottleneckSurveyor(string scopeName, CallContextAccessNotificationDistributor callContextDistributor, Regex allow, Regex block)
+        public ScopedBottleneckSurveyor(string scopeName, CallContextAccessNotificationDistributor callContextDistributor, Regex allow, Regex block)
         {
             _scopeName = scopeName;
             _allow = allow;
@@ -150,12 +156,12 @@ namespace AmbientServices
             _bottleneckAccesses = new Dictionary<string, AmbientBottleneckAccessor>();
             if (callContextDistributor != null)
             {
-                callContextDistributor.BottleneckExited += OnBottleneckAccessEnded;
                 _callContextDistributor = callContextDistributor;
+                callContextDistributor.RegisterAccessNotificationSink(this);
             }
         }
 
-        public ScopeBottleneckSurveyor(string scopeName, IAmbientBottleneckDetector bottleneckDetector, Regex allow, Regex block)
+        public ScopedBottleneckSurveyor(string scopeName, IAmbientBottleneckDetector bottleneckDetector, Regex allow, Regex block)
         {
             _scopeName = scopeName;
             _allow = allow;
@@ -163,8 +169,8 @@ namespace AmbientServices
             _bottleneckAccesses = new Dictionary<string, AmbientBottleneckAccessor>();
             if (bottleneckDetector != null)
             {
-                bottleneckDetector.BottleneckExited += OnBottleneckAccessEnded;
                 _bottleneckDetector = bottleneckDetector;
+                bottleneckDetector.RegisterAccessNotificationSink(this);
             }
         }
 
@@ -183,10 +189,10 @@ namespace AmbientServices
             return _bottleneckAccesses.Values.OrderBy(m => m.Utilization).Take(count);
         }
 
-        internal void OnBottleneckAccessEnded(object sender, AmbientBottleneckAccessor evnt)
+        public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (evnt == null) throw new ArgumentNullException(nameof(evnt));
-            string bottleneckId = evnt.Bottleneck.Id;
+            if (bottleneckAccessor == null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
             bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
@@ -195,11 +201,11 @@ namespace AmbientServices
                 AmbientBottleneckAccessor metric;
                 if (_bottleneckAccesses.TryGetValue(bottleneckId, out metric))
                 {
-                    _bottleneckAccesses[bottleneckId] = metric.Combine(evnt);
+                    _bottleneckAccesses[bottleneckId] = metric.Combine(bottleneckAccessor);
                 }
                 else
                 {
-                    _bottleneckAccesses.Add(bottleneckId, evnt);
+                    _bottleneckAccesses.Add(bottleneckId, bottleneckAccessor);
                 }
             }
         }
@@ -210,14 +216,8 @@ namespace AmbientServices
             {
                 if (disposing)
                 {
-                    if (_bottleneckDetector != null)
-                    {
-                        _bottleneckDetector.BottleneckExited -= OnBottleneckAccessEnded;
-                    }
-                    if (_callContextDistributor != null)
-                    {
-                        _callContextDistributor.BottleneckExited -= OnBottleneckAccessEnded;
-                    }
+                    _bottleneckDetector?.DeregisterAccessNotificationSink(this);
+                    _callContextDistributor?.DeregisterAccessNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -240,7 +240,7 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
     }
-    internal class TimeWindowSurveyManager : IDisposable
+    internal class TimeWindowSurveyManager : IAmbientBottleneckExitNotificationSink, IAmbientBottleneckEnterNotificationSink, IDisposable
     {
         private readonly IAmbientBottleneckDetector _bottleneckDetector;
         private readonly AmbientEventTimer _timer;
@@ -269,23 +269,22 @@ namespace AmbientServices
             _timer = timer;
             if (bottleneckDetector != null)
             {
-                bottleneckDetector.BottleneckEntered += OnBottleneckAccessBegun;
-                bottleneckDetector.BottleneckExited += OnBottleneckAccessEnded;
                 _bottleneckDetector = bottleneckDetector;
+                bottleneckDetector.RegisterAccessNotificationSink(this);
             }
         }
-        internal void OnBottleneckAccessBegun(object sender, AmbientBottleneckAccessor access)
+        public void BottleneckEntered(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (access == null) throw new ArgumentNullException(nameof(access));
-            string bottleneckId = access.Bottleneck.Id;
-            _currentWindowSurvey.OnBottleneckAccessBegun(bottleneckId, access);
+            if (bottleneckAccessor == null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            _currentWindowSurvey.BottleneckEntered(bottleneckAccessor);
         }
-        internal void OnBottleneckAccessEnded(object sender, AmbientBottleneckAccessor access)
+
+        public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (access == null) throw new ArgumentNullException(nameof(access));
-            string bottleneckId = access.Bottleneck.Id;
-            _currentWindowSurvey.OnBottleneckAccessEnded(bottleneckId, access);
+            if (bottleneckAccessor == null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            _currentWindowSurvey.BottleneckExited( bottleneckAccessor);
         }
+
 
         protected virtual void Dispose(bool disposing)
         {
@@ -294,11 +293,7 @@ namespace AmbientServices
                 if (disposing)
                 {
                     _timer.Dispose();
-                    if (_bottleneckDetector != null)
-                    {
-                        _bottleneckDetector.BottleneckEntered -= OnBottleneckAccessBegun;
-                        _bottleneckDetector.BottleneckExited -= OnBottleneckAccessEnded;
-                    }
+                    _bottleneckDetector.DeregisterAccessNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -321,7 +316,7 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
     }
-    internal class TimeWindowBottleneckSurvey : IAmbientBottleneckSurvey
+    internal class TimeWindowBottleneckSurvey : IAmbientBottleneckExitNotificationSink, IAmbientBottleneckSurvey
     {
         private readonly string _scopeName;
         private readonly Regex _allow;
@@ -378,32 +373,33 @@ namespace AmbientServices
             }
         }
 
-        public void OnBottleneckAccessBegun(string bottleneckId, AmbientBottleneckAccessor access)
+        public void BottleneckEntered(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (access == null) throw new ArgumentNullException(nameof(access));
-            System.Diagnostics.Debug.Assert(bottleneckId == access.Bottleneck.Id);
+            if (bottleneckAccessor == null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             // is this bottleneck being surveyed?
+            string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
             bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
             if (allowed)
             {
-                _metrics.AddOrUpdate(bottleneckId, access, (s, m) => m.Combine(access));
+                _metrics.AddOrUpdate(bottleneckId, bottleneckAccessor, (s, m) => m.Combine(bottleneckAccessor));
             }
         }
-        public void OnBottleneckAccessEnded(string bottleneckId, AmbientBottleneckAccessor access)
+
+        public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (access == null) throw new ArgumentNullException(nameof(access));
-            System.Diagnostics.Debug.Assert(bottleneckId == access.Bottleneck.Id);
+            if (bottleneckAccessor == null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             // is this bottleneck being surveyed?
+            string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
             bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
             if (allowed)
             {
-                _metrics.AddOrUpdate(bottleneckId, access, (s, m) => m.Combine(access));
+                _metrics.AddOrUpdate(bottleneckId, bottleneckAccessor, (s, m) => m.Combine(bottleneckAccessor));
             }
         }
     }
-    internal class ProcessBottleneckSurveyor : IAmbientBottleneckSurveyor
+    internal class ProcessBottleneckSurveyor : IAmbientBottleneckExitNotificationSink, IAmbientBottleneckSurveyor
     {
         private readonly IAmbientBottleneckDetector _bottleneckDetector;
         private readonly string _scopeName;
@@ -421,8 +417,8 @@ namespace AmbientServices
             _metrics = new ConcurrentDictionary<string, AmbientBottleneckAccessor>();
             if (bottleneckDetector != null)
             {
-                bottleneckDetector.BottleneckExited += OnBottleneckAccessEnded;
                 _bottleneckDetector = bottleneckDetector;
+                bottleneckDetector.RegisterAccessNotificationSink(this);
             }
         }
 
@@ -441,16 +437,16 @@ namespace AmbientServices
             return _metrics.Values.OrderBy(m => m.Utilization).Take(count);
         }
 
-        public void OnBottleneckAccessEnded(object sender, AmbientBottleneckAccessor evnt)
+        public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (evnt == null) throw new ArgumentNullException(nameof(evnt));
-            string bottleneckId = evnt.Bottleneck.Id;
+            if (bottleneckAccessor == null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
             bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
             if (allowed)
             {
-                _metrics.AddOrUpdate(bottleneckId, evnt, (s, m) => m.Combine(evnt));
+                _metrics.AddOrUpdate(bottleneckId, bottleneckAccessor, (s, m) => m.Combine(bottleneckAccessor));
             }
         }
 
@@ -460,10 +456,7 @@ namespace AmbientServices
             {
                 if (disposing)
                 {
-                    if (_bottleneckDetector != null)
-                    {
-                        _bottleneckDetector.BottleneckExited -= OnBottleneckAccessEnded;
-                    }
+                    _bottleneckDetector?.DeregisterAccessNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -486,7 +479,7 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
     }
-    class ThreadSurveyManager : IDisposable
+    class ThreadSurveyManager : IAmbientBottleneckExitNotificationSink, IDisposable
     {
         private readonly IAmbientBottleneckDetector _bottleneckDetector;
         private readonly ThreadLocal<ThreadAccessDistributor> _threadDistributors;
@@ -497,8 +490,8 @@ namespace AmbientServices
             _threadDistributors = new ThreadLocal<ThreadAccessDistributor>();
             if (bottleneckDetector != null)
             {
-                bottleneckDetector.BottleneckExited += BottleneckDetector_BottleneckExited;
                 _bottleneckDetector = bottleneckDetector;
+                bottleneckDetector.RegisterAccessNotificationSink(this);
             }
         }
 
@@ -514,10 +507,9 @@ namespace AmbientServices
                 return threadDistributor;
             }
         }
-
-        private void BottleneckDetector_BottleneckExited(object sender, AmbientBottleneckAccessor e)
+        void IAmbientBottleneckExitNotificationSink.BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            ThreadDistributor.OnBottleneckAccessEnded(sender, e);
+            ThreadDistributor.BottleneckExited(bottleneckAccessor);
         }
 
         internal ThreadBottleneckSurveyor CreateThreadSurveyor(string scopeName, Regex allow, Regex block)
@@ -533,10 +525,7 @@ namespace AmbientServices
                 if (disposing)
                 {
                     _threadDistributors.Dispose();
-                    if (_bottleneckDetector != null)
-                    {
-                        _bottleneckDetector.BottleneckExited -= BottleneckDetector_BottleneckExited;
-                    }
+                    _bottleneckDetector?.DeregisterAccessNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -559,19 +548,30 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
     }
-    internal class ThreadAccessDistributor
+    internal class ThreadAccessDistributor : IAmbientBottleneckExitNotificationSink
     {
-        public event EventHandler<AmbientBottleneckAccessor> BottleneckExited;
+        private ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientBottleneckExitNotificationSink>();
 
         public ThreadAccessDistributor()
         {
         }
-        public void OnBottleneckAccessEnded(object sender, AmbientBottleneckAccessor access)
+        public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            BottleneckExited?.Invoke(sender, access);
+            foreach (IAmbientBottleneckExitNotificationSink notificationSink in _notificationSinks)
+            {
+                notificationSink.BottleneckExited(bottleneckAccessor);
+            }
+        }
+        public bool RegisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink)
+        {
+            return _notificationSinks.Add(sink);
+        }
+        public bool DeregisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink)
+        {
+            return _notificationSinks.Remove(sink);
         }
     }
-    internal class ThreadBottleneckSurveyor : IAmbientBottleneckSurveyor
+    internal class ThreadBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBottleneckExitNotificationSink
     {
         private readonly ThreadAccessDistributor _threadDistributor;
         private readonly string _scopeName;
@@ -588,8 +588,8 @@ namespace AmbientServices
             _metrics = new Dictionary<string, AmbientBottleneckAccessor>();
             if (threadDistributor != null)
             {
-                threadDistributor.BottleneckExited += OnBottleneckAccessEnded;
                 _threadDistributor = threadDistributor;
+                threadDistributor.RegisterAccessNotificationSink(this);
             }
         }
 
@@ -608,10 +608,10 @@ namespace AmbientServices
             return _metrics.Values.OrderBy(m => m.Utilization).Take(count);
         }
 
-        public void OnBottleneckAccessEnded(object sender, AmbientBottleneckAccessor evnt)
+        public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (evnt == null) throw new ArgumentNullException(nameof(evnt));
-            string bottleneckId = evnt.Bottleneck.Id;
+            if (bottleneckAccessor == null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
             bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
@@ -620,11 +620,11 @@ namespace AmbientServices
                 AmbientBottleneckAccessor metric;
                 if (_metrics.TryGetValue(bottleneckId, out metric))
                 {
-                    _metrics[bottleneckId] = metric.Combine(evnt);
+                    _metrics[bottleneckId] = metric.Combine(bottleneckAccessor);
                 }
                 else
                 {
-                    _metrics.Add(bottleneckId, evnt);
+                    _metrics.Add(bottleneckId, bottleneckAccessor);
                 }
             }
         }
@@ -635,10 +635,7 @@ namespace AmbientServices
             {
                 if (disposing)
                 {
-                    if (_threadDistributor != null)
-                    {
-                        _threadDistributor.BottleneckExited -= OnBottleneckAccessEnded;
-                    }
+                    _threadDistributor.DeregisterAccessNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

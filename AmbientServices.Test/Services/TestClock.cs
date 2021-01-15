@@ -16,6 +16,27 @@ namespace AmbientServices.Test
     [TestClass]
     public class TestClock
     {
+        class AmbientPausedClockTimeChangeListener : IAmbientClockTimeChangedNotificationSink, IDisposable
+        {
+            AmbientClock.PausedAmbientClock _pausedClock;
+            Action<IAmbientClock, long, long, DateTime, DateTime> _action;
+            public AmbientPausedClockTimeChangeListener(AmbientClock.PausedAmbientClock pausedClock, Action<IAmbientClock, long, long, DateTime, DateTime> action)
+            {
+                _pausedClock = pausedClock;
+                _action = action;
+                pausedClock.RegisterTimeChangedNotificationSink(this);
+            }
+
+            public void Dispose()
+            {
+                _pausedClock.DeregisterTimeChangedNotificationSink(this);
+            }
+
+            public void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
+            {
+                _action?.Invoke(clock, oldTicks, newTicks, oldUtcDateTime, newUtcDateTime);
+            }
+        }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
@@ -23,15 +44,22 @@ namespace AmbientServices.Test
         public void PausedClock()
         {
             AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
-            AmbientClockTimeChangedEventArgs eventArgs = null;
-            clock.TimeChanged += (s,e) => { Assert.AreEqual(s, clock); eventArgs = e; };
-            clock.SkipAhead(10000);
-            Assert.IsNotNull(eventArgs);
-            Assert.AreEqual(clock, eventArgs.Clock);
-            Assert.AreEqual(0, eventArgs.OldTicks);
-            Assert.AreEqual(10000, eventArgs.NewTicks);
-            Assert.AreEqual(clock, eventArgs.Clock);
-            Assert.IsTrue(eventArgs.NewUtcDateTime > eventArgs.OldUtcDateTime);
+            long baselineTicks = clock.Ticks;
+            IAmbientClock pausedClock = null;
+            long oldTicks = 0;
+            long newTicks = 0;
+            DateTime oldUtcDateTime = DateTime.MinValue;
+            DateTime newUtcDateTime = DateTime.MinValue;
+            using (AmbientPausedClockTimeChangeListener listener = new AmbientPausedClockTimeChangeListener(clock, (c, ot, nt, od, nd) => { pausedClock = c; oldTicks = ot; newTicks = nt; oldUtcDateTime = od; newUtcDateTime = nd; }))
+            {
+                clock.SkipAhead(10000);
+                Assert.IsNotNull(pausedClock);
+                Assert.AreEqual(clock, pausedClock);
+                Assert.AreEqual(baselineTicks, oldTicks);
+                Assert.AreEqual(baselineTicks + 10000, newTicks);
+                Assert.AreEqual(clock, pausedClock);
+                Assert.IsTrue(newUtcDateTime > oldUtcDateTime);
+            }
         }
 
         /// <summary>

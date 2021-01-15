@@ -3,6 +3,28 @@
 namespace AmbientServices
 {
     /// <summary>
+    /// An interface that callers implement to receive bottleneck exit notifications.
+    /// </summary>
+    public interface IAmbientBottleneckExitNotificationSink
+    {
+        /// <summary>
+        /// Notification that the bottleneck was exited.
+        /// </summary>
+        /// <param name="bottleneckAccessor">The <see cref="AmbientBottleneckAccessor"/> representing the access.</param>
+        void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor);
+    }
+    /// <summary>
+    /// An interface that callers implement to receive bottleneck entry notifications.
+    /// </summary>
+    public interface IAmbientBottleneckEnterNotificationSink
+    {
+        /// <summary>
+        /// Notification that the bottleneck was entered.
+        /// </summary>
+        /// <param name="bottleneckAccessor">The <see cref="AmbientBottleneckAccessor"/> representing the access.</param>
+        void BottleneckEntered(AmbientBottleneckAccessor bottleneckAccessor);
+    }
+    /// <summary>
     /// An interface that abstracts an ambient bottleneck detector.
     /// </summary>
     /// <remarks>
@@ -18,15 +40,17 @@ namespace AmbientServices
         /// <returns>An <see cref="AmbientBottleneckAccessor"/> that should be disposed when exiting the bottleneck.</returns>
         AmbientBottleneckAccessor EnterBottleneck(AmbientBottleneck bottleneck);
         /// <summary>
-        /// An event that is raised whenever <see cref="EnterBottleneck"/> is called to enter a bottleneck.
+        /// Registers an access notification sink with this ambient bottleneck detector.
         /// </summary>
-#pragma warning disable CA1003  // AmbientBottleneckAccessor is not JUST for the event args, and allocating a class that wraps it would seriously affect performance
-        event EventHandler<AmbientBottleneckAccessor> BottleneckEntered;
+        /// <param name="sink">An <see cref="IAmbientBottleneckExitNotificationSink"/> that will receive notifications when a bottleneck is entered.</param>
+        /// <returns>true if the registration was successful, false if the specified sink was already registered.</returns>
+        bool RegisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink);
         /// <summary>
-        /// An event that is raised whenever the <see cref="AmbientBottleneckAccessor"/> returned by <see cref="EnterBottleneck"/> gets disposed, indicating that the bottleneck access is complete.
+        /// Deregisters an access notification sink with this ambient bottleneck detector.
         /// </summary>
-        event EventHandler<AmbientBottleneckAccessor> BottleneckExited;
-#pragma warning restore CA1003
+        /// <param name="sink">An <see cref="IAmbientBottleneckExitNotificationSink"/> that will receive notifications when a bottleneck is entered.</param>
+        /// <returns>true if the deregistration was successful, false if the specified sink was not registered.</returns>
+        bool DeregisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink);
     }
     /// <summary>
     /// An enumeration of possible bottleneck types.
@@ -72,11 +96,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the beginning of the time range for the access.
         /// </summary>
-        public DateTime AccessBegin { get { return new DateTime(_owner.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp)); } }
+        public DateTime AccessBegin { get { return new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp)); } }
         /// <summary>
         /// Gets the end of the time range for the access, if the access is finished.
         /// </summary>
-        public DateTime? AccessEnd { get { return (_accessEndStopwatchTimestamp >= long.MaxValue) ? (DateTime?)null : new DateTime(_owner.StopwatchTimestampToDateTime(_accessEndStopwatchTimestamp)); } }
+        public DateTime? AccessEnd { get { return (_accessEndStopwatchTimestamp >= long.MaxValue) ? (DateTime?)null : new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessEndStopwatchTimestamp)); } }
         /// <summary>
         /// Gets the number of times the bottleneck was accessed.  This is only statistical and is not used to compute <see cref="Utilization"/> or rank bottlenecks.
         /// </summary>
@@ -137,7 +161,7 @@ namespace AmbientServices
             if (bottleneck == null) throw new ArgumentNullException(nameof(bottleneck));
             _owner = owner;
             _bottleneck = bottleneck;
-            _accessBeginStopwatchTimestamp = _owner.DateTimeToStopwatchTimestamp(accessBegin.Ticks);
+            _accessBeginStopwatchTimestamp = TimeSpanExtensions.DateTimeToStopwatchTimestamp(accessBegin.Ticks);
             _accessEndStopwatchTimestamp = long.MaxValue;
         }
 

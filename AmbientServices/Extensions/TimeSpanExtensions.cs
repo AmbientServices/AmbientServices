@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 
 namespace AmbientServices
@@ -16,6 +17,8 @@ namespace AmbientServices
         private static readonly long StopwatchToTimeSpanMultiplier;
         private static readonly long StopwatchToTimeSpanDivisor;
         private static readonly double StopwatchToTimeSpanRatio;
+        private static readonly long BaselineStopwatchTimestamp;
+        private static readonly long BaselineDateTimeTicks;
 #pragma warning disable CA1810  // it should be faster in this case to do it this way because the values depend on each other
         static TimeSpanExtensions()
 #pragma warning restore CA1810
@@ -30,6 +33,8 @@ namespace AmbientServices
             StopwatchToTimeSpanMultiplier = (long)(stopwatchTicksPerSecond / gcd);
             StopwatchToTimeSpanDivisor = (long)(timeSpanTicksPerSecond / gcd);
             StopwatchToTimeSpanRatio = (double)StopwatchToTimeSpanMultiplier / (double)StopwatchToTimeSpanDivisor;
+            BaselineStopwatchTimestamp = Stopwatch.GetTimestamp();     // note that it doesn't matter if AmbientClock is in use--these are *relative* numbers, so the conversion should work either way
+            BaselineDateTimeTicks = DateTime.UtcNow.Ticks;
         }
         internal static ulong GCD(ulong a, ulong b)
         {
@@ -81,11 +86,32 @@ namespace AmbientServices
             }
         }
         /// <summary>
+        /// Converts a stopwatch timestamp to UTC <see cref="DateTime"/> ticks.
+        /// </summary>
+        /// <param name="stopwatchTimestamp">A timestamp gathered from <see cref="Stopwatch.GetTimestamp()"/>.</param>
+        /// <returns>The number of UTC <see cref="DateTime "/>ticks.</returns>
+        public static long StopwatchTimestampToDateTime(long stopwatchTimestamp)
+        {
+            long stopwatchTicksAgo = BaselineStopwatchTimestamp - stopwatchTimestamp;
+            long dateTimeTicksAgo = StopwatchTicksToTimeSpanTicks(stopwatchTicksAgo);
+            return BaselineDateTimeTicks - dateTimeTicksAgo;
+        }
+        /// <summary>
+        /// Converts UTC <see cref="DateTime"/> ticks to a stopwatc timestamp.
+        /// </summary>
+        /// <param name="dateTimeTicks">Ticks from a UTC <see cref="DateTime"/>.</param>
+        /// <returns>The corresponding <see cref="Stopwatch"/> timestamp.</returns>
+        public static long DateTimeToStopwatchTimestamp(long dateTimeTicks)
+        {
+            long dateTimeTicksAgo = BaselineDateTimeTicks - dateTimeTicks;
+            long stopwatchTicksAgo = TimeSpanTicksToStopwatchTicks(dateTimeTicksAgo);
+            return BaselineStopwatchTimestamp - stopwatchTicksAgo;
+        }
+        /// <summary>
         /// Attempts to parse a string as a timespan.
         /// </summary>
         /// <param name="span">The candidate string.</param>
         /// <returns>A <see cref="TimeSpan"/>, if one could be parsed, or <b>null</b> if not.</returns>
-        //        [System.Diagnostics.DebuggerStepThrough]
         public static TimeSpan? TryParseTimeSpan(this string span)
         {
             if (string.IsNullOrEmpty(span)) return null;

@@ -173,6 +173,7 @@ public static class AssemblyLoggingExtensions
 ```
 ### Default Implementation
 The default implementation asynchronously buffers the log messages and flushes them in batches out to the System Diagnostics Trace (which would slow code dramatically if each log message was written synchronously).
+An alternate implementation, `AmbientFileLogger` logs messages to a daily rotating set of files at a location specified in the constructor.
 
 ## AmbientProgress
 The ambient progress interface abstracts a simple context-following progress tracker of the type that is universally applicable.  Progress tracking tracks the proportion of an operation that has completed processing and the item currently being processed and provides easy aggregation of subprocess progress.  The ambient context is checked for cancellation each time the progress is updated or parts are started or completed.

@@ -13,6 +13,7 @@ namespace AmbientServices
     [DefaultAmbientService]
     class BasicAmbientServiceProfiler : IAmbientServiceProfiler
     {
+        private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientServiceProfilerNotificationSink>();
         private AsyncLocal<CallContextActiveSystemData> _activeSystem;
 
         public BasicAmbientServiceProfiler()
@@ -20,26 +21,42 @@ namespace AmbientServices
             _activeSystem = new AsyncLocal<CallContextActiveSystemData>();
         }
 
-        public event EventHandler<AmbientServiceProfilerSystemSwitchedEvent> SystemSwitched;
-
         public void SwitchSystem(string system, string updatedPreviousSystem = null)
         {
-            CallContextActiveSystemData oldSystem = _activeSystem.Value;    // note that this is a struct so it can't be null
+            CallContextActiveSystemData oldSystem = _activeSystem.Value;
+            // value not yet initialized? // note that this is a struct so it can't be null, so we need to initialize this to the default value for the context, which apparently just started
+            if (oldSystem.RawGroup == null) oldSystem = new CallContextActiveSystemData(null, AmbientClock.Ticks);
             CallContextActiveSystemData newSystem = new CallContextActiveSystemData(system);
             _activeSystem.Value = newSystem;
-            // raise the event
-            SystemSwitched?.Invoke(this, new AmbientServiceProfilerSystemSwitchedEvent(newSystem.Group, oldSystem.StartStopwatchTimestamp, newSystem.StartStopwatchTimestamp, updatedPreviousSystem ?? oldSystem.Group));
+            // call all the notification sinks
+            foreach (IAmbientServiceProfilerNotificationSink notificationSink in _notificationSinks)
+            {
+                notificationSink.OnSystemSwitched(newSystem.StartStopwatchTimestamp, newSystem.Group, oldSystem.StartStopwatchTimestamp, updatedPreviousSystem);
+            }
+        }
+        public bool RegisterSystemSwitchedNotificationSink(IAmbientServiceProfilerNotificationSink sink)
+        {
+            return _notificationSinks.Add(sink);
+        }
+        public bool DeregisterSystemSwitchedNotificationSink(IAmbientServiceProfilerNotificationSink sink)
+        {
+            return _notificationSinks.Remove(sink);
         }
     }
     /// <summary>
-    /// A struct that holds information about which system is currently active in a call contxt.
+    /// A struct that holds information about which system is currently active in a call context.
     /// </summary>
     struct CallContextActiveSystemData
     {
+        private string _group;
         /// <summary>
         /// The currently-active system or system group identifier.
         /// </summary>
-        public string Group { get; private set; }
+        public string Group { get { return string.IsNullOrEmpty(_group) ? "" : _group; } }
+        /// <summary>
+        /// The currently-active system or system group identifier (null if this struct is default).
+        /// </summary>
+        internal string RawGroup { get { return _group; } }
         /// <summary>
         /// The stopwatch timestamp when this system or group became active.
         /// Based on <see cref="AmbientClock.Ticks"/>.
@@ -52,7 +69,7 @@ namespace AmbientServices
         /// <param name="system">The identifier for the active system (or system group).</param>
         public CallContextActiveSystemData(string system)
         {
-            Group = system;
+            _group = system ?? "";
             StartStopwatchTimestamp = AmbientClock.Ticks;
         }
         /// <summary>
@@ -62,14 +79,14 @@ namespace AmbientServices
         /// <param name="startStopwatchTimestamp">The start timestamp, which presumably originated from a previous get of <see cref="AmbientClock.Ticks"/>.</param>
         public CallContextActiveSystemData(string system, long startStopwatchTimestamp)
         {
-            Group = system;
+            _group = system ?? "";
             StartStopwatchTimestamp = startStopwatchTimestamp;
         }
     }
     /// <summary>
     /// A class that tracks service profile statistics across multiple call contexts in a process or a single time window.
     /// </summary>
-    class ProcessOrSingleTimeWindowServiceProfiler : IAmbientServiceProfile
+    class ProcessOrSingleTimeWindowServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
     {
         private readonly IAmbientServiceProfiler _profiler;
         private readonly string _scopeName;
@@ -91,11 +108,11 @@ namespace AmbientServices
             _accumulatorsByGroup = new ConcurrentDictionary<string, AmbientServiceProfilerAccumulator>();
             _activeGroupByCallContext = new ConcurrentDictionary<object, CallContextActiveSystemData>();
             _callContextKey = new AsyncLocal<object>();
-            _profiler.SystemSwitched += OnSystemSwitched;
+            _profiler.RegisterSystemSwitchedNotificationSink(this);
         }
         internal static string GroupSystem(Regex transform, string system)
         {
-            if (transform == null || system == null) return system ?? "";
+            if (transform == null || system == null) return system;
             Match match = transform.Match(system);
             StringBuilder group = new StringBuilder();
             GroupCollection groups = match.Groups;
@@ -113,20 +130,32 @@ namespace AmbientServices
             _activeGroupByCallContext.TryGetValue(scopeKey, out ret);
             return ret;
         }
-        internal void OnSystemSwitched(object sender, AmbientServiceProfilerSystemSwitchedEvent changes)
+        /// <summary>
+        /// Notifies the notification sink that the system has switched.
+        /// </summary>
+        /// <remarks>
+        /// This function will be called whenever the service profiler is told that the currently-processing system has switched.
+        /// Note that the previously-executing system may or may not be revised at this time.  
+        /// Such revisions can be used to distinguish between processing that resulted in success or failure, or other similar outcomes that the notifier wishes to distinguish.
+        /// </remarks>
+        /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
+        /// <param name="newSystem">The identifier for the system that is starting to run.</param>
+        /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
+        /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
+        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null)
         {
             // assign a call context key for the current call context if we haven't assigned one yet
             if (_callContextKey.Value == null) _callContextKey.Value = new object();
             // are we revising the old system?
-            string justEndedGroup = (changes.RevisedOldSystem != null) ? GroupSystem(_systemToGroupTransform, changes.RevisedOldSystem) : GetActiveSystemData(_callContextKey.Value).Group ?? "";
+            string justEndedGroup = (revisedOldSystem == null) ? GetActiveSystemData(_callContextKey.Value).Group : GroupSystem(_systemToGroupTransform, revisedOldSystem);
             // add the just ended group stats to the group accumulators
             _accumulatorsByGroup.AddOrUpdate(justEndedGroup,
-                s => new AmbientServiceProfilerAccumulator(justEndedGroup, changes.NewSystemStartStopwatchTimestamp - changes.OldSystemStartStopwatchTimestamp),
-                (s, old) => new AmbientServiceProfilerAccumulator(justEndedGroup, old.TotalStopwatchTicksUsed + changes.NewSystemStartStopwatchTimestamp - changes.OldSystemStartStopwatchTimestamp, old.ExecutionCount + 1)
+                s => new AmbientServiceProfilerAccumulator(justEndedGroup, newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp),
+                (s, old) => new AmbientServiceProfilerAccumulator(justEndedGroup, old.TotalStopwatchTicksUsed + newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp, old.ExecutionCount + 1)
             );
-            string newGroup = GroupSystem(_systemToGroupTransform, changes.NewSystem);
+            string newGroup = GroupSystem(_systemToGroupTransform, newSystem);
             // keep track of what is active on this call context as well so we can count partial results
-            _activeGroupByCallContext[_callContextKey.Value] = new CallContextActiveSystemData(newGroup, changes.NewSystemStartStopwatchTimestamp);
+            _activeGroupByCallContext[_callContextKey.Value] = new CallContextActiveSystemData(newGroup, newSystemStartStopwatchTimestamp);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -136,7 +165,7 @@ namespace AmbientServices
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
-                    if (_profiler != null) _profiler.SystemSwitched -= OnSystemSwitched;
+                    _profiler.DeregisterSystemSwitchedNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -161,7 +190,7 @@ namespace AmbientServices
 
         internal void CloseSampling()
         {
-            _profiler.SystemSwitched -= OnSystemSwitched;
+            _profiler.DeregisterSystemSwitchedNotificationSink(this);
             long endStopwatchTimestamp = AmbientClock.Ticks;
             foreach (CallContextActiveSystemData activeCallContextSystems in _activeGroupByCallContext.Values)
             {
@@ -175,24 +204,42 @@ namespace AmbientServices
             _activeGroupByCallContext.Clear();
         }
     }
-    class ScopeOnSystemSwitchedDistributor
+    class ScopeOnSystemSwitchedDistributor : IAmbientServiceProfilerNotificationSink
     {
+        private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientServiceProfilerNotificationSink>();
         /// <summary>
-        /// Switches scope to the specified new system.
+        /// Notifies the notification sink that the system has switched.
         /// </summary>
-        /// <param name="sender">The sender of the event.</param>
-        /// <param name="changes">The <see cref="AmbientServiceProfilerSystemSwitchedEvent"/> for this system change.</param>
-        public void OnSystemSwitched(object sender, AmbientServiceProfilerSystemSwitchedEvent changes)
+        /// <remarks>
+        /// This function will be called whenever the service profiler is told that the currently-processing system has switched.
+        /// Note that the previously-executing system may or may not be revised at this time.  
+        /// Such revisions can be used to distinguish between processing that resulted in success or failure, or other similar outcomes that the notifier wishes to distinguish.
+        /// </remarks>
+        /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
+        /// <param name="newSystem">The identifier for the system that is starting to run.</param>
+        /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
+        /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
+        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null)
         {
-            OnCallContextSystemSwitched?.Invoke(sender, changes);
+            foreach (IAmbientServiceProfilerNotificationSink notificationSink in _notificationSinks)
+            {
+                notificationSink.OnSystemSwitched(newSystemStartStopwatchTimestamp, newSystem, oldSystemStartStopwatchTimestamp, revisedOldSystem);
+            }
         }
 
-        public EventHandler<AmbientServiceProfilerSystemSwitchedEvent> OnCallContextSystemSwitched;
+        public bool RegisterSystemSwitchedNotificationSink(IAmbientServiceProfilerNotificationSink sink)
+        {
+            return _notificationSinks.Add(sink);
+        }
+        public bool DeregisterSystemSwitchedNotificationSink(IAmbientServiceProfilerNotificationSink sink)
+        {
+            return _notificationSinks.Remove(sink);
+        }
     }
     /// <summary>
     /// A class that tracks service profile statistics for a specific call context.
     /// </summary>
-    class CallContextServiceProfiler : IAmbientServiceProfile
+    class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
     {
         private readonly ScopeOnSystemSwitchedDistributor _distributor;
         private readonly Regex _systemGroupTransform;
@@ -228,7 +275,7 @@ namespace AmbientServices
         }
 
         /// <summary>
-        /// Constructs a ScopeProcessingDistributionTracker.
+        /// Constructs a CallContextServiceProfiler.
         /// </summary>
         /// <param name="distributor">A <see cref="ScopeOnSystemSwitchedDistributor"/> to hook into to receive system change events.</param>
         /// <param name="scopeName">The name of the call contxt being tracked.</param>
@@ -242,32 +289,39 @@ namespace AmbientServices
             _stopwatchTicksUsedByGroup = new Dictionary<string, (long, long)>();
             _currentGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, startSystem);
             _currentGroupStartStopwatchTicks = AmbientClock.Ticks;
-            distributor.OnCallContextSystemSwitched += OnSystemChanged;
+            distributor.RegisterSystemSwitchedNotificationSink(this);
         }
         /// <summary>
-        /// Switches scope to the specified new processor.
+        /// Notifies the notification sink that the system has switched.
         /// </summary>
-        /// <param name="sender">The sender of the event.</param>
-        /// <param name="changes">The <see cref="AmbientServiceProfilerSystemSwitchedEvent"/> for this processor change.</param>
-        public void OnSystemChanged(object sender, AmbientServiceProfilerSystemSwitchedEvent changes)
+        /// <remarks>
+        /// This function will be called whenever the service profiler is told that the currently-processing system has switched.
+        /// Note that the previously-executing system may or may not be revised at this time.  
+        /// Such revisions can be used to distinguish between processing that resulted in success or failure, or other similar outcomes that the notifier wishes to distinguish.
+        /// </remarks>
+        /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
+        /// <param name="newSystem">The identifier for the system that is starting to run.</param>
+        /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
+        /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
+        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null)
         {
-            string justEndedGroup = (changes.RevisedOldSystem != null)
-                ? ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, changes.RevisedOldSystem)
-                : _currentGroup;
+            string justEndedGroup = (revisedOldSystem == null)
+                ? _currentGroup
+                : ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, revisedOldSystem);
             // update the just ended group
             ValueTuple<long, long> values;
             if (!_stopwatchTicksUsedByGroup.TryGetValue(justEndedGroup, out values))
             {
-                _stopwatchTicksUsedByGroup.Add(justEndedGroup, (changes.NewSystemStartStopwatchTimestamp - changes.OldSystemStartStopwatchTimestamp, 1));
+                _stopwatchTicksUsedByGroup.Add(justEndedGroup, (newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp, 1));
             }
             else
             {
-                _stopwatchTicksUsedByGroup[justEndedGroup] = (values.Item1 + changes.NewSystemStartStopwatchTimestamp - changes.OldSystemStartStopwatchTimestamp, values.Item2 + 1);
+                _stopwatchTicksUsedByGroup[justEndedGroup] = (values.Item1 + newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp, values.Item2 + 1);
             }
-            string newGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, changes.NewSystem);
+            string newGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, newSystem);
             // switch to the new processor
             _currentGroup = newGroup;
-            _currentGroupStartStopwatchTicks = changes.NewSystemStartStopwatchTimestamp;
+            _currentGroupStartStopwatchTicks = newSystemStartStopwatchTimestamp;
         }
 
         protected virtual void Dispose(bool disposing)
@@ -277,7 +331,7 @@ namespace AmbientServices
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
-                    _distributor.OnCallContextSystemSwitched -= OnSystemChanged;
+                    _distributor.DeregisterSystemSwitchedNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -287,7 +341,7 @@ namespace AmbientServices
         }
 
         // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~ScopeProcessingDistributionTracker()
+        // ~CallContextServiceProfiler()
         // {
         //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         //     Dispose(disposing: false);

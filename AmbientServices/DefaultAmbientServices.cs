@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -20,7 +21,7 @@ namespace AmbientServices
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class DefaultAmbientServiceAttribute : Attribute
     {
-        private IEnumerable<Type> _registrationInterfaces;
+        private IReadOnlyList<Type> _registrationInterfaces;
 
         /// <summary>
         /// Constructs a DefaultAmbientServiceAttribute.
@@ -28,14 +29,15 @@ namespace AmbientServices
         public DefaultAmbientServiceAttribute()
         {
         }
-#pragma warning disable CA1019
         /// <summary>
-        /// Constructs a DefaultAmbientServiceAttribute that is limited to one specific interface, even if multiple interfaces are directly implemented.
+        /// Constructs a DefaultAmbientServiceAttribute that is limited to the specified interface, even if other interfaces are directly implemented.
         /// </summary>
-        /// <param name="registrationInterface">An interface type to use for the registration instead of all the interfaces implemented by the class.</param>
+        /// <param name="registrationInterface">A single registration interface (for CLS compliance).</param>
+#pragma warning disable CA1019  // this constructor is only for CLS compliance--this attribute is accessible through the RegistrationInterfaces property
         public DefaultAmbientServiceAttribute(Type registrationInterface)
+#pragma warning restore CA1019
         {
-            _registrationInterfaces = new Type[] { registrationInterface };
+            _registrationInterfaces = ImmutableArray<Type>.Empty.Add(registrationInterface);
         }
         /// <summary>
         /// Constructs a DefaultAmbientServiceAttribute that is limited to the listed interfaces, even if other interfaces are directly implemented.
@@ -43,14 +45,13 @@ namespace AmbientServices
         /// <param name="registrationInterfaces">A params array of interface types to use for the registration instead of all the interfaces implemented by the class.</param>
         public DefaultAmbientServiceAttribute(params Type[] registrationInterfaces)
         {
-            _registrationInterfaces = registrationInterfaces;
+            _registrationInterfaces = ImmutableArray<Type>.Empty.AddRange(registrationInterfaces);
         }
-#pragma warning restore CA1019
         /// <summary>
         /// Gets the interface types indicating which services are implemented by the class the attribute is applied to.  
         /// If null, all interfaces that are directly implemented by the class should be used.
         /// </summary>
-        public IEnumerable<Type> RegistrationTypes { get { return _registrationInterfaces; } }
+        public IReadOnlyList<Type> RegistrationInterfaces { get { return _registrationInterfaces; } }
     }
     /// <summary>
     /// An internal static class that collects default ambient service implementations in every currently and subsequently loaded assembly.
@@ -74,7 +75,11 @@ namespace AmbientServices
             DefaultAmbientServiceAttribute attribute = type.GetCustomAttribute<DefaultAmbientServiceAttribute>();
             if (attribute != null && type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)
             {
-                IEnumerable<Type> registrationInterfaces = attribute.RegistrationTypes ?? type.GetInterfaces();
+                IReadOnlyList<Type> registrationInterfaces = attribute.RegistrationInterfaces;
+                if ((registrationInterfaces?.Count ?? 0) == 0)
+                {
+                    registrationInterfaces = type.GetInterfaces();
+                }
                 foreach (Type iface in registrationInterfaces)
                 {
                     _DefaultImplementations.TryAdd(iface, type);

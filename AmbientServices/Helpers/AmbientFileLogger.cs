@@ -37,10 +37,9 @@ namespace AmbientServices
             _fileExtension = fileExtension;
             _rotationPeriodMinutes = rotationPeriodMinutes;
             // which period number within the day are we in right now?
-            TimeSpan timeOfDay = AmbientClock.UtcNow.TimeOfDay;
-            _periodNumber = (int)(timeOfDay.TotalMinutes / rotationPeriodMinutes);
+            _periodNumber = GetPeriodNumber(AmbientClock.UtcNow);
             // use that for the starting suffix
-            string startingSuffix = _periodNumber.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            string startingSuffix = PeriodString(_periodNumber);
             _fileBuffers = new RotatingFileBuffer(filePrefix, startingSuffix + _fileExtension, TimeSpan.FromSeconds(autoFlushSeconds));
         }
         /// <summary>
@@ -69,7 +68,7 @@ namespace AmbientServices
                 if (oldValue == System.Threading.Interlocked.CompareExchange(ref _periodNumber, newPeriodNumber, oldValue))
                 {
                     // we won the race to update the period number
-                    _fileBuffers.BufferFileRotation(newPeriodNumber.ToString(System.Globalization.CultureInfo.InvariantCulture) + _fileExtension);
+                    _fileBuffers.BufferFileRotation(PeriodString(newPeriodNumber) + _fileExtension);
                     break;
                 }
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
@@ -85,6 +84,16 @@ namespace AmbientServices
         {
             return _disposedValue ? Task.CompletedTask : _fileBuffers.Flush(cancel);
         }
+        private int GetPeriodNumber(DateTime dateTime)
+        {
+            // which period number within the day are we in right now?
+            TimeSpan timeOfDay = dateTime.TimeOfDay;
+            return (int)(timeOfDay.TotalMinutes / _rotationPeriodMinutes);
+        }
+        private static string PeriodString(int periodNumber)
+        {
+            return periodNumber.ToString("D4", System.Globalization.CultureInfo.InvariantCulture);
+        }
         /// <summary>
         /// Gets the log file name for the specified time.
         /// </summary>
@@ -92,11 +101,9 @@ namespace AmbientServices
         /// <returns>The filename for log messages logged at the specified time.</returns>
         internal string GetLogFileName(DateTime dateTime)
         {
-            // which period number within the day are we in right now?
-            TimeSpan timeOfDay = dateTime.TimeOfDay;
-            _periodNumber = (int)(timeOfDay.TotalMinutes / _rotationPeriodMinutes);
+            _periodNumber = GetPeriodNumber(dateTime);
             // use that for the starting suffix
-            string suffix = _periodNumber.ToString(System.Globalization.CultureInfo.InvariantCulture) + _fileExtension;
+            string suffix = PeriodString(_periodNumber) + _fileExtension;
             return _filePrefix + suffix;
         }
         /// <summary>
@@ -105,20 +112,19 @@ namespace AmbientServices
         /// </summary>
         /// <param name="filePathPrefix">The file prefix (the same one that would be passed as the filePrefix parameter to the constructor).</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-#pragma warning disable CA1801
         public static Task TryDeleteAllFiles(string filePathPrefix, CancellationToken cancel = default)
-#pragma warning restore CA1801
         {
             string directory = Path.GetDirectoryName(filePathPrefix);
             string filename = Path.GetFileName(filePathPrefix);
             // clean up the files
             foreach (string file in Directory.GetFiles(directory, filename + "*.log"))
             {
+                if (cancel.IsCancellationRequested) break;
                 try
                 {
                     System.IO.File.Delete(file);
                 }
-#pragma warning disable CA1031
+#pragma warning disable CA1031  // we REALLY want to catch everything here--delete can throw a lot of different exceptions and we don't want ANY of them to make it through--this is a "do your best" function
                 catch { }   // ignore all errors and just skip files we can't delete
 #pragma warning restore CA1031
             }

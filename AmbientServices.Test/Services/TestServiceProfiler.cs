@@ -282,30 +282,6 @@ namespace AmbientServices.Test
             }
         }
         [TestMethod]
-        public void AmbientServiceProfilerSystemChangedEvent()
-        {
-            AmbientServiceProfilerSystemSwitchedEvent a1 = new AmbientServiceProfilerSystemSwitchedEvent(nameof(AmbientServiceProfilerSystemChangedEvent) + "New", 0, 1, nameof(AmbientServiceProfilerSystemChangedEvent) + "Old");
-            AmbientServiceProfilerSystemSwitchedEvent a2 = new AmbientServiceProfilerSystemSwitchedEvent(nameof(AmbientServiceProfilerSystemChangedEvent) + "New", 0, 2, nameof(AmbientServiceProfilerSystemChangedEvent) + "Old");
-            AmbientServiceProfilerSystemSwitchedEvent a3 = new AmbientServiceProfilerSystemSwitchedEvent(nameof(AmbientServiceProfilerSystemChangedEvent) + "New", 1, 1, nameof(AmbientServiceProfilerSystemChangedEvent) + "Old");
-            AmbientServiceProfilerSystemSwitchedEvent b = new AmbientServiceProfilerSystemSwitchedEvent(nameof(AmbientServiceProfilerSystemChangedEvent) + "New-B", 0, 1, nameof(AmbientServiceProfilerSystemChangedEvent) + "Old-B");
-            AmbientServiceProfilerSystemSwitchedEvent c = new AmbientServiceProfilerSystemSwitchedEvent(nameof(AmbientServiceProfilerSystemChangedEvent) + "New-C", 0, 1, nameof(AmbientServiceProfilerSystemChangedEvent) + "Old-C");
-
-            Assert.AreNotEqual(a1.GetHashCode(), a2.GetHashCode());
-            Assert.AreNotEqual(a1, a2);
-            Assert.AreNotEqual(a1, a3);
-            Assert.AreNotEqual(a1, b);
-            Assert.AreNotEqual(a1, c);
-
-            Assert.IsFalse(a1.Equals(new DateTime()));
-            Assert.IsFalse(a1 == a2);
-            Assert.IsFalse(a1 == a3);
-            Assert.IsFalse(a1 == b);
-            Assert.IsTrue(a1 != a2);
-            Assert.IsTrue(a1 != a3);
-            Assert.IsTrue(a1 != b);
-        }
-
-        [TestMethod]
         public void AmbientServiceProfilerCoordinatorSettings()
         {
             string system1 = "DynamoDB/Table:My-table/Partition:342644/Result:Success";
@@ -407,7 +383,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void AmbientServiceProfilerCoordinatorOverrideGroupTransform()
         {
-            string system1 = "DynamoDB/Table:My-table/Partition:342644/Result:Success";
+            string system1Start = "DynamoDB/Table:My-table/Partition:342644";
+            string system1End = "DynamoDB/Table:My-table/Partition:342644/Result:Success";
             string system2 = "S3/Bucket:My-bucket/Prefix:abcdefg/Result:Retry";
             string system3 = "SQL/Database:My-database/Table:User/Result:Failed";
             string groupTransform = "(?:([^:/]+)(?:(/Database:[^:/]*)|(/Bucket:[^:/]*)|(/Result:[^:/]*)|(?:/[^/]*))*)";
@@ -419,16 +396,16 @@ namespace AmbientServices.Test
             using (IDisposable timeWindowProfiler = coordinator.CreateTimeWindowProfiler(nameof(AmbientServiceProfilerCoordinatorOverrideGroupTransform), TimeSpan.FromMilliseconds(10000), p => { timeWindowProfile = p; return Task.CompletedTask; }, groupTransform))
             using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(AmbientServiceProfilerCoordinatorOverrideGroupTransform), groupTransform))
             {
-                _ServiceProfiler.Local?.SwitchSystem(system1);
+                _ServiceProfiler.Local?.SwitchSystem(system1Start);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(5));
 
-                _ServiceProfiler.Local?.SwitchSystem(system2);
+                _ServiceProfiler.Local?.SwitchSystem(system2, system1End);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(200));
 
                 _ServiceProfiler.Local?.SwitchSystem(system3);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(3000));
 
-                _ServiceProfiler.Local?.SwitchSystem(system1);
+                _ServiceProfiler.Local?.SwitchSystem(system1End);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(5));
 
                 _ServiceProfiler.Local?.SwitchSystem("noreport");
