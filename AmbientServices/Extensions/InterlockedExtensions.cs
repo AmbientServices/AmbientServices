@@ -187,41 +187,18 @@ namespace AmbientServices
                 // between five and ten misses, sleep for a random amount before continuing
                 if (attempt >= 5)
                 {
-                    delay = Pseudorandom % (int)(50 * Math.Pow(2, attempt - 4));
+                    delay = _Rand.NextInt32 % (int)(50 * Math.Pow(2, attempt - 4));
                     System.Threading.Thread.Sleep(delay);
                 }
                 // between one and three misses, loop for a random number of iterations before continuing
                 else if (attempt >= 3)
                 {
-                    delay = Pseudorandom % (int)(500 * Math.Pow(2, attempt - 2));
+                    delay = _Rand.NextInt32 % (int)(500 * Math.Pow(2, attempt - 2));
                     for (int spin = 0; spin < delay; ++spin) { }
                 }
             }
             return true;
         }
-        private static int _PseudorandomRotator;
-        /// <summary>
-        /// Gets a superfast pseudorandom number.  This number, based on a combination of a simple interlocked rotator and the tick count, will jump rapidly from low numbers to high numbers.
-        /// </summary>
-        /// <returns>A singed but always positive pseudorandom number.</returns>
-        /// <remarks>
-        /// This number will be useful for certain types of algorithms where a fast, even statistical distribution is needed, but where no semblance of cryptographic security is required.
-        /// For example, load distribution.
-        /// </remarks>
-        private static int Pseudorandom
-        {
-            get
-            {
-                unchecked
-                {
-                    uint x = (uint)Environment.TickCount ^ (uint)System.Threading.Interlocked.Increment(ref _PseudorandomRotator) * 433494437;
-                    x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
-                    x = (((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2));
-                    x = (((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4));
-                    x = (((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8));
-                    return (int)(((x >> 16) | (x << 16)) & 0x7fffffff);
-                }
-            }
-        }
+        private static Pseudorandom _Rand = new AmbientServices.Pseudorandom(true);
     }
 }

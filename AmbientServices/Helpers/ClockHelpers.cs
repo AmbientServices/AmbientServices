@@ -284,7 +284,7 @@ namespace AmbientServices
             /// Note that negative times are allowed, but should only be used to test weird clock issues.
             /// </remarks>
             /// <param name="ticks">The number of ticks to move forward.</param>
-            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClock.TimeChanged"/> is being raised.</remarks>
+            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called directly or indirectly from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> implementation.</remarks>
             public void SkipAhead(long ticks)
             {
                 long newTicks = _baseStopwatchTicks + System.Threading.Interlocked.Add(ref _elapsedStopwatchTicks, ticks);
@@ -302,7 +302,7 @@ namespace AmbientServices
             /// Note that negative times are allowed, but should only be used to test weird clock issues.
             /// </remarks>
             /// <param name="time">A <see cref="TimeSpan"/> indicating how much to move forward.</param>
-            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClock.TimeChanged"/> is being raised.</remarks>
+            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called directly or indirectly from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> implementation.</remarks>
             public void SkipAhead(TimeSpan time)
             {
                 SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(time.Ticks));

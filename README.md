@@ -15,7 +15,7 @@ By convention, AmbientServices should not be used for information that alters th
 
 For example, logging should never alter function outputs at all.  Caching may affect the output, but only by giving results that are slightly stale, and only in cases where there are already hidden inputs (like a database) anyway.  Some functions may measure the passage of time during processing and might record that information or change their outputs based on the duration of time passed, but callers should not be surprised when the passage of time is slower or faster than their expected "normal".  Settings (often stored in a configuration file) can alter the output of a function, but never in a way that the caller is concerned about.  In fact, the very concept of settings is in reality a type of parameter intended to affect functions without requiring the caller to be concerned with their specific values.  Progress tracking and cancellation may be useful for the caller, but never affects the output of the function other than aborting its processing altogether.
 
-## Advanced Services
+## Performance Services
 Advanced ambient services provide detailed system performance monitoring.
 With them you can easily track how various parts of your system are performing all the time, not just when you run it with a profiler.
 
@@ -119,7 +119,7 @@ The default implementation has a small local-only cache using a very simple impl
 ## AmbientLogger
 The ambient logger interface abstracts a simple logging system of the type that is universally applicable.  The logger simply receives strings to log and flushes them when called.
 
-Logging should never affect control flow or results.  The only side-effect should be transparent to the caller.  Every user and implementor should understand this implied part of the logging interface contract.
+Logging should never be used in a way that affects control flow or results.  The only side-effect should be transparent to the caller.  Every user and implementor should understand this implied part of the logging interface contract.  In order to do this, care should be taken to ensure that when using logging functions that use lambdas to avoid generating log messages until after the logging system checks to see if the message would be filtered, those lambdas must not have any side effects.
 
 ### Helpers
 The `AmbientLogger<TOWNER>` generic class provides a wrapper of the ambient cache that attaches the owner type, a severity level, and a category to each message and filters them according to settings from the ambient or specified settings.  Overloads that take a message-generating lambda are also provided.  These overloads should be used when generating the log message from the provided input data is expensive and the caller wants to avoid that expense when the message is going to be filtered anyway.
@@ -181,7 +181,8 @@ The ambient progress interface abstracts a simple context-following progress tra
 Progress tracking should never affect control flow or results, except in the event of a cancellation, in which case there are no functional results.  Naturally both consumers and services should avoid any usage or implementation to the contrary.
 
 ### Helpers
-The only helper class here is `AmbientCancellationTokenSource`, which is a superset of the framework's `CancellationTokenSource` that can raise cancellation using an ambient clock.
+The `AmbientProgressService` static class provides easy access to the local and global `IAmbientProgress`.
+The `AmbientCancellationTokenSource` class is a superset of the framework's `CancellationTokenSource` that can raise cancellation using an ambient clock.
 
 ### Settings
 There are no settings for this service.
@@ -194,8 +195,6 @@ There are no settings for this service.
 /// </summary>
 class DownloadAndUnzip
 {
-    private static readonly IAmbientProgressService AmbientProgress = Ambient.GetService<IAmbientProgressService>().Global;
-
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
     private readonly MemoryStream _package;
@@ -209,7 +208,7 @@ class DownloadAndUnzip
 
     public async Task MainOperation(CancellationToken cancel = default(CancellationToken))
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         using (progress?.TrackPart(0.01f, 0.75f, "Download "))
         {
             await Download();
@@ -221,7 +220,7 @@ class DownloadAndUnzip
     }
     public async Task Download()
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
         HttpWebRequest request = HttpWebRequest.CreateHttp(_downlaodUrl);
         using (WebResponse response = request.GetResponse())
@@ -243,7 +242,7 @@ class DownloadAndUnzip
     }
     public Task Unzip()
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
 
         ZipArchive archive = new ZipArchive(_package);
@@ -1348,6 +1347,17 @@ class Application
 }
 ```
 
+## Miscellaneous
+Several non-service type utilities and extensions to system classes are also included because they are needed by the implementations.
+These include InterlockedExtensions for threadsafe tracking of min/max values, 
+ArrayExtensions for comparing arrays by value, 
+StringExtensions for doing natural string comparisons,
+ConcurrentHashSet for keeping a keyed set of items in a thread-safe collection, 
+Date (because that should be implemented by the system and isn't), 
+International System of Units (SI) string generation for more readable status reports,
+FilteredStackTrace to remove system code tracing from exception stack dumps,
+and Pseudorandom for greatly improved and threadsafe random number generation.
+
 # Library Information
 
 ## Author and License
@@ -1367,5 +1377,5 @@ Contributions are welcome under the following conditions:
 1. enhancements are consistent with the overall scope of the project
 2. no new assembly dependencies are introduced
 3. code coverage by unit tests cover all new lines and conditions whenever possible
-4. documentation is updated appropriately
+4. documentation (both inline and here) is updated appropriately
 5. style for code and documentation contributions remains consistent

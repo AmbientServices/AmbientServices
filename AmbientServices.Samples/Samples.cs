@@ -214,8 +214,6 @@ public static class AssemblyLoggingExtensions
 /// </summary>
 class DownloadAndUnzip
 {
-    private static readonly IAmbientProgressService AmbientProgress = Ambient.GetService<IAmbientProgressService>().Global;
-
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
     private readonly MemoryStream _package;
@@ -229,7 +227,7 @@ class DownloadAndUnzip
 
     public async Task MainOperation(CancellationToken cancel = default(CancellationToken))
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         using (progress?.TrackPart(0.01f, 0.75f, "Download "))
         {
             await Download();
@@ -241,7 +239,7 @@ class DownloadAndUnzip
     }
     public async Task Download()
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
         HttpWebRequest request = HttpWebRequest.CreateHttp(_downlaodUrl);
         using (WebResponse response = request.GetResponse())
@@ -263,7 +261,7 @@ class DownloadAndUnzip
     }
     public Task Unzip()
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
 
         ZipArchive archive = new ZipArchive(_package);

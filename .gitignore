@@ -159,12 +159,6 @@ $RECYCLE.BIN/
 *.coverage
 /opencover.results.xml
 /coverage.bat
-/.vs/AmbientServices/v15/Server/sqlite3
-/.vs/AmbientServices/DesignTimeBuild
-/.vs/AmbientServices/v16/TestStore/0
+/.vs
 /coveragereport
 /AmbientServices/AmbientServices.xml
-/.vs/AmbientServices/v16/TestStore/1/491.testlog
-/.vs/AmbientServices/v16/TestStore/1
-/.vs/AmbientServices/v16/TestStore/OutputMessages/4d090f59-5815-06a8-2e81-d4f460ec53b0/StandardOutput.txt
-/.vs/AmbientServices/v16/TestStore/OutputMessages
