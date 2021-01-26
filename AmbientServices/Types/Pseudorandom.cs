@@ -489,7 +489,7 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Gets a <see cref="Double"/> with a random value.  All possible values should be roughly evenly distributed, including special values like <see cref="Double.Nan"/>, <see cref="Double.Epsilon"/>, <see cref="Double.PositiveInfinity"/>, etc.
+        /// Gets a <see cref="Double"/> with a random value.  All possible values should be roughly evenly distributed, including special values like <see cref="Double.NaN"/>, <see cref="Double.Epsilon"/>, <see cref="Double.PositiveInfinity"/>, etc.
         /// </summary>
         public Double NextDouble
         {
