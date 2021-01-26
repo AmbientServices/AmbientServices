@@ -22,7 +22,7 @@ namespace AmbientServices
 
         /// <summary>
         /// Gets a thread-safe non-repeating seed to initialize a <see cref="Pseudorandom"/>, attempting to avoid using the same seed as much as possible.
-        /// Uses timing information including the high frequency performance counter from <see cref="Stopwatch"/> to get increase the randomness of the seed.
+        /// Uses timing information including the high frequency performance counter from <see cref="System.Diagnostics.Stopwatch"/> to get increase the randomness of the seed.
         /// </summary>
         private static ulong NextGlobalSeed
         {
@@ -489,7 +489,7 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Gets a <see cref="Double"/> with a random value.  All possible values should be roughly evenly distributed, including special values like <see cref="Double.Nan"/>, <see cref="Double.Epsilon"/>, <see cref="Double.PositiveInfinity, etc."/>
+        /// Gets a <see cref="Double"/> with a random value.  All possible values should be roughly evenly distributed, including special values like <see cref="Double.Nan"/>, <see cref="Double.Epsilon"/>, <see cref="Double.PositiveInfinity"/>, etc.
         /// </summary>
         public Double NextDouble
         {
