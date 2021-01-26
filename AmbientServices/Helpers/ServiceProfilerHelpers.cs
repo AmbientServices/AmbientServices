@@ -9,7 +9,7 @@ namespace AmbientServices
     /// <summary>
     /// A class that coordinates service profilers.
     /// </summary>
-    public class AmbientServiceProfilerCoordinator : IDisposable
+    public class AmbientServiceProfilerCoordinator : IAmbientServiceProfilerNotificationSink, IDisposable
     {
         private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
         private static readonly AmbientService<IAmbientServiceProfiler> _AmbientServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
@@ -38,18 +38,25 @@ The regular expression will attempt to match the system identifier, with the val
                 s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));
             _scopeDistributor = new AsyncLocal<ScopeOnSystemSwitchedDistributor>();
             _eventBroadcaster = _AmbientServiceProfiler.Local;
-            if (_eventBroadcaster != null) _eventBroadcaster.SystemSwitched += OnSystemSwitched;
+            _eventBroadcaster?.RegisterSystemSwitchedNotificationSink(this);
         }
 
         /// <summary>
-        /// Notifies the service profiler coordinator of a system switch.
+        /// Notifies the notification sink that the system has switched.
         /// </summary>
-        /// <param name="sender">The sender of the event.</param>
-        /// <param name="changes">The <see cref="AmbientServiceProfilerSystemSwitchedEvent"/> for this system switch.</param>
-        private void OnSystemSwitched(object sender, AmbientServiceProfilerSystemSwitchedEvent changes)
+        /// <remarks>
+        /// This function will be called whenever the service profiler is told that the currently-processing system has switched.
+        /// Note that the previously-executing system may or may not be revised at this time.  
+        /// Such revisions can be used to distinguish between processing that resulted in success or failure, or other similar outcomes that the notifier wishes to distinguish.
+        /// </remarks>
+        /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
+        /// <param name="newSystem">The identifier for the system that is starting to run.</param>
+        /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
+        /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
+        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null)
         {
             if (_scopeDistributor.Value == null) _scopeDistributor.Value = new ScopeOnSystemSwitchedDistributor();
-            _scopeDistributor.Value.OnSystemSwitched(sender, changes);
+            _scopeDistributor.Value.OnSystemSwitched(newSystemStartStopwatchTimestamp, newSystem, oldSystemStartStopwatchTimestamp, revisedOldSystem);
         }
         /// <summary>
         /// Creates a service profiler which profiles the current call context.
@@ -123,7 +130,7 @@ The regular expression will attempt to match the system identifier, with the val
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects)
-                    if (_eventBroadcaster != null) _eventBroadcaster.SystemSwitched -= OnSystemSwitched;
+                    _eventBroadcaster?.DeregisterSystemSwitchedNotificationSink(this);
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

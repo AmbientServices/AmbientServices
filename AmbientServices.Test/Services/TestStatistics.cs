@@ -89,7 +89,7 @@ namespace AmbientServices.Test
             Assert.IsFalse(AmbientStatistics.RemoveStatistic(runTime.Id));
         }
         [TestMethod]
-        public void AmbientPerformanceMetricsAttributes()
+        public void AmbientPerformanceMetricsProperties()
         {
             IAmbientStatisticReader runTime = AmbientStatistics.Statistics["ExecutionTime"];
             Assert.AreEqual(MissingSampleHandling.LinearEstimation, runTime.MissingSampleHandling);
@@ -97,7 +97,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(AggregationTypes.Average, runTime.PreferredTemporalAggregationType);
             Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max, runTime.SpatialAggregationTypes);
             Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max, runTime.TemporalAggregationTypes);
-            IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(false, "AmbientPerformanceMetricsAttributes", "AmbientPerformanceMetricsAttributes Test", true, 0
+            IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(false, nameof(AmbientPerformanceMetricsProperties), nameof(AmbientPerformanceMetricsProperties) + " Test", true, 0
                 , AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
                 , AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.Sum
                 , AggregationTypes.MostRecent, AggregationTypes.MostRecent, MissingSampleHandling.ExponentialEstimation);

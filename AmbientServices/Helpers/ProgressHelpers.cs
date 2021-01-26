@@ -6,6 +6,35 @@ using System.Threading;
 namespace AmbientServices
 {
     /// <summary>
+    /// A static class that holds a property used to more conveniently access the ambient <see cref="IAmbientProgress"/>.
+    /// </summary>
+    public static class AmbientProgressService
+    {
+        private static readonly AmbientService<IAmbientProgressService> _Progress = Ambient.GetService<IAmbientProgressService>();
+        /// <summary>
+        /// Gets the <see cref="IAmbientProgress"/> from the current local (or global) ambient progress service.
+        /// </summary>
+        public static IAmbientProgress Progress
+        {
+            get
+            {
+                return _Progress.Local.Progress;
+            }
+        }
+        /// <summary>
+        /// Gets the <see cref="IAmbientProgress"/> from the global ambient progress service.
+        /// </summary>
+        public static IAmbientProgress GlobalProgress
+        {
+            get
+            {
+                return _Progress.Global.Progress;
+            }
+        }
+    }
+
+
+    /// <summary>
     /// A cancellation token source that works with ambient timers in addition to system timers.
     /// </summary>
     public class AmbientCancellationTokenSource : IDisposable

@@ -61,8 +61,6 @@ namespace AmbientServices
                 return _Instance;
             }
         }
-
-
         /// <summary>
         /// The singleton call-context-local service reference (non-singleton reference can be used for unit testing).
         /// </summary>
@@ -71,6 +69,10 @@ namespace AmbientServices
         /// The global service reference.
         /// </summary>
         private GlobalServiceReference<T> _globalReference = new GlobalServiceReference<T>();
+
+
+        // this is only internal instead of private so that we can diagnose issues in test cases
+        internal GlobalServiceReference<T> GlobalReference { get { return _globalReference; } }
 
         /// <summary>
         /// Gets the <see cref="LocalServiceReference{T}"/> for the service indicated by the type.
@@ -85,6 +87,18 @@ namespace AmbientServices
                 if (ret == null) ret = _localReference.Value = new LocalServiceReference<T>();    // initialize if needed
                 return ret;
             }
+        }
+
+        /// <summary>
+        /// Overrides the service implementation locally and temporarily.
+        /// </summary>
+        /// <param name="newLocalServiceImplementation">The new local service implementation to use until the returned object is disposed.</param>
+        /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the local service implementation to what it was before this call.</returns>
+#pragma warning disable CA1822  // I realize this can be static, but the whole point of this is to make it *easier* to call, and the static name (or the constructor name) is likely much longer than the instance name
+        internal IDisposable ScopedLocalOverride(T newLocalServiceImplementation)
+#pragma warning restore CA1822        
+        {
+            return new ScopedLocalServiceOverride<T>(newLocalServiceImplementation);
         }
 
         internal AmbientService()
@@ -203,7 +217,7 @@ namespace AmbientServices
         public T OldGlobal { get { return _oldGlobalService; } }
 
         #region IDisposable Support
-        private bool _disposed = false; // To detect redundant calls
+        private bool _disposed; // To detect redundant calls
 
         void Dispose(bool disposing)
         {
@@ -261,8 +275,8 @@ namespace AmbientServices
         {
             _service = DefaultImplementation();
         }
-
-        private static T DefaultImplementation()
+        // this is only internal instead of private in order to diagnose issues in test cases
+        internal static T DefaultImplementation()
         {
             Type impType = DefaultAmbientServices.TryFind(typeof(T));
             if (impType == null) return null;       // there is no default implementation (yet)
@@ -271,7 +285,8 @@ namespace AmbientServices
             T implementation = (T)mi.Invoke(null, Array.Empty<object>());
             return implementation;
         }
-        private T LateAssignedDefaultServiceImplementation()
+        // this is only internal instead of private in order to diagnose issues in test cases
+        internal T LateAssignedDefaultServiceImplementation()
         {
             T newDefaultImplementation = DefaultImplementation();
             // still no default implementation registered?  try again later

@@ -214,8 +214,6 @@ public static class AssemblyLoggingExtensions
 /// </summary>
 class DownloadAndUnzip
 {
-    private static readonly IAmbientProgressService AmbientProgress = Ambient.GetService<IAmbientProgressService>().Global;
-
     private readonly string _targetFolder;
     private readonly string _downlaodUrl;
     private readonly MemoryStream _package;
@@ -229,7 +227,7 @@ class DownloadAndUnzip
 
     public async Task MainOperation(CancellationToken cancel = default(CancellationToken))
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         using (progress?.TrackPart(0.01f, 0.75f, "Download "))
         {
             await Download();
@@ -241,7 +239,7 @@ class DownloadAndUnzip
     }
     public async Task Download()
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
         HttpWebRequest request = HttpWebRequest.CreateHttp(_downlaodUrl);
         using (WebResponse response = request.GetResponse())
@@ -263,7 +261,7 @@ class DownloadAndUnzip
     }
     public Task Unzip()
     {
-        IAmbientProgress progress = AmbientProgress?.Progress;
+        IAmbientProgress progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
 
         ZipArchive archive = new ZipArchive(_package);
@@ -468,6 +466,7 @@ class BasicAmbientCallStack : IAmbientCallStack
     {
         ImmutableStack<string> stack = GetStack();
         stack = stack.Push(entry);
+        Stack.Value = stack;
         return new CallStackEntry(stack);
     }
 
@@ -492,7 +491,7 @@ class BasicAmbientCallStack : IAmbientCallStack
                 {
                     if (_stack != null)
                     {
-                        _stack.Pop();
+                        Stack.Value = _stack.Pop();
                         _stack = null;
                     }
                 }
@@ -617,6 +616,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
     }
 }
 #endregion
+
 
 
 
@@ -782,6 +782,11 @@ public static class StatisticsReporter
 }
 #endregion
 
+
+
+
+
+
 #region AmbientBottleneckDetectorSample
 /// <summary>
 /// A class that holds a thread-safe queue which reports on the associated bottleneck.
@@ -919,6 +924,10 @@ class BottleneckReporter
 #endregion
 
 
+
+
+
+
 #region AmbientServiceProfilerSample
 /// <summary>
 /// A class that access a SQL database and reports profiling information to the system profiling system.
@@ -1026,6 +1035,157 @@ class ProfileReporter
         {
             return _mostRecentWindowServiceProfile;
         }
+    }
+}
+#endregion
+
+
+
+
+
+
+
+#region StatusSample
+/// <summary>
+/// A class that audits a specific drive.
+/// </summary>
+class DiskAuditor
+{
+    private readonly DriveInfo _driveInfo;
+    private readonly string _testPath;
+    private readonly bool _readonly;
+
+    /// <summary>
+    /// Constructs a disk auditor.
+    /// </summary>
+    /// <param name="driveName">The name of the drive to be audited.</param>
+    /// <param name="testPath">A path within the drive to be used for testing.</param>
+    /// <param name="readOnly">Whether or not the test should be readonly. (The program may not have write access to some paths and still want to audit them for space usage and reading).</param>
+    public DiskAuditor(string driveName, string testPath, bool readOnly)
+    {
+        _driveInfo = new DriveInfo(driveName);
+        _testPath = testPath;
+        _readonly = readOnly;
+    }
+    /// <summary>
+    /// Performs the disk audit, reporting results into <paramref name="statusBuilder"/>.
+    /// </summary>
+    /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to write the results into.</param>
+    /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
+    public async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    {
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.Leaf;
+        statusBuilder.AddProperty("_Path", _driveInfo.Name);
+        statusBuilder.AddProperty("_VolumeLabel", _driveInfo.VolumeLabel);
+        statusBuilder.AddProperty("DriveFormat", _driveInfo.DriveFormat);
+        statusBuilder.AddProperty("DriveType", _driveInfo.DriveType);
+        statusBuilder.AddProperty("AvailableFreeBytes", _driveInfo.AvailableFreeSpace);
+        statusBuilder.AddProperty("TotalFreeBytes", _driveInfo.TotalFreeSpace);
+        statusBuilder.AddProperty("TotalBytes", _driveInfo.TotalSize);
+        if (!string.IsNullOrEmpty(_testPath))
+        {
+            StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+            statusBuilder.AddChild(readBuilder);
+            try
+            {
+                // attempt to read a file (if one exists)
+                foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, _testPath)))
+                {
+                    AmbientStopwatch s = AmbientStopwatch.StartNew();
+                    try
+                    {
+                        using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        {
+                            byte[] b = new byte[1];
+                            await fs.ReadAsync(b, 0, 1, cancel);
+                            await fs.FlushAsync();
+                        }
+                        readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                        readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
+                        break;
+                    }
+                    catch (IOException) // this will be thrown if the file cannot be accessed because it is open exclusively by another process (this happens a lot with temp files)
+                    {
+                        // just move on and try the next file
+                        continue;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                readBuilder.AddException(e);
+            }
+            if (!_readonly)
+            {
+                StatusResultsBuilder writeBuilder = new StatusResultsBuilder("Write");
+                statusBuilder.AddChild(writeBuilder);
+                try
+                {
+                    // attempt to write a temporary file
+                    string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
+                    AmbientStopwatch s = AmbientStopwatch.StartNew();
+                    using (FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
+                    {
+                        byte[] b = new byte[1];
+                        await fs.WriteAsync(b, 0, 1);
+                        await fs.FlushAsync();
+                        readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                        writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
+                    }
+                }
+                catch (Exception e)
+                {
+                    writeBuilder.AddException(e);
+                }
+            }
+        }
+    }
+}
+/// <summary>
+/// An auditor for the local disk system.  This class will be automatically instantiated when <see cref="Status.Start"/> is called and disposed when <see cref="Status.Stop"/> is called.
+/// </summary>
+public sealed class LocalDiskAuditor : StatusAuditor 
+{
+    private readonly bool _ready;
+    private readonly DiskAuditor _tempAuditor;
+    private readonly DiskAuditor _systemAuditor;
+
+    /// <summary>
+    /// Constructs the local disk auditor instance, which will audit the state of the local disk every 15 minutes (note that this frequency is to prevent the code from slowing down the unit tests; if this were used in the real world, one minute might be a better frequency).
+    /// </summary>
+    public LocalDiskAuditor() : base ("/LocalDisk", TimeSpan.FromMinutes(15))
+    {
+        string tempPath = System.IO.Path.GetTempPath();
+        string tempDrive = Path.GetPathRoot(tempPath);
+        string tempPathRelative = tempPath.Substring(tempDrive.Length);
+        _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative,  true);
+        _systemAuditor = new DiskAuditor(Environment.GetFolderPath(Environment.SpecialFolder.System), "", false);
+        _ready = true;
+    }
+    protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
+    public override async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    {
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        await _tempAuditor.Audit(statusBuilder.AddChild("Temp"));
+        await _systemAuditor.Audit(statusBuilder.AddChild("System"));
+    }
+}
+
+class Application
+{
+    /// <summary>
+    /// Starts the status system.
+    /// </summary>
+    public static async Task StartStatus()
+    {
+        await Status.DefaultInstance.Start();
+    }
+    /// <summary>
+    /// Stops the status system.
+    /// </summary>
+    public static async Task StopStatus()
+    {
+        await Status.DefaultInstance.Stop();
     }
 }
 #endregion

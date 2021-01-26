@@ -89,30 +89,33 @@ namespace AmbientServices.Test
             {
                 using (ProcessBottleneckSurveyor surveyor = new ProcessBottleneckSurveyor(null, _BottleneckDetector.Local, null, null))
                 {
-                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.OnBottleneckAccessEnded(null, null));
+                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
                 }
                 using (ThreadSurveyManager threadManager = new ThreadSurveyManager(_BottleneckDetector.Local))
                 {
                     using (ThreadBottleneckSurveyor surveyor = threadManager.CreateThreadSurveyor(null, null, null))
                     {
-                        Assert.ThrowsException<ArgumentNullException>(() => surveyor.OnBottleneckAccessEnded(null, null));
+                        Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
                     }
                 }
-                using (ScopeBottleneckSurveyor surveyor = new ScopeBottleneckSurveyor(null, _BottleneckDetector.Local, null, null))
+                using (ThreadSurveyManager threadManager = new ThreadSurveyManager(null))
                 {
-                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.OnBottleneckAccessEnded(null, null));
+                }
+                using (ScopedBottleneckSurveyor surveyor = new ScopedBottleneckSurveyor(null, _BottleneckDetector.Local, null, null))
+                {
+                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
                 }
                 using (TimeWindowSurveyManager timeWindowManager = new TimeWindowSurveyManager(TimeSpan.FromSeconds(1), null, _BottleneckDetector.Local, null, null))
                 {
-                    Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.OnBottleneckAccessBegun(null, null));
-                    Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.OnBottleneckAccessEnded(null, null));
+                    Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckEntered(null));
+                    Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckExited(null));
 
                     TimeWindowBottleneckSurvey surveyor = new TimeWindowBottleneckSurvey(null, null, 0, TimeSpan.FromSeconds(1));
-                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.OnBottleneckAccessBegun(null, null));
-                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.OnBottleneckAccessEnded(null, null));
+                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckEntered(null));
+                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
                 }
 
-                                BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
+                            BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
                 AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new AmbientBottleneck("BottleneckDetectorAccessRecordCombine-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test1", 1000, TimeSpan.FromSeconds(1));
                 AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new AmbientBottleneck("BottleneckDetectorAccessRecordCombine-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test2", 2000, TimeSpan.FromSeconds(1));
                 DateTime start = AmbientClock.UtcNow;
@@ -535,6 +538,16 @@ namespace AmbientServices.Test
                     {
                     }
                 }
+            }
+        }
+        [TestMethod]
+        public void AmbientBottleneckSurveyorsEmpty()
+        {
+            using (CallContextSurveyManager surveymanager = new CallContextSurveyManager(null))
+            {
+            }
+            using (ProcessBottleneckSurveyor surveymanager = new ProcessBottleneckSurveyor(nameof(AmbientBottleneckSurveyorsEmpty), null, null, null))
+            {
             }
         }
         [TestMethod]

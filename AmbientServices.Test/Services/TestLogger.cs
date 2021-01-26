@@ -207,7 +207,8 @@ namespace AmbientServices.Test
             Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda, "category", AmbientLogLevel.Information));
             Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullException, "category", AmbientLogLevel.Information));
             Assert.ThrowsException<ArgumentNullException>(() => logger.Log("message", nullException, "category", AmbientLogLevel.Information));
-            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda, (Exception)null, "category", AmbientLogLevel.Information));
+            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(() => "message", nullException, "category", AmbientLogLevel.Information));
+            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda, new ApplicationException(), "category", AmbientLogLevel.Information));
         }
     }
     class AllowedLoggerType { }

@@ -46,6 +46,7 @@ namespace AmbientServices
         {
             if (!_logFilter.IsBlocked(level, TypeName, category))
             {
+                if (!string.IsNullOrEmpty(category)) category = category + ":";
                 message = String.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, TypeName, category, message);
                 _logger.Log(message);
             }
@@ -107,6 +108,7 @@ namespace AmbientServices
         /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
         public void Log(Func<string> messageLambda, Exception ex, string category = null, AmbientLogLevel level = AmbientLogLevel.Error)
         {
+            if (ex == null) throw new ArgumentNullException(nameof(ex));
             if (_logger == null) return;
             if (messageLambda == null) throw new ArgumentNullException(nameof(messageLambda));
             InnerLog(messageLambda() + Environment.NewLine + ex.ToString(), category, level);

@@ -32,11 +32,24 @@ namespace AmbientServices.Test
         private static readonly AmbientService<IGlobalOverrideTest> _GlobalOverrideTest = Ambient.GetService<IGlobalOverrideTest>();
         private static readonly AmbientService<ILocalOverrideTest> _LocalOverrideTest = Ambient.GetService<ILocalOverrideTest>();
 
+        [AssemblyInitialize]
+        public static void AssemblyInitialize(TestContext context)
+        { 
+        }
+
+        [AssemblyCleanup]
+        public static void AssemblyCleanup()
+        {
+            System.Threading.Tasks.Task t = TraceBuffer.Flush();
+            t.ConfigureAwait(false).GetAwaiter().GetResult();
+        }
+
         [TestMethod]
         public void AmbientServicesBasic()
         {
             ITest test = _Test.Global;
             Assert.IsNotNull(test);
+            Assert.AreEqual(_Test.GlobalReference.Service, _Test.Global);
             IAmbientLogger logger = _Logger.Global;
             Assert.IsNotNull(logger);
             AmbientLogger<TestAmbientService> serviceBrokerLogger = new AmbientLogger<TestAmbientService>(logger);

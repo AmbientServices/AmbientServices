@@ -202,7 +202,7 @@ namespace AmbientServices
             }
 
             #region IDisposable Support
-            private bool _disposed = false; // to detect redundant calls
+            private bool _disposed; // to detect redundant calls
 
             private void Dispose(bool disposing)
             {
@@ -227,21 +227,16 @@ namespace AmbientServices
         /// </summary>
         internal class PausedAmbientClock : IAmbientClock
         {
-#if DEBUG
-#pragma warning disable CA1823
-            private readonly string _construction = new StackTrace().ToString();
-#pragma warning restore CA1823
-#endif
-            private readonly DateTime _baseDateTime;
-            private long _stopwatchTicks;
+            private readonly ConcurrentHashSet<IAmbientClockTimeChangedNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientClockTimeChangedNotificationSink>();
+            private readonly long _baseStopwatchTicks;
+            private long _elapsedStopwatchTicks;
 
             /// <summary>
             /// Constructs an ambient clock that is paused at the current date-time and only moves time forward when explicitly told to do so.
             /// </summary>
             public PausedAmbientClock()
             {
-                _baseDateTime = DateTime.UtcNow;
-                _stopwatchTicks = 0;
+                _baseStopwatchTicks = Stopwatch.GetTimestamp();
             }
             /// <summary>
             /// Gets the number of ticks elapsed.  (In units of <see cref="Stopwatch.Frequency"/>).
@@ -249,27 +244,38 @@ namespace AmbientServices
             /// <remarks>
             /// This property is thread-safe.
             /// </remarks>
-            public long Ticks { get { return _stopwatchTicks; } }
+            public long Ticks { get { return _baseStopwatchTicks + _elapsedStopwatchTicks; } }
             /// <summary>
             /// Gets the current UTC <see cref="DateTime"/>.
             /// </summary>
             /// <remarks>
             /// This property is thread-safe.
             /// </remarks>
-            public DateTime UtcDateTime { get { return UtcDateTimeFromStopwatchTicks(_baseDateTime, _stopwatchTicks); } }
+            public DateTime UtcDateTime { get { return UtcDateTimeFromStopwatchTicks(_baseStopwatchTicks + _elapsedStopwatchTicks); } }
 
-            private static DateTime UtcDateTimeFromStopwatchTicks(DateTime baseUtcDateTime, long stopwatchTicks)
+            private static DateTime UtcDateTimeFromStopwatchTicks(long stopwatchTicks)
             {
-                return baseUtcDateTime.AddTicks(stopwatchTicks * TimeSpan.TicksPerSecond / Stopwatch.Frequency);
+                return new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(stopwatchTicks), DateTimeKind.Utc);
             }
 
             /// <summary>
-            /// An event indicating that the ambient clock's time has changed.
+            /// Registers a time changed notification sink with this ambient clock.
             /// </summary>
-            /// <remarks>
-            /// This is used by <see cref="AmbientEventTimer"/> in order to know when the paused time changes and it's time to raise the timer's elapsed event.
-            /// </remarks>
-            public event EventHandler<AmbientClockTimeChangedEventArgs> TimeChanged;
+            /// <param name="sink">An <see cref="IAmbientClockTimeChangedNotificationSink"/> that will receive notifications when the time is changed.</param>
+            /// <returns>true if the registration was successful, false if the specified sink was already registered.</returns>
+            public bool RegisterTimeChangedNotificationSink(IAmbientClockTimeChangedNotificationSink sink)
+            {
+                return _notificationSinks.Add(sink);
+            }
+            /// <summary>
+            /// Deregisters a time changed notification sink with this ambient clock.
+            /// </summary>
+            /// <param name="sink">An <see cref="IAmbientClockTimeChangedNotificationSink"/> that will receive notifications when the time is changed.</param>
+            /// <returns>true if the deregistration was successful, false if the specified sink was not registered.</returns>
+            public bool DeregisterTimeChangedNotificationSink(IAmbientClockTimeChangedNotificationSink sink)
+            {
+                return _notificationSinks.Remove(sink);
+            }
 
             /// <summary>
             /// Moves the clock forward by the specified number of ticks.  Ticks are the same units as <see cref="Stopwatch"/> ticks, with <see cref="Stopwatch.Frequency"/> ticks per second.
@@ -278,13 +284,16 @@ namespace AmbientServices
             /// Note that negative times are allowed, but should only be used to test weird clock issues.
             /// </remarks>
             /// <param name="ticks">The number of ticks to move forward.</param>
-            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClock.TimeChanged"/> is being raised.</remarks>
+            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called directly or indirectly from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> implementation.</remarks>
             public void SkipAhead(long ticks)
             {
-                long newTicks = System.Threading.Interlocked.Add(ref _stopwatchTicks, ticks);
+                long newTicks = _baseStopwatchTicks + System.Threading.Interlocked.Add(ref _elapsedStopwatchTicks, ticks);
                 long oldTicks = newTicks - ticks;
                 // notify any subscribers
-                TimeChanged?.Invoke(this, new AmbientClockTimeChangedEventArgs { Clock = this, OldTicks = oldTicks, NewTicks = newTicks, OldUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, oldTicks), NewUtcDateTime = UtcDateTimeFromStopwatchTicks(_baseDateTime, newTicks) });
+                foreach (IAmbientClockTimeChangedNotificationSink notificationSink in _notificationSinks)
+                {
+                    notificationSink.TimeChanged(this, oldTicks, newTicks, UtcDateTimeFromStopwatchTicks(oldTicks), UtcDateTimeFromStopwatchTicks(newTicks));
+                }
             }
             /// <summary>
             /// Moves the clock forward by the specified amount of time.
@@ -293,10 +302,10 @@ namespace AmbientServices
             /// Note that negative times are allowed, but should only be used to test weird clock issues.
             /// </remarks>
             /// <param name="time">A <see cref="TimeSpan"/> indicating how much to move forward.</param>
-            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called while <see cref="IAmbientClock.TimeChanged"/> is being raised.</remarks>
+            /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called directly or indirectly from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> implementation.</remarks>
             public void SkipAhead(TimeSpan time)
             {
-                SkipAhead(time.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
+                SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(time.Ticks));
             }
         }
     }
@@ -324,7 +333,9 @@ namespace AmbientServices
         /// <summary>
         /// Returns a newly constructed <see cref="AmbientStopwatch"/> that has been started.
         /// </summary>
+#pragma warning disable CA1711  // the analyzer incorrectly thinks this method is a replacement to Start, but it is not--it literally starts a *new* stopwatch (exactly like the framework itself)
         public static AmbientStopwatch StartNew()
+#pragma warning restore CA1711
         {
             return new AmbientStopwatch(true);
         }
@@ -446,7 +457,7 @@ namespace AmbientServices
     /// <remarks>
     /// AmbientEventTimer is thread-safe.
     /// </remarks>
-    public class AmbientEventTimer : System.Timers.Timer
+    public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNotificationSink
     {
         private static readonly System.Reflection.ConstructorInfo _ElapsedEventArgsConstructor = typeof(System.Timers.ElapsedEventArgs).GetConstructor(
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null,
@@ -458,8 +469,7 @@ namespace AmbientServices
         private long _nextRaiseStopwatchTicks;
         private int _autoReset;
         private int _enabled;
-        private LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockTimeChangedEventArgs> _weakTimeChanged;
-        private EventHolder _eventHolder = new EventHolder();
+        private EventHolder _eventHolder;
 
         struct EventHolder
         {
@@ -515,11 +525,7 @@ namespace AmbientServices
                 base.Enabled = false;
 
                 long nowStopwatchTicks = clock.Ticks;
-                IAmbientClock tempClock = clock;
-                _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockTimeChangedEventArgs>(
-                    // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
-                    this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
-                clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
+                clock.RegisterTimeChangedNotificationSink(this);
                 _periodStopwatchTicks = 0;
                 _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = 0;
@@ -543,24 +549,22 @@ namespace AmbientServices
                 base.Enabled = false;
 
                 long nowStopwatchTicks = clock.Ticks;
-                IAmbientClock tempClock = clock;
-                _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientEventTimer, object, AmbientClockTimeChangedEventArgs>(
-                    // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
-                    this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
-                clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
+                clock.RegisterTimeChangedNotificationSink(this);
                 _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
                 _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = 0;
             }
             // else no clock, so use the base system timer
         }
-        // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
-        private static void OnTimeChanged(AmbientEventTimer timer, object sender, AmbientClockTimeChangedEventArgs e)
-        {
-            timer.OnTimeChanged(sender, e);
-        }
-        // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
-        private void OnTimeChanged(object _, AmbientClockTimeChangedEventArgs e)
+        /// <summary>
+        /// Receives notification that the ambient clock time was changed.
+        /// </summary>
+        /// <param name="clock">The <see cref="IAmbientClock"/> whose time was changed.</param>
+        /// <param name="oldTicks">The old number of elapsed ticks.</param>
+        /// <param name="newTicks">The new number of elapsed ticks.</param>
+        /// <param name="oldUtcDateTime">The old UTC <see cref="DateTime"/>.</param>
+        /// <param name="newUtcDateTime">The new UTC <see cref="DateTime"/>.</param>
+        public void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
         {
             // there should be a clock if we get here
             System.Diagnostics.Debug.Assert(_clock != null && !((System.Timers.Timer)this).Enabled);
@@ -572,7 +576,7 @@ namespace AmbientServices
                 long periodStopwatchTicks = _periodStopwatchTicks;
                 bool autoReset = (_autoReset != 0);
                 // loop because it's possible that we need to raise the event more than once
-                while (nextRaiseStopwatchTicks > e.OldTicks && nextRaiseStopwatchTicks <= e.NewTicks && _enabled != 0)
+                while (nextRaiseStopwatchTicks > oldTicks && nextRaiseStopwatchTicks <= newTicks && _enabled != 0)
                 {
                     _eventHolder.RaiseElapsed(this);
                     // should we reset for another period?
@@ -726,6 +730,7 @@ namespace AmbientServices
             if (_clock != null)
             {
                 Enabled = false;
+                _clock.DeregisterTimeChangedNotificationSink(this);
             }
             base.Dispose(disposing);
         }
@@ -738,8 +743,8 @@ namespace AmbientServices
     /// <remarks>
     /// AmbientCallbackTimer is thread-safe.
     /// </remarks>
-    public sealed class AmbientCallbackTimer : MarshalByRefObject,
-#if NET5_0 || NETCORE3_0 || NETCORE3_1 || NETSTANDARD2_1
+    public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTimeChangedNotificationSink, 
+#if !NETSTANDARD2_0
         IAsyncDisposable, 
 #endif
         IDisposable
@@ -749,7 +754,7 @@ namespace AmbientServices
         private static readonly object _UseTimerInstanceForStateIndicator = new object();
         private static long _TimerCount;
 
-#if NET5_0 || NETCORE3_0 || NETCORE3_1
+#if !NETSTANDARD2_0
         /// <summary>
         /// Gets the number of <see cref="AmbientCallbackTimer"/>s and <see cref="System.Threading.Timer"/> that are currently active.
         /// Does not double-count <see cref="AmbientCallbackTimer"/> that pass through to a <see cref="System.Threading.Timer"/>.
@@ -772,8 +777,7 @@ namespace AmbientServices
         private long _nextRaiseStopwatchTicks;
         private int _autoReset;
         private int _enabled;
-        private LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockTimeChangedEventArgs> _weakTimeChanged;
-        private bool _disposed = false; // To detect redundant calls
+        private bool _disposed; // To detect redundant calls
 
         /// <summary>
         /// Constructs an AmbientCallbackTimer using the ambient clock.  The timer will not be set to call he callback.
@@ -862,12 +866,15 @@ namespace AmbientServices
         }
 
         // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
-        private static void OnTimeChanged(AmbientCallbackTimer timer, object sender, AmbientClockTimeChangedEventArgs e)
-        {
-            timer.OnTimeChanged(sender, e);
-        }
-        // when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
-        private void OnTimeChanged(object _, AmbientClockTimeChangedEventArgs e)
+        /// <summary>
+        /// Receives notification that the ambient clock time was changed.
+        /// </summary>
+        /// <param name="clock">The <see cref="IAmbientClock"/> whose time was changed.</param>
+        /// <param name="oldTicks">The old number of elapsed ticks.</param>
+        /// <param name="newTicks">The new number of elapsed ticks.</param>
+        /// <param name="oldUtcDateTime">The old UTC <see cref="DateTime"/>.</param>
+        /// <param name="newUtcDateTime">The new UTC <see cref="DateTime"/>.</param>
+        public void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
         {
             // there should be a clock and NOT a timer if we get here
             System.Diagnostics.Debug.Assert(_clock != null && _timer == null);
@@ -878,7 +885,7 @@ namespace AmbientServices
                 long nextRaiseStopwatchTicks = _nextRaiseStopwatchTicks;
                 long periodStopwatchTicks = _periodStopwatchTicks;
                 bool autoReset = (_autoReset != 0);
-                while (_callback != null && nextRaiseStopwatchTicks > e.OldTicks && nextRaiseStopwatchTicks <= e.NewTicks && _enabled != 0)
+                while (_callback != null && nextRaiseStopwatchTicks > oldTicks && nextRaiseStopwatchTicks <= newTicks && _enabled != 0)
                 {
                     // should we reset for another period?
                     if (autoReset && periodStopwatchTicks != Timeout.Infinite)
@@ -901,7 +908,7 @@ namespace AmbientServices
             // race to disable us-- did we win the race?
             if (1 == System.Threading.Interlocked.Exchange(ref _enabled, 0))
             {
-                _weakTimeChanged.Unsubscribe();
+                _clock.DeregisterTimeChangedNotificationSink(this);
                 System.Threading.Interlocked.Decrement(ref _TimerCount);
             }
         }
@@ -910,10 +917,7 @@ namespace AmbientServices
             System.Threading.Interlocked.Increment(ref _TimerCount);
             long nowStopwatchTicks = _clock.Ticks;
             IAmbientClock tempClock = _clock;
-            _weakTimeChanged = new LazyUnsubscribeWeakEventListenerProxy<AmbientCallbackTimer, object, AmbientClockTimeChangedEventArgs>(
-                // note that the following line will not be covered unless garbage collection runs before we exit but after the test that hits the line above, which will probably be rare
-                this, OnTimeChanged, wtc => tempClock.TimeChanged -= wtc.WeakEventHandler);
-            _clock.TimeChanged += _weakTimeChanged.WeakEventHandler;
+            _clock.RegisterTimeChangedNotificationSink(this);
             _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
             long ticksToNextInvocation = dueTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
             _nextRaiseStopwatchTicks = nowStopwatchTicks + ticksToNextInvocation;
@@ -983,8 +987,8 @@ namespace AmbientServices
             }
         }
 
-        #region IDisposable Support
-#if NET5_0 || NETCORE3_0 || NETCORE3_1 || NETSTANDARD2_1
+#region IDisposable Support
+#if !NETSTANDARD2_0
         public static System.Runtime.CompilerServices.ConfiguredAsyncDisposable ConfigureAwait(this IAsyncDisposable source, bool continueOnCapturedContext)
         {
         }
@@ -1019,7 +1023,7 @@ namespace AmbientServices
             return ret;
         }
 
-#if NET5_0 || NETCORE3_0 || NETCORE3_1 || NETSTANDARD2_1
+#if !NETSTANDARD2_0
         public System.Threading.Tasks.ValueTask DisposeAsync()
         {
             if (_clock != null)
@@ -1057,7 +1061,7 @@ namespace AmbientServices
     /// <summary>
     /// A sealed class that emulates <see cref="RegisteredWaitHandle"/> but uses the ambient clock if one is registered.
     /// </summary>
-    public sealed class AmbientRegisteredWaitHandle
+    public sealed class AmbientRegisteredWaitHandle : IAmbientClockTimeChangedNotificationSink
     {
         private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
         private static readonly ManualResetEvent _ManualResetEvent = new ManualResetEvent(true);
@@ -1111,7 +1115,7 @@ namespace AmbientServices
                 _nextCallbackTimeStopwatchTicks = (millisecondTimeoutInterval == Timeout.Infinite) ? Timeout.Infinite : (_clock.Ticks + timeoutIntervalStopwatchTicks);
                 _periodStopwatchTicks = executeOnlyOnce ? Timeout.Infinite : timeoutIntervalStopwatchTicks;
                 _executeOnlyOnce = executeOnlyOnce;
-                _clock.TimeChanged += OnAmbientClockTimeChanged;
+                _clock.RegisterTimeChangedNotificationSink(this);
             }
         }
 
@@ -1136,12 +1140,20 @@ namespace AmbientServices
             _callback(_state, false);
 
         }
-        private void OnAmbientClockTimeChanged(object sender, AmbientClockTimeChangedEventArgs eventArgs)
-        {
+        /// <summary>
+        /// Receives notification that the ambient clock time was changed.
+        /// </summary>
+        /// <param name="clock">The <see cref="IAmbientClock"/> whose time was changed.</param>
+        /// <param name="oldTicks">The old number of elapsed ticks.</param>
+        /// <param name="newTicks">The new number of elapsed ticks.</param>
+        /// <param name="oldUtcDateTime">The old UTC <see cref="DateTime"/>.</param>
+        /// <param name="newUtcDateTime">The new UTC <see cref="DateTime"/>.</param>
+        public void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
+        {// when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
             // there should be a clock if we get here
             System.Diagnostics.Debug.Assert(_clock != null);
             // loop until we process all the scheduled callbacks
-            while (_nextCallbackTimeStopwatchTicks != Timeout.Infinite && _nextCallbackTimeStopwatchTicks > eventArgs.OldTicks && _nextCallbackTimeStopwatchTicks <= eventArgs.NewTicks)
+            while (_nextCallbackTimeStopwatchTicks != Timeout.Infinite && _nextCallbackTimeStopwatchTicks > oldTicks && _nextCallbackTimeStopwatchTicks <= newTicks)
             {
                 // should we reset for another period?
                 if (_periodStopwatchTicks != Timeout.Infinite)
@@ -1180,10 +1192,7 @@ namespace AmbientServices
         public bool Unregister(WaitHandle waitObject)
         {
             bool ret = _registeredWaitHandle.Unregister(waitObject);
-            if (_clock != null)
-            {
-                _clock.TimeChanged -= OnAmbientClockTimeChanged;
-            }
+            _clock?.DeregisterTimeChangedNotificationSink(this);
             return ret;
         }
     }

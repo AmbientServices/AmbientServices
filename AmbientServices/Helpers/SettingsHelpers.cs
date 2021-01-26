@@ -200,7 +200,9 @@ namespace AmbientServices
         /// <summary>
         /// An event the is raised when a new setting is registered, allowing settings sets to call the setting's conversion function to get a strongly-typed value.
         /// </summary>
+#pragma warning disable CA1003  // this event is performance critical
         public event EventHandler<IAmbientSettingInfo> SettingRegistered;
+#pragma warning restore CA1003
     }
     /// <summary>
     /// An immutable class that contains a typed setting value and the settings set it came from.
@@ -283,7 +285,7 @@ namespace AmbientServices
             {
                 ret = _convert(value);
             }
-#pragma warning disable CA1031 
+#pragma warning disable CA1031 // this is a "do your best" kind of function, so we really do want to cactch all exceptions here
             catch
             {
                 ret = _defaultValue;

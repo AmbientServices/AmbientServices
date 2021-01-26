@@ -3,5 +3,5 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 [assembly: CLSCompliant(true)]
-[assembly: InternalsVisibleToAttribute("AmbientServices.Test")]
-[assembly: InternalsVisibleToAttribute("AmbientServices.Test.DelayedLoad")]
+[assembly: InternalsVisibleTo("AmbientServices.Test")]
+[assembly: InternalsVisibleTo("AmbientServices.Test.DelayedLoad")]

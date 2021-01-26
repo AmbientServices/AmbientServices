@@ -14,7 +14,7 @@ namespace AmbientServices
 
         private readonly IAmbientSetting<int> _callFrequencyToEject;
         private readonly IAmbientSetting<int> _countToEject;
-        private int _expireCount = 0;
+        private int _expireCount;
         private ConcurrentQueue<TimedQueueEntry> _timedQueue = new ConcurrentQueue<TimedQueueEntry>();
         private ConcurrentQueue<string> _untimedQueue = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>();

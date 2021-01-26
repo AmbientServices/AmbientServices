@@ -1,3 +1,4 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Runtime.CompilerServices;
 
-[assembly: Parallelize(Workers = 16, Scope = ExecutionScope.MethodLevel)]
+[assembly: InternalsVisibleTo("AmbientServices.Test")]
