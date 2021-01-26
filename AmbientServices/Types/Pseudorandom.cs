@@ -43,24 +43,24 @@ namespace AmbientServices
             }
         }
 
-        private uint _seed;    // note that we use a uint here because four billion possible seeds should be plenty maybe someday when 32-bit operations are slower than 64-bit operations this should be changed to ulong
+        private ulong _seed;
 
         /// <summary>
         /// Constructs a pseduorandom with the specified seed value.
         /// </summary>
         /// <param name="seed">The seed to use.</param>
-        public Pseudorandom(int seed)
+        public Pseudorandom(long seed)
         {
-            _seed = (uint)seed;
+            _seed = (ulong)seed;
         }
         /// <summary>
         /// Constructs a pseduorandom with the specified seed value.
         /// </summary>
         /// <param name="seed">The seed to use.</param>
         [CLSCompliant(false)]
-        public Pseudorandom(uint seed)
+        public Pseudorandom(ulong seed)
         {
-            _seed = (uint)seed;
+            _seed = seed;
         }
         /// <summary>
         /// Clones this <see cref="Pseudorandom"/> such that identical calls on the clone will return the same pseudorandom data as this instance.
@@ -149,7 +149,7 @@ namespace AmbientServices
             {
                 unchecked
                 {
-                    uint x = ++_seed * 777_767_777;     // note that this is a prime number (but not a mersenne prime)
+                    uint x = (uint)(++_seed * 777_767_777);     // note that this is a prime number (but not a mersenne prime)
                     x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
                     x = (((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2));
                     x = (((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4));
@@ -467,14 +467,18 @@ namespace AmbientServices
         {
             if (target == null) throw new ArgumentNullException(nameof(target));
             int index = 0;
-            uint rawData;
-            for (int endOffset = (length < 0 || offset + length > target.Length) ? target.Length : (offset + length); offset < endOffset; offset += 4, index = ((index + 1) % 4))
+            ulong rawData;
+            for (int endOffset = (length < 0 || offset + length > target.Length) ? target.Length : (offset + length); offset < endOffset; offset += 8, index = ((index + 1) % 8))
             {
                 rawData = NextUInt32;
                 target[offset] = (byte)(rawData & 0xff);
                 if (offset + 1 < endOffset) target[offset + 1] = (byte)((rawData & 0xff00) >> 8);
                 if (offset + 2 < endOffset) target[offset + 2] = (byte)((rawData & 0xff0000) >> 16);
                 if (offset + 3 < endOffset) target[offset + 3] = (byte)((rawData & 0xff000000) >> 24);
+                if (offset + 4 < endOffset) target[offset + 4] = (byte)((rawData & 0xff00000000) >> 32);
+                if (offset + 5 < endOffset) target[offset + 5] = (byte)((rawData & 0xff0000000000) >> 40);
+                if (offset + 6 < endOffset) target[offset + 6] = (byte)((rawData & 0xff000000000000) >> 48);
+                if (offset + 7 < endOffset) target[offset + 7] = (byte)((rawData & 0xff00000000000000) >> 56);
             }
         }
         const int DecimalMaxScalePlusOne = 29;
