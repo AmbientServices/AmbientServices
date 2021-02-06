@@ -15,16 +15,13 @@ namespace AmbientServices.Test
     [TestClass]
     public class TestProgress
     {
-        private static readonly AmbientService<IAmbientProgressService> _ProgressService = Ambient.GetService<IAmbientProgressService>();
-
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
         public void Progress()
         {
-            IAmbientProgressService ambientProgress = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgress.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.Update(0.01f);
             Assert.AreEqual(0.01f, progress.PortionComplete);
@@ -40,12 +37,12 @@ namespace AmbientServices.Test
             Assert.AreEqual("", progress.ItemCurrentlyBeingProcessed);
             using (progress.TrackPart(0.05f, 0.10f, null, true))
             {
-                IAmbientProgress subprogress = ambientProgress.Progress;
+                IAmbientProgress subprogress = AmbientProgressService.GlobalProgress;
                 subprogress.ResetCancellation(TimeSpan.FromMilliseconds(5));
             }
             using (progress.TrackPart(0.10f, 0.15f, null, false))
             {
-                IAmbientProgress subprogress = ambientProgress.Progress;
+                IAmbientProgress subprogress = AmbientProgressService.GlobalProgress;
                 subprogress.ResetCancellation(TimeSpan.FromMilliseconds(5));
             }
         }
@@ -55,8 +52,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ProgressIndependence()
         {
-            IAmbientProgressService ambientProgress = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgress.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             OtherThreadContext c = new OtherThreadContext();
             Thread t = new Thread(c.OtherThread);
             t.Start();
@@ -72,7 +68,7 @@ namespace AmbientServices.Test
             public SemaphoreSlim Done { get; } = new SemaphoreSlim(0);
             public void OtherThread()
             {
-                OtherProgress = _ProgressService.Global.Progress;
+                OtherProgress = AmbientProgressService.GlobalProgress;
                 OtherThreadProgressMatches = (OtherProgress == MainProgress);
                 Done.Release();
             }
@@ -83,14 +79,13 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ProgressPartStack()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.05f, 0.10f))
             {
-                Assert.AreNotEqual(progress, ambientProgressService.Progress);
+                Assert.AreNotEqual(progress, AmbientProgressService.GlobalProgress);
             }
-            Assert.AreEqual(progress, ambientProgressService.Progress);
+            Assert.AreEqual(progress, AmbientProgressService.GlobalProgress);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -98,21 +93,20 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ProgressPart()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.05f, 0.05f, "prefix-"))
             {
-                IAmbientProgress subprogress = ambientProgressService.Progress;
+                IAmbientProgress subprogress = AmbientProgressService.GlobalProgress;
                 Assert.AreEqual(0.0f, subprogress.PortionComplete);
-                Assert.AreNotEqual(progress, ambientProgressService.Progress);
+                Assert.AreNotEqual(progress, AmbientProgressService.GlobalProgress);
                 subprogress.Update(.5f, "subitem");
                 Assert.AreEqual(0.5f, subprogress.PortionComplete);
                 Assert.AreEqual("subitem", subprogress.ItemCurrentlyBeingProcessed);
                 Assert.AreEqual(0.075f, progress.PortionComplete);
                 Assert.AreEqual("prefix-subitem", progress.ItemCurrentlyBeingProcessed);
             }
-            Assert.AreEqual(progress, ambientProgressService.Progress);
+            Assert.AreEqual(progress, AmbientProgressService.GlobalProgress);
             Assert.AreEqual(0.10f, progress.PortionComplete);
             Assert.AreEqual("prefix-subitem", progress.ItemCurrentlyBeingProcessed);
         }
@@ -122,14 +116,13 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ProgressThread()
         {
-            IAmbientProgressService ambientProgress = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgress.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.Update(0.25f, "main");
             Thread thread = new Thread(new ParameterizedThreadStart(o =>
                 {
                     // the progress here should be a SEPARATE progress because it's a separate execution thread
-                    IAmbientProgress threadProgress = ambientProgress.Progress;
+                    IAmbientProgress threadProgress = AmbientProgressService.GlobalProgress;
                     threadProgress.Update(0.75f, "thread");
                     threadProgress.Update(0.33f, "cross-thread");
                 }));
@@ -143,8 +136,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionCompleteTooLowError()
         {
-            IAmbientProgressService ambientProgress = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgress.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.Update(-.01f);
         }
@@ -154,8 +146,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionCompleteTooHighError()
         {
-            IAmbientProgressService ambientProgress = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgress.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.Update(1.01f);
         }
@@ -165,12 +156,11 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PartPortionCompleteTooLowError()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.01f, 0.02f))
             {
-                IAmbientProgress subprogress = ambientProgressService.Progress;
+                IAmbientProgress subprogress = AmbientProgressService.GlobalProgress;
                 subprogress.Update(-.01f);
             }
         }
@@ -180,12 +170,11 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PartPortionCompleteTooHighError()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.01f, 0.02f))
             {
-                IAmbientProgress subprogress = ambientProgressService.Progress;
+                IAmbientProgress subprogress = AmbientProgressService.GlobalProgress;
                 subprogress.Update(1.01f);
             }
         }
@@ -195,8 +184,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void StartPortionTooLowError()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(-0.01f, 1.0f))
             {
@@ -208,8 +196,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void StartPortionTooHighError()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.0f, 1.01f))
             {
@@ -221,8 +208,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionPartTooLowError()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(1.0f, -0.01f))
             {
@@ -234,8 +220,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionPartTooHighError()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(1.0f, 1.01f))
             {
@@ -247,8 +232,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void PortionTooLargeError()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.5f, 0.73f))
             {
@@ -260,12 +244,11 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PartStackCorruption()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.13f);
-            IDisposable subProgress2 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
-            IDisposable subProgress3 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress2 = AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress3 = AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.24f);
             Assert.ThrowsException<InvalidOperationException>(() => subProgress1.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress3.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress2.Dispose());
@@ -276,12 +259,11 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PartStackCorruption2()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.13f);
-            IDisposable subProgress2 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
-            IDisposable subProgress3 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress2 = AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress3 = AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.24f);
             Assert.ThrowsException<InvalidOperationException>(() => subProgress1.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress2.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress3.Dispose());
@@ -292,12 +274,11 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PartStackCorruption3()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.13f);
-            IDisposable subProgress2 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
-            IDisposable subProgress3 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress2 = AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress3 = AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.24f);
             Assert.ThrowsException<InvalidOperationException>(() => subProgress2.Dispose());
             Assert.ThrowsException<InvalidOperationException>(() => subProgress3.Dispose());
             subProgress1.Dispose();
@@ -308,12 +289,11 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PartStackCorruption4()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.13f);
-            IDisposable subProgress2 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
-            IDisposable subProgress3 = ambientProgressService.Progress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress2 = AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.24f);
+            IDisposable subProgress3 = AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.24f);
             Assert.ThrowsException<InvalidOperationException>(() => subProgress2.Dispose());
             subProgress1.Dispose();
             Assert.ThrowsException<InvalidOperationException>(() => subProgress3.Dispose());
@@ -324,15 +304,14 @@ namespace AmbientServices.Test
         [TestMethod]
         public void GetCancellationToken()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             CancellationToken token = progress.CancellationToken;
             Assert.IsNotNull(token);
 
             using (ScopedLocalServiceOverride<IAmbientProgressService> LocalServiceOverride = new ScopedLocalServiceOverride<IAmbientProgressService>(null))
             {
-                IAmbientProgress noProgress = _ProgressService.Local?.Progress;
+                IAmbientProgress noProgress = AmbientProgressService.Progress;
                 CancellationToken cancel = noProgress?.CancellationToken ?? default(CancellationToken);
             }
         }
@@ -342,7 +321,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void CancellationTokenSource()
         {
-            IAmbientProgress progress = _ProgressService.Local.Progress;
+            IAmbientProgress progress = AmbientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (AmbientClock.Pause())
             {
@@ -413,11 +392,11 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SubProgressCancellationTokenSource()
         {
-            IAmbientProgress progress = _ProgressService.Local.Progress;
+            IAmbientProgress progress = AmbientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.0f, 1.0f))
             {
-                IAmbientProgress subprogress = _ProgressService.Local.Progress;
+                IAmbientProgress subprogress = AmbientProgressService.Progress;
                 using (AmbientClock.Pause())
                 {
                     subprogress.ResetCancellation(TimeSpan.FromMilliseconds(100));
@@ -452,7 +431,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void Cancellation()
         {
-            IAmbientProgress progress = _ProgressService.Local.Progress;
+            IAmbientProgress progress = AmbientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (AmbientClock.Pause())
             {
@@ -462,7 +441,7 @@ namespace AmbientServices.Test
                 Assert.IsFalse(tokenSource.IsCancellationRequested);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                 Assert.IsTrue(tokenSource.IsCancellationRequested);
-                Assert.ThrowsException<OperationCanceledException>(() => _ProgressService.Local.Progress.ThrowIfCancelled());
+                Assert.ThrowsException<OperationCanceledException>(() => AmbientProgressService.Progress.ThrowIfCancelled());
             }
         }
         /// <summary>
@@ -471,12 +450,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SubProgressCancellation()
         {
-            IAmbientProgress progress = _ProgressService.Local.Progress;
+            IAmbientProgress progress = AmbientProgressService.Progress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress.CancellationToken.ThrowIfCancellationRequested();
             using (progress.TrackPart(0.0f, 1.0f))
             {
-                IAmbientProgress subprogress = _ProgressService.Local.Progress;
+                IAmbientProgress subprogress = AmbientProgressService.Progress;
                 using (AmbientClock.Pause())
                 {
                     subprogress.ResetCancellation(TimeSpan.FromMilliseconds(104));
@@ -485,7 +464,7 @@ namespace AmbientServices.Test
                     Assert.IsFalse(tokenSource.IsCancellationRequested);
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(106));
                     Assert.IsTrue(tokenSource.IsCancellationRequested);
-                    Assert.ThrowsException<OperationCanceledException>(() => _ProgressService.Local.Progress.ThrowIfCancelled());
+                    Assert.ThrowsException<OperationCanceledException>(() => AmbientProgressService.Progress.ThrowIfCancelled());
                 }
             }
         }
@@ -495,8 +474,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void CancellationToken()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             if (progress.GetType().Name == "SubProgress")
             {
@@ -506,9 +484,9 @@ namespace AmbientServices.Test
             CancellationToken token = progress.CancellationToken;
             Assert.IsFalse(token.IsCancellationRequested);
             IDisposable subProgress1 = progress.TrackPart(0.05f, 0.11f);
-            using (ambientProgressService.Progress.TrackPart(0.05f, 0.07f))
+            using (AmbientProgressService.GlobalProgress.TrackPart(0.05f, 0.07f))
             {
-                token = ambientProgressService.Progress.CancellationToken;
+                token = AmbientProgressService.GlobalProgress.CancellationToken;
                 Assert.IsFalse(token.IsCancellationRequested);
             }
         }
@@ -550,13 +528,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public void DisposeTopLevelProgress()
         {
-            IAmbientProgressService ambientProgressService = _ProgressService.Global;
-            IAmbientProgress progress = ambientProgressService.Progress;
+            IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             using (progress as IDisposable)
             {
             }
             // this should create a new progress
-            progress = ambientProgressService.Progress;
+            progress = AmbientProgressService.GlobalProgress;
             progress.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             using (progress.TrackPart(0.05f, 0.13f))
             {

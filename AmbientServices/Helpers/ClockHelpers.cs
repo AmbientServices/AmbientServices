@@ -988,12 +988,6 @@ namespace AmbientServices
         }
 
 #region IDisposable Support
-#if !NETSTANDARD2_0
-        public static System.Runtime.CompilerServices.ConfiguredAsyncDisposable ConfigureAwait(this IAsyncDisposable source, bool continueOnCapturedContext)
-        {
-        }
-#endif
-
         /// <summary>
         /// Disposes of the timer, signaling an optional <see cref="WaitHandle"/> when the disposal is complete (meaning that the callback is not in progress and will not be subsequently called).
         /// </summary>
@@ -1024,15 +1018,29 @@ namespace AmbientServices
         }
 
 #if !NETSTANDARD2_0
-        public System.Threading.Tasks.ValueTask DisposeAsync()
+        /// <summary>
+        /// Asynchronously disposes the instance.
+        /// </summary>
+        /// <returns>A <see cref="ValueTask"/> allowing the caller to control and monitor the asynchronous execution.</returns>
+        public async ValueTask DisposeAsync()
         {
-            if (_clock != null)
-            {
-            }
-            else
+            // Perform async cleanup.
+            await DisposeAsyncCore().ConfigureAwait(false);
+
+            // Dispose of unmanaged resources.
+            Dispose();
+            // Suppress finalization.
+#pragma warning disable CA1816      // this is the *recommended* implementation!  see https://docs.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync
+            GC.SuppressFinalize(this);
+#pragma warning disable CA1816
+        }
+        private ValueTask DisposeAsyncCore()    // note that this would be protected virtual if this class were not sealed
+        {
+            if (_timer != null)
             {
                 return _timer.DisposeAsync();
             }
+            return default;
         }
 #endif
         /// <summary>

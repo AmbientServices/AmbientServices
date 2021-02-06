@@ -59,7 +59,7 @@ namespace AmbientServices
             {
                 return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + firstDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
             }
-            return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
+            return prefix + Math.Round(count, 0).ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
         }
         /// <summary>
         /// Gets a short string representing the specified timespan.
