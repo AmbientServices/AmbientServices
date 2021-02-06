@@ -117,7 +117,7 @@ namespace AmbientServices
             if (string.IsNullOrEmpty(span)) return null;
             // is a span specified and does it contain a : and does it parse correctly as a timespan?
             TimeSpan timeSpan;
-            if (span.Contains(':') && TimeSpan.TryParse(span, out timeSpan))
+            if (span.Contains(':', StringComparison.Ordinal) && TimeSpan.TryParse(span, out timeSpan))
             {
                 // use that timespan
                 return timeSpan;

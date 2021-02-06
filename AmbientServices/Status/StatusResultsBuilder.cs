@@ -242,8 +242,8 @@ namespace AmbientServices
             if (severity < 0.0) throw new ArgumentOutOfRangeException(nameof(severity), "The specified severity must be greater than or equal to zero!");
             float rating = StatusRating.Fail - severity;
             string exceptionType = ex.TypeName();
-            string exceptionTerse = "[" + exceptionType + "] " + ex.Message.Replace(Environment.NewLine, Environment.NewLine + "  ");
-            string exceptionDetails = HttpUtility.HtmlEncode(ex.ToFilteredString().Trim()).Replace(Environment.NewLine, "<br/>");
+            string exceptionTerse = "[" + exceptionType + "] " + ex.Message.Replace(Environment.NewLine, Environment.NewLine + "  ", StringComparison.Ordinal);
+            string exceptionDetails = HttpUtility.HtmlEncode(ex.ToFilteredString().Trim()).Replace(Environment.NewLine, "<br/>", StringComparison.Ordinal);
             if (_worstAlert == null || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, exceptionType, exceptionTerse, exceptionDetails);
