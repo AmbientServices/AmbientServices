@@ -719,7 +719,7 @@ namespace AmbientServices.Test
                 timer.AutoReset = true;
                 timer.Enabled = true;
                 await Task.Delay(3750);
-                Assert.IsTrue(elapsed >= 1 && elapsed <= 3, elapsed.ToString());        // this *should* be three if we have processing power available, but it can be less than 3 when it is not (as is often the case during unit tests), thus we are tolerant
+                Assert.IsTrue(elapsed >= 1 && elapsed <= 4, elapsed.ToString());        // this *should* be three if we have processing power available, but it can be less than 3 when it is not (as is often the case during unit tests), and might be slightly higher if this continuation doesn't get scheduled right away, thus we are tolerant
                 Assert.AreEqual(0, disposed);           // this assertion failed once, but is very intermittent, not sure how this is possible
             }
             Assert.AreEqual(1, disposed);
@@ -936,9 +936,9 @@ namespace AmbientServices.Test
                 timer.Change(1000U, 770U);
                 Assert.AreEqual(0, invocations);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(1500));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(650));
-                Assert.IsTrue(invocations >= 1 && invocations <= 2);        // tolerate *some* difference here just to reduce the test failure frequency
+                Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());        // tolerate *some* difference here just to reduce the test failure frequency
             }
         }
         /// <summary>
@@ -955,9 +955,9 @@ namespace AmbientServices.Test
                 timer.Change(330L, (long)Timeout.Infinite);
                 Assert.AreEqual(0, invocations);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(500));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(990));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
             }
         }
         /// <summary>
@@ -1014,11 +1014,11 @@ namespace AmbientServices.Test
             {
                 Assert.AreEqual(0, invocations);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(560));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 1 && invocations <= 2);
+                Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 2 && invocations <= 3);
+                Assert.IsTrue(invocations >= 2 && invocations <= 3, invocations.ToString());
             }
         }
         /// <summary>
@@ -1035,11 +1035,11 @@ namespace AmbientServices.Test
             {
                 Assert.AreEqual(0, invocations);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(560));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 1 && invocations <= 2);
+                Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 2 && invocations <= 3);
+                Assert.IsTrue(invocations >= 2 && invocations <= 3, invocations.ToString());
             }
         }
         /// <summary>
@@ -1056,11 +1056,11 @@ namespace AmbientServices.Test
             {
                 Assert.AreEqual(0, invocations);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(560));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 1 && invocations <= 2);
+                Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 2 && invocations <= 3);
+                Assert.AreEqual(3, invocations);
             }
         }
         /// <summary>
@@ -1077,11 +1077,11 @@ namespace AmbientServices.Test
             {
                 Assert.AreEqual(0, invocations);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(560));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 1 && invocations <= 2);
+                Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 2 && invocations <= 3);
+                Assert.IsTrue(invocations >= 2 && invocations <= 3, invocations.ToString());
             }
         }
         /// <summary>
@@ -1098,11 +1098,11 @@ namespace AmbientServices.Test
             {
                 Assert.AreEqual(0, invocations);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(560));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations <= 1);
+                Assert.IsTrue(invocations <= 1, invocations.ToString());
             }
         }
         /// <summary>
@@ -1366,11 +1366,11 @@ namespace AmbientServices.Test
             System.Threading.Thread.Sleep(100);
             System.Threading.Thread.Sleep(50);
             Assert.AreEqual(0, signaledInvocations);
-            Assert.AreEqual(1, timedOutInvocations);
+            Assert.IsTrue(timedOutInvocations >= 1);
             are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
             System.Threading.Thread.Sleep(400);
             Assert.AreEqual(1, signaledInvocations);
-            Assert.AreEqual(1, timedOutInvocations);
+            Assert.IsTrue(timedOutInvocations >= 1);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1390,11 +1390,11 @@ namespace AmbientServices.Test
             System.Threading.Thread.Sleep(100);
             System.Threading.Thread.Sleep(50);
             Assert.AreEqual(0, signaledInvocations);
-            Assert.AreEqual(1, timedOutInvocations);
+            Assert.IsTrue(timedOutInvocations >= 1);
             are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
             System.Threading.Thread.Sleep(400);
             Assert.AreEqual(1, signaledInvocations);
-            Assert.AreEqual(1, timedOutInvocations);
+            Assert.IsTrue(timedOutInvocations >= 1);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
