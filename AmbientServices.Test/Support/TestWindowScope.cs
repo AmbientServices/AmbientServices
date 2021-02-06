@@ -38,10 +38,10 @@ namespace AmbientServices.Test
             Assert.AreEqual("-5.6Y", WindowScope.WindowSize(TimeSpan.FromDays(-2037.53)));
             Assert.AreEqual("5.6Y", WindowScope.WindowSize(TimeSpan.FromDays(2037.53)));
             Assert.AreEqual("7.8M", WindowScope.WindowSize(TimeSpan.FromDays(237.53)));
-            Assert.AreEqual("37D", WindowScope.WindowSize(TimeSpan.FromDays(37.53)));
-            Assert.AreEqual("37h", WindowScope.WindowSize(TimeSpan.FromHours(37.53)));
-            Assert.AreEqual("37m", WindowScope.WindowSize(TimeSpan.FromMinutes(37.53)));
-            Assert.AreEqual("37s", WindowScope.WindowSize(TimeSpan.FromSeconds(37.53)));
+            Assert.AreEqual("38D", WindowScope.WindowSize(TimeSpan.FromDays(37.53)));
+            Assert.AreEqual("38h", WindowScope.WindowSize(TimeSpan.FromHours(37.53)));
+            Assert.AreEqual("38m", WindowScope.WindowSize(TimeSpan.FromMinutes(37.53)));
+            Assert.AreEqual("38s", WindowScope.WindowSize(TimeSpan.FromSeconds(37.53)));
             Assert.AreEqual("2754ms", WindowScope.WindowSize(TimeSpan.FromMilliseconds(2753.643)));
             Assert.AreEqual("3.5ms", WindowScope.WindowSize(new TimeSpan((long)(TimeSpan.TicksPerMillisecond * 3.452))));
         }

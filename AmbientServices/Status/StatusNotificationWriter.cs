@@ -232,14 +232,14 @@ namespace AmbientServices
             _details.Append(aggregatedAlert.Target + ": " + aggregatedAlert.DetailsSources + " reporting: ");
 
             // multi-line alert details or properties to list?
-            if ((aggregatedAlert?.CommonAlert?.Details != null && (aggregatedAlert.CommonAlert.Details.Contains("<br/>") || aggregatedAlert.CommonAlert.Details.Contains("</div>"))) || (propertyRanges != null && propertyRanges.Count > 0))
+            if ((aggregatedAlert?.CommonAlert?.Details != null && (aggregatedAlert.CommonAlert.Details.Contains("<br/>", StringComparison.Ordinal) || aggregatedAlert.CommonAlert.Details.Contains("</div>", StringComparison.Ordinal))) || (propertyRanges != null && propertyRanges.Count > 0))
             {
                 CloseHeader(_details, _terse, _tabLevel);
 
                 EnterTabLevel();
                 OpenHeader(_details, _terse, _tabLevel, (StatusRatingRange)(-1), rgbColor);
 
-                if (_terse != null) _terse.Append(RenderTerse(auditAlert.Terse).Replace("\n", "\n" + new string(' ', _tabLevel)));
+                if (_terse != null) _terse.Append(RenderTerse(auditAlert.Terse).Replace("\n", "\n" + new string(' ', _tabLevel), StringComparison.Ordinal));
                 _details.AppendLine(RenderDetails(auditAlert.Details));
 
                 CloseHeader(_details, _terse, _tabLevel);

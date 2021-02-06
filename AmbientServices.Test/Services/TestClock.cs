@@ -1060,7 +1060,7 @@ namespace AmbientServices.Test
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
                 Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 2 && invocations <= 4, invocations.ToString());
+                Assert.AreEqual(3, invocations);
             }
         }
         /// <summary>

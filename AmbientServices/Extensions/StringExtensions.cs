@@ -69,8 +69,8 @@ namespace AmbientServices
                 return 1;
             }
             // first replace any sequences of comma-separated digits with just the digits
-            string normA = CommaSeparatedDigits.Replace(a, m => m.Value.Replace(",", ""));
-            string normB = CommaSeparatedDigits.Replace(b, m => m.Value.Replace(",", ""));
+            string normA = CommaSeparatedDigits.Replace(a, m => m.Value.Replace(",", "", StringComparison.Ordinal));
+            string normB = CommaSeparatedDigits.Replace(b, m => m.Value.Replace(",", "", StringComparison.Ordinal));
             // next count the longest digit sequence in either string
             int maxDigitsA = DigitSequenceRegex.Matches(normA + ".0").Cast<System.Text.RegularExpressions.Match>().Select(digitChunk => digitChunk.Value.Length).Max();
             int maxDigitsB = DigitSequenceRegex.Matches(normB + ".0").Cast<System.Text.RegularExpressions.Match>().Select(digitChunk => digitChunk.Value.Length).Max();
@@ -149,5 +149,54 @@ namespace AmbientServices
             }
             return builder.ToString();
         }
+
+#if !NET5_0
+#pragma warning disable CA1801  // these functions specifically make the code behave the old pre net5.0 way.
+        /// <summary>
+        /// Replaces matching parts of the string with another string.
+        /// </summary>
+        /// <param name="source">The source string.</param>
+        /// <param name="find">The string to find.</param>
+        /// <param name="target">The string to put in place of <paramref name="find"/>.</param>
+        /// <param name="compare">A <see cref="StringComparison"/> indicating how to perform the search.</param>
+        /// <returns><paramref name="source"/> string with instances of <paramref name="find"/> replaced with <paramref name="target"/>.</returns>
+        public static string Replace(this string source, string find, string target, StringComparison compare)
+        {
+            return source?.Replace(find, target);
+        }
+        /// <summary>
+        /// Checks to see if a string contains the specified character.
+        /// </summary>
+        /// <param name="source">The source string.</param>
+        /// <param name="find">The character to look for.</param>
+        /// <param name="compare">A <see cref="StringComparison"/> indicating how to perform the search.</param>
+        /// <returns>Whether or not <paramref name="source"/> contains <paramref name="find"/>.</returns>
+        public static bool Contains(this string source, char find, StringComparison compare)
+        {
+            return source?.Contains(find) ?? false;
+        }
+        /// <summary>
+        /// Checks to see if a string contains a specified string.
+        /// </summary>
+        /// <param name="source">The source string.</param>
+        /// <param name="find">The string to look for.</param>
+        /// <param name="compare">A <see cref="StringComparison"/> indicating how to perform the search.</param>
+        /// <returns>Whether or not <paramref name="source"/> contains <paramref name="find"/>.</returns>
+        public static bool Contains(this string source, string find, StringComparison compare)
+        {
+            return source?.Contains(find) ?? false;
+        }
+        /// <summary>
+        /// Gets a 32-bit hash code for the specified string.
+        /// </summary>
+        /// <param name="source">The string.</param>
+        /// <param name="compare">A <see cref="StringComparison"/> indicating whether to ignore case and such when making the hash code.</param>
+        /// <returns>A 32-bit hash code for <paramref name="source"/>.</returns>
+        public static int GetHashCode(this string source, StringComparison compare)
+        {
+            return source?.GetHashCode() ?? 0;
+        }
+#pragma warning restore CA1801
+#endif
     }
 }
