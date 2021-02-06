@@ -1076,11 +1076,23 @@ namespace AmbientServices.Test
             using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, TimeSpan.FromMilliseconds(370), TimeSpan.FromMilliseconds(530)))
             {
                 Assert.AreEqual(0, invocations);
-                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(560));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(160));
                 Assert.IsTrue(invocations <= 1, invocations.ToString());
-                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(130));
                 Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());
-                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(130));
                 Assert.IsTrue(invocations >= 2 && invocations <= 4, invocations.ToString());
             }
         }
