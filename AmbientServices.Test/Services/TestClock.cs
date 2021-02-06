@@ -1106,13 +1106,13 @@ namespace AmbientServices.Test
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(130));
-                Assert.IsTrue(invocations >= 1 && invocations <= 3, invocations.ToString());
+                Assert.IsTrue(invocations >= 1 && invocations <= 5, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(130));
-                Assert.IsTrue(invocations >= 2 && invocations <= 5, invocations.ToString());   // despite our best efforts, we can't control the actual timing or the scheduling of asynchronous notifications, so we SHOULD have 2 here, but it could be zero if the async callback processing didn't get scheduled, and could be more if things were busy and more time elapsed than just the sleeps above
+                Assert.IsTrue(invocations >= 2 && invocations <= 7, invocations.ToString());   // despite our best efforts, we can't control the actual timing or the scheduling of asynchronous notifications, so we SHOULD have 2 here, but it could be zero if the async callback processing didn't get scheduled, and could be more if things were busy and more time elapsed than just the sleeps above
             }
         }
         /// <summary>
