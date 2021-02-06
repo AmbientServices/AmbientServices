@@ -935,9 +935,28 @@ namespace AmbientServices.Test
                 Assert.AreEqual(0, invocations);
                 timer.Change(1000U, 770U);
                 Assert.AreEqual(0, invocations);
-                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(1500));
-                Assert.IsTrue(invocations <= 1, invocations.ToString());
-                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(650));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                Assert.IsTrue(invocations <= 2, invocations.ToString());
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(150));
                 Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());        // tolerate *some* difference here just to reduce the test failure frequency
             }
         }
@@ -1081,13 +1100,13 @@ namespace AmbientServices.Test
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(160));
-                Assert.IsTrue(invocations <= 1, invocations.ToString());
+                Assert.IsTrue(invocations >= 1 && invocations <= 3, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(130));
-                Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());
+                Assert.IsTrue(invocations >= 1 && invocations <= 3, invocations.ToString());
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
@@ -1381,7 +1400,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(timedOutInvocations >= 1);
             are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
             System.Threading.Thread.Sleep(400);
-            Assert.AreEqual(1, signaledInvocations);
+            Assert.IsTrue(signaledInvocations >= 0 && signaledInvocations <= 1, signaledInvocations.ToString());
             Assert.IsTrue(timedOutInvocations >= 1);
         }
         /// <summary>
