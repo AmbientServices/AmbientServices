@@ -957,7 +957,7 @@ namespace AmbientServices.Test
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(150));
-                Assert.IsTrue(invocations >= 1 && invocations <= 4, invocations.ToString());        // tolerate *some* difference here just to reduce the test failure frequency
+                Assert.IsTrue(invocations >= 1 && invocations <= 6, invocations.ToString());        // tolerate *some* difference here just to reduce the test failure frequency
             }
         }
         /// <summary>
@@ -1053,12 +1053,24 @@ namespace AmbientServices.Test
             using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 370U, 530U))
             {
                 Assert.AreEqual(0, invocations);
-                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(560));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(160));
                 Assert.IsTrue(invocations <= 1, invocations.ToString());
-                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 1 && invocations <= 2, invocations.ToString());
-                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations >= 2 && invocations <= 3, invocations.ToString());
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(130));
+                Assert.IsTrue(invocations >= 1 && invocations <= 3, invocations.ToString());
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(130));
+                Assert.IsTrue(invocations >= 2 && invocations <= 5, invocations.ToString());
             }
         }
         /// <summary>
