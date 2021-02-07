@@ -7,6 +7,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+#if NET5_0
+using System.Runtime.Versioning;
+#endif
 
 namespace AmbientServices
 {
@@ -399,6 +402,9 @@ namespace AmbientServices
             }
         }
     }
+#if NET5_0
+    [UnsupportedOSPlatform("browser")]
+#endif
     internal class ProcessBottleneckSurveyor : IAmbientBottleneckExitNotificationSink, IAmbientBottleneckSurveyor
     {
         private readonly IAmbientBottleneckDetector _bottleneckDetector;
