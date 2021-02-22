@@ -534,5 +534,23 @@ namespace AmbientServices.Test
                 Assert.IsTrue(l > 0);
             }
         }
+        [TestMethod]
+        public void PseudorandomNullReferences()
+        {
+            Pseudorandom a = new Pseudorandom(0);
+            Pseudorandom b = new Pseudorandom(0);
+            Pseudorandom c = new Pseudorandom(1);
+            Pseudorandom n = null;
+            Assert.IsTrue(a == b);
+            Assert.IsFalse(a == c);
+            Assert.IsFalse(a == n);
+            Assert.IsFalse(n == a);
+            Assert.IsTrue(n == null);
+            Assert.IsFalse(a != b);
+            Assert.IsTrue(a != c);
+            Assert.IsFalse(n != null);
+            Assert.IsTrue(a != n);
+            Assert.IsTrue(n != a);
+        }
     }
 }
