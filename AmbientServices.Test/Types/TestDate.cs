@@ -197,19 +197,6 @@ namespace AmbientServices.Test
             Assert.AreEqual(Date.UtcToday, Date.FromDateTime(DateTime.SpecifyKind(DateTime.UtcNow.Date, DateTimeKind.Unspecified)));
         }
         [TestMethod]
-        public void DateSerialize()
-        {
-            Date today = DateTime.Now.GetDate();
-            BinaryFormatter binaryFmt = new BinaryFormatter();
-            using (MemoryStream date = new MemoryStream())
-            {
-                binaryFmt.Serialize(date, today);
-                date.Position = 0;
-                Date roundtrip = (Date)binaryFmt.Deserialize(date);
-                Assert.AreEqual(today, roundtrip);
-            }
-        }
-        [TestMethod]
         public void DateAdd()
         {
             DateTime dtNow = DateTime.Now;

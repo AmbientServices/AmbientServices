@@ -7,6 +7,9 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+#if NET5_0
+using System.Runtime.Versioning;
+#endif
 
 namespace AmbientServices
 {
@@ -988,12 +991,6 @@ namespace AmbientServices
         }
 
 #region IDisposable Support
-#if !NETSTANDARD2_0
-        public static System.Runtime.CompilerServices.ConfiguredAsyncDisposable ConfigureAwait(this IAsyncDisposable source, bool continueOnCapturedContext)
-        {
-        }
-#endif
-
         /// <summary>
         /// Disposes of the timer, signaling an optional <see cref="WaitHandle"/> when the disposal is complete (meaning that the callback is not in progress and will not be subsequently called).
         /// </summary>
@@ -1024,15 +1021,29 @@ namespace AmbientServices
         }
 
 #if !NETSTANDARD2_0
-        public System.Threading.Tasks.ValueTask DisposeAsync()
+        /// <summary>
+        /// Asynchronously disposes the instance.
+        /// </summary>
+        /// <returns>A <see cref="ValueTask"/> allowing the caller to control and monitor the asynchronous execution.</returns>
+        public async ValueTask DisposeAsync()
         {
-            if (_clock != null)
-            {
-            }
-            else
+            // Perform async cleanup.
+            await DisposeAsyncCore().ConfigureAwait(false);
+
+            // Dispose of unmanaged resources.
+            Dispose();
+            // Suppress finalization.
+#pragma warning disable CA1816      // this is the *recommended* implementation!  see https://docs.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync
+            GC.SuppressFinalize(this);
+#pragma warning disable CA1816
+        }
+        private ValueTask DisposeAsyncCore()    // note that this would be protected virtual if this class were not sealed
+        {
+            if (_timer != null)
             {
                 return _timer.DisposeAsync();
             }
+            return default;
         }
 #endif
         /// <summary>
@@ -1061,6 +1072,9 @@ namespace AmbientServices
     /// <summary>
     /// A sealed class that emulates <see cref="RegisteredWaitHandle"/> but uses the ambient clock if one is registered.
     /// </summary>
+#if NET5_0
+    [UnsupportedOSPlatform("browser")]
+#endif
     public sealed class AmbientRegisteredWaitHandle : IAmbientClockTimeChangedNotificationSink
     {
         private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
@@ -1210,6 +1224,9 @@ namespace AmbientServices
         /// <param name="millisecondTimeoutInterval">The time-out in milliseconds. If the millisecondsTimeOutInterval parameter is 0 (zero), the function tests the object's state and returns immediately. If millisecondsTimeOutInterval is -1, the function's time-out interval never elapses.</param>
         /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
         /// <returns>The System.Threading.RegisteredWaitHandle that encapsulates the native handle.</returns>
+#if NET5_0
+        [UnsupportedOSPlatform("browser")]
+#endif
         public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, int millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
@@ -1223,6 +1240,9 @@ namespace AmbientServices
         /// <param name="millisecondTimeoutInterval">The time-out in milliseconds. If the millisecondsTimeOutInterval parameter is 0 (zero), the function tests the object's state and returns immediately. If millisecondsTimeOutInterval is -1, the function's time-out interval never elapses.</param>
         /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
         /// <returns>The System.Threading.RegisteredWaitHandle that encapsulates the native handle.</returns>
+#if NET5_0
+        [UnsupportedOSPlatform("browser")]
+#endif
         [CLSCompliant(false)]
         public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
         {
@@ -1237,6 +1257,9 @@ namespace AmbientServices
         /// <param name="millisecondTimeoutInterval">The time-out in milliseconds. If the millisecondsTimeOutInterval parameter is 0 (zero), the function tests the object's state and returns immediately. If millisecondsTimeOutInterval is -1, the function's time-out interval never elapses.</param>
         /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
         /// <returns>The System.Threading.RegisteredWaitHandle that encapsulates the native handle.</returns>
+#if NET5_0
+        [UnsupportedOSPlatform("browser")]
+#endif
         public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
@@ -1250,6 +1273,9 @@ namespace AmbientServices
         /// <param name="timeoutInterval">The time-out represented by a <see cref="System.TimeSpan"/>. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
         /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
         /// <returns>The System.Threading.RegisteredWaitHandle that encapsulates the native handle.</returns>
+#if NET5_0
+        [UnsupportedOSPlatform("browser")]
+#endif
         public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, TimeSpan timeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, timeoutInterval, executeOnlyOnce);
@@ -1263,6 +1289,9 @@ namespace AmbientServices
         /// <param name="millisecondTimeoutInterval">The time-out represented by a System.TimeSpan. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
         /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
         /// <returns>The <see cref="System.Threading.RegisteredWaitHandle"/> object that can be used to cancel the registered wait operation.</returns>
+#if NET5_0
+        [UnsupportedOSPlatform("browser")]
+#endif
         public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, int millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
@@ -1276,6 +1305,9 @@ namespace AmbientServices
         /// <param name="millisecondTimeoutInterval">The time-out represented by a System.TimeSpan. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
         /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
         /// <returns>The <see cref="System.Threading.RegisteredWaitHandle"/> object that can be used to cancel the registered wait operation.</returns>
+#if NET5_0
+        [UnsupportedOSPlatform("browser")]
+#endif
         [CLSCompliant(false)]
         public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
         {
@@ -1290,6 +1322,9 @@ namespace AmbientServices
         /// <param name="millisecondTimeoutInterval">The time-out represented by a System.TimeSpan. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
         /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
         /// <returns>The <see cref="System.Threading.RegisteredWaitHandle"/> object that can be used to cancel the registered wait operation.</returns>
+#if NET5_0
+        [UnsupportedOSPlatform("browser")]
+#endif
         public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
@@ -1303,6 +1338,9 @@ namespace AmbientServices
         /// <param name="timeoutInterval">The time-out represented by a <see cref="System.TimeSpan"/>. If timeout is 0 (zero), the function tests the object's state and returns immediately. If timeout is -1, the function's time-out interval never elapses.</param>
         /// <param name="executeOnlyOnce">true to indicate that the thread will no longer wait on the waitObject parameter after the delegate has been called; false to indicate that the timer is reset every time the wait operation completes until the wait is unregistered.</param>
         /// <returns>The <see cref="System.Threading.RegisteredWaitHandle"/> object that can be used to cancel the registered wait operation.</returns>
+#if NET5_0
+        [UnsupportedOSPlatform("browser")]
+#endif
         public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, TimeSpan timeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, timeoutInterval, executeOnlyOnce);

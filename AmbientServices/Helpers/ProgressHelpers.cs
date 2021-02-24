@@ -18,7 +18,7 @@ namespace AmbientServices
         {
             get
             {
-                return _Progress.Local.Progress;
+                return _Progress.Local?.Progress;
             }
         }
         /// <summary>

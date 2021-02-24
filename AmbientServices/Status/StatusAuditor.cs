@@ -93,7 +93,7 @@ namespace AmbientServices
         /// <returns>The 32-bit hash code for this object.</returns>
         public override int GetHashCode()
         {
-            return _rating.GetHashCode() ^ _auditAlertCode.GetHashCode();
+            return _rating.GetHashCode() ^ _auditAlertCode.GetHashCode(StringComparison.Ordinal);
         }
         /// <summary>
         /// Checks to see if this <see cref="StatusAuditAlert"/> is logically equal to another one.
@@ -229,7 +229,7 @@ namespace AmbientServices
         {
             StringBuilder output = new StringBuilder();
             output.Append('@');
-            output.Append(_auditStartTime.ToShortTimeString().Replace(" ", ""));
+            output.Append(_auditStartTime.ToShortTimeString().Replace(" ", "", StringComparison.Ordinal));
             if (_alert != null)
             {
                 output.Append(':');
