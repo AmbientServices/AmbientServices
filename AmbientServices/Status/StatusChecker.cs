@@ -10,23 +10,29 @@ namespace AmbientServices
     /// A abstract base class containing logic to compute status results for a particular part of the system.
     /// Any non-abstract derivitave of this class with an empty constructor will be automatically instantiated by the system and retained in a system-wide list to track status.
     /// Derived classes do not have to be immutable, but they must be threadsafe.
-    /// StatusTestNode is disposable because derivatives may contain things like mutexes and timers that require disposal.
+    /// StatusTestNode is disposable because derived classes often contain things like mutexes and timers that require disposal.
     /// </summary>
     public abstract class StatusChecker : IDisposable
     {
         private readonly string _targetSystem;
-        private readonly StatusResultsTracker _resultsTracker = new StatusResultsTracker();
+        private readonly StatusResultsTracker _resultsTracker;
         private bool _disposedValue;
 
         /// <summary>
         /// Constructs a <see cref="StatusChecker"/>.
         /// </summary>
         /// <param name="targetSystem">The name of the target system (if any).</param>
+        /// <remarks>
+        /// Target system names are concatenated with ancestor and descendant nodes and used to aggregate errors from the same system reported by multiple sources so that they can be summarized rather than listed individually.
+        /// Targets with a leading slash character indicate that the system is a shared system and may have status results measured by other source systems which should be combined.
+        /// Shared targets are not concatenated to the targets indicated by ancestor nodes, and their parents are ignored during summarization, treating shared systems as top-level nodes.
+        /// Defaults to null, but should almost always be set to a non-empty string.
+        /// Null should only be used to indicate that this node is not related to any specific target system, which would probably only happen if <see cref="StatusResults.NatureOfSystem"/> this, parent, and child nodes is such that some kind of special grouping is needed to make the overall status rating computation work correctly and the target system identifier for child nodes makes more sense without any identifier at this level.
+        /// </remarks>
         protected internal StatusChecker(string targetSystem)
         {
             _targetSystem = targetSystem;
-            // set the status to pending for now just in case anyone asks for it before the initial check happens
-            SetLatestResults(StatusResults.GetPendingResults(null, targetSystem));
+            _resultsTracker = new StatusResultsTracker(StatusResults.GetPendingResults(null, targetSystem));
         }
 
         /// <summary>
@@ -42,8 +48,8 @@ namespace AmbientServices
         public StatusResults LatestResults { get { return _resultsTracker.LatestResults; } }
         /// <summary>
         /// Gets an enumeration of previous <see cref="StatusResults"/>s.  
-        /// Null or empty if no such test results are available or applicable.
-        /// Note that previous ratings are limited to a set time span and a set number of entries (see settings).
+        /// Empty if no such test results are available or applicable.
+        /// Note that the history here is limited to a set time span and a set number of entries (see settings).
         /// </summary>
         public virtual IEnumerable<StatusResults> History
         {
@@ -69,10 +75,11 @@ namespace AmbientServices
         /// Sets the latest results.
         /// </summary>
         /// <param name="newResults">The new <see cref="StatusResults"/>.  Note that null results will not be stored.</param>
-        protected void SetLatestResults(StatusResults newResults)
+        protected internal void SetLatestResults(StatusResults newResults)
         {
             if (newResults != null)
             {
+                if (!String.Equals(_targetSystem, newResults.TargetSystem, StringComparison.Ordinal)) throw new ArgumentException("The target system for the specified status results and must match the this StatusChecker's target system!", nameof(newResults));
                 Status.Logger.Log($"{newResults.TargetSystemDisplayName}: {newResults.Report?.Alert}", "Results");
                 _resultsTracker.SetLatestResults(newResults);
             }
@@ -142,8 +149,10 @@ namespace AmbientServices
         private StatusResults _statusResults;                           // interlocked
         private ConcurrentQueue<StatusResults> _statusResultsHistory;   // interlocked
 
-        public StatusResultsTracker()
+        public StatusResultsTracker(StatusResults pendingStatusResults)
         {
+            _statusResults = pendingStatusResults;
+            _statusResultsHistory = new ConcurrentQueue<StatusResults>();
         }
 
         /// <summary>
@@ -173,13 +182,6 @@ namespace AmbientServices
             if (oldResults != null)
             {
                 ConcurrentQueue<StatusResults> history = _statusResultsHistory;
-                if (history == null)
-                {
-                    history = new ConcurrentQueue<StatusResults>();
-                    ConcurrentQueue<StatusResults> result = Interlocked.CompareExchange(ref _statusResultsHistory, history, null);
-                    // this condition can only be hit if two threads enter this block of code and both try to update the status results history, so tests can only cover it inconsistently
-                    if (result != null) history = result;
-                }
                 history.Enqueue(oldResults);
                 // NOTE that there is a race here that might remove too many previous entries--this should be rare and not catastrophic
                 TruncateQueue(_statusResultsHistory);
@@ -189,7 +191,7 @@ namespace AmbientServices
         private static IAmbientSetting<int> _StatusResultsRetentionEntries = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionEntries", "The maximum number of status results history entries to keep", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
         private static void TruncateQueue(ConcurrentQueue<StatusResults> queueToTruncate)
         {
-            StatusResults oldRatingResults;
+            StatusResults? oldRatingResults;
             // only keep entries newer than that set retention period
             while (!queueToTruncate.IsEmpty)
             {

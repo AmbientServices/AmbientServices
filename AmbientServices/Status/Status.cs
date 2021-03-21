@@ -100,7 +100,7 @@ namespace AmbientServices
             System.Threading.Interlocked.Exchange(ref _shuttingDown, 0);
         }
 
-        private void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
+        private void CurrentDomain_AssemblyLoad(object? sender, AssemblyLoadEventArgs args)
         {
             AddCheckersAndAuditors(args.LoadedAssembly);
         }
@@ -120,7 +120,7 @@ namespace AmbientServices
                     if (IsTestableStatusCheckerClass(type))
                     {
                         // construct an instance (it will be added to the list by the constructor)
-                        StatusChecker checker = (StatusChecker)Activator.CreateInstance(type);
+                        StatusChecker checker = (StatusChecker)Activator.CreateInstance(type)!;
                         AddCheckerOrAuditor(checker);
                     }
                 }
@@ -132,10 +132,11 @@ namespace AmbientServices
         /// <param name="checker">The <see cref="StatusChecker"/> to add.</param>
         public void AddCheckerOrAuditor(StatusChecker checker)
         {
-            Logger.Log("Adding Checker: " + checker?.GetType().Name, "Registration");
+            if (checker == null) throw new ArgumentNullException(nameof(checker));
+            Logger.Log("Adding Checker: " + checker.GetType().Name, "Registration");
             _checkers.Add(checker);
             // is this checker an auditor?
-            StatusAuditor auditor = checker as StatusAuditor;
+            StatusAuditor? auditor = checker as StatusAuditor;
             // kick off the initial audit (note that this cannot be done in the StatusAuditor constructor because it might run before the derived class constructor finishes)
             auditor?.ScheduleInitialAudit();
         }
@@ -146,8 +147,9 @@ namespace AmbientServices
         /// <param name="checker">The <see cref="StatusChecker"/> to remove.</param>
         public void RemoveCheckerOrAuditor(StatusChecker checker)
         {
+            if (checker == null) throw new ArgumentNullException(nameof(checker));
             _checkers.Remove(checker);
-            Logger.Log("Removed Checker: " + checker?.GetType().Name, "Registration");
+            Logger.Log("Removed Checker: " + checker.GetType().Name, "Registration");
         }
 
         private static float? Rating(StatusResults results)

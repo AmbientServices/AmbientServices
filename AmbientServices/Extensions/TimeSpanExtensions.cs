@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Diagnostics;
 using System.Linq;
 
@@ -59,7 +60,7 @@ namespace AmbientServices
                     return timeSpanTicks * TimeSpanToStopwatchMultiplier / TimeSpanToStopwatchDivisor;
                 }
             }
-            // the testability of this code depends on the values of system constants which cannot be altered by the test code
+            // Coverage note: the testability of this code depends on the values of system constants which cannot be altered by the test code
             catch (OverflowException)
             {
                 return (long)(timeSpanTicks * TimeSpanToStopwatchRatio);
@@ -79,7 +80,7 @@ namespace AmbientServices
                     return timeSpanTicks * StopwatchToTimeSpanMultiplier / StopwatchToTimeSpanDivisor;
                 }
             }
-            // the testability of this code depends on the values of system constants which cannot be altered by the test code
+            // Coverage note: the testability of this code depends on the values of system constants which cannot be altered by the test code
             catch (OverflowException)
             {
                 return (long)(timeSpanTicks * StopwatchToTimeSpanRatio);
@@ -192,7 +193,7 @@ namespace AmbientServices
                 return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + firstDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
             }
             // else nothing past the decimal
-            if (intPart == 1) postfix = postfix + "s";
+            if (intPart != 1) postfix = postfix + "s";
             return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
         }
         /// <summary>

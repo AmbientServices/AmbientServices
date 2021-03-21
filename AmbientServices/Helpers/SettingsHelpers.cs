@@ -25,10 +25,24 @@ namespace AmbientServices
         /// <param name="key">A key string identifying the setting.</param>
         /// <param name="description">A description of the setting.</param>
         /// <param name="convert">A delegate that takes a string and returns the type.</param>
-        /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
-        public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        /// <param name="defaultValueString">The default string value for the setting.  This will be converted for the current value if the setting is not set.  Defaults to empty string.</param>
+        public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsSet? settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = "")
         {
             return (settingsSet == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, convert, defaultValueString) : (IAmbientSetting<T>)GetSettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
+        }
+        /// <summary>
+        /// Construct a setting instance.  
+        /// If a non-null settings set is specified, the setting will be attached to that, otherwise the ambient settings set will be used.
+        /// Never returns a setting whose value is always the default value.
+        /// </summary>
+        /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, returns an setting attached to the ambient settings set.</param>
+        /// <param name="key">A key string identifying the setting.</param>
+        /// <param name="description">A description of the setting.</param>
+        /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.</param>
+        /// <param name="convert">A delegate that takes a string and returns the type.</param>
+        public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsSet? settingsSet, string key, string description, T defaultValue, Func<string, T> convert)
+        {
+            return (settingsSet == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, defaultValue, convert) : (IAmbientSetting<T>)GetSettingsSetSetting<T>(settingsSet, key, description, defaultValue, convert);
         }
         /// <summary>
         /// Construct a setting instance that uses a specific settings set and caches the setting with the specified key, converting it from a string using the specified delegate.
@@ -37,10 +51,22 @@ namespace AmbientServices
         /// <param name="key">A key string identifying the setting.</param>
         /// <param name="description">A description of the setting.</param>
         /// <param name="convert">A delegate that takes a string and returns the type.</param>
-        /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
-        public static IAmbientSetting<T> GetSettingsSetSetting<T>(IAmbientSettingsSet settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        /// <param name="defaultValueString">The default string value for the setting.  This will be converted for the current value if the setting is not set.  Defaults to empty string.</param>
+        public static IAmbientSetting<T> GetSettingsSetSetting<T>(IAmbientSettingsSet? settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = "")
         {
             return new SettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
+        }
+        /// <summary>
+        /// Construct a setting instance that uses a specific settings set and caches the setting with the specified key, converting it from a string using the specified delegate.
+        /// </summary>
+        /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, the setting will always contain the default value.</param>
+        /// <param name="key">A key string identifying the setting.</param>
+        /// <param name="description">A description of the setting.</param>
+        /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.</param>
+        /// <param name="convert">A delegate that takes a string and returns the type.</param>
+        public static IAmbientSetting<T> GetSettingsSetSetting<T>(IAmbientSettingsSet? settingsSet, string key, string description, T defaultValue, Func<string, T> convert)
+        {
+            return new SettingsSetSetting<T>(settingsSet, key, description, defaultValue, convert);
         }
         /// <summary>
         /// Construct an ambient setting instance that caches the setting with the specified key, converting it from a string using the specified delegate.
@@ -49,10 +75,22 @@ namespace AmbientServices
         /// <param name="key">A key string identifying the setting.</param>
         /// <param name="description">A description of the setting.</param>
         /// <param name="convert">A delegate that takes a string and returns the type.</param>
-        /// <param name="defaultValueString">The default string value for the setting.  This will be used as the current value if the setting is not set.  Defaults to null.</param>
-        public static IAmbientSetting<T> GetAmbientSetting<T>(string key, string description, Func<string, T> convert, string defaultValueString = null)
+        /// <param name="defaultValueString">The default string value for the setting.  This will be converted for the current value if the setting is not set.  Defaults to empty string.</param>
+        public static IAmbientSetting<T> GetAmbientSetting<T>(string key, string description, Func<string, T> convert, string defaultValueString = "")
         {
             return new AmbientSetting<T>(key, description, convert, defaultValueString);
+        }
+        /// <summary>
+        /// Construct an ambient setting instance that caches the setting with the specified key, converting it from a string using the specified delegate.
+        /// Settings will be gathered from the ambient local settings set, if one exists.
+        /// </summary>
+        /// <param name="key">A key string identifying the setting.</param>
+        /// <param name="description">A description of the setting.</param>
+        /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.</param>
+        /// <param name="convert">A delegate that takes a string and returns the type.</param>
+        public static IAmbientSetting<T> GetAmbientSetting<T>(string key, string description, T defaultValue, Func<string, T> convert)
+        {
+            return new AmbientSetting<T>(key, description, defaultValue, convert);
         }
     }
 
@@ -96,7 +134,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the default value that is used when the value is not found in the settings set.
         /// </summary>
-        object DefaultValue { get; }
+        object? DefaultValue { get; }
         /// <summary>
         /// Converts the setting value from the specified string to a typed value.
         /// The implementor may cache the value being generated if the settings set is the global settings set.
@@ -131,7 +169,7 @@ namespace AmbientServices
             int loopCount = 0;
             do
             {
-                IAmbientSettingInfo existingSetting;
+                IAmbientSettingInfo? existingSetting;
                 existingReference = _settings.GetOrAdd(setting.Key, newReference);
                 // did we NOT succeed?
                 if (newReference != existingReference)
@@ -141,7 +179,7 @@ namespace AmbientServices
                     {
                         // overwrite that one--were we NOT able to overwrite it?
                         if (!_settings.TryUpdate(setting.Key, newReference, existingReference))
-                        { // the inside of this loop is nearly impossible to cover in tests
+                        { // Coverage note: the inside of this loop is nearly impossible to cover in tests
                             // wait a bit and try again
                             System.Threading.Thread.Sleep((int)Math.Pow(2, loopCount + 1));
                             continue;
@@ -151,8 +189,8 @@ namespace AmbientServices
                     // the old one is still there, so we need to check for a conflict
                     string existingDescription = existingSetting.Description ?? "<null>";
                     string description = setting.Description ?? "<null>";
-                    string existingDefaultValueString = existingSetting.DefaultValueString ?? "<null>";
-                    string defaultValueString = setting.DefaultValueString ?? "<null>";
+                    string existingDefaultValueString = existingSetting.DefaultValueString;
+                    string defaultValueString = setting.DefaultValueString;
                     if (!String.Equals(existingDescription, description, StringComparison.Ordinal) || !String.Equals(existingDefaultValueString, defaultValueString, StringComparison.Ordinal))
                     {
                         throw new ArgumentException($"A setting with the key {setting.Key} has already been registered ({existingDescription} vs {description} or {existingDefaultValueString} vs {defaultValueString})!");
@@ -161,7 +199,7 @@ namespace AmbientServices
                 // raise the registered event
                 SettingRegistered?.Invoke(null, setting);
                 return;
-                // the loop and exception is nearly impossible to cover in tests
+                // Coverage note: the loop and exception is nearly impossible to cover in tests
             } while (loopCount++ < 10);
             throw new TimeoutException("Timeout attempting to register setting!");
         }
@@ -174,7 +212,7 @@ namespace AmbientServices
             {
                 foreach (KeyValuePair<string, WeakReference<IAmbientSettingInfo>> s in _settings)
                 {
-                    IAmbientSettingInfo setting;
+                    IAmbientSettingInfo? setting;
                     if (s.Value.TryGetTarget(out setting))
                     {
                         yield return setting;
@@ -191,17 +229,17 @@ namespace AmbientServices
         /// </summary>
         /// <param name="key">The key for the setting.</param>
         /// <returns>An <see cref="IAmbientSettingInfo"/> for the specified setting.</returns>
-        public IAmbientSettingInfo TryGetSetting(string key)
+        public IAmbientSettingInfo? TryGetSetting(string key)
         {
-            WeakReference<IAmbientSettingInfo> wrSetting;
-            IAmbientSettingInfo setting;
+            WeakReference<IAmbientSettingInfo>? wrSetting;
+            IAmbientSettingInfo? setting;
             return _settings.TryGetValue(key, out wrSetting) ? (wrSetting.TryGetTarget(out setting) ? setting : null) : null;
         }
         /// <summary>
         /// An event the is raised when a new setting is registered, allowing settings sets to call the setting's conversion function to get a strongly-typed value.
         /// </summary>
 #pragma warning disable CA1003  // this event is performance critical
-        public event EventHandler<IAmbientSettingInfo> SettingRegistered;
+        public event EventHandler<IAmbientSettingInfo>? SettingRegistered;
 #pragma warning restore CA1003
     }
     /// <summary>
@@ -219,8 +257,47 @@ namespace AmbientServices
             this.SettingsSet = settingsSet;
         }
     }
+    /// <summary>
+    /// The <see cref="IAmbientSettingsSet"/> that is attached to default values.
+    /// Note that this settings set does NOT actually contain any settings, it returns null for all keys.
+    /// Default values are stored with their individual <see cref="IAmbientSettingInfo"/> instance.
+    /// </summary>
+    public class DefaultSettingsSet : IAmbientSettingsSet
+    {
+        private static readonly DefaultSettingsSet _Instance = new DefaultSettingsSet();
+        /// <summary>
+        /// Gets the singleton instance of <see cref="DefaultSettingsSet"/>.
+        /// </summary>
+        public static DefaultSettingsSet Instance { get { return _Instance; } }
 
-    class SettingInfo<T> : IAmbientSettingInfo
+        private DefaultSettingsSet()
+        {
+        }
+        /// <summary>
+        /// Gets the name of the set of settings so that a settings consumer can know where a changed setting value came from.
+        /// </summary>
+        public string SetName => "DefaultSettingsValues";
+        /// <summary>
+        /// Gets the current raw value for the setting with the specified key, or null if the setting is not set.
+        /// </summary>
+        /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
+        /// <returns>The setting value, or null if the setting is not set.</returns>
+        public string? GetRawValue(string key)
+        {
+            return null;
+        }
+        /// <summary>
+        /// Gets the current typed value for the setting with the specified key, or null if the setting is not set.
+        /// </summary>
+        /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
+        /// <returns>The setting value, or null if the setting is not set.</returns>
+        public object? GetTypedValue(string key)
+        {
+            return null;
+        }
+    }
+
+    class SettingInfo<T> : IAmbientSettingInfo 
     {
         protected static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
 
@@ -229,10 +306,25 @@ namespace AmbientServices
         private readonly string _defaultValueString;
         private readonly T _defaultValue;
         private readonly Func<string, T> _convert;
-        private long _lastUsedTicks = DateTime.MinValue.Ticks;      // interlocked
-        private SettingsSetSettingValue<T> _globalSetAndValue;      // interlocked
+        private long _lastUsedTicks = DateTime.MinValue.Ticks;       // interlocked
+        private SettingsSetSettingValue<T>? _globalSetAndValue;      // interlocked
 
-        public SettingInfo(string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public SettingInfo(string key, string description, T defaultValue, Func<string, T>? convert)
+        {
+            if (convert == null)
+            {
+                if (typeof(T) != typeof(string)) throw new ArgumentNullException(nameof(convert));
+                convert = s => ((T)(object)s)!; // this should be okay because we've just tested the type above and we only get here it T is string and since the input to convert is non-null, the output will be too!
+            }
+            _key = key;
+            _description = description;
+            _convert = convert;
+            _defaultValue = defaultValue;
+            _defaultValueString = defaultValue?.ToString() ?? "";
+            SettingsRegistry.DefaultRegistry.Register(this);
+        }
+
+        public SettingInfo(string key, string description, Func<string, T>? convert, string defaultValue = "")
         {
             if (convert == null)
             {
@@ -242,8 +334,8 @@ namespace AmbientServices
             _key = key;
             _description = description;
             _convert = convert;
-            _defaultValueString = defaultValueString;
-            _defaultValue = convert(defaultValueString);
+            _defaultValueString = defaultValue;
+            _defaultValue = convert(defaultValue);
             SettingsRegistry.DefaultRegistry.Register(this);
         }
 
@@ -270,7 +362,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the untyped default value.
         /// </summary>
-        object IAmbientSettingInfo.DefaultValue => _defaultValue;
+        object? IAmbientSettingInfo.DefaultValue => _defaultValue;
 
         /// <summary>
         /// Converts the specified value for the specified settings set.
@@ -287,16 +379,16 @@ namespace AmbientServices
             }
 #pragma warning disable CA1031 // this is a "do your best" kind of function, so we really do want to cactch all exceptions here
             catch
+#pragma warning restore CA1031 
             {
                 ret = _defaultValue;
             }
-#pragma warning restore CA1031 
             // is this settings set the one for this setting or is it the global settings set?
             if (settingsSet == _SettingsSet.Global)
             {
                 System.Threading.Interlocked.Exchange(ref _globalSetAndValue, new SettingsSetSettingValue<T>(ret, settingsSet));
             }
-            return ret;
+            return ret!;
         }
         /// <summary>
         /// Updates the last used time for this setting to the current time.
@@ -308,13 +400,13 @@ namespace AmbientServices
             // loop attempting to put it in until we win the race
             while (accessTime > oldValue)
             {
+                // Coverate note: this loop is nondeterministic when running with multiple threads, so code coverage may not cover these lines, and it's not possible to force this condition
                 // try to put in our value--did we win the race?
                 if (oldValue == System.Threading.Interlocked.CompareExchange(ref _lastUsedTicks, accessTime, oldValue))
-                {
+                { 
                     // we're done and we were the new max
                     break;
                 }
-                // NOTE: this loop is nondeterministic when running with multiple threads, so code coverage may not cover these lines, and it's not possible to force this condition
                 // update our value
                 oldValue = _lastUsedTicks;
             }
@@ -339,7 +431,7 @@ namespace AmbientServices
             get
             {
                 UpdateLastUsed();
-                return _globalSetAndValue;
+                return (_globalSetAndValue != null) ? _globalSetAndValue : new SettingsSetSettingValue<T>(_defaultValue, DefaultSettingsSet.Instance);
             }
         }
     }
@@ -347,22 +439,35 @@ namespace AmbientServices
     {
         protected static readonly AmbientService<IAmbientSettingsSet> _AmbientSettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
 
-        protected readonly AmbientService<IAmbientSettingsSet> _settingsSet;
+        protected readonly AmbientService<IAmbientSettingsSet>? _settingsSet;
         protected readonly SettingInfo<T> _settingInfo;
-        private readonly IAmbientSettingsSet _fixedSettingsSet;
+        private readonly IAmbientSettingsSet? _fixedSettingsSet;
 
-        public SettingsSetSetting(IAmbientSettingsSet fixedSettingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public SettingsSetSetting(IAmbientSettingsSet? fixedSettingsSet, string key, string description, Func<string, T>? convert, string defaultValueString = "")
         {
             _settingInfo = new SettingInfo<T>(key, description, convert, defaultValueString);
             _fixedSettingsSet = fixedSettingsSet;
         }
 
-        internal SettingsSetSetting(AmbientService<IAmbientSettingsSet> settings, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public SettingsSetSetting(IAmbientSettingsSet? fixedSettingsSet, string key, string description, T defaultValue, Func<string, T>? convert)
+        {
+            _settingInfo = new SettingInfo<T>(key, description, defaultValue, convert);
+            _fixedSettingsSet = fixedSettingsSet;
+        }
+
+        internal SettingsSetSetting(AmbientService<IAmbientSettingsSet> settings, string key, string description, Func<string, T>? convert, string defaultValueString = "")
         {
             _settingInfo = new SettingInfo<T>(key, description, convert, defaultValueString);
             _settingsSet = settings;
         }
-        protected IAmbientSettingsSet GetValueSet()
+#if NEEDED
+        internal SettingsSetSetting(AmbientService<IAmbientSettingsSet> settings, string key, string description, T defaultValue, Func<string, T>? convert)
+        {
+            _settingInfo = new SettingInfo<T>(key, description, defaultValue, convert);
+            _settingsSet = settings;
+        }
+#endif
+        protected IAmbientSettingsSet? GetValueSet()
         {
             _settingInfo.UpdateLastUsed();
             if (_settingsSet != null)
@@ -377,13 +482,13 @@ namespace AmbientServices
         }
         protected T GetValueFromSet(IAmbientSettingsSet set)
         {
-            object value = set.GetTypedValue(_settingInfo.Key);
+            object? value = set.GetTypedValue(_settingInfo.Key);
             return (value == null) ? _settingInfo.DefaultValue : (T)value;
         }
         protected (T, string) GetValueAndSet(IAmbientSettingsSet set)
         {
-            object value = set?.GetTypedValue(_settingInfo.Key);
-            return (value == null) ? (_settingInfo.DefaultValue, null) : ((T)value, set.SetName);
+            object? value = set.GetTypedValue(_settingInfo.Key);
+            return (value == null) ? (_settingInfo.DefaultValue, DefaultSettingsSet.Instance.SetName) : ((T)value, set.SetName);
         }
         /// <summary>
         /// Gets the current value of the setting (cached from the value given by the settings set).
@@ -392,44 +497,56 @@ namespace AmbientServices
         {
             get
             {
-                IAmbientSettingsSet set = GetValueSet();
+                IAmbientSettingsSet? set = GetValueSet();
                 return (set != null)
                     ? GetValueFromSet(set)
                     : _settingInfo.GlobalValue;
             }
         }
         /// <summary>
-        /// Gets the current value of the setting along with the name of the set that the value came from (or null if the default value was used).
+        /// Gets the current value of the setting along with the name of the set that the value came from.
         /// Note that this function may be significantly slower than <see cref="Value"/>.
         /// </summary>
-        /// <returns>The current value of the setting along with the name of the set that the value came from (or null if the default value was used).</returns>
+        /// <returns>The current value of the setting along with the name of the set that the value came from.</returns>
         public virtual (T, string) GetValueWithSetName()
         {
-            IAmbientSettingsSet set = GetValueSet();
-            return GetValueAndSet(set);
+            IAmbientSettingsSet? set = GetValueSet();
+            return (set != null)
+                ? GetValueAndSet(set)
+                : (_settingInfo.GlobalValue, DefaultSettingsSet.Instance.SetName);
         }
     }
     class AmbientSetting<T> : SettingsSetSetting<T>
     {
-        public AmbientSetting(string key, string description, Func<string, T> convert, string defaultValueString = null)
-            : base((IAmbientSettingsSet)null, key, description, convert, defaultValueString)
+        public AmbientSetting(string key, string description, Func<string, T> convert, string defaultValueString = "")
+            : base((IAmbientSettingsSet?)null, key, description, convert, defaultValueString)
         {
         }
 
-        internal AmbientSetting(AmbientService<IAmbientSettingsSet> settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = null)
+        public AmbientSetting(string key, string description, T defaultValue, Func<string, T> convert)
+            : base((IAmbientSettingsSet?)null, key, description, defaultValue, convert)
+        {
+        }
+
+        internal AmbientSetting(AmbientService<IAmbientSettingsSet> settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = "")
             : base(settingsSet, key, description, convert, defaultValueString)
         {
         }
-
-        private IAmbientSettingsSet GetAmbientValueSet()
+#if NEEDED // Add this one if needed--it should work fine, but isn't currently used
+        internal AmbientSetting(AmbientService<IAmbientSettingsSet> settingsSet, string key, string description, T defaultValue, Func<string, T> convert)
+            : base(settingsSet, key, description, defaultValue, convert)
+        {
+        }
+#endif
+        private IAmbientSettingsSet? GetAmbientValueSet()
         {
             _settingInfo.UpdateLastUsed();
             AmbientService<IAmbientSettingsSet> settingsSet = _settingsSet ?? _AmbientSettingsSet;
             // is there a local settings set override?
-            IAmbientSettingsSet localSettingsSetOverride = settingsSet.Override;
+            IAmbientSettingsSet? localSettingsSetOverride = settingsSet.Override;
             if (localSettingsSetOverride != null) return localSettingsSetOverride;
             // is there a local settings set suppression?
-            IAmbientSettingsSet localSettingsSet = settingsSet.Local;
+            IAmbientSettingsSet? localSettingsSet = settingsSet.Local;
             return (localSettingsSet != null)
                 ? GetValueSet() // fall through to the base (global settings set)
                 : null;  // use the default value
@@ -442,7 +559,7 @@ namespace AmbientServices
         {
             get
             {
-                IAmbientSettingsSet set = GetAmbientValueSet();
+                IAmbientSettingsSet? set = GetAmbientValueSet();
                 return (set != null)
                     ? GetValueFromSet(set)
                     : _settingInfo.GlobalValue;
@@ -455,17 +572,10 @@ namespace AmbientServices
         /// <returns>The current value of the setting along with the name of the set that the value came from (or null if the default value was used).</returns>
         public override (T, string) GetValueWithSetName()
         {
-            IAmbientSettingsSet set = GetAmbientValueSet();
+            IAmbientSettingsSet? set = GetAmbientValueSet();
             if (set != null) return GetValueAndSet(set);
             SettingsSetSettingValue<T> setAndValue = _settingInfo.GlobalSetAndValue;
-            if (setAndValue != null)
-            {
-                return (setAndValue.Value, setAndValue.SettingsSet.SetName);
-            }
-            else
-            {
-                return (_settingInfo.DefaultValue, null);
-            }
+            return (setAndValue.Value, setAndValue.SettingsSet.SetName);
         }
     }
 }

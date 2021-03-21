@@ -18,21 +18,23 @@ namespace AmbientServices.Test
             Assert.AreNotEqual(StatusAuditAlert.Empty, StatusAuditAlert.None);
             Assert.AreNotEqual(StatusAuditAlert.Empty.GetHashCode(), StatusAuditAlert.None.GetHashCode());
             Assert.IsFalse(StatusAuditAlert.Empty.Equals((StatusAuditAlert)null));
-            Assert.IsFalse(StatusAuditAlert.Empty.Equals("test"));
+            Assert.IsFalse(StatusAuditAlert.Empty!.Equals("test")); // the analyzer obviously gets confused when you test whether something is equal to null, even if you assert that it returns false
             Assert.AreNotEqual(StatusAuditAlert.Empty.ToString(), StatusAuditAlert.None.ToString());
             StatusAuditAlert sa = StatusAuditAlert.Empty;
-            Assert.ThrowsException<ArgumentNullException>(() => new StatusAuditAlert(1.0f, null, null, null));
+            Assert.ThrowsException<ArgumentNullException>(() => new StatusAuditAlert(1.0f, null!, "", ""));
+            Assert.ThrowsException<ArgumentNullException>(() => new StatusAuditAlert(1.0f, "", null!, ""));
+            Assert.ThrowsException<ArgumentNullException>(() => new StatusAuditAlert(1.0f, "", "", null!));
         }
         [TestMethod]
         public void StatusAuditReportMisc()
         {
             StatusAuditAlert sa = new StatusAuditAlert(StatusRating.Okay, "Okay", "terse", "detailed");
-            StatusAuditReport sr = new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(1), sa);
+            StatusAuditReport sr = new StatusAuditReport(AmbientClock.UtcNow.AddMinutes(1), TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(2), sa);
             Assert.AreNotEqual(StatusAuditReport.Pending, sr);
             Assert.AreNotEqual(StatusAuditReport.Pending.GetHashCode(), sr.GetHashCode());
             Assert.AreNotEqual(sr.GetHashCode(), new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5)).GetHashCode());
             Assert.IsFalse(StatusAuditReport.Pending.Equals((StatusAuditReport)null));
-            Assert.IsFalse(StatusAuditReport.Pending.Equals("test"));
+            Assert.IsFalse(StatusAuditReport.Pending!.Equals("test"));  // this is a false positive in the analyzer's null detector
             Assert.AreNotEqual(StatusAuditReport.Pending.ToString(), sr.ToString());
         }
         [TestMethod]
@@ -53,6 +55,24 @@ namespace AmbientServices.Test
                     AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
                     AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
                     AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
+                }
+            }
+        }
+        [TestMethod]
+        public async Task StatusAuditorArgumentException()
+        {
+            using (AmbientClock.Pause())
+            {
+                StatusResults auditorTestResults;
+                StatusResults auditorAuditExceptionTestResults;
+                using (StatusAuditorTest test = new StatusAuditorTest(nameof(StatusAuditorArgumentException)))
+                {
+                    auditorTestResults = await test.GetStatus();
+                }
+                using (StatusAuditorAuditExceptionTest test = new StatusAuditorAuditExceptionTest(nameof(StatusAuditorArgumentException) + "2"))
+                {
+                    auditorAuditExceptionTestResults = await test.GetStatus();
+                    Assert.ThrowsException<ArgumentException>(() => test.SetLatestResults(auditorTestResults));
                 }
             }
         }
@@ -80,6 +100,20 @@ namespace AmbientServices.Test
                     // run the initial audit manually and synchronously
                     test.InitialAuditTimer_Elapsed(null, null);
                 }
+            }
+        }
+        [TestMethod]
+        public void StatusAuditorTriggerAfterDisposed()
+        {
+            using (AmbientClock.Pause())
+            {
+                StatusAuditorAuditNeverRunTest testCopy;
+                using (StatusAuditorAuditNeverRunTest test = new StatusAuditorAuditNeverRunTest(nameof(StatusAuditorAuditNeverRunTest)))
+                {
+                    testCopy = test;
+                    Assert.AreEqual("StatusAuditorAuditNeverRunTest", test.TargetSystem);
+                }
+                testCopy.AuditTimer_Elapsed(null, null);
             }
         }
         [TestMethod]
@@ -167,7 +201,6 @@ namespace AmbientServices.Test
         public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
-            statusBuilder.TargetSystem = "TestAuditableStatusNoChildren";
             StatusRatingRange currentAuditRating = (StatusRatingRange)(_auditNumber++ % (int)EnumExtensions.MaxEnumValue<StatusRatingRange>());
             float rating = (StatusRating.GetRangeUpperBound(currentAuditRating) + StatusRating.GetRangeLowerBound(currentAuditRating)) / 2;
             if (rating <= StatusRating.Fail)

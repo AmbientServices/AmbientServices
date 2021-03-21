@@ -34,7 +34,9 @@ namespace AmbientServices
             // loop through each element and compare
             for (int offset = 0; offset < array.Length; ++offset)
             {
-                int elemhashcode = array[offset].GetHashCode();
+#pragma warning disable CA1508      // this is an analyzer false positive--remove this when the analyzer gets fixed--see https://stackoverflow.com/questions/66502241/how-to-properly-fix-this-code-to-support-nullable-references-without-warnings/66502477#66502477
+                int elemhashcode = array[offset]?.GetHashCode() ?? 0;   // Note here that even though TYPE is not TYPE?, it is nullable because we haven't added a notnull generic type contraint (where TYPE: notnull)
+#pragma warning restore CA1508
                 code ^= (elemhashcode >> (32 - (offset % 32)) ^ (elemhashcode << (offset % 32)) ^ 0x1A7FCA3B);
             }
             return code;
@@ -46,7 +48,7 @@ namespace AmbientServices
         /// <param name="array1">The first array.</param>
         /// <param name="array2">The second array.</param>
         /// <returns>Whether or not the content of the arrays are equal.</returns>
-        public static bool ValueEquals(Type elementType, Array array1, Array array2)
+        public static bool ValueEquals(Type elementType, Array? array1, Array? array2)
         {
             if (elementType == null) throw new ArgumentNullException(nameof(elementType));
             if (array1 == null)
@@ -82,7 +84,10 @@ namespace AmbientServices
                     cursor[dimension] = remainder / size[dimension + 1];
                     remainder %= size[dimension + 1];
                 }
-                bool eq = (elementType.IsArray) ? ValueEquals(elementType.GetElementType(), (Array)array1.GetValue(cursor), (Array)array2.GetValue(cursor)) : Object.Equals(array1.GetValue(cursor), array2.GetValue(cursor));
+                bool eq = (elementType.IsArray)
+                        // I could be wrong, but I'm pretty sure if elementType.IsArray is true, GetElementType() cannot return null
+                    ? ValueEquals(elementType.GetElementType()!, (Array?)array1.GetValue(cursor), (Array?)array2.GetValue(cursor))
+                    : Object.Equals(array1.GetValue(cursor), array2.GetValue(cursor));
                 if (!eq) return false;
             }
             // they are equal!

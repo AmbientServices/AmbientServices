@@ -2,13 +2,11 @@
 
   <PropertyGroup>
     <TargetFrameworks>netcoreapp2.1;net5.0</TargetFrameworks>
-
+    <LangVersion>9.0</LangVersion>
+    <Nullable>warnings</Nullable>
     <IsPackable>false</IsPackable>
-
     <ApplicationIcon />
-
     <OutputType>Library</OutputType>
-
     <StartupObject />
   </PropertyGroup>
 

@@ -15,6 +15,7 @@ namespace AmbientServices
         /// <returns>A filtered string for the exception.</returns>
         public static string ToFilteredString(this Exception exception)
         {
+            if (exception == null) throw new ArgumentNullException(nameof(exception));
             StringBuilder stack = new StringBuilder();
             BuildFilteredString(exception, stack);
             return stack.ToString();
@@ -22,16 +23,14 @@ namespace AmbientServices
 
         internal static void BuildFilteredString(Exception exception, StringBuilder output)
         {
-            if (exception != null)
-            {
-                BuildFilteredString(exception.InnerException, output);
+            Exception? innerException = exception.InnerException;
+            if (innerException != null) BuildFilteredString(innerException, output);
 
-                if (output.Length > 0) output.AppendLine();
+            if (output.Length > 0) output.AppendLine();
 
-                output.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "[{0}] {1}", exception.GetType().Name, exception.Message);
-                output.AppendLine();
-                output.Append(new FilteredStackTrace(exception));
-            }
+            output.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "[{0}] {1}", exception.GetType().Name, exception.Message);
+            output.AppendLine();
+            output.Append(new FilteredStackTrace(exception));
         }
         /// <summary>
         /// Gets the type name for the exception, which is literally the type name with any trailing &quot;Exception&quot; removed.

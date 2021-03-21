@@ -86,7 +86,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="obj">The object to test.</param>
         /// <returns><b>true</b> if the objects are equal, <b>false</b> if they are not.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (!(obj is FilteredStackTrace)) return false;
             return base.Equals((StackTrace)obj);
@@ -120,7 +120,7 @@ namespace AmbientServices
                 bool first = true;
                 foreach (StackFrame frame in frames)
                 {
-                    string fullMethodName = frame.GetMethod().DeclaringType.FullName;
+                    string fullMethodName = frame!.GetMethod()!.DeclaringType!.FullName!;  // I don't think the method of a stack frame or its declaring type or its name can be null
                     if (first || (!fullMethodName.StartsWith("Microsoft.", StringComparison.Ordinal) && !fullMethodName.StartsWith("System.", StringComparison.Ordinal)))
                     {
                         yield return frame;
@@ -145,7 +145,7 @@ namespace AmbientServices
             StringBuilder output = new StringBuilder();
             foreach (StackFrame frame in frames)
             {
-                string line = Invariant($" at {frame.GetMethod().DeclaringType.Name}.{frame.GetMethod().Name} in {FilterFilename(frame.GetFileName() ?? "<unknown>")}:{frame.GetFileLineNumber()}.{frame.GetFileColumnNumber()}");
+                string line = Invariant($" at {frame!.GetMethod()!.DeclaringType!.Name!}.{frame!.GetMethod()!.Name!} in {FilterFilename(frame!.GetFileName() ?? "<unknown>")}:{frame!.GetFileLineNumber()}.{frame!.GetFileColumnNumber()}");
                 output.AppendLine(line);
             }
             return output.ToString();

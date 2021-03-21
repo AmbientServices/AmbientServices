@@ -45,7 +45,7 @@ namespace AmbientServices
         public void WeakEventHandler(TEVENTARG1 arg1, TEVENTARG2 arg2)
         {
             // is the instance still alive?
-            TTYPETOWEAKEN weak;
+            TTYPETOWEAKEN? weak;
             if (_weakSubscriber.TryGetTarget(out weak))
             {
                 // the event subscriber is still alive, so call it's static event notification function

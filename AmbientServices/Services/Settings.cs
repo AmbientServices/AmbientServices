@@ -18,13 +18,13 @@ namespace AmbientServices
         /// </summary>
         /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
         /// <returns>The setting value, or null if the setting is not set.</returns>
-        string GetRawValue(string key);
+        string? GetRawValue(string key);
         /// <summary>
         /// Gets the current typed value for the setting with the specified key, or null if the setting is not set.
         /// </summary>
         /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
         /// <returns>The setting value, or null if the setting is not set.</returns>
-        object GetTypedValue(string key);
+        object? GetTypedValue(string key);
     }
     /// <summary>
     /// An interface that may or may not also be implemented by an ambient settings set implementation.

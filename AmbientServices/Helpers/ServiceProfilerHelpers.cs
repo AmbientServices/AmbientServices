@@ -14,8 +14,8 @@ namespace AmbientServices
         private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
         private static readonly AmbientService<IAmbientServiceProfiler> _AmbientServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
 
-        private readonly IAmbientSetting<Regex> _defaultSystemGroupTransformSetting;
-        private readonly IAmbientServiceProfiler _eventBroadcaster;
+        private readonly IAmbientSetting<Regex?> _defaultSystemGroupTransformSetting;
+        private readonly IAmbientServiceProfiler? _eventBroadcaster;
         private readonly AsyncLocal<ScopeOnSystemSwitchedDistributor> _scopeDistributor;
         private bool _disposedValue;
 
@@ -30,12 +30,12 @@ namespace AmbientServices
         /// Constructs an AmbientServiceProfilerCoordinator using the specified settings set.
         /// </summary>
         /// <param name="settingsSet"></param>
-        public AmbientServiceProfilerCoordinator(IAmbientSettingsSet settingsSet)
+        public AmbientServiceProfilerCoordinator(IAmbientSettingsSet? settingsSet)
         {
-            _defaultSystemGroupTransformSetting = AmbientSettings.GetSettingsSetSetting<Regex>(settingsSet, nameof(AmbientServiceProfilerCoordinator) + "-DefaultSystemGroupTransform", 
+            _defaultSystemGroupTransformSetting = AmbientSettings.GetSettingsSetSetting<Regex?>(settingsSet, nameof(AmbientServiceProfilerCoordinator) + "-DefaultSystemGroupTransform", 
                 @"A `Regex` string used to transform the system identifier to a group identifier.
 The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.", 
-                s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));
+                s => string.IsNullOrEmpty(s) ? (Regex?)null : new Regex(s, RegexOptions.Compiled));
             _scopeDistributor = new AsyncLocal<ScopeOnSystemSwitchedDistributor>();
             _eventBroadcaster = _AmbientServiceProfiler.Local;
             _eventBroadcaster?.RegisterSystemSwitchedNotificationSink(this);
@@ -53,7 +53,7 @@ The regular expression will attempt to match the system identifier, with the val
         /// <param name="newSystem">The identifier for the system that is starting to run.</param>
         /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
         /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null)
+        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null)
         {
             if (_scopeDistributor.Value == null) _scopeDistributor.Value = new ScopeOnSystemSwitchedDistributor();
             _scopeDistributor.Value.OnSystemSwitched(newSystemStartStopwatchTimestamp, newSystem, oldSystemStartStopwatchTimestamp, revisedOldSystem);
@@ -64,12 +64,12 @@ The regular expression will attempt to match the system identifier, with the val
         /// <param name="scopeName">A name of the call context to attach to the analyzer.</param>
         /// <param name="overrideSystemGroupTransformRegex">A <see cref="Regex"/> string to transform the system into a system group.</param>
         /// <returns>A <see cref="IAmbientServiceProfile"/> that will profile systems executed in this call context, or null if there is no ambient service profiler event collector.  Note that the returned object is NOT thread-safe.</returns>
-        public IAmbientServiceProfile CreateCallContextProfiler(string scopeName, string overrideSystemGroupTransformRegex = null)
+        public IAmbientServiceProfile? CreateCallContextProfiler(string scopeName, string? overrideSystemGroupTransformRegex = null)
         {
-            IAmbientServiceProfiler metrics = _AmbientServiceProfiler.Local;
+            IAmbientServiceProfiler? metrics = _AmbientServiceProfiler.Local;
             if (metrics != null)
             {
-                Regex groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
+                Regex? groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
                 if (_scopeDistributor.Value == null) _scopeDistributor.Value = new ScopeOnSystemSwitchedDistributor();
                 CallContextServiceProfiler analyzer = new CallContextServiceProfiler(_scopeDistributor.Value, scopeName, groupTransform);
                 return analyzer;
@@ -84,16 +84,13 @@ The regular expression will attempt to match the system identifier, with the val
         /// <param name="onWindowComplete">An async delegate that receives a <see cref="IAmbientServiceProfile"/> at the end of each time window.</param>
         /// <param name="overrideSystemGroupTransformRegex">A <see cref="Regex"/> string to transform the procesor into a processor group.</param>
         /// <returns>A <see cref="IDisposable"/> that scopes the collection of the profiles.</returns>
-        public IDisposable CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientServiceProfile, Task> onWindowComplete, string overrideSystemGroupTransformRegex = null)
+        public IDisposable? CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientServiceProfile, Task> onWindowComplete, string? overrideSystemGroupTransformRegex = null)
         {
-            IAmbientServiceProfiler metrics = _AmbientServiceProfiler.Local;
-            if (metrics != null)
-            {
-                Regex groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
-                TimeWindowServiceProfiler tracker = new TimeWindowServiceProfiler(metrics, scopeNamePrefix, windowPeriod, onWindowComplete, groupTransform);
-                return tracker;
-            }
-            return null;
+            IAmbientServiceProfiler? metrics = _AmbientServiceProfiler.Local;
+            if (metrics == null) return null;
+            Regex? groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
+            TimeWindowServiceProfiler tracker = new TimeWindowServiceProfiler(metrics, scopeNamePrefix, windowPeriod, onWindowComplete, groupTransform);
+            return tracker;
         }
         /// <summary>
         /// Creates a service profiler which profiles the entire process for the entire (remaining) duration of execution.
@@ -108,12 +105,12 @@ The regular expression will attempt to match the system identifier, with the val
         /// whereas this will analyze all threads and call contexts in the process.  
         /// They will produce the same results only for programs where there is only a single call context (no parallelization)
         /// </remarks>
-        public IAmbientServiceProfile CreateProcessProfiler(string scopeName, string overrideSystemGroupTransformRegex = null)
+        public IAmbientServiceProfile? CreateProcessProfiler(string scopeName, string? overrideSystemGroupTransformRegex = null)
         {
-            IAmbientServiceProfiler metrics = _AmbientServiceProfiler.Local;
+            IAmbientServiceProfiler? metrics = _AmbientServiceProfiler.Local;
             if (metrics != null)
             {
-                Regex groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
+                Regex? groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
                 ProcessOrSingleTimeWindowServiceProfiler tracker = new ProcessOrSingleTimeWindowServiceProfiler(metrics, scopeName, groupTransform);
                 return tracker;
             }

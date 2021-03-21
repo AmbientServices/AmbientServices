@@ -29,7 +29,7 @@ namespace AmbientServices.Test
             using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
             {
                 AmbientSetting<int> value;
-                value = new AmbientSetting<int>("int-setting", "", s => s == null ? 0 : Int32.Parse(s));
+                value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
                 Assert.AreEqual(0, value.Value);
                 value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
                 Assert.AreEqual(1, value.Value);
@@ -55,7 +55,7 @@ namespace AmbientServices.Test
             using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new ScopedLocalServiceOverride<IAmbientSettingsSet>(null))
             {
                 AmbientSetting<int> value;
-                value = new AmbientSetting<int>("int-setting", "", s => s == null ? 0 : Int32.Parse(s));
+                value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
                 Assert.AreEqual(0, value.Value);
                 value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
                 Assert.AreEqual(1, value.Value);
@@ -92,7 +92,7 @@ namespace AmbientServices.Test
         public void SettingsSetWithPreregisteredSettings()
         {
             SettingInfo<string> base1 = new SettingInfo<string>(nameof(SettingsSetWithPreregisteredSettings) + "1", "", null);
-            SettingInfo<int> base2 = new SettingInfo<int>(nameof(SettingsSetWithPreregisteredSettings) + "2", "", s => (s == null) ? 2 : Int32.Parse(s));
+            SettingInfo<int> base2 = new SettingInfo<int>(nameof(SettingsSetWithPreregisteredSettings) + "2", "", s => string.IsNullOrEmpty(s) ? 2 : Int32.Parse(s));
             SettingInfo<int> base3 = new SettingInfo<int>(nameof(SettingsSetWithPreregisteredSettings) + "3", "", s => Int32.Parse(s), "3");
             Dictionary<string, string> settings = new Dictionary<string, string> { { nameof(SettingsSetWithPreregisteredSettings) + "1", null }, { nameof(SettingsSetWithPreregisteredSettings) + "2", "2" }, { nameof(SettingsSetWithPreregisteredSettings) + "3", null }, };
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetWithPreregisteredSettings), settings);
@@ -138,11 +138,19 @@ namespace AmbientServices.Test
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingNullConvert));
             string testSettingKey = nameof(SettingsSetSettingNullConvert);
             string initialValue = "initialValue";
+            string secondValue = "change1";
             SettingsSetSetting<string> testSetting = new SettingsSetSetting<string>(settingsSet, testSettingKey, "", null, initialValue);
             Assert.AreEqual(initialValue, testSetting.Value);
-            string secondValue = "change1";
             settingsSet.ChangeSetting(testSettingKey, secondValue);
             Assert.AreEqual(secondValue, testSetting.Value);
+            settingsSet.ChangeSetting(testSettingKey, initialValue);
+            Assert.AreEqual(initialValue, testSetting.Value);
+            testSetting = new SettingsSetSetting<string>(settingsSet, testSettingKey, "", initialValue, null);
+            Assert.AreEqual(initialValue, testSetting.Value);
+            settingsSet.ChangeSetting(testSettingKey, secondValue);
+            Assert.AreEqual(secondValue, testSetting.Value);
+            settingsSet.ChangeSetting(testSettingKey, initialValue);
+            Assert.AreEqual(initialValue, testSetting.Value);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -153,6 +161,8 @@ namespace AmbientServices.Test
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingNonStringNullConvert));
             string testSettingKey = nameof(SettingsSetSettingNonStringNullConvert);
             Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", null, "1"));
+            Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", 1, null));
+            Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int?>(settingsSet, testSettingKey, "", (int?)null, null));
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -162,7 +172,7 @@ namespace AmbientServices.Test
         {
             Dictionary<string, string> settings = new Dictionary<string, string>() { { "key", "value" } };
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingMisc), settings);
-            Assert.IsTrue(settingsSet.ToString().Contains(nameof(SettingMisc)));
+            Assert.IsTrue(settingsSet!.ToString()!.Contains(nameof(SettingMisc)));
             Assert.AreEqual("SettingMisc", settingsSet.SetName);
         }
         /// <summary>
@@ -418,18 +428,28 @@ namespace AmbientServices.Test
             TempRegister(registry, "key2", "description");
             Assert.ThrowsException<ArgumentException>(() => TempRegister(registry, description: "different description"));
 
-            Assert.ThrowsException<ArgumentNullException>(() => registry.Register(null));
+            Assert.ThrowsException<ArgumentNullException>(() => registry.Register(null!));
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
         /// </summary>
         [TestMethod]
+        public void AmbientSettingsWithSetNameNull()
+        {
+            string settingName = nameof(AmbientSettingsWithSetNameNull) + "-int-setting";
+            AmbientSetting<int> setting = new AmbientSetting<int>(settingName, "", s => Int32.Parse(s), "1");
+            (int, string) valueWithSetName = setting.GetValueWithSetName();
+        }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientSettingsSet"/>.
+    /// </summary>
+    [TestMethod]
         public void AmbientSettingsWithSetName()
         {
             string settingName = nameof(AmbientSettingsWithSetName) + "-int-setting";
             AmbientSetting<int> setting3 = new AmbientSetting<int>(settingName, "", s => Int32.Parse(s), "1");
             Assert.AreEqual(1, setting3.Value);
-            Assert.IsNull(setting3.GetValueWithSetName().Item2);
+            Assert.IsNotNull(setting3.GetValueWithSetName().Item2);
             IMutableAmbientSettingsSet settingsSet = _SettingsSet.Global as IMutableAmbientSettingsSet;
             if (settingsSet != null)
             {
@@ -442,9 +462,9 @@ namespace AmbientServices.Test
             using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
             {
                 AmbientSetting<int> setting;
-                setting = new AmbientSetting<int>(nameof(AmbientSettingsWithSetName) + "-int-setting-1", "", s => s == null ? 0 : Int32.Parse(s));
+                setting = new AmbientSetting<int>(nameof(AmbientSettingsWithSetName) + "-int-setting-1", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
                 Assert.AreEqual(0, setting.Value);
-                Assert.IsNull(setting.GetValueWithSetName().Item2);
+                Assert.IsNotNull(setting.GetValueWithSetName().Item2);
                 setting = new AmbientSetting<int>(nameof(AmbientSettingsWithSetName) + "-int-setting-2", "", s => Int32.Parse(s), "1");
                 settings.ChangeSetting(nameof(AmbientSettingsWithSetName) + "-int-setting-2", "1");
                 Assert.AreEqual(1, setting.Value);
@@ -458,8 +478,17 @@ namespace AmbientServices.Test
                 settings.ChangeSetting(settingName, null);
                 int settingValue = setting.Value;
                 Assert.AreEqual(1, setting.Value);
-                Assert.IsNull(setting3.GetValueWithSetName().Item2);
+                Assert.IsNotNull(setting3.GetValueWithSetName().Item2);
             }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientSettingsSet"/>.
+        /// </summary>
+        [TestMethod]
+        public void SettingsGetSettings()
+        {
+            IAmbientSetting<int> setting = AmbientSettings.GetSetting<int>(null, nameof(SettingsGetSettings), "", s => Int32.Parse(s), "0");
+            Assert.AreEqual(0, setting.Value);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -471,12 +500,12 @@ namespace AmbientServices.Test
 
             IAmbientSetting<int> setting = AmbientSettings.GetSettingsSetSetting(null, settingName, "", s => Int32.Parse(s), "1");
             Assert.AreEqual(1, setting.Value);
-            Assert.IsNull(setting.GetValueWithSetName().Item2);
+            Assert.IsNotNull(setting.GetValueWithSetName().Item2);
 
             BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(SettingsSetSettingsWithSetName));
             setting = AmbientSettings.GetSettingsSetSetting(settings, settingName, "", s => Int32.Parse(s), "1");
             Assert.AreEqual(1, setting.Value);
-            Assert.IsNull(setting.GetValueWithSetName().Item2);
+            Assert.IsNotNull(setting.GetValueWithSetName().Item2);
 
             settings.ChangeSetting(settingName, "2");
             Assert.AreEqual(2, setting.Value);
@@ -514,6 +543,19 @@ namespace AmbientServices.Test
             {
                 return DefaultValueString;
             }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientSettingsSet"/>.
+        /// </summary>
+        [TestMethod]
+        public void DefaultSettingsSetNullValues()
+        {
+            Assert.IsNull(DefaultSettingsSet.Instance.GetTypedValue(null!));
+            Assert.IsNull(DefaultSettingsSet.Instance.GetRawValue(null!));
+            Assert.IsNull(DefaultSettingsSet.Instance.GetTypedValue(""));
+            Assert.IsNull(DefaultSettingsSet.Instance.GetRawValue(""));
+            Assert.IsNull(DefaultSettingsSet.Instance.GetTypedValue("test"));
+            Assert.IsNull(DefaultSettingsSet.Instance.GetRawValue("test"));
         }
     }
 }

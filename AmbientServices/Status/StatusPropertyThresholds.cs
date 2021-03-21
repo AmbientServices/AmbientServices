@@ -45,7 +45,7 @@ namespace AmbientServices
             }
             return _thresholds;
         }
-        private static void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
+        private static void CurrentDomain_AssemblyLoad(object? sender, AssemblyLoadEventArgs args)
         {
             RegisterAssemblyThresholds(args.LoadedAssembly);
         }
@@ -81,7 +81,7 @@ namespace AmbientServices
                             yield return new KeyValuePair<string, StatusPropertyThresholds>(checkerThresholds.PropertyPath + "." + kvp.Key, kvp.Value);
                         }
                     }
-                    else
+                    else if (checkerThresholds.Thresholds != null)
                     {
                         yield return new KeyValuePair<string, StatusPropertyThresholds>(checkerThresholds.PropertyPath, checkerThresholds.Thresholds);
                     }
@@ -244,9 +244,9 @@ namespace AmbientServices
             _thresholds = thresholds;
         }
 
-        public StatusPropertyThresholds GetThresholds(string path)
+        public StatusPropertyThresholds? GetThresholds(string path)
         {
-            StatusPropertyThresholds value;
+            StatusPropertyThresholds? value;
             if (!_thresholds.TryGetValue(path.ToUpperInvariant(), out value)) return null;
             return value;
         }
@@ -258,8 +258,8 @@ namespace AmbientServices
     public sealed class DefaultPropertyThresholdsAttribute : Attribute
     {
         private readonly string _propertyPath;
-        private readonly StatusPropertyThresholds _thresholds;
-        private readonly Type _deferToType;
+        private readonly StatusPropertyThresholds? _thresholds;
+        private readonly Type? _deferToType;
 
         /// <summary>
         /// Constructs a default property thresholds instance by looking at a different type whose threshold attribute will be deferred to.
@@ -277,14 +277,14 @@ namespace AmbientServices
         /// Note that attribute parameters cannot take nullable values, so we use <see cref="Single.NaN"/> instead to indicate that there is no such threshold value.
         /// </summary>
         /// <param name="propertyPath">The path to the property with a default threshold.</param>
-        /// <param name="failureThreshold">The first value that is a failure instead of an alert.  <see cref="Single.NaN"/> if there is no such value.</param>
-        /// <param name="okayThreshold">The first value that is an alert instead of okay.  <see cref="Single.NaN"/> if there is no such value.</param>
-        /// <param name="alertThreshold">The first value that is okay instead of superlative.  <see cref="Single.NaN"/> if there is no such value.</param>
+        /// <param name="failVsAlertThreshold">The first value that is a failure instead of an alert.  <see cref="Single.NaN"/> if there is no such value.</param>
+        /// <param name="okayVsSuperlativeThreshold">The first value that is an alert instead of okay.  <see cref="Single.NaN"/> if there is no such value.</param>
+        /// <param name="alertVsOkayThreshold">The first value that is okay instead of superlative.  <see cref="Single.NaN"/> if there is no such value.</param>
         /// <param name="thresholdNature">A <see cref="StatusThresholdNature"/> indicating whether low values are good or bad for this threshold.  Only used if less than two threshold values are specified.</param>
-        public DefaultPropertyThresholdsAttribute(string propertyPath, float failureThreshold = float.NaN, float alertThreshold = float.NaN, float okayThreshold = float.NaN, StatusThresholdNature thresholdNature = StatusThresholdNature.HighIsGood)
+        public DefaultPropertyThresholdsAttribute(string propertyPath, float failVsAlertThreshold = float.NaN, float alertVsOkayThreshold = float.NaN, float okayVsSuperlativeThreshold = float.NaN, StatusThresholdNature thresholdNature = StatusThresholdNature.HighIsGood)
         {
             _propertyPath = propertyPath;
-            _thresholds = new StatusPropertyThresholds(float.IsNaN(failureThreshold) ? null : (float?)failureThreshold, float.IsNaN(alertThreshold) ? null : (float?)alertThreshold, float.IsNaN(okayThreshold) ? null : (float?)okayThreshold, thresholdNature);
+            _thresholds = new StatusPropertyThresholds(float.IsNaN(failVsAlertThreshold) ? null : (float?)failVsAlertThreshold, float.IsNaN(alertVsOkayThreshold) ? null : (float?)alertVsOkayThreshold, float.IsNaN(okayVsSuperlativeThreshold) ? null : (float?)okayVsSuperlativeThreshold, thresholdNature);
             _deferToType = null;
         }
         /// <summary>
@@ -293,28 +293,29 @@ namespace AmbientServices
         public string PropertyPath { get { return _propertyPath; } }
         /// <summary>
         /// Gets the <see cref="StatusPropertyThresholds"/> for the corresponding property.
+        /// May be null if deferred to another type but that type has no attribute thresholds.
         /// </summary>
-        public StatusPropertyThresholds Thresholds { get { return _thresholds; } }
+        public StatusPropertyThresholds? Thresholds { get { return _thresholds; } }
         /// <summary>
         /// A type to defer to for default property thresholds.  Thresholds attached to that type will be added with the property path prefixed.
         /// </summary>
-        public Type DeferToType { get { return _deferToType; } }
+        public Type? DeferToType { get { return _deferToType; } }
         /// <summary>
         /// Gets the status rating threshold that distinguishes failures from alerts.
         /// </summary>
-        public float FailureThreshold { get { return _thresholds.FailVsAlertThreshold ?? float.NaN; } }
+        public float FailVsAlertThreshold { get { return _thresholds?.FailVsAlertThreshold ?? float.NaN; } }
         /// <summary>
         /// Gets the status rating threshold that distinguishes alerts from okay.
         /// </summary>
-        public float AlertThreshold { get { return _thresholds.AlertVsOkayThreshold ?? float.NaN; } }
+        public float AlertVsOkayThreshold { get { return _thresholds?.AlertVsOkayThreshold ?? float.NaN; } }
         /// <summary>
         /// Gets the status rating threshold that distinguishes okay from superlative.
         /// </summary>
-        public float OkayThreshold { get { return _thresholds.OkayVsSuperlativeThreshold ?? float.NaN; } }
+        public float OkayVsSuperlativeThreshold { get { return _thresholds?.OkayVsSuperlativeThreshold ?? float.NaN; } }
         /// <summary>
         /// Gets the status rating threshold that distinguishes okay from superlative.
         /// </summary>
-        public StatusThresholdNature ThresholdNature { get { return _thresholds.Nature; } }
+        public StatusThresholdNature ThresholdNature { get { return _thresholds?.Nature ?? StatusThresholdNature.HighIsGood; } }
     }
     /// <summary>
     /// An interface that abstracts the querying of thresholds used to rate system statuses.
@@ -325,7 +326,7 @@ namespace AmbientServices
         /// Gets the <see cref="StatusPropertyThresholds"/> instance for the specified path, or null if no overrding thresholds are configured.
         /// </summary>
         /// <param name="path">The target system path whose thresholds are desired.</param> 
-        /// <returns>A <see cref="StatusPropertyThresholds"/> instance containing the status rating thresholds.</returns>
-        StatusPropertyThresholds GetThresholds(string path);
+        /// <returns>A <see cref="StatusPropertyThresholds"/> instance containing the status rating thresholds, or null if there were no thresholds for the specified path.</returns>
+        StatusPropertyThresholds? GetThresholds(string path);
     }
 }

@@ -117,7 +117,7 @@ namespace AmbientServices.Test
             logger.Log("Exception during test", new ApplicationException());
             logger.Log(() => "Exception during test", new ApplicationException());
             logger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
-            await _Logger.Global.Flush();
+            if (_Logger.Global != null) await _Logger.Global.Flush();
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientLogger"/>.
@@ -161,7 +161,7 @@ namespace AmbientServices.Test
             logger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
             logger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
             logger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
-            await _Logger.Global.Flush();
+            if (_Logger.Global != null) await _Logger.Global.Flush();
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientLogger"/>.
@@ -192,7 +192,7 @@ namespace AmbientServices.Test
                 testlogger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
                 testlogger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
 
-                await _Logger.Local.Flush();
+                if (_Logger.Local != null) await _Logger.Local.Flush();
             }
         }
         /// <summary>
@@ -204,11 +204,11 @@ namespace AmbientServices.Test
             AmbientLogger<TestLogger> logger = new AmbientLogger<TestLogger>(_Logger.Global);
             Func<string> nullLambda = null;
             Exception nullException = null;
-            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda, "category", AmbientLogLevel.Information));
-            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullException, "category", AmbientLogLevel.Information));
-            Assert.ThrowsException<ArgumentNullException>(() => logger.Log("message", nullException, "category", AmbientLogLevel.Information));
-            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(() => "message", nullException, "category", AmbientLogLevel.Information));
-            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda, new ApplicationException(), "category", AmbientLogLevel.Information));
+            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda!, "category", AmbientLogLevel.Information));
+            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullException!, "category", AmbientLogLevel.Information));
+            Assert.ThrowsException<ArgumentNullException>(() => logger.Log("message", nullException!, "category", AmbientLogLevel.Information));
+            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(() => "message", nullException!, "category", AmbientLogLevel.Information));
+            Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda!, new ApplicationException(), "category", AmbientLogLevel.Information));
         }
     }
     class AllowedLoggerType { }

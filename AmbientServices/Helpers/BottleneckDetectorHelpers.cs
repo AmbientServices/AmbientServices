@@ -67,8 +67,8 @@ namespace AmbientServices
         /// <summary>
         /// Enters the bottleneck, if there is a configured detector.
         /// </summary>
-        /// <returns>An <see cref="AmbientBottleneckAccessor"/> that should be disposed when exiting the bottleneck.</returns>
-        public AmbientBottleneckAccessor EnterBottleneck()
+        /// <returns>An <see cref="AmbientBottleneckAccessor"/> that should be disposed when exiting the bottleneck, or null, if there is no ambient bottleneck detector.</returns>
+        public AmbientBottleneckAccessor? EnterBottleneck()
         {
             return _BottleneckDetector.Local?.EnterBottleneck(this);
         }
@@ -91,9 +91,9 @@ namespace AmbientServices
         /// </summary>
         string ScopeName { get; }
         /// <summary>
-        /// Gets the <see cref="AmbientBottleneckAccessor"/> that was utilized the most.
+        /// Gets the <see cref="AmbientBottleneckAccessor"/> that was utilized the most, if any were used.
         /// </summary>
-        AmbientBottleneckAccessor MostUtilizedBottleneck { get; }
+        AmbientBottleneckAccessor? MostUtilizedBottleneck { get; }
         /// <summary>
         /// Gets the most used <see cref="AmbientBottleneckAccessor"/> within the scope.
         /// </summary>
@@ -115,9 +115,9 @@ namespace AmbientServices
         private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
         private static readonly AmbientService<IAmbientBottleneckDetector> _AmbientBottleneckDetector = Ambient.GetService<IAmbientBottleneckDetector>();
 
-        private readonly IAmbientSetting<Regex> _defaultAllowSetting;
-        private readonly IAmbientSetting<Regex> _defaultBlockSetting;
-        private readonly IAmbientBottleneckDetector _bottleneckDetector;
+        private readonly IAmbientSetting<Regex?> _defaultAllowSetting;
+        private readonly IAmbientSetting<Regex?> _defaultBlockSetting;
+        private readonly IAmbientBottleneckDetector? _bottleneckDetector;
         private readonly CallContextSurveyManager _callContextSurveyor;
         private readonly ThreadSurveyManager _threadSurveyor;
         private bool _disposedValue;
@@ -133,14 +133,14 @@ namespace AmbientServices
         /// Constructs a AmbientBottleneckTracker using the specified settings set.
         /// </summary>
         /// <param name="settingsSet">An <see cref="IAmbientSettingsSet"/> to get settings from.</param>
-        public AmbientBottleneckSurveyorCoordinator(IAmbientSettingsSet settingsSet)
+        public AmbientBottleneckSurveyorCoordinator(IAmbientSettingsSet? settingsSet)
         {
-            _defaultAllowSetting = AmbientSettings.GetSetting<Regex>(settingsSet, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultAllow",
+            _defaultAllowSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultAllow",
                 @"A `Regex` string used to match bottleneck identifiers that should be tracked.  By default, all bottlenecks are allowed.",
-                s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));
-            _defaultBlockSetting = AmbientSettings.GetSetting<Regex>(settingsSet, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultBlock",
+                s => string.IsNullOrEmpty(s) ? (Regex?)null : new Regex(s, RegexOptions.Compiled));
+            _defaultBlockSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultBlock",
                 @"A `Regex` string used to match bottleneck identifiers that should NOT be tracked.  By default, no bottlenecks are blocked.",
-                s => (s == null) ? (Regex)null : new Regex(s, RegexOptions.Compiled));
+                s => string.IsNullOrEmpty(s) ? (Regex?)null : new Regex(s, RegexOptions.Compiled));
             _bottleneckDetector = _AmbientBottleneckDetector.Local;
             _callContextSurveyor = new CallContextSurveyManager(_bottleneckDetector);
             _threadSurveyor = new ThreadSurveyManager(_bottleneckDetector);
@@ -152,7 +152,7 @@ namespace AmbientServices
         /// <param name="overrideAllowRegex">A <see cref="Regex"/> string to override the default allow filter.</param>
         /// <param name="overrideBlockRegex">A <see cref="Regex"/> string to override the default block filter.</param>
         /// <returns>A <see cref="IAmbientBottleneckSurveyor"/> that surveys bottleneck statistics for this call context.  Note that the returned object is NOT thread-safe.</returns>
-        public IAmbientBottleneckSurveyor CreateCallContextSurveyor([CallerMemberName] string scopeName = null, string overrideAllowRegex = null, string overrideBlockRegex = null)
+        public IAmbientBottleneckSurveyor CreateCallContextSurveyor([CallerMemberName] string? scopeName = null, string? overrideAllowRegex = null, string? overrideBlockRegex = null)
         {
             return _callContextSurveyor.CreateCallContextSurveyor(scopeName,
                     (overrideAllowRegex == null) ? _defaultAllowSetting.Value : new Regex(overrideAllowRegex, RegexOptions.Compiled),
@@ -168,11 +168,11 @@ namespace AmbientServices
         /// <param name="overrideAllowRegex">A <see cref="Regex"/> string to override the default allow filter.</param>
         /// <param name="overrideBlockRegex">A <see cref="Regex"/> string to override the default block filter.</param>
         /// <returns>A <see cref="IDisposable"/> that scopes the collection of the surveys.</returns>
-        public IDisposable CreateTimeWindowSurveyor(TimeSpan windowSize, Func<IAmbientBottleneckSurvey, Task> onWindowComplete, string overrideAllowRegex = null, string overrideBlockRegex = null)
+        public IDisposable CreateTimeWindowSurveyor(TimeSpan windowSize, Func<IAmbientBottleneckSurvey, Task> onWindowComplete, string? overrideAllowRegex = null, string? overrideBlockRegex = null)
         {
             if (onWindowComplete == null) throw new ArgumentNullException(nameof(onWindowComplete), "Time Window Surveys are pointless without a window completion delegate!");
-            Regex allow = (overrideAllowRegex == null) ? _defaultAllowSetting.Value : new Regex(overrideAllowRegex, RegexOptions.Compiled);
-            Regex block = (overrideBlockRegex == null) ? _defaultBlockSetting.Value : new Regex(overrideBlockRegex, RegexOptions.Compiled);
+            Regex? allow = (overrideAllowRegex == null) ? _defaultAllowSetting.Value : new Regex(overrideAllowRegex, RegexOptions.Compiled);
+            Regex? block = (overrideBlockRegex == null) ? _defaultBlockSetting.Value : new Regex(overrideBlockRegex, RegexOptions.Compiled);
             return new TimeWindowSurveyManager(windowSize, onWindowComplete, _bottleneckDetector, allow, block);
         }
         /// <summary>
@@ -192,7 +192,7 @@ namespace AmbientServices
 #if NET5_0
         [UnsupportedOSPlatform("browser")]
 #endif
-        public IAmbientBottleneckSurveyor CreateProcessSurveyor(string processScopeName = null, string overrideAllowRegex = null, string overrideBlockRegex = null)
+        public IAmbientBottleneckSurveyor CreateProcessSurveyor(string? processScopeName = null, string? overrideAllowRegex = null, string? overrideBlockRegex = null)
         {
             ProcessBottleneckSurveyor analyzer = new ProcessBottleneckSurveyor(processScopeName, _bottleneckDetector,
                     (overrideAllowRegex == null) ? _defaultAllowSetting.Value : new Regex(overrideAllowRegex, RegexOptions.Compiled),
@@ -208,7 +208,7 @@ namespace AmbientServices
         /// <param name="overrideAllowRegex">A <see cref="Regex"/> string to override the default allow filter.</param>
         /// <param name="overrideBlockRegex">A <see cref="Regex"/> string to override the default block filter.</param>
         /// <returns>A <see cref="IAmbientBottleneckSurveyor"/> that surveys bottleneck statistics survey for the current thread.  Note that the returned object is NOT thread-safe.</returns>
-        public IAmbientBottleneckSurveyor CreateThreadSurveyor(string threadScopeName = null, string overrideAllowRegex = null, string overrideBlockRegex = null)
+        public IAmbientBottleneckSurveyor CreateThreadSurveyor(string? threadScopeName = null, string? overrideAllowRegex = null, string? overrideBlockRegex = null)
         {
             return _threadSurveyor.CreateThreadSurveyor(threadScopeName,
                     (overrideAllowRegex == null) ? _defaultAllowSetting.Value : new Regex(overrideAllowRegex, RegexOptions.Compiled),

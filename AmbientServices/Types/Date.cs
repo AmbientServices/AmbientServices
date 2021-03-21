@@ -112,6 +112,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> containing the serialized form of the data.</param>
         /// <param name="context">The <see cref="StreamingContext"/> indicating how the serialization occurred.</param>
+        [ExcludeFromCoverage]   // this is only here to provide an implementation that is as close as possible to System.Date.   However, BinaryFormatter has been deprecated so we won't bother testing it
         private Date(SerializationInfo info, StreamingContext context)
         {   // 
             // Note that this function is only invoked by the .NET Serialization system, and it's not clear at all how to exercise some code paths
@@ -434,7 +435,7 @@ namespace AmbientServices
         /// <param name="obj">A boxed <see cref="Date"/> object to compare, or null.</param>
         /// <returns>A signed number indicating the relative values of this instance and value.</returns>
         /// <value>Less than zero This instance is earlier than value. Zero This instance is the same as value. Greater than zero This instance is later than value, or value is null.</value>
-        public int CompareTo(object obj)
+        public int CompareTo(object? obj)
         {
             if (obj is Date)
             {
@@ -471,7 +472,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="obj">An object to compare to this instance.</param>
         /// <returns><b>true</b> if value is an instance of <see cref="Date"/> and equals the value of this instance; otherwise, <b>false</b>.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (obj is Date)
             {
@@ -658,7 +659,7 @@ namespace AmbientServices
         /// <param name="format">A DateTime format string.</param>
         /// <param name="formatProvider">An <see cref="IFormatProvider"/> that supplies culture-specific formatting information.</param>
         /// <returns>A string representation of value of the current <see cref="Date"/> object as specified by format and provider.</returns>
-        public string ToString(string format, IFormatProvider formatProvider)
+        public string ToString(string? format, IFormatProvider? formatProvider)
         {
             if (format == null) throw new ArgumentNullException(nameof(format));
             if (format.Length == 1)
@@ -795,82 +796,82 @@ namespace AmbientServices
             return TypeCode.Int32;
         }
 
-        bool IConvertible.ToBoolean(IFormatProvider provider)
+        bool IConvertible.ToBoolean(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToBoolean(provider);
         }
 
-        byte IConvertible.ToByte(IFormatProvider provider)
+        byte IConvertible.ToByte(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToByte(provider);
         }
 
-        char IConvertible.ToChar(IFormatProvider provider)
+        char IConvertible.ToChar(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToChar(provider);
         }
 
-        DateTime IConvertible.ToDateTime(IFormatProvider provider)
+        DateTime IConvertible.ToDateTime(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToDateTime(provider);
         }
 
-        decimal IConvertible.ToDecimal(IFormatProvider provider)
+        decimal IConvertible.ToDecimal(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToDecimal(provider);
         }
 
-        double IConvertible.ToDouble(IFormatProvider provider)
+        double IConvertible.ToDouble(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToDouble(provider);
         }
 
-        short IConvertible.ToInt16(IFormatProvider provider)
+        short IConvertible.ToInt16(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToInt16(provider);
         }
 
-        int IConvertible.ToInt32(IFormatProvider provider)
+        int IConvertible.ToInt32(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToInt32(provider);
         }
 
-        long IConvertible.ToInt64(IFormatProvider provider)
+        long IConvertible.ToInt64(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToInt64(provider);
         }
 
-        sbyte IConvertible.ToSByte(IFormatProvider provider)
+        sbyte IConvertible.ToSByte(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToSByte(provider);
         }
 
-        float IConvertible.ToSingle(IFormatProvider provider)
+        float IConvertible.ToSingle(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToSingle(provider);
         }
 
-        string IConvertible.ToString(IFormatProvider provider)
+        string IConvertible.ToString(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToString(provider);
         }
 
-        object IConvertible.ToType(Type conversionType, IFormatProvider provider)
+        object IConvertible.ToType(Type conversionType, IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToType(conversionType, provider);
         }
 
-        ushort IConvertible.ToUInt16(IFormatProvider provider)
+        ushort IConvertible.ToUInt16(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToUInt16(provider);
         }
 
-        uint IConvertible.ToUInt32(IFormatProvider provider)
+        uint IConvertible.ToUInt32(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToUInt32(provider);
         }
 
-        ulong IConvertible.ToUInt64(IFormatProvider provider)
+        ulong IConvertible.ToUInt64(IFormatProvider? provider)
         {
             return ((IConvertible)_daysSinceCalendarStart).ToUInt64(provider);
         }
@@ -879,6 +880,7 @@ namespace AmbientServices
 
         #region ISerializable Members
 
+        [ExcludeFromCoverage]   // this is only here to provide an implementation that is as close as possible to System.Date.   However, BinaryFormatter has been deprecated so we won't bother testing it
         void ISerializable.GetObjectData(SerializationInfo info, StreamingContext context)
         {
             info.AddValue(DaysField, _daysSinceCalendarStart);

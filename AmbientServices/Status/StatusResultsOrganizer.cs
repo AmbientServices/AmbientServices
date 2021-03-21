@@ -10,7 +10,7 @@ namespace AmbientServices
     /// </summary>
     class StatusResultsOrganizer
     {
-        private readonly IStatusThresholdsRegistry _thresholds;
+        private readonly IStatusThresholdsRegistry? _thresholds;
         private readonly List<StatusPropertyRange> _propertyRanges = new List<StatusPropertyRange>();
         private readonly List<StatusResultsOrganizer> _children = new List<StatusResultsOrganizer>();
 
@@ -29,9 +29,9 @@ namespace AmbientServices
         /// <summary>
         /// Gets the source.
         /// </summary>
-        public string Source { get; private set; }
+        public string? Source { get; private set; }
         /// <summary>
-        /// Gets the target, if collating based on target, or null if not.
+        /// Gets the target.
         /// </summary>
         public string Target { get; private set; }
         /// <summary>
@@ -41,7 +41,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets a <see cref="StatusAuditReport"/> summarizing the status for this node in the tree.
         /// </summary>
-        public StatusAuditReport OverallReport { get; private set; }
+        public StatusAuditReport? OverallReport { get; private set; }
         /// <summary>
         /// Gets an enumeration of <see cref="StatusPropertyRange"/>s indicating the range of the various properties for this node and all descendant nodes.
         /// </summary>
@@ -49,11 +49,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the <see cref="StatusPropertyRange"/> for the property that has the worst rating according to the applied thresholds.
         /// </summary>
-        internal StatusPropertyRange WorstPropertyRange { get; private set; }
+        internal StatusPropertyRange? WorstPropertyRange { get; private set; }
         /// <summary>
         /// Gets the <see cref="StatusAuditAlert"/> for the worst property range according to the applied thresholds.
         /// </summary>
-        internal StatusAuditAlert WorstPropertyAlert { get; private set; }
+        internal StatusAuditAlert? WorstPropertyAlert { get; private set; }
         /// <summary>
         /// Gets the rating used for sorting, which is the overall rating if there is one, or <see cref="StatusRating.Okay"/> if there is not.
         /// </summary>
@@ -67,7 +67,7 @@ namespace AmbientServices
         /// </summary>
         public IEnumerable<StatusResultsOrganizer> Children { get { return _children; } }
 
-        private StatusResultsOrganizer(StatusResults results, string source, string localTarget)
+        private StatusResultsOrganizer(StatusResults results, string? source, string localTarget)
         {
             MostRecentTime = results.Time;
             Source = results.SourceSystem ?? source;
@@ -76,14 +76,14 @@ namespace AmbientServices
             OverallReport = results.Report;
         }
 
-        public StatusResultsOrganizer(IStatusThresholdsRegistry thresholds = null)
+        public StatusResultsOrganizer(IStatusThresholdsRegistry? thresholds = null)
         {
             _thresholds = thresholds;
             Target = "/";
             NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
         }
 
-        public StatusResultsOrganizer(StatusResults results, string source = null, IStatusThresholdsRegistry thresholds = null)
+        public StatusResultsOrganizer(StatusResults results, string? source = null, IStatusThresholdsRegistry? thresholds = null)
         {
             _thresholds = thresholds;
             Target = "/";
@@ -95,20 +95,20 @@ namespace AmbientServices
         /// </summary>
         /// <param name="results">The <see cref="StatusResults"/> for this node.</param>
         /// <param name="source">The source to assign for nodes that don't have a source assigned.</param>
-        public void Add(StatusResults results, string source = null)
+        public void Add(StatusResults results, string? source = null)
         {
             Add(this, results, source);
         }
         /// <summary>
         /// Adds the specified <see cref="StatusResults"/> as a descendant of the specified root.
-        /// The position in the tree where the results will be put is determined by the <see cref="StatusResults.Target"/> property, 
+        /// The position in the tree where the results will be put is determined by the <see cref="StatusResults.TargetDisplayName"/> property, 
         /// with nodes that have the same target ending up as siblings to a common parent.
         /// </summary>
         /// <param name="root">The root <see cref="StatusResultsOrganizer"/> being added to.</param>
         /// <param name="results">The <see cref="StatusResults"/> being added.</param>
         /// <param name="source">A source, if one needs to be assigned.</param>
         /// <param name="target">A parent target for the specified node.</param>
-        public void Add(StatusResultsOrganizer root, StatusResults results, string source = null, string target = "")
+        public void Add(StatusResultsOrganizer root, StatusResults results, string? source = null, string target = "")
         {
             // a leaf node?
             if (results.NatureOfSystem == StatusNatureOfSystem.Leaf)
@@ -117,9 +117,9 @@ namespace AmbientServices
                 string localTarget = results.TargetSystem;
                 StatusResultsOrganizer organizedResults = new StatusResultsOrganizer(results, source, localTarget);
                 StatusResultsOrganizer parent = this;
-                string localtarget = results.TargetSystem;
+                string? localtarget = results.TargetSystem;
                 // a child of the root?
-                if (localtarget.StartsWith("/", StringComparison.Ordinal))
+                if (localtarget?.StartsWith("/", StringComparison.Ordinal) ?? false)
                 {
                     parent = root;
                     localtarget = localtarget.Substring(1);
@@ -130,7 +130,7 @@ namespace AmbientServices
             }
             else // the results instance we're adding is an inner node
             {
-                StatusResultsOrganizer match;
+                StatusResultsOrganizer? match;
                 // do the results specify a target?
                 if (!string.IsNullOrEmpty(results.TargetSystem))
                 {
@@ -141,7 +141,7 @@ namespace AmbientServices
                     else
                     {
                         StatusResultsOrganizer parent = this;
-                        string localTarget = results.TargetSystem;
+                        string? localTarget = results.TargetSystem;
                         // a child of the root?
                         if (localTarget.StartsWith("/", StringComparison.Ordinal))
                         {
@@ -194,7 +194,7 @@ namespace AmbientServices
             // merge any attibutes into the matching node
             foreach (StatusProperty property in results.Properties)
             {
-                StatusPropertyRange range = _propertyRanges.Where(ar => ar.Name == property.Name).FirstOrDefault();
+                StatusPropertyRange? range = _propertyRanges.Where(ar => ar.Name == property.Name).FirstOrDefault();
                 if (range != null)
                 {
                     range.Merge(property.Value);
@@ -224,15 +224,13 @@ namespace AmbientServices
             bool childPending = false;
 
             // keep track of the worst property rating
-            StatusAuditAlert worstAlert = null;
-            StatusPropertyRange worstAlertPropertyRange = null;
+            StatusAuditAlert? worstAlert = null;
+            StatusPropertyRange? worstAlertPropertyRange = null;
             foreach (StatusPropertyRange propertyRange in _propertyRanges)
             {
                 string propertyPath = ComputeTarget(target, propertyRange.Name).TrimStart('/');
-                // is there a thresholds to use to rate a property here?
-                StatusPropertyThresholds thresholds = (_thresholds ?? StatusPropertyThresholds.DefaultPropertyThresholds).GetThresholds(propertyPath);
-                // no threshold? get the defaults
-                if (thresholds == null) thresholds = StatusPropertyThresholds.DefaultPropertyThresholds.GetThresholds(propertyPath);
+                // is there a thresholds to use to rate a property here or are there defaults?
+                StatusPropertyThresholds? thresholds = (_thresholds ?? StatusPropertyThresholds.DefaultPropertyThresholds).GetThresholds(propertyPath);
                 // is there a numeric value for which thresholds can be applied?
                 float? minValue = null;
                 if (!string.IsNullOrEmpty(propertyRange.MinValue))
@@ -251,7 +249,7 @@ namespace AmbientServices
                 {
                     // rate based on the value and the thresholds--is this now the worst rating?
                     StatusAuditAlert alert = thresholds.Rate(propertyRange.Name, minValue.Value, maxValue.Value);
-                    if (worstAlert == null || alert.Rating < worstAlert.Rating)
+                    if (Object.ReferenceEquals(worstAlert, null) || alert.Rating < worstAlert.Rating)
                     {
                         worstAlert = alert;
                         worstAlertPropertyRange = propertyRange;
@@ -261,7 +259,7 @@ namespace AmbientServices
             WorstPropertyAlert = worstAlert;
             WorstPropertyRange = worstAlertPropertyRange;
 
-            StatusAuditAlert assignedAlert = OverallReport?.Alert;
+            StatusAuditAlert? assignedAlert = OverallReport?.Alert;
             float? assignedRating = assignedAlert?.Rating;
             float? worstThresholdRating = WorstPropertyAlert?.Rating;
 
@@ -405,7 +403,6 @@ namespace AmbientServices
 
         private static string ComputeTarget(string parentTargetSystem, string childTarget)
         {
-            childTarget = childTarget ?? "";
             if (childTarget.StartsWith("/", StringComparison.Ordinal) || string.IsNullOrEmpty(parentTargetSystem)) return childTarget;
             if (parentTargetSystem.EndsWith("/", StringComparison.Ordinal)) return parentTargetSystem + childTarget.TrimStart('.');
             return parentTargetSystem.TrimEnd('.') + "." + childTarget.TrimStart('.');
@@ -425,11 +422,8 @@ namespace AmbientServices
                     output.Append(Source);
                     output.Append("->");
                 }
-                if (Target != null)
-                {
-                    output.Append(Target);
-                    output.Append(':');
-                }
+                output.Append(Target);
+                output.Append(':');
             }
             if (OverallReport != null)
             {
@@ -440,11 +434,11 @@ namespace AmbientServices
     }
     class AggregatedAlert
     {
-        private static string RenderSource(string source) { return source ?? Status.DefaultSource; }
-        private static string RenderTarget(string target) { return target ?? Status.DefaultTarget; }
+        private static string RenderSource(string? source) { return source ?? Status.DefaultSource; }
+        private static string RenderTarget(string? target) { return target ?? Status.DefaultTarget; }
 
 
-        public StatusAuditAlert CommonAlert { get; private set; }
+        public StatusAuditAlert? CommonAlert { get; private set; }
         public float RatingSum { get; private set; }
         public List<string> Sources { get; private set; }
         public string Target { get; private set; }
@@ -473,7 +467,7 @@ namespace AmbientServices
             PropertyRanges = new List<StatusPropertyRange>();
         }
 
-        public AggregatedAlert(string source, string target, DateTime time, StatusAuditReport initialReport)
+        public AggregatedAlert(string? source, string? target, DateTime time, StatusAuditReport? initialReport)
         {
             StatusAuditReport report = initialReport ?? new StatusAuditReport(time, TimeSpan.Zero, null, StatusAuditAlert.None);
             CommonAlert = report.Alert;
@@ -503,7 +497,7 @@ namespace AmbientServices
             PropertyRanges = new List<StatusPropertyRange>();
         }
 
-        public void Aggregate(string source, string target, DateTime time, StatusAuditReport additionalReport)
+        public void Aggregate(string? source, string target, DateTime time, StatusAuditReport? additionalReport)
         {
             StatusAuditReport report = additionalReport ?? new StatusAuditReport(time, TimeSpan.Zero, null, StatusAuditAlert.None);
             if (CommonAlert != report.Alert) throw new InvalidOperationException("Only results with the same alert can be aggregated!");
@@ -517,9 +511,9 @@ namespace AmbientServices
             PropertyRanges = new List<StatusPropertyRange>();
         }
 
-        internal bool CanBeAggregated(string target, StatusAuditReport candidateReport)
+        internal bool CanBeAggregated(string target, StatusAuditReport? candidateReport)
         {
-            return Target == RenderTarget(target) && CommonAlert == candidateReport?.Alert;
+            return Target == RenderTarget(target) && candidateReport != null && CommonAlert == candidateReport.Alert;
         }
 
         internal string TerseSources

@@ -21,7 +21,7 @@ namespace AmbientServices
             _activeSystem = new AsyncLocal<CallContextActiveSystemData>();
         }
 
-        public void SwitchSystem(string system, string updatedPreviousSystem = null)
+        public void SwitchSystem(string? system, string? updatedPreviousSystem = null)
         {
             CallContextActiveSystemData oldSystem = _activeSystem.Value;
             // value not yet initialized? // note that this is a struct so it can't be null, so we need to initialize this to the default value for the context, which apparently just started
@@ -67,7 +67,7 @@ namespace AmbientServices
         /// Constructs a CallContextActiveSystemData with the specified system, starting right now.
         /// </summary>
         /// <param name="system">The identifier for the active system (or system group).</param>
-        public CallContextActiveSystemData(string system)
+        public CallContextActiveSystemData(string? system)
         {
             _group = system ?? "";
             StartStopwatchTimestamp = AmbientClock.Ticks;
@@ -77,7 +77,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="system">The identifier for the active system (or system group).</param>
         /// <param name="startStopwatchTimestamp">The start timestamp, which presumably originated from a previous get of <see cref="AmbientClock.Ticks"/>.</param>
-        public CallContextActiveSystemData(string system, long startStopwatchTimestamp)
+        public CallContextActiveSystemData(string? system, long startStopwatchTimestamp)
         {
             _group = system ?? "";
             StartStopwatchTimestamp = startStopwatchTimestamp;
@@ -90,7 +90,7 @@ namespace AmbientServices
     {
         private readonly IAmbientServiceProfiler _profiler;
         private readonly string _scopeName;
-        private readonly Regex _systemToGroupTransform;
+        private readonly Regex? _systemToGroupTransform;
         private readonly AsyncLocal<object> _callContextKey;
         private readonly ConcurrentDictionary<string, AmbientServiceProfilerAccumulator> _accumulatorsByGroup;
         private readonly ConcurrentDictionary<object, CallContextActiveSystemData> _activeGroupByCallContext;
@@ -100,7 +100,7 @@ namespace AmbientServices
 
         public IEnumerable<AmbientServiceProfilerAccumulator> ProfilerStatistics => _accumulatorsByGroup.Values;
 
-        public ProcessOrSingleTimeWindowServiceProfiler(IAmbientServiceProfiler metrics, string scopeName, Regex systemGroupTransform)
+        public ProcessOrSingleTimeWindowServiceProfiler(IAmbientServiceProfiler metrics, string scopeName, Regex? systemGroupTransform)
         {
             _profiler = metrics;
             _scopeName = scopeName;
@@ -110,9 +110,9 @@ namespace AmbientServices
             _callContextKey = new AsyncLocal<object>();
             _profiler.RegisterSystemSwitchedNotificationSink(this);
         }
-        internal static string GroupSystem(Regex transform, string system)
+        internal static string GroupSystem(Regex? transform, string system)
         {
-            if (transform == null || system == null) return system;
+            if (transform == null) return system;
             Match match = transform.Match(system);
             StringBuilder group = new StringBuilder();
             GroupCollection groups = match.Groups;
@@ -142,7 +142,7 @@ namespace AmbientServices
         /// <param name="newSystem">The identifier for the system that is starting to run.</param>
         /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
         /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null)
+        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null)
         {
             // assign a call context key for the current call context if we haven't assigned one yet
             if (_callContextKey.Value == null) _callContextKey.Value = new object();
@@ -219,7 +219,7 @@ namespace AmbientServices
         /// <param name="newSystem">The identifier for the system that is starting to run.</param>
         /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
         /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null)
+        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null)
         {
             foreach (IAmbientServiceProfilerNotificationSink notificationSink in _notificationSinks)
             {
@@ -242,7 +242,7 @@ namespace AmbientServices
     class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
     {
         private readonly ScopeOnSystemSwitchedDistributor _distributor;
-        private readonly Regex _systemGroupTransform;
+        private readonly Regex? _systemGroupTransform;
         private readonly string _scopeName;
         private readonly Dictionary<string, ValueTuple<long, long>> _stopwatchTicksUsedByGroup;
         private string _currentGroup;
@@ -281,7 +281,7 @@ namespace AmbientServices
         /// <param name="scopeName">The name of the call contxt being tracked.</param>
         /// <param name="systemGroupTransform">A <see cref="Regex"/> string to transform the procesor into a system group.</param>
         /// <param name="startSystem">The optional starting system.</param>
-        public CallContextServiceProfiler(ScopeOnSystemSwitchedDistributor distributor, string scopeName, Regex systemGroupTransform, string startSystem = "")
+        public CallContextServiceProfiler(ScopeOnSystemSwitchedDistributor distributor, string scopeName, Regex? systemGroupTransform, string startSystem = "")
         {
             _distributor = distributor;
             _systemGroupTransform = systemGroupTransform;
@@ -303,9 +303,9 @@ namespace AmbientServices
         /// <param name="newSystem">The identifier for the system that is starting to run.</param>
         /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
         /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null)
+        public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null)
         {
-            string justEndedGroup = (revisedOldSystem == null)
+            string? justEndedGroup = (revisedOldSystem == null)
                 ? _currentGroup
                 : ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, revisedOldSystem);
             // update the just ended group
@@ -318,7 +318,7 @@ namespace AmbientServices
             {
                 _stopwatchTicksUsedByGroup[justEndedGroup] = (values.Item1 + newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp, values.Item2 + 1);
             }
-            string newGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, newSystem);
+            string? newGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, newSystem);
             // switch to the new processor
             _currentGroup = newGroup;
             _currentGroupStartStopwatchTicks = newSystemStartStopwatchTimestamp;
@@ -362,7 +362,7 @@ namespace AmbientServices
     {
         private readonly string _scopeNamePrefix;
         private readonly AmbientEventTimer _timeWindowRotator;
-        private ProcessOrSingleTimeWindowServiceProfiler _timeWindowCallContextCollector;  // interlocked
+        private ProcessOrSingleTimeWindowServiceProfiler? _timeWindowCallContextCollector;  // interlocked
         private bool _disposedValue;
 
         /// <summary>
@@ -373,7 +373,7 @@ namespace AmbientServices
         /// <param name="windowPeriod">A <see cref="TimeSpan"/> indicating how often reports are desired.</param>
         /// <param name="onWindowComplete">An async delegate that receives a <see cref="IAmbientServiceProfile"/> at the end of each time window.</param>
         /// <param name="systemGroupTransform">A <see cref="Regex"/> string to transform the system into a system group.</param>
-        public TimeWindowServiceProfiler(IAmbientServiceProfiler metrics, string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientServiceProfile, Task> onWindowComplete, Regex systemGroupTransform)
+        public TimeWindowServiceProfiler(IAmbientServiceProfiler metrics, string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientServiceProfile, Task> onWindowComplete, Regex? systemGroupTransform)
         {
             if (onWindowComplete == null) throw new ArgumentNullException(nameof(onWindowComplete), "Time Window Collection is pointless without a completion delegate!");
             _scopeNamePrefix = scopeNamePrefix;
@@ -382,20 +382,23 @@ namespace AmbientServices
             _timeWindowRotator.Elapsed +=
                 (sender, handler) =>
                 {
-                    ProcessOrSingleTimeWindowServiceProfiler oldAccumulator = Rotate(metrics, windowPeriod, systemGroupTransform);
-                    Task t = onWindowComplete(oldAccumulator);
-                    t.Wait();
+                    ProcessOrSingleTimeWindowServiceProfiler? oldAccumulator = Rotate(metrics, windowPeriod, systemGroupTransform);
+                    if (oldAccumulator != null)
+                    {
+                        Task t = onWindowComplete(oldAccumulator);
+                        t.Wait();
+                    }
                 };
             _timeWindowRotator.AutoReset = true;
             _timeWindowRotator.Enabled = true;
         }
 
-        private ProcessOrSingleTimeWindowServiceProfiler Rotate(IAmbientServiceProfiler metrics, TimeSpan windowPeriod, Regex systemGroupTransform)
+        private ProcessOrSingleTimeWindowServiceProfiler? Rotate(IAmbientServiceProfiler metrics, TimeSpan windowPeriod, Regex? systemGroupTransform)
         {
             string windowName = WindowScope.WindowId(AmbientClock.UtcNow, windowPeriod);
             string newAccumulatorScopeName = _scopeNamePrefix + windowName + "(" + WindowScope.WindowSize(windowPeriod) + ")"; ;
             ProcessOrSingleTimeWindowServiceProfiler newAccumulator = new ProcessOrSingleTimeWindowServiceProfiler(metrics, newAccumulatorScopeName, systemGroupTransform);
-            ProcessOrSingleTimeWindowServiceProfiler oldAccumulator = System.Threading.Interlocked.Exchange(ref _timeWindowCallContextCollector, newAccumulator);
+            ProcessOrSingleTimeWindowServiceProfiler? oldAccumulator = System.Threading.Interlocked.Exchange(ref _timeWindowCallContextCollector, newAccumulator);
             if (oldAccumulator != null)
             {
                 // close out the old accumulator

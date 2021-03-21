@@ -526,11 +526,12 @@ namespace AmbientServices
         /// Gets a random value for an enum of the specified type.  All possible values should be roughly evenly distributed.  
         /// If the specified enum type is marked with <see cref="FlagsAttribute"/>, a random set of possible values are combined.
         /// </summary>
-        /// <param name="type">The type for the enum a random value is to be selected for.</param>
+        /// <param name="type">The type for the enum a random value is to be selected for.  Must be a non-null enum type.</param>
         /// <returns>A random value for that enum.</returns>
         public object NextEnum(Type type)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
+            if (!(typeof(System.Enum)).IsAssignableFrom(type)) throw new ArgumentException("The type must be an enum type!", nameof(type));
             FieldInfo[] enumValues = type.GetFields(BindingFlags.Public | BindingFlags.Static);
             // is this a flags type?
             if (type.GetCustomAttributes(typeof(FlagsAttribute), false).Length > 0)
@@ -559,13 +560,13 @@ namespace AmbientServices
                 }
                 for (int value = 0; value < values; ++value)
                 {
-                    // the optimizer seems to insert a huge amount of code here with at least one branch, despite there being no branching logic here, so I'm not sure how to get full coverage here.  perhaps it's inlining something or unwrapping one of the loops?
+                    // Coverage note: the optimizer seems to insert a huge amount of code here with at least one branch, despite there being no branching logic here, so I'm not sure how to get full coverage here.  perhaps it's inlining something or unwrapping one of the loops?
                     enumStringValue = "," + enumValues[enumValueSelectorIndex[value]].GetValue(type);
                 }
                 // have the CLR parse that value and give us a typed enum back
                 return Enum.Parse(type, enumStringValue.Substring(1));
             }
-            return enumValues[NextUInt32 % enumValues.Length].GetValue(type);
+            return enumValues[NextUInt32 % enumValues.Length].GetValue(type)!;  // enum field values better not be null!
         }
         /// <summary>
         /// Gets a random typed enum value for a specific enum type.  Values will be roughly evenly distributed across all possible values.
@@ -595,7 +596,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="obj">The object to compare to.</param>
         /// <returns>true if <paramref name="obj"/> is logically equal to this instance, false if it is not.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (!(obj is Pseudorandom)) return false;
             return Equals((Pseudorandom)obj);
@@ -605,9 +606,9 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">The Pseudorandom to compare to.</param>
         /// <returns>true if <paramref name="other"/> is logically equal to this instance, false if it is not.</returns>
-        public bool Equals(Pseudorandom other)
+        public bool Equals(Pseudorandom? other)
         {
-            if (Object.ReferenceEquals(other, null)) return false;
+            if (ReferenceEquals(other, null)) return false;
             return _seed.Equals(other._seed);
         }
         /// <summary>
@@ -616,7 +617,7 @@ namespace AmbientServices
         /// <param name="a">The first Pseudorandom to compare.</param>
         /// <param name="b">The second Pseudorandom to compare.</param>
         /// <returns>true if the Pseudorandoms are the same, otherwise false.</returns>
-        public static bool operator ==(Pseudorandom a, Pseudorandom b)
+        public static bool operator ==(Pseudorandom? a, Pseudorandom? b)
         {
             if (Object.ReferenceEquals(a, b)) return true;
             if (Object.ReferenceEquals(a, null) || Object.ReferenceEquals(b, null)) return false;
@@ -628,7 +629,7 @@ namespace AmbientServices
         /// <param name="a">The first Pseudorandom to compare.</param>
         /// <param name="b">The second Pseudorandom to compare.</param>
         /// <returns>true if the Pseudorandoms are logically not equal, otherwise false.</returns>
-        public static bool operator !=(Pseudorandom a, Pseudorandom b)
+        public static bool operator !=(Pseudorandom? a, Pseudorandom? b)
         {
             if (Object.ReferenceEquals(a, b)) return false;
             if (Object.ReferenceEquals(a, null) || Object.ReferenceEquals(b, null)) return true;

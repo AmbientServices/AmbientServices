@@ -10,14 +10,14 @@ namespace AmbientServices
     /// </summary>
     public class StatusResultsBuilder
     {
-        private string _sourceSystem;
+        private string? _sourceSystem;
         private string _targetSystem;
         private int _relativeDetailLevel;
         private StatusNatureOfSystem _natureOfSystem;
         private DateTime _auditStartTime;
         private DateTime? _nextAuditTime;
         private TimeSpan? _auditDuration;
-        private StatusAuditAlert _worstAlert;
+        private StatusAuditAlert? _worstAlert;
         private readonly List<StatusProperty> _properties = new List<StatusProperty>();
         private readonly List<StatusResultsBuilder> _children = new List<StatusResultsBuilder>();
 
@@ -86,13 +86,14 @@ namespace AmbientServices
         /// When results are gathered from a remote system, a node will be inserted indicating the system the results originated from, and that node should set the source system name.
         /// Only the last (closest) source system name in the tree will be used.
         /// </remarks>
-        public string SourceSystem
+        public string? SourceSystem
         {
             get { return _sourceSystem; }
             set { _sourceSystem = value; }
         }
         /// <summary>
-        /// Gets or sets the target system name, which identifies either a top-level system or the part of a system being audited or measured.
+        /// Gets the target system name, which identifies either a top-level system or the part of a system being audited or measured.
+        /// The target system may only be specified explicitly in the constructor, or implicilty through the <see cref="StatusChecker"/> or <see cref="StatusAuditor"/>.
         /// </summary>
         /// <remarks>
         /// Target system names are concatenated with ancestor and descendant nodes and used to aggregate errors from the same system reported by multiple sources so that they can be summarized rather than listed individually.
@@ -101,10 +102,9 @@ namespace AmbientServices
         /// Defaults to null, but should almost always be set to a non-empty string.
         /// Null should only be used to indicate that this node is not related to any specific target system, which would probably only happen if <see cref="NatureOfSystem"/> this, parent, and child nodes is such that some kind of special grouping is needed to make the overall status rating computation work correctly and the target system identifier for child nodes makes more sense without any identifier at this level.
         /// </remarks>
-        public string TargetSystem
+        public string? TargetSystem
         {
             get { return _targetSystem; }
-            set { _targetSystem = value; }
         }
         /// <summary>
         /// Gets or sets the audit start time for this node.  Defaults to the time the constuctor was called.
@@ -153,7 +153,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the worst rated <see cref="StatusAuditAlert"/> that has been reported so far.
         /// </summary>
-        public StatusAuditAlert WorstAlert
+        public StatusAuditAlert? WorstAlert
         {
             get { return _worstAlert; }
         }
@@ -173,7 +173,7 @@ namespace AmbientServices
             get
             {
                 TimeSpan duration = (_auditDuration == null) ? (AmbientClock.UtcNow - _auditStartTime) : _auditDuration.Value;
-                StatusAuditReport report = (_worstAlert == null) ? null : new StatusAuditReport(_auditStartTime, duration, _nextAuditTime, _worstAlert);
+                StatusAuditReport? report = Object.ReferenceEquals(_worstAlert, null) ? null : new StatusAuditReport(_auditStartTime, duration, _nextAuditTime, _worstAlert);
                 return (report == null)
                     ? new StatusResults(_sourceSystem, _targetSystem, _auditStartTime, _relativeDetailLevel, _properties, _natureOfSystem, _children.Select(c => c.FinalResults))
                     : new StatusResults(_sourceSystem, _targetSystem, _auditStartTime, _relativeDetailLevel, _properties, report);
@@ -193,7 +193,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="name">The name for the property.</param>
         /// <param name="value">The value for the propertiy, for which <see cref="Object.ToString()"/> will be called to convert it into a string.</param>
-        public void AddProperty<T>(string name, T value)
+        public void AddProperty<T>(string name, T value) where T : notnull
         {
             _properties.Add(StatusProperty.Create(name, value));
         }
@@ -202,7 +202,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="name">The name of the property to look for.</param>
         /// <returns>The <see cref="StatusProperty"/> that was found, or null if no status property with that name exists in the list.</returns>
-        public StatusProperty FindProperty(string name)
+        public StatusProperty? FindProperty(string name)
         {
             return _properties.Find(a => String.Equals(a.Name, name, StringComparison.Ordinal));
         }
@@ -244,7 +244,7 @@ namespace AmbientServices
             string exceptionType = ex.TypeName();
             string exceptionTerse = "[" + exceptionType + "] " + ex.Message.Replace(Environment.NewLine, Environment.NewLine + "  ", StringComparison.Ordinal);
             string exceptionDetails = HttpUtility.HtmlEncode(ex.ToFilteredString().Trim()).Replace(Environment.NewLine, "<br/>", StringComparison.Ordinal);
-            if (_worstAlert == null || rating < _worstAlert.Rating)
+            if (Object.ReferenceEquals(_worstAlert, null) || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, exceptionType, exceptionTerse, exceptionDetails);
             }
@@ -260,7 +260,7 @@ namespace AmbientServices
         {
             if (severity < 0.0) throw new ArgumentOutOfRangeException(nameof(severity), "The specified severity must be greater than or equal to zero!");
             float rating = StatusRating.Fail - severity;
-            if (_worstAlert == null || rating < _worstAlert.Rating)
+            if (Object.ReferenceEquals(_worstAlert, null) || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             }
@@ -276,7 +276,7 @@ namespace AmbientServices
         {
             if (severity < 0.0 || severity >= 1.0) throw new ArgumentOutOfRangeException(nameof(severity), "The specified severity must be less than one and greater than or equal to zero!");
             float rating = StatusRating.Alert - severity;
-            if (_worstAlert == null || rating < _worstAlert.Rating)
+            if (Object.ReferenceEquals(_worstAlert, null) || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             }
@@ -292,7 +292,7 @@ namespace AmbientServices
         {
             if (severity >= 1.0) throw new ArgumentOutOfRangeException(nameof(severity), "The specified severity must less than one!");
             float rating = StatusRating.Okay - severity;
-            if (_worstAlert == null || rating < _worstAlert.Rating)
+            if (Object.ReferenceEquals(_worstAlert, null) || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             }
@@ -306,7 +306,7 @@ namespace AmbientServices
         public void AddSuperlative(string auditAlertCode, string terse, string details)
         {
             float rating = StatusRating.Superlative;
-            if (_worstAlert == null)
+            if (Object.ReferenceEquals(_worstAlert, null))
             {
                 _worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             }

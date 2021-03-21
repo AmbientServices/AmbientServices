@@ -19,6 +19,14 @@ namespace AmbientServices.Test
             string prop = property.ToString();
             Assert.IsTrue(prop.Contains("Property"));
             Assert.IsTrue(prop.Contains("Value"));
+            Assert.AreEqual("<null>", StatusProperty.Create("TestNullToString", new NullToString()).Value);
+        }
+        class NullToString
+        {
+            public override string ToString()
+            {
+                return null;
+            }
         }
         [TestMethod]
         public void StatusResults()
@@ -44,7 +52,7 @@ namespace AmbientServices.Test
             results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
             Assert.IsNull(results.SourceSystem);
             Assert.AreEqual("Localhost", results.SourceSystemDisplayName);
-            Assert.IsNull(results.TargetSystem);
+            Assert.AreEqual("", results.TargetSystem);
             Assert.AreEqual("Unknown Target", results.TargetSystemDisplayName);
             Assert.IsTrue(results.ToString().Length == 0);
 

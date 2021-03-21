@@ -21,9 +21,9 @@ namespace AmbientServices
 
         public IDictionary<string, IAmbientStatisticReader> Statistics => _statistics;
 
-        public IAmbientStatisticReader ReadStatistic(string id)
+        public IAmbientStatisticReader? ReadStatistic(string id)
         {
-            IAmbientStatisticReader statistic;
+            IAmbientStatisticReader? statistic;
             if (_statistics.TryGetValue(id, out statistic)) return statistic;
             return null;
         }
@@ -37,7 +37,7 @@ namespace AmbientServices
             , MissingSampleHandling missingSampleHandling = MissingSampleHandling.LinearEstimation
             )
         {
-            IAmbientStatistic statistic = null;
+            IAmbientStatistic? statistic;
             if (resetIfAlreadyExists)
             {
                 statistic = new Statistic(() => _statistics.TryRemove(id, out _), timeBased, id, description, initialValue, temporalAggregationTypes, spatialAggregationTypes, preferredTemporalAggregationType, preferredSpatialAggregationType, missingSampleHandling);
@@ -46,7 +46,8 @@ namespace AmbientServices
             else
             {
                 statistic = new Statistic(() => _statistics.TryRemove(id, out _), timeBased, id, description, initialValue, temporalAggregationTypes, spatialAggregationTypes, preferredTemporalAggregationType, preferredSpatialAggregationType, missingSampleHandling);
-                statistic = _statistics.GetOrAdd(id, statistic) as IAmbientStatistic;
+                statistic = _statistics.GetOrAdd(id, statistic) as IAmbientStatistic;   // this *could* return something that is only an IAmbientStatisticReader!
+                if (statistic == null) throw new InvalidOperationException("The specified statistic identifier is already in use by a read-only statistic!");
             }
             return statistic;
         }

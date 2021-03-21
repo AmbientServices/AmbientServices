@@ -122,37 +122,42 @@ namespace AmbientServices.Test
             using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerBasic)))
             {
                 _ServiceProfiler.Local?.SwitchSystem("ServiceProfilerBasic1");
-                Assert.AreEqual(nameof(ServiceProfilerBasic), processProfile.ScopeName);
-                foreach (AmbientServiceProfilerAccumulator stats in processProfile.ProfilerStatistics)
+                Assert.AreEqual(nameof(ServiceProfilerBasic), processProfile?.ScopeName);
+                if (processProfile != null)
                 {
-                    if (string.IsNullOrEmpty(stats.Group))
+                    foreach (AmbientServiceProfilerAccumulator stats in processProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
-                    }
-                    else
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        if (string.IsNullOrEmpty(stats.Group))
+                        {
+                            Assert.AreEqual("", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        }
+                        else
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        }
                     }
                 }
-
-                Assert.AreEqual(nameof(ServiceProfilerBasic), scopeProfile.ScopeName);
-                foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
+                Assert.AreEqual(nameof(ServiceProfilerBasic), scopeProfile?.ScopeName);
+                if (scopeProfile != null)
                 {
-                    if (string.IsNullOrEmpty(stats.Group))
+                    foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
-                    }
-                    else
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        if (string.IsNullOrEmpty(stats.Group))
+                        {
+                            Assert.AreEqual("", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        }
+                        else
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        }
                     }
                 }
 
@@ -164,25 +169,28 @@ namespace AmbientServices.Test
 
                 _ServiceProfiler.Local?.SwitchSystem("ServiceProfilerBasic2");
 
-                foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
+                if (scopeProfile != null)
                 {
-                    if (string.IsNullOrEmpty(stats.Group))
+                    foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("", stats.Group);
-                        Assert.AreEqual(2, stats.ExecutionCount);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(113), stats.TimeUsed);
-                    }
-                    else if (stats.Group.EndsWith("1"))
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(100), stats.TimeUsed);
-                    }
-                    else if (stats.Group.EndsWith("2"))
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic2", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(0), stats.TimeUsed);
+                        if (string.IsNullOrEmpty(stats.Group))
+                        {
+                            Assert.AreEqual("", stats.Group);
+                            Assert.AreEqual(2, stats.ExecutionCount);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(113), stats.TimeUsed);
+                        }
+                        else if (stats.Group.EndsWith("1"))
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(100), stats.TimeUsed);
+                        }
+                        else if (stats.Group.EndsWith("2"))
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic2", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(0), stats.TimeUsed);
+                        }
                     }
                 }
 
@@ -194,31 +202,34 @@ namespace AmbientServices.Test
 
                 _ServiceProfiler.Local?.SwitchSystem("ServiceProfilerBasic3");
 
-                foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
+                if (scopeProfile != null)
                 {
-                    if (string.IsNullOrEmpty(stats.Group))
+                    foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("", stats.Group);
-                        Assert.AreEqual(3, stats.ExecutionCount);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(226), stats.TimeUsed);
-                    }
-                    else if (stats.Group.EndsWith("1"))
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(100), stats.TimeUsed);
-                    }
-                    else if (stats.Group.EndsWith("2"))
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic2", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(100), stats.TimeUsed);
-                    }
-                    else if (stats.Group.EndsWith("3"))
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic3", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(0), stats.TimeUsed);
+                        if (string.IsNullOrEmpty(stats.Group))
+                        {
+                            Assert.AreEqual("", stats.Group);
+                            Assert.AreEqual(3, stats.ExecutionCount);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(226), stats.TimeUsed);
+                        }
+                        else if (stats.Group.EndsWith("1"))
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(100), stats.TimeUsed);
+                        }
+                        else if (stats.Group.EndsWith("2"))
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic2", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(100), stats.TimeUsed);
+                        }
+                        else if (stats.Group.EndsWith("3"))
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic3", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(0), stats.TimeUsed);
+                        }
                     }
                 }
 
@@ -266,7 +277,7 @@ namespace AmbientServices.Test
                 Assert.ThrowsException<ArgumentNullException>(
                     () =>
                     {
-                        using (IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerNull), TimeSpan.FromMilliseconds(100), null))
+                        using (IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerNull), TimeSpan.FromMilliseconds(100), null!))
                         {
                         }
                     });
@@ -306,25 +317,28 @@ namespace AmbientServices.Test
                 _ServiceProfiler.Local?.SwitchSystem(system1);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(5));
 
-                foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
+                if (scopeProfile != null)
                 {
-                    if (stats.Group.StartsWith("DynamoDB"))
+                    foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
-                        Assert.AreEqual(2, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("S3"))
-                    {
-                        Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("SQL"))
-                    {
-                        Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
+                        if (stats.Group.StartsWith("DynamoDB"))
+                        {
+                            Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
+                            Assert.AreEqual(2, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("S3"))
+                        {
+                            Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("SQL"))
+                        {
+                            Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
                     }
                 }
             }
@@ -357,25 +371,28 @@ namespace AmbientServices.Test
 
                 _ServiceProfiler.Local?.SwitchSystem("noreport");
 
-                foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
+                if (scopeProfile != null)
                 {
-                    if (stats.Group.StartsWith("DynamoDB"))
+                    foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
-                        Assert.AreEqual(2, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("S3"))
-                    {
-                        Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("SQL"))
-                    {
-                        Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
+                        if (stats.Group.StartsWith("DynamoDB"))
+                        {
+                            Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
+                            Assert.AreEqual(2, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("S3"))
+                        {
+                            Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("SQL"))
+                        {
+                            Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
                     }
                 }
             }
@@ -410,68 +427,77 @@ namespace AmbientServices.Test
 
                 _ServiceProfiler.Local?.SwitchSystem("noreport");
 
-                foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
+                if (scopeProfile != null)
                 {
-                    if (stats.Group.StartsWith("DynamoDB"))
+                    foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
-                        Assert.AreEqual(2, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("S3"))
-                    {
-                        Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("SQL"))
-                    {
-                        Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
+                        if (stats.Group.StartsWith("DynamoDB"))
+                        {
+                            Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
+                            Assert.AreEqual(2, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("S3"))
+                        {
+                            Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("SQL"))
+                        {
+                            Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
                     }
                 }
-                foreach (AmbientServiceProfilerAccumulator stats in processProfile.ProfilerStatistics)
+                if (processProfile != null)
                 {
-                    if (stats.Group.StartsWith("DynamoDB"))
+                    foreach (AmbientServiceProfilerAccumulator stats in processProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
-                        Assert.AreEqual(2, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("S3"))
-                    {
-                        Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("SQL"))
-                    {
-                        Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
+                        if (stats.Group.StartsWith("DynamoDB"))
+                        {
+                            Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
+                            Assert.AreEqual(2, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("S3"))
+                        {
+                            Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("SQL"))
+                        {
+                            Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
                     }
                 }
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(10000));
-                foreach (AmbientServiceProfilerAccumulator stats in timeWindowProfile.ProfilerStatistics)
+                if (timeWindowProfile != null)
                 {
-                    if (stats.Group.StartsWith("DynamoDB"))
+                    foreach (AmbientServiceProfilerAccumulator stats in timeWindowProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
-                        Assert.AreEqual(2, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("S3"))
-                    {
-                        Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                    }
-                    else if (stats.Group.StartsWith("SQL"))
-                    {
-                        Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
-                        Assert.AreEqual(1, stats.ExecutionCount);
+                        if (stats.Group.StartsWith("DynamoDB"))
+                        {
+                            Assert.AreEqual("DynamoDB/Result:Success", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(10), stats.TimeUsed);
+                            Assert.AreEqual(2, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("S3"))
+                        {
+                            Assert.AreEqual("S3/Bucket:My-bucket/Result:Retry", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
+                        else if (stats.Group.StartsWith("SQL"))
+                        {
+                            Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
+                            Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                        }
                     }
                 }
             }

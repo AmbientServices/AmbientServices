@@ -566,64 +566,71 @@ namespace AmbientServices.Test
         public void DefaultPropertyThresholdsProperty()
         {
             DefaultPropertyThresholdsAttribute property;
-            property = typeof(DefaultPropertyThresholdsAttributeDeferSource).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
+            property = (typeof(DefaultPropertyThresholdsAttributeDeferSource).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute)!;
             Assert.AreEqual("PropertyPathDeferSource", property.PropertyPath);
             Assert.AreEqual(typeof(DefaultPropertyThresholdsAttributeTestDeferTarget), property.DeferToType);
             Assert.IsNull(property.Thresholds);
 
-            property = typeof(DefaultPropertyThresholdsAttributeTestDeferTarget).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
+            property = (typeof(DefaultPropertyThresholdsAttributeTestDeferTarget).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute)!;
             Assert.AreEqual("PropertyPathDeferTarget", property.PropertyPath);
             Assert.IsNull(property.DeferToType);
-            Assert.AreEqual(1.0f, property.Thresholds.FailVsAlertThreshold);
-            Assert.AreEqual(2.0f, property.Thresholds.AlertVsOkayThreshold);
-            Assert.AreEqual(3.0f, property.Thresholds.OkayVsSuperlativeThreshold);
-            Assert.AreEqual(StatusThresholdNature.HighIsGood, property.Thresholds.Nature);
-            Assert.AreEqual(1.0f, property.FailureThreshold);
-            Assert.AreEqual(2.0f, property.AlertThreshold);
-            Assert.AreEqual(3.0f, property.OkayThreshold);
+            Assert.AreEqual(1.0f, property.Thresholds?.FailVsAlertThreshold);
+            Assert.AreEqual(2.0f, property.Thresholds?.AlertVsOkayThreshold);
+            Assert.AreEqual(3.0f, property.Thresholds?.OkayVsSuperlativeThreshold);
+            Assert.AreEqual(StatusThresholdNature.HighIsGood, property.Thresholds?.Nature);
+            Assert.AreEqual(1.0f, property.FailVsAlertThreshold);
+            Assert.AreEqual(2.0f, property.AlertVsOkayThreshold);
+            Assert.AreEqual(3.0f, property.OkayVsSuperlativeThreshold);
             Assert.AreEqual(StatusThresholdNature.HighIsGood, property.ThresholdNature);
 
-            property = typeof(DefaultPropertyThresholdsAttributeTestNoFailure).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
+            property = (typeof(DefaultPropertyThresholdsAttributeTestNoFailure).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute)!;
             Assert.AreEqual("PropertyPathNoFailure", property.PropertyPath);
             Assert.IsNull(property.DeferToType);
-            Assert.IsNull(property.Thresholds.FailVsAlertThreshold);
-            Assert.AreEqual(2.0f, property.Thresholds.AlertVsOkayThreshold);
-            Assert.AreEqual(1.0f, property.Thresholds.OkayVsSuperlativeThreshold);
-            Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds.Nature);
-            Assert.IsTrue(float.IsNaN(property.FailureThreshold));
-            Assert.AreEqual(2.0f, property.AlertThreshold);
-            Assert.AreEqual(1.0f, property.OkayThreshold);
+            Assert.IsNull(property.Thresholds?.FailVsAlertThreshold);
+            Assert.AreEqual(2.0f, property.Thresholds?.AlertVsOkayThreshold);
+            Assert.AreEqual(1.0f, property.Thresholds?.OkayVsSuperlativeThreshold);
+            Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds?.Nature);
+            Assert.IsTrue(float.IsNaN(property.FailVsAlertThreshold));
+            Assert.AreEqual(2.0f, property.AlertVsOkayThreshold);
+            Assert.AreEqual(1.0f, property.OkayVsSuperlativeThreshold);
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.ThresholdNature);
 
-            property = typeof(DefaultPropertyThresholdsAttributeTestNoAlert).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
+            property = (typeof(DefaultPropertyThresholdsAttributeTestNoAlert).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute)!;
             Assert.AreEqual("PropertyPathNoAlert", property.PropertyPath);
             Assert.IsNull(property.DeferToType);
-            Assert.AreEqual(3.0f, property.Thresholds.FailVsAlertThreshold);
-            Assert.IsNull(property.Thresholds.AlertVsOkayThreshold);
-            Assert.AreEqual(1.0f, property.Thresholds.OkayVsSuperlativeThreshold);
-            Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds.Nature);
-            Assert.AreEqual(3.0f, property.FailureThreshold);
-            Assert.IsTrue(float.IsNaN(property.AlertThreshold));
-            Assert.AreEqual(1.0f, property.OkayThreshold);
+            Assert.AreEqual(3.0f, property.Thresholds?.FailVsAlertThreshold);
+            Assert.IsNull(property.Thresholds?.AlertVsOkayThreshold);
+            Assert.AreEqual(1.0f, property.Thresholds?.OkayVsSuperlativeThreshold);
+            Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds?.Nature);
+            Assert.AreEqual(3.0f, property.FailVsAlertThreshold);
+            Assert.IsTrue(float.IsNaN(property.AlertVsOkayThreshold));
+            Assert.AreEqual(1.0f, property.OkayVsSuperlativeThreshold);
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.ThresholdNature);
 
-            property = typeof(DefaultPropertyThresholdsAttributeTestNoOkay).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
+            property = (typeof(DefaultPropertyThresholdsAttributeTestNoOkay).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute)!;
             Assert.AreEqual("PropertyPathNoOkay", property.PropertyPath);
             Assert.IsNull(property.DeferToType);
-            Assert.AreEqual(3.0f, property.Thresholds.FailVsAlertThreshold);
-            Assert.AreEqual(2.0f, property.Thresholds.AlertVsOkayThreshold);
-            Assert.IsNull(property.Thresholds.OkayVsSuperlativeThreshold);
-            Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds.Nature);
-            Assert.AreEqual(3.0f, property.FailureThreshold);
-            Assert.AreEqual(2.0f, property.AlertThreshold);
-            Assert.IsTrue(float.IsNaN(property.OkayThreshold));
+            Assert.AreEqual(3.0f, property.Thresholds?.FailVsAlertThreshold);
+            Assert.AreEqual(2.0f, property.Thresholds?.AlertVsOkayThreshold);
+            Assert.IsNull(property.Thresholds?.OkayVsSuperlativeThreshold);
+            Assert.AreEqual(StatusThresholdNature.LowIsGood, property.Thresholds?.Nature);
+            Assert.AreEqual(3.0f, property.FailVsAlertThreshold);
+            Assert.AreEqual(2.0f, property.AlertVsOkayThreshold);
+            Assert.IsTrue(float.IsNaN(property.OkayVsSuperlativeThreshold));
             Assert.AreEqual(StatusThresholdNature.LowIsGood, property.ThresholdNature);
 
-            property = typeof(DefaultPropertyThresholdsAttributeTestNoThreshold).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute;
+            property = (typeof(DefaultPropertyThresholdsAttributeTestNoThreshold).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute)!;
             Assert.AreEqual("PropertyPathNoThreshold", property.PropertyPath);
-            Assert.IsNull(property.Thresholds.FailVsAlertThreshold);
-            Assert.IsNull(property.Thresholds.AlertVsOkayThreshold);
-            Assert.IsNull(property.Thresholds.OkayVsSuperlativeThreshold);
+            Assert.IsNull(property.Thresholds?.FailVsAlertThreshold);
+            Assert.IsNull(property.Thresholds?.AlertVsOkayThreshold);
+            Assert.IsNull(property.Thresholds?.OkayVsSuperlativeThreshold);
+
+            property = (typeof(DefaultPropertyThresholdsAttributeTestNullThresholds).GetCustomAttributes(typeof(DefaultPropertyThresholdsAttribute), false)[0] as DefaultPropertyThresholdsAttribute)!;
+            Assert.AreEqual("PropertyPathNullThresholds", property.PropertyPath);
+            Assert.IsTrue(float.IsNaN(property.FailVsAlertThreshold));
+            Assert.IsTrue(float.IsNaN(property.AlertVsOkayThreshold));
+            Assert.IsTrue(float.IsNaN(property.OkayVsSuperlativeThreshold));
+            Assert.AreEqual(StatusThresholdNature.HighIsGood, property.ThresholdNature);
         }
         [TestMethod]
         public void DefaultStatusThresholdsClass()
@@ -649,9 +656,9 @@ namespace AmbientServices.Test
             //class SampleVolumeAuditor
 
             IStatusThresholdsRegistry defaultThresholds = StatusPropertyThresholds.DefaultPropertyThresholds;
-            Assert.AreEqual(1.0f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").FailVsAlertThreshold);
-            Assert.AreEqual(2.5f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").AlertVsOkayThreshold);
-            Assert.AreEqual(5.0f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent").OkayVsSuperlativeThreshold);
+            Assert.AreEqual(1.0f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent")?.FailVsAlertThreshold);
+            Assert.AreEqual(2.5f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent")?.AlertVsOkayThreshold);
+            Assert.AreEqual(5.0f, defaultThresholds.GetThresholds("SampleDisk.Temp.AvailablePercent")?.OkayVsSuperlativeThreshold);
         }
     }
     [DefaultPropertyThresholds("PropertyPathDeferSource", typeof(DefaultPropertyThresholdsAttributeTestDeferTarget))]
@@ -676,6 +683,10 @@ namespace AmbientServices.Test
     }
     [DefaultPropertyThresholds("PropertyPathNoThreshold")]
     class DefaultPropertyThresholdsAttributeTestNoThreshold
+    {
+    }
+    [DefaultPropertyThresholds("PropertyPathNullThresholds", typeof(int))]
+    class DefaultPropertyThresholdsAttributeTestNullThresholds
     {
     }
 }

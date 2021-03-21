@@ -17,6 +17,7 @@ namespace AmbientServices.Test
             ConcurrentHashSet<int> playSet = new ConcurrentHashSet<int>();
             ConcurrentHashSet<int> smallSet = new ConcurrentHashSet<int>(new int[] { 0, 1 });
             ConcurrentHashSet<int> bigSet = new ConcurrentHashSet<int>(new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, EqualityComparer<int>.Default);
+            ConcurrentHashSet<int> nullSet = null;
             Assert.AreEqual(EqualityComparer<int>.Default, bigSet.Comparer);
             Assert.IsFalse(string.IsNullOrEmpty(smallSet.ToString()));
             Assert.IsTrue(smallSet.IsProperSubsetOf(bigSet));
@@ -50,6 +51,9 @@ namespace AmbientServices.Test
             Assert.IsTrue(setComparer.Equals(smallSet, playSet));
             Assert.IsFalse(setComparer.Equals(bigSet, playSet));
             Assert.AreEqual(setComparer.GetHashCode(smallSet), setComparer.GetHashCode(playSet));
+            Assert.IsTrue(setComparer.Equals(smallSet, smallSet));
+            Assert.IsFalse(setComparer.Equals(smallSet, nullSet));
+            Assert.IsFalse(setComparer.Equals(nullSet, smallSet));
             Assert.IsFalse(smallSet.IsReadOnly);
 
             Assert.IsTrue(smallSet.Overlaps(bigSet));

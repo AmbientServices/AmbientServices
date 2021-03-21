@@ -39,7 +39,7 @@ namespace AmbientServices
         internal static IEnumerable<Type> TypesFromException(ReflectionTypeLoadException ex)
         {
             if (ex == null) throw new ArgumentNullException(nameof(ex));
-            return ex.Types.Where(t => t != null);
+            return ex.Types.Where(t => t != null)!; // the where condition filters out null values!
         }
         /// <summary>
         /// Checks to see if this assembly refers to the specified assembly.

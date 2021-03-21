@@ -64,7 +64,7 @@ namespace AmbientServices
         /// <summary>
         /// The singleton call-context-local service reference (non-singleton reference can be used for unit testing).
         /// </summary>
-        private AsyncLocal<LocalServiceReference<T>> _localReference = new AsyncLocal<LocalServiceReference<T>>();
+        private AsyncLocal<LocalServiceReference<T>?> _localReference = new AsyncLocal<LocalServiceReference<T>?>();
         /// <summary>
         /// The global service reference.
         /// </summary>
@@ -83,7 +83,7 @@ namespace AmbientServices
         {
             get
             {
-                LocalServiceReference<T> ret = _localReference.Value;
+                LocalServiceReference<T>? ret = _localReference.Value;
                 if (ret == null) ret = _localReference.Value = new LocalServiceReference<T>();    // initialize if needed
                 return ret;
             }
@@ -110,7 +110,7 @@ namespace AmbientServices
         /// When setting the service, overwrites any previous implementation and raises the <see cref="GlobalChanged"/> event either on this thread or another thread asynchronously.
         /// Thread-safe.
         /// </summary>
-        public T Global
+        public T? Global
         {
             get
             {
@@ -127,7 +127,7 @@ namespace AmbientServices
         /// Otherwise sets to the specified implementation.
         /// Thread-safe.
         /// </summary>
-        public T Override
+        public T? Override
         {
             get
             {
@@ -144,7 +144,7 @@ namespace AmbientServices
         /// Otherwise sets the local override to the specified implementation.
         /// Thread-safe.
         /// </summary>
-        public T Local
+        public T? Local
         {
             get
             {
@@ -194,14 +194,14 @@ namespace AmbientServices
     {
         private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
 
-        private T _oldGlobalService;
-        private T _oldLocalServiceOverride;
+        private T? _oldGlobalService;
+        private T? _oldLocalServiceOverride;
 
         /// <summary>
         /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
         /// </summary>
         /// <param name="temporaryLocalService">The service to temporarily use in this call context.</param>
-        public ScopedLocalServiceOverride(T temporaryLocalService)
+        public ScopedLocalServiceOverride(T? temporaryLocalService)
         {
             _oldGlobalService = _Reference.Global;
             _oldLocalServiceOverride = _Reference.Override;
@@ -210,11 +210,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the old local override in case it is needed by the overriding implementation.
         /// </summary>
-        public T OldOverride { get { return _oldLocalServiceOverride; } }
+        public T? OldOverride { get { return _oldLocalServiceOverride; } }
         /// <summary>
         /// Gets the old global implementation in case it is needed by the overriding implementation.
         /// </summary>
-        public T OldGlobal { get { return _oldGlobalService; } }
+        public T? OldGlobal { get { return _oldGlobalService; } }
 
         #region IDisposable Support
         private bool _disposed; // To detect redundant calls
@@ -250,7 +250,8 @@ namespace AmbientServices
         private static T _ImplementationSingleton = CreateInstance();
         private static T CreateInstance()
         {
-            ConstructorInfo ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            ConstructorInfo? ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            if (ci == null) throw new InvalidOperationException("The type must have a default constructor!");
             return (T)ci.Invoke(Array.Empty<object>());
         }
         public static T GetImplementation() { return _ImplementationSingleton; }
@@ -269,29 +270,29 @@ namespace AmbientServices
         /// <summary>
         /// A reference to the current service implementation.  Null if not yet initialized.  <see cref="SuppressedService"/> if the service has been explicitly suppressed.
         /// </summary>
-        private object _service;
+        private object? _service;
 
         internal GlobalServiceReference()
         {
             _service = DefaultImplementation();
         }
         // this is only internal instead of private in order to diagnose issues in test cases
-        internal static T DefaultImplementation()
+        internal static T? DefaultImplementation()
         {
-            Type impType = DefaultAmbientServices.TryFind(typeof(T));
+            Type? impType = DefaultAmbientServices.TryFind(typeof(T));
             if (impType == null) return null;       // there is no default implementation (yet)
             Type type = typeof(DefaultServiceImplementation<>).MakeGenericType(impType);
-            MethodInfo mi = type.GetMethod(nameof(DefaultServiceImplementation<T>.GetImplementation));
-            T implementation = (T)mi.Invoke(null, Array.Empty<object>());
+            MethodInfo mi = type.GetMethod(nameof(DefaultServiceImplementation<T>.GetImplementation))!; // DefaultServiceImplementation<T> has a public GetImplementation method, so this should always succeed
+            T implementation = (T)mi.Invoke(null, Array.Empty<object>())!;  // DefaultServiceImplementation<T> returns a non-null T
             return implementation;
         }
         // this is only internal instead of private in order to diagnose issues in test cases
-        internal T LateAssignedDefaultServiceImplementation()
+        internal T? LateAssignedDefaultServiceImplementation()
         {
-            T newDefaultImplementation = DefaultImplementation();
+            T? newDefaultImplementation = DefaultImplementation();
             // still no default implementation registered?  try again later
             if (newDefaultImplementation == null) return null;
-            T oldDefaultImplementation = System.Threading.Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) as T;
+            T? oldDefaultImplementation = System.Threading.Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) as T;
             // we should almost always get a null back here, but it's theoretically possible if two attempts to retrieve the implementation happen at the same time, but even in this case, the only way we would get back instances of different types would be if the default ambient service changed, which shouldn't be possible given the current implementation
             // as a result, the non-null case below is unlikely to get covered by tests
             return (oldDefaultImplementation == null)
@@ -305,7 +306,7 @@ namespace AmbientServices
         /// When setting the service, overwrites any previous service and raises the <see cref="ServiceChanged"/> event.
         /// Thread-safe.
         /// </summary>
-        public T Service
+        public T? Service
         {
             get
             {
@@ -313,7 +314,7 @@ namespace AmbientServices
             }
             set
             {
-                T oldImplementation = System.Threading.Interlocked.Exchange(ref _service, value ?? SuppressedService) as T;
+                T? oldImplementation = System.Threading.Interlocked.Exchange(ref _service, value ?? SuppressedService) as T;
                 ServiceChanged?.Invoke(typeof(LocalServiceReference<T>), EventArgs.Empty);
             }
         }
@@ -331,7 +332,7 @@ namespace AmbientServices
         /// This way if multiple changes happen, they will always end up with the latest value.
         /// Subscribers must take care to avoid race conditions that may be caused by such out-of-order notifications.
         /// </remarks>
-        public event EventHandler<EventArgs> ServiceChanged;
+        public event EventHandler<EventArgs>? ServiceChanged;
     }
     /// <summary>
     /// A class that manages a call-context-local service reference.
@@ -347,13 +348,13 @@ namespace AmbientServices
         /// <summary>
         /// The call-context-local override.
         /// </summary>
-        private object _localOverride;
+        private object? _localOverride;
 
         internal LocalServiceReference()
         {
             _localOverride = null;
         }
-        internal object RawOverride
+        internal object? RawOverride
         {
             get
             {
@@ -369,7 +370,7 @@ namespace AmbientServices
         /// If set to null, suppresses the default implementation (so that the getter returns null).
         /// Thread-safe.
         /// </summary>
-        public T Service
+        public T? Service
         {
             // this isn't currently needed, but if it is, just uncomment this code
             //get

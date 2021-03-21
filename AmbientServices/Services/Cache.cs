@@ -20,7 +20,7 @@ namespace AmbientServices
         /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some implementations may ignore this value.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// <returns>The cached object, or null if it was not found in the cache.</returns>
-        Task<T> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class;
+        Task<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class;
         /// <summary>
         /// Stores the specified item in the cache.
         /// </summary>

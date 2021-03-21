@@ -65,10 +65,10 @@ namespace AmbientServices.Test
                     Assert.AreEqual("Zero Auto Test", _ZeroAutoBottleneck.Description);
                     Assert.AreEqual("TestBottleneckDetector-ZeroAutoTest1", _ZeroAutoBottleneck.ToString());
                 }
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck?.Bottleneck);
 
                 Assert.AreEqual(_ZeroAutoBottleneck, collector.ProcessAnalyzer.GetMostUtilizedBottlenecks(10).First().Bottleneck);
                 Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.GetMostUtilizedBottlenecks(10).First().Bottleneck);
@@ -89,13 +89,13 @@ namespace AmbientServices.Test
             {
                 using (ProcessBottleneckSurveyor surveyor = new ProcessBottleneckSurveyor(null, _BottleneckDetector.Local, null, null))
                 {
-                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
+                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
                 }
                 using (ThreadSurveyManager threadManager = new ThreadSurveyManager(_BottleneckDetector.Local))
                 {
                     using (ThreadBottleneckSurveyor surveyor = threadManager.CreateThreadSurveyor(null, null, null))
                     {
-                        Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
+                        Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
                     }
                 }
                 using (ThreadSurveyManager threadManager = new ThreadSurveyManager(null))
@@ -105,17 +105,17 @@ namespace AmbientServices.Test
                 {
                     Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
                 }
-                using (TimeWindowSurveyManager timeWindowManager = new TimeWindowSurveyManager(TimeSpan.FromSeconds(1), null, _BottleneckDetector.Local, null, null))
+                using (TimeWindowSurveyManager timeWindowManager = new TimeWindowSurveyManager(TimeSpan.FromSeconds(1), a => Task.CompletedTask, _BottleneckDetector.Local, null, null))
                 {
-                    Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckEntered(null));
-                    Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckExited(null));
+                    Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckEntered(null!));
+                    Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckExited(null!));
 
                     TimeWindowBottleneckSurvey surveyor = new TimeWindowBottleneckSurvey(null, null, 0, TimeSpan.FromSeconds(1));
-                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckEntered(null));
-                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
+                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckEntered(null!));
+                    Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
                 }
 
-                            BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
+                BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
                 AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new AmbientBottleneck("BottleneckDetectorAccessRecordCombine-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test1", 1000, TimeSpan.FromSeconds(1));
                 AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new AmbientBottleneck("BottleneckDetectorAccessRecordCombine-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test2", 2000, TimeSpan.FromSeconds(1));
                 DateTime start = AmbientClock.UtcNow;
@@ -125,10 +125,21 @@ namespace AmbientServices.Test
                 Assert.ThrowsException<ArgumentNullException>(
                     () =>
                     {
-                        using (surveyorCoordinator.CreateTimeWindowSurveyor(TimeSpan.FromMilliseconds(100), null))
+                        using (surveyorCoordinator.CreateTimeWindowSurveyor(TimeSpan.FromMilliseconds(100), null!))
                         {
                         }
                     });
+            }
+        }
+        [TestMethod]
+        public void TimeWindowSurveyManagerNoDetector()
+        {
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(null))
+            using (AmbientClock.Pause())
+            {
+                using (TimeWindowSurveyManager timeWindowManager = new TimeWindowSurveyManager(TimeSpan.FromSeconds(1), a => Task.CompletedTask, null, null, null))
+                {
+                }
             }
         }
         [TestMethod]
@@ -142,12 +153,12 @@ namespace AmbientServices.Test
                 try
                 {
                     DateTime start = AmbientClock.UtcNow;
-                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null, BottleneckDetectorAccessRecordPropertiesBottleneck, start));
-                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null, start));
-                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null, BottleneckDetectorAccessRecordPropertiesBottleneck, 0));
-                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null, 0));
-                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null, BottleneckDetectorAccessRecordPropertiesBottleneck, 0, 0, 0, 0.0));
-                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null, 0, 0, 0, 0.0));
+                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, start));
+                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, start));
+                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, 0));
+                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0));
+                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, 0, 0, 0, 0.0));
+                    Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0, 0, 0, 0.0));
                     AmbientBottleneckAccessor r = new AmbientBottleneckAccessor(bd, BottleneckDetectorAccessRecordPropertiesBottleneck, start);
                     Assert.ThrowsException<InvalidOperationException>(() => r.SetUsage(0, 0));
                     Assert.ThrowsException<InvalidOperationException>(() => r.AddUsage(0, 0));
@@ -177,10 +188,10 @@ namespace AmbientServices.Test
                     Assert.AreEqual("Zero Auto Test", _ZeroAutoBottleneck.Description);
                     Assert.AreEqual("TestBottleneckDetector-ZeroAutoTest1", _ZeroAutoBottleneck.ToString());
                 }
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck?.Bottleneck);
 
                 Assert.AreEqual(_ZeroAutoBottleneck, collector.ProcessAnalyzer.GetMostUtilizedBottlenecks(10).First().Bottleneck);
                 Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.GetMostUtilizedBottlenecks(10).First().Bottleneck);
@@ -205,10 +216,10 @@ namespace AmbientServices.Test
                     Assert.AreEqual("Linear Auto Test", _LinearAutoBottleneck.Description);
                     Assert.AreEqual("TestBottleneckDetector-LinearAutoTest1", _LinearAutoBottleneck.ToString());
                 }
-                Assert.AreEqual(_LinearAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_LinearAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_LinearAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_LinearAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck.Bottleneck);
+                Assert.AreEqual(_LinearAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_LinearAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_LinearAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_LinearAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck?.Bottleneck);
             }
         }
         [TestMethod]
@@ -230,10 +241,10 @@ namespace AmbientServices.Test
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                 }
                 // zero should be the only one that gets through the filters
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ZeroAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ZeroAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck?.Bottleneck);
                 Assert.AreEqual(1, collector.ProcessAnalyzer.GetMostUtilizedBottlenecks(10).Count());
                 Assert.AreEqual(1, collector.ThreadAnalyzer.GetMostUtilizedBottlenecks(10).Count());
                 Assert.AreEqual(1, collector.ScopeAnalyzer.GetMostUtilizedBottlenecks(10).Count());
@@ -253,10 +264,10 @@ namespace AmbientServices.Test
                     Assert.AreEqual("Exponential Auto Test", _ExponentialAutoBottleneck.Description);
                     Assert.AreEqual("TestBottleneckDetector-ExponentialAutoTest1", _ExponentialAutoBottleneck.ToString());
                 }
-                Assert.AreEqual(_ExponentialAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ExponentialAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ExponentialAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_ExponentialAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck.Bottleneck);
+                Assert.AreEqual(_ExponentialAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ExponentialAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ExponentialAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_ExponentialAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck?.Bottleneck);
             }
         }
         [TestMethod]
@@ -279,10 +290,10 @@ namespace AmbientServices.Test
                     Assert.AreEqual("Linear Auto Test", _LinearAutoBottleneck.Description);
                     Assert.AreEqual("TestBottleneckDetector-LinearAutoTest1", _LinearAutoBottleneck.ToString());
                 }
-                Assert.AreEqual(_LinearAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_LinearAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_LinearAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck.Bottleneck);
-                Assert.AreEqual(_LinearAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck.Bottleneck);
+                Assert.AreEqual(_LinearAutoBottleneck, collector.ProcessAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_LinearAutoBottleneck, collector.ThreadAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_LinearAutoBottleneck, collector.ScopeAnalyzer.MostUtilizedBottleneck?.Bottleneck);
+                Assert.AreEqual(_LinearAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.MostUtilizedBottleneck?.Bottleneck);
             }
         }
         [TestMethod]
@@ -310,9 +321,9 @@ namespace AmbientServices.Test
                             Assert.IsTrue(null != a2);
                             Assert.IsFalse(a1 == b1);
                             Assert.IsTrue(a1 != b1);
-                            Assert.AreEqual(0, a1.CompareTo(a2));
-                            Assert.AreEqual(1, a1.CompareTo(null));
-                            Assert.AreEqual(0, a2.CompareTo(a1));
+                            Assert.AreEqual(0, a1!.CompareTo(a2));
+                            Assert.AreEqual(1, a1!.CompareTo(null));
+                            Assert.AreEqual(0, a2!.CompareTo(a1));
                             Assert.IsTrue(b1 > a2);
                             Assert.IsTrue(b1 > null);
                             Assert.IsFalse(null > b1);
@@ -541,6 +552,18 @@ namespace AmbientServices.Test
             }
         }
         [TestMethod]
+        public void AmbientBottleneckCallContextSurveyorNullName()
+        {
+            AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckCallContextSurveyorNullName) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckCallContextSurveyorNullName) + " Test1", 1000, TimeSpan.FromSeconds(1));
+            using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
+            {
+                using (IAmbientBottleneckSurveyor surveyor = manager.CreateCallContextSurveyor(null, null, null))
+                {
+                    Assert.AreEqual("", surveyor.ScopeName);
+                }
+            }
+        }
+        [TestMethod]
         public void AmbientBottleneckSurveyorsEmpty()
         {
             using (CallContextSurveyManager surveymanager = new CallContextSurveyManager(null))
@@ -641,7 +664,7 @@ namespace AmbientServices.Test
                             }
                             Assert.AreEqual(1, timeWindowResults.Count);
                             analysis = timeWindowResults[0];
-                            Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck.Bottleneck);
+                            Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                             timeWindowResults.Clear();
                         }
                         // trigger another time window (all the bottleneck accessors are closed now)
@@ -649,7 +672,7 @@ namespace AmbientServices.Test
                         // in the second window, we should have 50ms for 1, 0ms for 2, and 50ms for 3, but 3 has a higher limit, so 1 should be the most used
                         Assert.AreEqual(1, timeWindowResults.Count);
                         analysis = timeWindowResults[0];
-                        Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck.Bottleneck);
+                        Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                         timeWindowResults.Clear();
                     }
                 }
@@ -675,23 +698,23 @@ namespace AmbientServices.Test
                     {
                         using (AmbientBottleneckAccessor access1 = bottleneck1.EnterBottleneck())
                         {
-                            access1.SetUsage(1, 50);
+                            access1?.SetUsage(1, 50);
                             AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                             using (AmbientBottleneckAccessor access2 = bottleneck2.EnterBottleneck())
                             {
-                                access1.SetUsage(1, 50);
-                                access2.SetUsage(1, 50);
+                                access1?.SetUsage(1, 50);
+                                access2?.SetUsage(1, 50);
                                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                             }
                             using (AmbientBottleneckAccessor access3 = bottleneck3.EnterBottleneck())
                             {
-                                access1.SetUsage(1, 50);
-                                access3.SetUsage(1, 50);
+                                access1?.SetUsage(1, 50);
+                                access3?.SetUsage(1, 50);
                                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                             }
                             Assert.AreEqual(1, timeWindowResults.Count);
                             analysis = timeWindowResults[0];
-                            Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck.Bottleneck);
+                            Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                             timeWindowResults.Clear();
                         }
                         // trigger another time window (all the bottleneck accessors are closed now)
@@ -699,7 +722,7 @@ namespace AmbientServices.Test
                         // in the second window, we should have 50 units for 1, 0 units for 2, and 50 units for 3, but 3 has a higher limit, so 1 should be the most used
                         Assert.AreEqual(1, timeWindowResults.Count);
                         analysis = timeWindowResults[0];
-                        Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck.Bottleneck);
+                        Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                         timeWindowResults.Clear();
                     }
                 }
@@ -729,23 +752,23 @@ namespace AmbientServices.Test
                         {
                             using (AmbientBottleneckAccessor access1 = bottleneck1.EnterBottleneck())
                             {
-                                access1.SetUsage(1, 50);
+                                access1?.SetUsage(1, 50);
                                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                                 using (AmbientBottleneckAccessor access2 = bottleneck2.EnterBottleneck())
                                 {
-                                    access1.SetUsage(1, 50);
-                                    access2.SetUsage(1, 50);
+                                    access1?.SetUsage(1, 50);
+                                    access2?.SetUsage(1, 50);
                                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                                 }
                                 using (AmbientBottleneckAccessor access3 = bottleneck3.EnterBottleneck())
                                 {
-                                    access1.SetUsage(1, 50);
-                                    access3.SetUsage(1, 50);
+                                    access1?.SetUsage(1, 50);
+                                    access3?.SetUsage(1, 50);
                                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                                 }
                                 Assert.AreEqual(1, timeWindowResults.Count);
                                 analysis = timeWindowResults[0];
-                                Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck.Bottleneck);
+                                Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                                 timeWindowResults.Clear();
                             }
                             // trigger another time window (all the bottleneck accessors are closed now)
@@ -753,7 +776,7 @@ namespace AmbientServices.Test
                             // in the second window, we should have 50 units for 1, 0 units for 2, and 50 units for 3, but 3 has a higher limit, so 1 should be the most used
                             Assert.AreEqual(1, timeWindowResults.Count);
                             analysis = timeWindowResults[0];
-                            Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck.Bottleneck);
+                            Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                             timeWindowResults.Clear();
                         }
                     }));

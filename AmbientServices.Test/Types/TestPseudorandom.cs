@@ -462,8 +462,9 @@ namespace AmbientServices.Test
             Assert.AreEqual(new Pseudorandom(5).GetHashCode(), rand.GetHashCode());
             Assert.IsFalse(rand.Equals(this));
             Assert.IsFalse(rand.Equals(null));
-            Assert.IsTrue(rand.Equals(rand.Clone()));
-            Assert.IsTrue(rand.Equals((object)rand.Clone()));
+            Pseudorandom clone = rand!.Clone(); // not sure how the analyzer gets confused here?  maybe it's seeing the Equals(null) above and getting confused about that
+            Assert.IsTrue(rand.Equals(clone));
+            Assert.IsTrue(rand.Equals((object)clone));
             Pseudorandom rand2 = new Pseudorandom(6);
             Assert.IsFalse(rand == rand2);
             Assert.IsTrue(rand != rand2);
@@ -486,10 +487,11 @@ namespace AmbientServices.Test
         public void PseudorandomExceptions()
         {
             Pseudorandom rand = new Pseudorandom(false);
-            Assert.ThrowsException<ArgumentNullException>(() => rand.NextEnum(null));
-            Assert.ThrowsException<ArgumentNullException>(() => rand.NextBytes(null, 1));
+            Assert.ThrowsException<ArgumentNullException>(() => rand.NextEnum(null!));
+            Assert.ThrowsException<ArgumentNullException>(() => rand.NextBytes(null!, 1));
             Assert.ThrowsException<ArgumentException>(() => rand.NextInt32SignedRangedUsuallySmall(10, 5));
             Assert.ThrowsException<ArgumentException>(() => rand.NextInt64SignedRangedUsuallySmall(10, 5));
+            Assert.ThrowsException<ArgumentException>(() => rand.NextEnum(typeof(int)));
         }
         [TestMethod]
         public void PseudorandomUsuallyVerySmall()
@@ -540,7 +542,7 @@ namespace AmbientServices.Test
             Pseudorandom a = new Pseudorandom(0);
             Pseudorandom b = new Pseudorandom(0);
             Pseudorandom c = new Pseudorandom(1);
-            Pseudorandom n = null;
+            Pseudorandom n = null!;
             Assert.IsTrue(a == b);
             Assert.IsFalse(a == c);
             Assert.IsFalse(a == n);

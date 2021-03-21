@@ -16,7 +16,6 @@ namespace AmbientServices.Test
     public class TestAmbientFileLogger
     {
         private static AmbientService<IAmbientLogger> Logger = Ambient.GetService<IAmbientLogger>();
-
         [TestMethod]
         public async Task AmbientFileLoggerBasic()
         {
@@ -24,21 +23,22 @@ namespace AmbientServices.Test
             try
             {
                 using (AmbientClock.Pause())
-                using (AmbientFileLogger logger = new AmbientFileLogger(tempPath, ".log", 8 * 60))
+                using (AmbientFileLogger loggerImp = new AmbientFileLogger(tempPath, ".log", 8 * 60))
                 {
                     // delete any preexisting files
-                    await AmbientFileLogger.TryDeleteAllFiles(logger.FilePrefix);
+                    await AmbientFileLogger.TryDeleteAllFiles(loggerImp.FilePrefix);
 
-                    using (IDisposable over = Logger.ScopedLocalOverride(logger))
+                    using (IDisposable over = Logger.ScopedLocalOverride(loggerImp))
                     {
+                        IAmbientLogger logger = Logger.Local;
                         // log the first test message (this will cause the file to be created, but only *after* this message gets flushed
-                        Logger.Local.Log("test1");
+                        logger?.Log("test1");
                         Assert.AreEqual(0, TempFileCount(tempPath));
-                        await Logger.Local.Flush();
+                        if (logger != null) await logger.Flush();
                         Assert.AreEqual(1, TempFileCount(tempPath));
                         // log the second test message (since the clock is stopped, this will *never* create another file)
-                        Logger.Local.Log("test2");
-                        await Logger.Local.Flush();
+                        logger?.Log("test2");
+                        if (logger != null) await logger.Flush();
                         Assert.AreEqual(1, TempFileCount(tempPath));
                     }
                 }
@@ -65,9 +65,9 @@ namespace AmbientServices.Test
                     using (IDisposable over = Logger.ScopedLocalOverride(logger))
                     {
                         // log the first test message (this will cause the file to be created, but only *after* this message gets flushed
-                        Logger.Local.Log("test1");
+                        Logger.Local?.Log("test1");
                         Assert.AreEqual(0, TempFileCount(logFilePrefix));
-                        await Logger.Local.Flush();
+                        if (Logger.Local != null) await Logger.Local.Flush();
                         Assert.AreEqual(1, TempFileCount(logFilePrefix));
 
                         // get the name of the first log file
@@ -77,32 +77,32 @@ namespace AmbientServices.Test
                         AmbientClock.SkipAhead(TimeSpan.FromHours(8));
 
                         // log the second test message
-                        Logger.Local.Log("test2");
-                        await Logger.Local.Flush();
+                        Logger.Local?.Log("test2");
+                        if (Logger.Local != null) await Logger.Local.Flush();
                         Assert.AreEqual(2, TempFileCount(logFilePrefix));
 
                         // skip ahead eight hours and flush another message (it should go in another file)
                         AmbientClock.SkipAhead(TimeSpan.FromHours(8));
 
                         // log the third test message
-                        Logger.Local.Log("test3");
-                        await Logger.Local.Flush();
+                        Logger.Local?.Log("test3");
+                        if (Logger.Local != null) await Logger.Local.Flush();
                         Assert.AreEqual(3, TempFileCount(logFilePrefix));
 
                         // skip ahead eight hours and flush another message (this should rotate around to the first file)
                         AmbientClock.SkipAhead(TimeSpan.FromHours(8));
 
                         // log the fourth test message
-                        Logger.Local.Log("test4");
-                        await Logger.Local.Flush();
+                        Logger.Local?.Log("test4");
+                        if (Logger.Local != null) await Logger.Local.Flush();
                         Assert.AreEqual(3, TempFileCount(logFilePrefix));
 
                         // skip ahead eight hours and flush another message (this should rotate around to the second file)
                         AmbientClock.SkipAhead(TimeSpan.FromHours(8));
 
                         // log a fifth test message just to make sure the first file gets closed
-                        Logger.Local.Log("test5");
-                        await Logger.Local.Flush();
+                        Logger.Local?.Log("test5");
+                        if (Logger.Local != null) await Logger.Local.Flush();
                         Assert.AreEqual(3, TempFileCount(logFilePrefix));
 
                         // open the first log file
@@ -120,20 +120,38 @@ namespace AmbientServices.Test
             }
             finally
             {
-                await AmbientFileLogger.TryDeleteAllFiles(logFilePrefix);
+                await AmbientFileLogger.TryDeleteAllFiles(logFilePrefix!);
             }
         }
         [TestMethod]
-        public void AmbientFileLoggerExceptions()
+        public async Task AmbientFileLoggerExceptions()
         {
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => new AmbientFileLogger(null, "log"));
+            try
+            {
+                await AmbientFileLogger.TryDeleteAllFiles(null!);
+                Assert.Fail("No ArgumentException thrown!");
+            }
+            catch (ArgumentException)
+            {
+                // this is what we were expecting!
+            }
+            try
+            {
+                await AmbientFileLogger.TryDeleteAllFiles("C:\\");
+                Assert.Fail("No ArgumentException thrown!");
+            }
+            catch (ArgumentException)
+            {
+                // this is what we were expecting!
+            }
         }
 
         private int TempFileCount(string filePathPrefix)
         {
             string directory = Path.GetDirectoryName(filePathPrefix);
             string filename = Path.GetFileName(filePathPrefix);
-            return Directory.GetFiles(directory, filename + "*.log").Length;
+            return Directory.GetFiles(directory!, filename + "*.log").Length;
         }
 
         [TestMethod]

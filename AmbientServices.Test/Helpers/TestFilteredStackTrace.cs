@@ -46,7 +46,7 @@ namespace AmbientServices.Test
             filtered = AmbientServices.FilteredStackTrace.FilterSystemAndMicrosoftFrames(new StackFrame[1] { new FilteredStackTrace().GetFrames().FirstOrDefault() });
             Assert.AreEqual(1, filtered.Count());
 
-            Assert.AreEqual("", AmbientServices.FilteredStackTrace.FilterFilename(null));
+            Assert.AreEqual("", AmbientServices.FilteredStackTrace.FilterFilename(null!));
             Assert.AreEqual("", AmbientServices.FilteredStackTrace.FilterFilename(""));
         }
         private void Subfunction(int parentStackFrames)

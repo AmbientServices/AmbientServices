@@ -1,6 +1,7 @@
 using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace AmbientServices.Test
@@ -106,6 +107,19 @@ namespace AmbientServices.Test
             Assert.AreEqual(AggregationTypes.MostRecent, counter.PreferredTemporalAggregationType);
             Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.Sum, counter.SpatialAggregationTypes);
             Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max, counter.TemporalAggregationTypes);
+        }
+        [TestMethod]
+        public void AmbientPerformanceMetricsException()
+        {
+            foreach (KeyValuePair<string, IAmbientStatisticReader> kvp in AmbientStatistics.Statistics)
+            {
+                // is this one readonly?
+                if (kvp.Value is not IAmbientStatistic)
+                {
+                    Assert.ThrowsException<InvalidOperationException>(() => AmbientStatistics.GetOrAddStatistic(true, kvp.Key, "", false));
+                    break;
+                }
+            }
         }
     }
 }

@@ -18,8 +18,8 @@ namespace AmbientServices
         /// <summary>
         /// Finds the specified statistic.
         /// </summary>
-        /// <returns>A <see cref="IAmbientStatisticReader"/> the caller can use to read the statistic.</returns>
-        IAmbientStatisticReader ReadStatistic(string id);
+        /// <returns>A <see cref="IAmbientStatisticReader"/> the caller can use to read the statistic, or null if there is no statistic with the specified ID.</returns>
+        IAmbientStatisticReader? ReadStatistic(string id);
         /// <summary>
         /// Adds or updates a statistic with the specified identifier, description, and properties.
         /// </summary>
@@ -33,7 +33,7 @@ namespace AmbientServices
         /// <param name="preferredTemporalAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated over time.</param>
         /// <param name="preferredSpatialAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated across systems.</param>
         /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
-        /// <returns>A <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
+        /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
         IAmbientStatistic GetOrAddStatistic(bool timeBased, string id, string description, bool replaceIfAlreadyExists = false
             , long initialValue = 0
             , AggregationTypes temporalAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max

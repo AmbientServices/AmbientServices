@@ -21,7 +21,7 @@ namespace AmbientServices
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class DefaultAmbientServiceAttribute : Attribute
     {
-        private IReadOnlyList<Type> _registrationInterfaces;
+        private IReadOnlyList<Type>? _registrationInterfaces;
 
         /// <summary>
         /// Constructs a DefaultAmbientServiceAttribute.
@@ -51,7 +51,7 @@ namespace AmbientServices
         /// Gets the interface types indicating which services are implemented by the class the attribute is applied to.  
         /// If null, all interfaces that are directly implemented by the class should be used.
         /// </summary>
-        public IReadOnlyList<Type> RegistrationInterfaces { get { return _registrationInterfaces; } }
+        public IReadOnlyList<Type>? RegistrationInterfaces { get { return _registrationInterfaces; } }
     }
     /// <summary>
     /// An internal static class that collects default ambient service implementations in every currently and subsequently loaded assembly.
@@ -72,22 +72,25 @@ namespace AmbientServices
 
         private static void AddDefaultImplementation(Type type)
         {
-            DefaultAmbientServiceAttribute attribute = type.GetCustomAttribute<DefaultAmbientServiceAttribute>();
-            if (attribute != null && type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)
+            DefaultAmbientServiceAttribute? attribute = type.GetCustomAttribute<DefaultAmbientServiceAttribute>();
+            if (attribute != null)
             {
-                IReadOnlyList<Type> registrationInterfaces = attribute.RegistrationInterfaces;
+                IReadOnlyList<Type>? registrationInterfaces = attribute.RegistrationInterfaces;
                 if ((registrationInterfaces?.Count ?? 0) == 0)
                 {
-                    registrationInterfaces = type.GetInterfaces();
+                    registrationInterfaces = type.GetInterfaces();   // this could be null if the specified type doesn't support *any* interfaces
                 }
-                foreach (Type iface in registrationInterfaces)
+                if (registrationInterfaces != null)
                 {
-                    _DefaultImplementations.TryAdd(iface, type);
+                    foreach (Type iface in registrationInterfaces)
+                    {
+                        _DefaultImplementations.TryAdd(iface, type);
+                    }
                 }
             }
         }
 
-        private static void CurrentDomain_AssemblyLoad(object sender, AssemblyLoadEventArgs args)
+        private static void CurrentDomain_AssemblyLoad(object? sender, AssemblyLoadEventArgs args)
         {
             Assembly assembly = args.LoadedAssembly;
             AssemblyLoader.OnLoad(assembly);
@@ -108,10 +111,10 @@ namespace AmbientServices
         /// </summary>
         /// <param name="iface">The <see cref="Type"/> of interface whose implementation is wanted.</param>
         /// <returns>The <see cref="Type"/> that implements that interface, or null if no implementation could be found.</returns>
-        public static Type TryFind(Type iface)
+        public static Type? TryFind(Type iface)
         {
             if (!iface.IsInterface) throw new ArgumentException("The specified type is not an interface type!", nameof(iface));
-            Type impType;
+            Type? impType;
             if (_DefaultImplementations.TryGetValue(iface, out impType))
             {
                 System.Diagnostics.Debug.Assert(iface.IsAssignableFrom(impType));
@@ -148,7 +151,7 @@ namespace AmbientServices
 
         internal static void OnLoad(Assembly assembly)
         {
-            Logger.Log(assembly.GetName().Name, "AssemblyLoad", AmbientLogLevel.Trace);
+            Logger.Log(assembly.GetName().Name!, "AssemblyLoad", AmbientLogLevel.Trace);
         }
     }
     [AttributeUsage(AttributeTargets.All)]

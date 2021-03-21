@@ -62,16 +62,17 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ReflectionTypeLoadException()
         {
-            string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "ReflectionTypeLoadException.Assembly.dll");
+            // Note that Assembly.Location returns empty string if the assembly is a single file application, but this is a test application, which is *not* a single file executable, so we should get a location
+            string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "ReflectionTypeLoadException.Assembly.dll");
             Type[] types = AmbientServices.AssemblyExtensions.GetLoadableTypes(Assembly.LoadFrom(dllPath)).ToArray();
         }
         [TestMethod]
         public void AssemblyExtensionsNullArgumentExceptions()
         {
-            Assembly n = null;
+            Assembly n = null!;
             Assert.ThrowsException<ArgumentNullException>(() => n.GetLoadableTypes());
             Assert.ThrowsException<ArgumentNullException>(() => n.DoesAssemblyReferToAssembly(n));
-            ReflectionTypeLoadException ex = null;
+            ReflectionTypeLoadException ex = null!;
             Assert.ThrowsException<ArgumentNullException>(() => AssemblyExtensions.TypesFromException(ex));
         }
     }

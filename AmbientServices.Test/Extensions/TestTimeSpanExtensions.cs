@@ -11,6 +11,7 @@ namespace AmbientServices.Test
         {
             Assert.AreEqual((TimeSpan?)null, "".TryParseTimeSpan());
             foreach (TimeSpan ts in new TimeSpan[] {    // NOTE: These numbers were carefully chosen to avoid rounding issues and avoid issues with the short string using only two significant digits
+                    TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(-1),
                     TimeSpan.FromMilliseconds(1.3), TimeSpan.FromMilliseconds(-1.3),
                     TimeSpan.FromMilliseconds(2.3), TimeSpan.FromMilliseconds(-2.3),
                     TimeSpan.FromMilliseconds(230), TimeSpan.FromMilliseconds(-230),

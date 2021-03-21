@@ -23,7 +23,7 @@ namespace AmbientServices
         /// <param name="newSystem">The identifier for the system that is starting to run.</param>
         /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
         /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-        void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string revisedOldSystem = null);
+        void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null);
     }
     /// <summary>
     /// An interface that abstracts a service profiler service.
@@ -33,7 +33,7 @@ namespace AmbientServices
         /// <summary>
         /// Switches the system that is executing in this call context.
         /// </summary>
-        /// <param name="system">A string indicating which system is beginning to execute, empty string to indicate that the default system (ie. CPU) is executing.</param>
+        /// <param name="system">A string indicating which system is beginning to execute, or null or empty string to indicate that the default system (ie. CPU) is executing.</param>
         /// <param name="updatedPreviousSystem">An optional updated for the previous system in case part of the system identifier couldn't be determined until the execution completed.  For example, if the operation failed, we can retroactively reclassify the time spent in order to properly separately track time spent on successful, timed-out, and failed operations.</param>
         /// <remarks>
         /// The system should be identified using the following form:
@@ -50,7 +50,7 @@ namespace AmbientServices
         /// For example, to transform the group systems by only the main system, database, bucket, and result, without retaining the prefixes, use the following Regex:
         /// (?:([^:/]+)(?:(?:(/)(?:Database:)([^:/]*))|(?:(/)(?:Bucket:)([^:/]*))|(?:(/)(?:Result:)([^:/]*))|(?:/[^/]*))*)
         /// </remarks>
-        void SwitchSystem(string system, string updatedPreviousSystem = null);
+        void SwitchSystem(string? system, string updatedPreviousSystem = null);
         /// <summary>
         /// Registers a system switch notification sink with this ambient service profiler.
         /// </summary>

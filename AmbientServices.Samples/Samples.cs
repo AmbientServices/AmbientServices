@@ -32,11 +32,11 @@ class User
     /// <summary>
     /// Gets or sets the user's email address.
     /// </summary>
-    public string Email { get; set; }
+    public string Email { get; private set; } = "";
     /// <summary>
     /// Gets or sets user's password hash.
     /// </summary>
-    public byte[] PasswordHash { get; set; }
+    public byte[] PasswordHash { get; private set; } = new byte[0];
 
     /// <summary>
     /// Checks the specified password against the hash.
@@ -54,7 +54,7 @@ class User
     /// </summary>
     /// <param name="email">The email of the user to find.</param>
     /// <returns></returns>
-    public static User Find(string email)
+    public static User? Find(string email)
     {
         // implement database lookup here
 
@@ -117,14 +117,14 @@ class UserManager
     /// </summary>
     /// <param name="email">The emali address for the user.</param>
     /// <returns>The <see cref="User"/>, if one was found, or null if the user was not found.</returns>
-    public static async Task<User> FindUser(string email)
+    public static async Task<User?> FindUser(string email)
     {
         string userKey = nameof(User) + "-" + email;
-        User user = await Cache.Retrieve<User>(userKey, TimeSpan.FromMinutes(15));
+        User? user = await Cache.Retrieve<User>(userKey, TimeSpan.FromMinutes(15));
         if (user != null)
         {
             user = User.Find(email);
-            await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+            if (user != null) await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(false, userKey);
         }
         return user;
     }
@@ -227,7 +227,7 @@ class DownloadAndUnzip
 
     public async Task MainOperation(CancellationToken cancel = default(CancellationToken))
     {
-        IAmbientProgress progress = AmbientProgressService.Progress;
+        IAmbientProgress? progress = AmbientProgressService.Progress;
         using (progress?.TrackPart(0.01f, 0.75f, "Download "))
         {
             await Download();
@@ -239,7 +239,7 @@ class DownloadAndUnzip
     }
     public async Task Download()
     {
-        IAmbientProgress progress = AmbientProgressService.Progress;
+        IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
         HttpWebRequest request = HttpWebRequest.CreateHttp(_downlaodUrl);
         using (WebResponse response = request.GetResponse())
@@ -261,7 +261,7 @@ class DownloadAndUnzip
     }
     public Task Unzip()
     {
-        IAmbientProgress progress = AmbientProgressService.Progress;
+        IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
 
         ZipArchive archive = new ZipArchive(_package);
@@ -309,7 +309,7 @@ class BufferPool
         {
             if (bytes < _bufferBytes)
             {
-                byte[] buffer;
+                byte[]? buffer;
                 if (_bag.TryTake(out buffer))
                 {
                     return buffer;
@@ -453,8 +453,8 @@ class BasicAmbientCallStack : IAmbientCallStack
 
     static private ImmutableStack<string> GetStack()
     {
-        ImmutableStack<string> stack = Stack.Value;
-        if (Stack.Value == null)
+        ImmutableStack<string>? stack = Stack.Value;
+        if (stack == null)
         {
             stack = ImmutableStack<string>.Empty;
             Stack.Value = stack;
@@ -474,7 +474,7 @@ class BasicAmbientCallStack : IAmbientCallStack
 
     class CallStackEntry : IDisposable
     {
-        private ImmutableStack<string> _stack;
+        private ImmutableStack<string>? _stack;
 
         public CallStackEntry(ImmutableStack<string> stack)
         {
@@ -549,15 +549,15 @@ class AppConfigAmbientSettings : IAmbientSettingsSet
 {
     public string SetName => "AppConfig";
 
-    public string GetRawValue(string key)
+    public string? GetRawValue(string key)
     {
         return System.Configuration.ConfigurationManager.AppSettings[key];
     }
-    public object GetTypedValue(string key)
+    public object? GetTypedValue(string key)
     {
-        string rawValue = System.Configuration.ConfigurationManager.AppSettings[key];
-        IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
-        return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
+        string? rawValue = System.Configuration.ConfigurationManager.AppSettings[key];
+        IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        return (ps != null) ? ps.Convert(this, rawValue ?? "") : rawValue;
     }
 }
 #endregion
@@ -575,7 +575,7 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
 {
     private static readonly AmbientService<IAmbientSettingsSet> SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
 
-    private readonly IAmbientSettingsSet _oldSettingsSet;
+    private readonly IAmbientSettingsSet? _oldSettingsSet;
     private readonly Dictionary<string, string> _overrides;
 
     /// <summary>
@@ -599,20 +599,20 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
         SettingsSet.Override = _oldSettingsSet;
     }
 
-    public string GetRawValue(string key)
+    public string? GetRawValue(string key)
     {
-        string value;
+        string? value;
         if (_overrides.TryGetValue(key, out value))
         {
             return value;
         }
-        return _oldSettingsSet.GetRawValue(key);
+        return _oldSettingsSet?.GetRawValue(key);
     }
-    public object GetTypedValue(string key)
+    public object? GetTypedValue(string key)
     {
-        string rawValue = GetRawValue(key);
-        IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
-        return (ps != null) ? ps.Convert(this, rawValue) : rawValue;
+        string? rawValue = GetRawValue(key);
+        IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+        return (ps != null) ? ps.Convert(this, rawValue ?? "") : rawValue;
     }
 }
 #endregion
@@ -631,12 +631,12 @@ public class RequestType
 {
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
 
-    private readonly IAmbientStatistic _pendingRequests;
-    private readonly IAmbientStatistic _totalRequests;
-    private readonly IAmbientStatistic _totalProcessingTime;
-    private readonly IAmbientStatistic _retries;
-    private readonly IAmbientStatistic _failures;
-    private readonly IAmbientStatistic _timeouts;
+    private readonly IAmbientStatistic? _pendingRequests;
+    private readonly IAmbientStatistic? _totalRequests;
+    private readonly IAmbientStatistic? _totalProcessingTime;
+    private readonly IAmbientStatistic? _retries;
+    private readonly IAmbientStatistic? _failures;
+    private readonly IAmbientStatistic? _timeouts;
 
     /// <summary>
     /// Constructs a RequestType with the specified type name.
@@ -644,7 +644,7 @@ public class RequestType
     /// <param name="typeName">The name of the request type.</param>
     public RequestType(string typeName)
     {
-        IAmbientStatistics ambientStatistics = AmbientStatistics.Local;
+        IAmbientStatistics? ambientStatistics = AmbientStatistics.Local;
         _pendingRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-RequestsPending", "The number of requests currently executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
         _totalRequests = ambientStatistics?.GetOrAddStatistic(false, typeName + "-TotalRequests", "The total number of requests that have finished executing", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
         _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(true, typeName + "-TotalProcessingTime", "The total time spent processing requests (only includes completed requests)", false, 0, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Sum, AggregationTypes.Sum, MissingSampleHandling.LinearEstimation);
@@ -663,27 +663,27 @@ public class RequestType
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the number of pending requests.
     /// </summary>
-    public IAmbientStatistic PendingRequests { get { return _pendingRequests; } }
+    public IAmbientStatistic? PendingRequests { get { return _pendingRequests; } }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of requests.
     /// </summary>
-    public IAmbientStatistic TotalRequests { get { return _totalRequests; } }
+    public IAmbientStatistic? TotalRequests { get { return _totalRequests; } }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total processing time.
     /// </summary>
-    public IAmbientStatistic TotalProcessingTime { get { return _totalProcessingTime; } }
+    public IAmbientStatistic? TotalProcessingTime { get { return _totalProcessingTime; } }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of retries.
     /// </summary>
-    public IAmbientStatistic Retries { get { return _retries; } }
+    public IAmbientStatistic? Retries { get { return _retries; } }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of failures.
     /// </summary>
-    public IAmbientStatistic Failures { get { return _failures; } }
+    public IAmbientStatistic? Failures { get { return _failures; } }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of timeouts.
     /// </summary>
-    public IAmbientStatistic Timeouts { get { return _timeouts; } }
+    public IAmbientStatistic? Timeouts { get { return _timeouts; } }
 }
 /// <summary>
 /// A request tracking object.
@@ -869,14 +869,14 @@ class EbsAccessor
     {
         string filePath = Path.Combine(_volumePrefix, file);
         int bytesRead;
-        using (AmbientBottleneckAccessor access = _bottleneck.EnterBottleneck())
+        using (AmbientBottleneckAccessor? access = _bottleneck.EnterBottleneck())
         {
             using (FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read))
             {
                 f.Position = fileOffset;
                 bytesRead = f.Read(buffer, bufferOffset, bytes);
             }
-            access.SetUsage(1, (bytesRead + IopsPageSize - 1) / IopsPageSize); // note that this approximation of IOPS won't be correct if the file is fragmented, and the lookup and opening of the file will likely use some IOPS as well--more accurate estmates can be obtained after long-term usage and comparison to AWS metrics
+            access?.SetUsage(1, (bytesRead + IopsPageSize - 1) / IopsPageSize); // note that this approximation of IOPS won't be correct if the file is fragmented, and the lookup and opening of the file will likely use some IOPS as well--more accurate estmates can be obtained after long-term usage and comparison to AWS metrics
         }
         return bytesRead;
     }
@@ -887,7 +887,7 @@ class EbsAccessor
 class BottleneckReporter
 {
     private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
-    private Dictionary<string, double> _mostRecentWindowTopBottlenecks;  // interlocked
+    private Dictionary<string, double>? _mostRecentWindowTopBottlenecks;  // interlocked
     private IDisposable _timeWindow;
 
     /// <summary>
@@ -913,7 +913,7 @@ class BottleneckReporter
     /// <summary>
     /// Gets a dictionary containing the top 10 bottlenecks with their overall utilization for the most recent time window.
     /// </summary>
-    public Dictionary<string, double> RecentBottleneckSummary
+    public Dictionary<string, double>? RecentBottleneckSummary
     {
         get
         {
@@ -957,7 +957,7 @@ class SqlAccessor
     /// <returns>A <see cref="SqlCommand"/> for this connection.</returns>
     public SqlCommand CreateCommand() { return _connection.CreateCommand(); }
 
-    private async Task<T> ExecuteAsync<T>(SqlCommand command, Func<CancellationToken, Task<T>> f, string table = null, CancellationToken cancel = default(CancellationToken))
+    private async Task<T> ExecuteAsync<T>(SqlCommand command, Func<CancellationToken, Task<T>> f, string? table = null, CancellationToken cancel = default(CancellationToken))
     {
         string systemId = _systemIdPrefix + (string.IsNullOrEmpty(table) ? "" : $"/Table:{table}");
         T ret;
@@ -975,24 +975,24 @@ class SqlAccessor
         }
         finally
         {
-            ServiceProfiler.Local?.SwitchSystem(null, systemId);
+            ServiceProfiler.Local?.SwitchSystem("", systemId);
         }
         return ret;
     }
 
-    public Task<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    public Task<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
     {
         return ExecuteAsync<int>(command, command.ExecuteNonQueryAsync, table, cancel);
     }
-    public Task<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    public Task<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
     {
         return ExecuteAsync<SqlDataReader>(command, command.ExecuteReaderAsync, table, cancel);
     }
-    public Task<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    public Task<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
     {
         return ExecuteAsync<object>(command, command.ExecuteScalarAsync, table, cancel);
     }
-    public Task<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string table = null)
+    public Task<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
     {
         return ExecuteAsync<XmlReader>(command, command.ExecuteXmlReaderAsync, table, cancel);
     }
@@ -1003,9 +1003,9 @@ class SqlAccessor
 class ProfileReporter
 {
     private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
-    private Dictionary<string, long> _mostRecentWindowServiceProfile;  // interlocked
+    private Dictionary<string, long>? _mostRecentWindowServiceProfile;  // interlocked
     private AmbientServiceProfilerCoordinator _coordinator;
-    private IDisposable _timeWindow;
+    private IDisposable? _timeWindow;
     /// <summary>
     /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
     /// </summary>
@@ -1029,7 +1029,7 @@ class ProfileReporter
     /// <summary>
     /// Gets a dictionary containing the service profile for the most recent time window.
     /// </summary>
-    public Dictionary<string, long> RecentProfile
+    public Dictionary<string, long>? RecentProfile
     {
         get
         {
@@ -1156,7 +1156,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
     public LocalDiskAuditor() : base ("/LocalDisk", TimeSpan.FromMinutes(15))
     {
         string tempPath = System.IO.Path.GetTempPath();
-        string tempDrive = Path.GetPathRoot(tempPath);
+        string tempDrive = Path.GetPathRoot(tempPath)!; // this better not return null, because System.IO.Path.GetTempPath() better not be null or empty!
         string tempPathRelative = tempPath.Substring(tempDrive.Length);
         _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative,  true);
         _systemAuditor = new DiskAuditor(Environment.GetFolderPath(Environment.SpecialFolder.System), "", false);

@@ -15,6 +15,7 @@ namespace AmbientServices
 #pragma warning disable CA1710  // we're following the precedent set by the framework itself rather than the code analyzer rules here, and given the name of this class, it would be very confusing not to
     public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, */ ISet<T>, ICollection<T>, IEnumerable<T>, System.Collections.IEnumerable
 #pragma warning restore CA1710
+        where T : notnull // ConcurrentDictionary<,> requires this
     {
         private readonly IEqualityComparer<T> _comparer;
         private readonly ConcurrentDictionary<T, byte> _dict;
@@ -124,8 +125,11 @@ namespace AmbientServices
 
         class HashSetComparer : IEqualityComparer<ConcurrentHashSet<T>>
         {
-            public bool Equals(ConcurrentHashSet<T> x, ConcurrentHashSet<T> y)
+            public bool Equals(ConcurrentHashSet<T>? x, ConcurrentHashSet<T>? y)
             {
+                if (ReferenceEquals(x, y)) return true;
+                if (ReferenceEquals(x, null)) return false;
+                if (ReferenceEquals(null, y)) return false;
                 return x.IsSubsetOf(y) && y.IsSubsetOf(x);
             }
             public int GetHashCode(ConcurrentHashSet<T> obj)
@@ -142,7 +146,7 @@ namespace AmbientServices
         /// Removes all elements in the specified collection from the current set.
         /// </summary>
         /// <param name="other">An enumeration of items to remove from this set.</param>
-        public void ExceptWith(IEnumerable<T> other)
+        public void ExceptWith(IEnumerable<T>? other)
         {
             if (other == null) return;
             byte junk;
@@ -157,7 +161,7 @@ namespace AmbientServices
         /// Modifies the current set to contain only elements that are present in that object and in the specified collection.
         /// </summary>
         /// <param name="other">An enumeration of items to keep.</param>
-        public void IntersectWith(IEnumerable<T> other)
+        public void IntersectWith(IEnumerable<T>? other)
         {
             if (other == null) { Clear(); return; }
             HashSet<T> keep = new HashSet<T>(other);
@@ -174,7 +178,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">An enumeration of items to compare to.</param>
         /// <returns><b>true</b> if this set is a proper subset of the specified collection.</returns>
-        public bool IsProperSubsetOf(IEnumerable<T> other)
+        public bool IsProperSubsetOf(IEnumerable<T>? other)
         {
             if (other == null) return false;
             HashSet<T> valid = new HashSet<T>(other);
@@ -190,7 +194,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">An enumeration of items to compare to.</param>
         /// <returns><b>true</b> if this set is a proper superset of the specified collection.</returns>
-        public bool IsProperSupersetOf(IEnumerable<T> other)
+        public bool IsProperSupersetOf(IEnumerable<T>? other)
         {
             if (other == null) return !_dict.IsEmpty;
             int items = 0;
@@ -207,7 +211,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">An enumeration of items to compare to.</param>
         /// <returns><b>true</b> if this set is a subset of the specified collection.</returns>
-        public bool IsSubsetOf(IEnumerable<T> other)
+        public bool IsSubsetOf(IEnumerable<T>? other)
         {
             if (other == null) return _dict.IsEmpty;
             HashSet<T> valid = new HashSet<T>(other);
@@ -223,7 +227,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">An enumeration of items to compare to.</param>
         /// <returns><b>true</b> if this set is a superset of the specified collection.</returns>
-        public bool IsSupersetOf(IEnumerable<T> other)
+        public bool IsSupersetOf(IEnumerable<T>? other)
         {
             if (other == null) return true;
             int items = 0;
@@ -240,7 +244,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">An enumeration of items to compare to.</param>
         /// <returns><b>true</b> if there is at least one item that exists in both this set and the specified collection.</returns>
-        public bool Overlaps(IEnumerable<T> other)
+        public bool Overlaps(IEnumerable<T>? other)
         {
             if (other == null) return false;
             foreach (T item in other)
@@ -260,7 +264,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="match">A <see cref="Predicate{T}"/> to use to evaluate each item in the set.</param>
         /// <returns>The number of items removed from the set.</returns>
-        public int RemoveWhere(Predicate<T> match)
+        public int RemoveWhere(Predicate<T>? match)
         {
             if (match == null) return 0;
             int removed = 0;
@@ -279,7 +283,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">An enumeration of items to compare to.</param>
         /// <returns>Whether or not this set contains exactly the same items as the specified collection.</returns>
-        public bool SetEquals(IEnumerable<T> other)
+        public bool SetEquals(IEnumerable<T>? other)
         {
             if (other == null) return _dict.IsEmpty;
             int items = 0;
@@ -294,7 +298,7 @@ namespace AmbientServices
         /// Modifies the current set to contain only elements that are present either in that object or in the specified collection, but not both.
         /// </summary>
         /// <param name="other">An enumeration of items to compare to.</param>
-        public void SymmetricExceptWith(IEnumerable<T> other)
+        public void SymmetricExceptWith(IEnumerable<T>? other)
         {
             if (other == null) return;
             foreach (T item in other)
@@ -314,7 +318,7 @@ namespace AmbientServices
         /// Modifies the current set to contain all elements that are present in itself, the specified collection, or both.
         /// </summary>
         /// <param name="other">An enumeration of items to compare to.</param>
-        public void UnionWith(IEnumerable<T> other)
+        public void UnionWith(IEnumerable<T>? other)
         {
             if (other == null) return;
             foreach (T item in other)

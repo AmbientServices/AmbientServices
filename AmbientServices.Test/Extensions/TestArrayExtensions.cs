@@ -37,7 +37,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(ArrayExtensions.ValueEquals(typeof(int), a, b));
             Assert.IsFalse(ArrayExtensions.ValueEquals(typeof(int), a, new int[] { 0, 1, 2 }));
             Assert.IsFalse(ArrayExtensions.ValueEquals(typeof(int), a, new int[,] { { 0 }, { 1 } }));
-            Assert.ThrowsException<ArgumentNullException>(() => ArrayExtensions.ValueEquals(null, a, a));
+            Assert.ThrowsException<ArgumentNullException>(() => ArrayExtensions.ValueEquals(null!, a, a));
         }
         [TestMethod]
         public void CompareArraysOfArraysByValue()
@@ -53,7 +53,7 @@ namespace AmbientServices.Test
         public void CompareArraysByValueWithNulls()
         {
             int[] a = new int[] { 0, 1, 2 };
-            int[] b = null;
+            int[] b = null!;
             Assert.IsFalse(a.ValueEquals(b));
             Assert.IsFalse(b.ValueEquals(a));
             Assert.IsTrue(b.ValueEquals(b));
@@ -65,8 +65,15 @@ namespace AmbientServices.Test
             int[] a = new int[] { 0, 1, 2 };
             int hashCode = a.ValueHashCode();
             Assert.IsTrue(hashCode != 0);
-            a = null;
+            a = null!;
             Assert.ThrowsException<ArgumentNullException>(() => a.ValueHashCode());
+        }
+        [TestMethod]
+        public void ArrayValueHashWithNull()
+        {
+            int?[] a = new int?[] { 0, null, 2 };
+            int hashCode = a.ValueHashCode();
+            Assert.IsTrue(hashCode != 0);
         }
     }
 }

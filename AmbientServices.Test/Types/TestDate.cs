@@ -86,6 +86,11 @@ namespace AmbientServices.Test
             Assert.AreEqual(5, date.Month);
             Assert.AreEqual(20, date.Day);
             Assert.AreEqual(141, date.DayOfYear);
+
+            date = new Date(2000, 5, 20);
+            int daysSinceStart = date.DaysSinceCalendarStart;
+            date = new Date(2000, 5, 21);
+            Assert.AreEqual(daysSinceStart + 1, date.DaysSinceCalendarStart);
         }
 
         [TestMethod]
@@ -279,7 +284,7 @@ namespace AmbientServices.Test
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => { Date d = new Date(2000, -1, 1); });
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => { Date d = new Date(2000, 1, 32); });
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => Date.IsLeapYear(-1));
-            Assert.ThrowsException<ArgumentNullException>(() => new Date(2000, 1, 15).ToString((string)null));
+            Assert.ThrowsException<ArgumentNullException>(() => new Date(2000, 1, 15).ToString((string)null!));
         }
     }
 }

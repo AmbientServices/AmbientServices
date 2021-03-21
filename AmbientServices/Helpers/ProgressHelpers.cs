@@ -14,7 +14,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the <see cref="IAmbientProgress"/> from the current local (or global) ambient progress service.
         /// </summary>
-        public static IAmbientProgress Progress
+        public static IAmbientProgress? Progress
         {
             get
             {
@@ -24,11 +24,12 @@ namespace AmbientServices
         /// <summary>
         /// Gets the <see cref="IAmbientProgress"/> from the global ambient progress service.
         /// </summary>
-        public static IAmbientProgress GlobalProgress
+        [ExcludeFromCoverage]   // this can't be fully tested without possibly affecting other tests and their coverage because this is a *global* item, so changing it during a test obviously has non-local effects
+        public static IAmbientProgress? GlobalProgress
         {
             get
             {
-                return _Progress.Global.Progress;
+                return _Progress.Global?.Progress;
             }
         }
     }
@@ -46,15 +47,15 @@ namespace AmbientServices
             CancellationTokenSource source = new CancellationTokenSource(); source.Cancel(); return source.Token;
         }
 
-        private IAmbientClock _clock;
-        private CancellationTokenSource _tokenSource;
-        private AmbientEventTimer _ambientTimer;
+        private IAmbientClock? _clock;
+        private CancellationTokenSource? _tokenSource;      // note that if this is not nullable, you can't tell if the token source has been disposed, which causes all sorts of problems
+        private AmbientEventTimer? _ambientTimer;
 
         /// <summary>
         /// Constructs an ambient cancellation token source using a system <see cref="CancellationTokenSource"/>.
         /// </summary>
         /// <param name="tokenSource">A <see cref="CancellationTokenSource"/> from the system.  If null, makes a cancellation token source that must be cancelled manually.</param>
-        public AmbientCancellationTokenSource(CancellationTokenSource tokenSource = null)
+        public AmbientCancellationTokenSource(CancellationTokenSource? tokenSource = null)
         {
             _tokenSource = tokenSource ?? new CancellationTokenSource();
         }
@@ -79,7 +80,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="clock">The <see cref="IAmbientClock"/> to use for the token source.</param>
         /// <param name="timeout">An optional timeout indicating how long before the associated cancellation token should be cancelled.</param>
-        public AmbientCancellationTokenSource(IAmbientClock clock, TimeSpan? timeout = null)
+        public AmbientCancellationTokenSource(IAmbientClock? clock, TimeSpan? timeout = null)
         {
             _clock = clock;
             _tokenSource = new CancellationTokenSource();
@@ -92,11 +93,11 @@ namespace AmbientServices
         private void ScheduleCancellation(TimeSpan timeout)
         {
             _ambientTimer = new AmbientEventTimer(timeout);
-            System.Timers.ElapsedEventHandler handler = null;
+            System.Timers.ElapsedEventHandler? handler = null;
             handler = (source, e) =>
             {
                 _ambientTimer.Elapsed -= handler;
-                _tokenSource.Cancel();
+                _tokenSource?.Cancel();
                 _ambientTimer.Dispose();
             };
             _ambientTimer.Elapsed += handler;   // note that the handler will keep the timer and the token source alive until the event is raised, but the event is only raised once anyway, and there is no need to unsubscribe because the owner of the event is disposed when the event is triggered anyway
@@ -119,7 +120,7 @@ namespace AmbientServices
         /// Marks the associated token as canceled.
         /// </summary>
         /// <param name="throwOnFirstException">true if exceptions should immediately propagate, otherwise false.</param>
-        public void Cancel(bool throwOnFirstException) { _tokenSource.Cancel(throwOnFirstException); }
+        public void Cancel(bool throwOnFirstException) { _tokenSource?.Cancel(throwOnFirstException); }
         /// <summary>
         /// Schedules a cancellation after the sepecified time.
         /// </summary>
@@ -139,11 +140,11 @@ namespace AmbientServices
         }
 
 #region IDisposable Support
-/// <summary>
-/// Implementation of the standard dispose pattern.
-/// </summary>
-/// <param name="disposing">Whether or not this instance is being disposed, as opposed to finalized.</param>
-protected virtual void Dispose(bool disposing)
+        /// <summary>
+        /// Implementation of the standard dispose pattern.
+        /// </summary>
+        /// <param name="disposing">Whether or not this instance is being disposed, as opposed to finalized.</param>
+        protected virtual void Dispose(bool disposing)
         {
             if (disposing)
             {

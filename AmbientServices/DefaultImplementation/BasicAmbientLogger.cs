@@ -134,11 +134,10 @@ namespace AmbientServices
                     for (int line = 0; line < 10; ++line)
                     {
                         // get the oldest item on the queue
-                        string s;
+                        string? s;
                         // is there a string to trace?
                         if (_Queue.TryDequeue(out s))
                         {
-                            System.Diagnostics.Debug.Assert(s != null);
                             if (s == _FlushString)
                             {
                                 // release the flusher that told us to flush

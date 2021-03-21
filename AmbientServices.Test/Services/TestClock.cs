@@ -901,6 +901,35 @@ namespace AmbientServices.Test
                 Assert.IsTrue(mre.WaitOne(0));
             }
         }
+#if NET5_0
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClock"/>.
+        /// </summary>
+        [TestMethod]
+        public void CallbackTimerActiveCount()
+        {
+            int invocations = 0;
+            TimerCallback callback = o => { ++invocations; };
+            using (AmbientClock.Pause())
+            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, null, 100, 100))
+            {
+                Assert.IsTrue(AmbientCallbackTimer.ActiveCount > 0);
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClock"/>.
+        /// </summary>
+        [TestMethod]
+        public async Task CallbackTimerAsyncDispose()
+        {
+            int invocations = 0;
+            TimerCallback callback = o => { ++invocations; };
+            using (AmbientClock.Pause())
+            await using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, null, 100, 100))
+            {
+            }
+        }
+#endif
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
@@ -911,7 +940,7 @@ namespace AmbientServices.Test
             TimerCallback callback = o => { ++invocations; };
             using (AmbientClock.Pause())
             {
-                Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null); });
+                Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
                 using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback)) 
@@ -937,12 +966,21 @@ namespace AmbientServices.Test
         /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
-        public void SystemCallbackTimerTimeoutInfiniteInitialConstructor()
+        public
+#if NET5_0
+            async Task 
+#else
+            void
+#endif
+            SystemCallbackTimerTimeoutInfiniteInitialConstructor()
         {
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
             object testState = new object();
+#if NET5_0
+            await
+#endif
             using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, Timeout.Infinite, 47))
             {
                 Assert.AreEqual(0, invocations);
@@ -1196,13 +1234,15 @@ namespace AmbientServices.Test
         {
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null); });
+            Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
             using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback))
             {
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
+                IAmbientClockTimeChangedNotificationSink sink = timer;
+                Assert.ThrowsException<InvalidOperationException>(() => { sink.TimeChanged(null!, long.MinValue, long.MaxValue, DateTime.MinValue, DateTime.MaxValue); });
             }
         }
         /// <summary>
@@ -1252,6 +1292,8 @@ namespace AmbientServices.Test
                 Assert.IsFalse(registered.Unregister(mre));
                 Assert.IsTrue(mre.WaitOne(0));
 
+                AmbientRegisteredWaitHandle wh = new AmbientRegisteredWaitHandle(false, mre, (s,b) => { }, null, 10000, true);
+                wh.Unregister(mre);
 
                 are = new AutoResetEvent(false);
                 signaledInvocations = 0;
@@ -1387,6 +1429,7 @@ namespace AmbientServices.Test
             System.Threading.Thread.Sleep(400);
 //            Assert.IsTrue(signaledInvocations == 1, signaledInvocations.ToString());
 //            Assert.IsTrue(timedOutInvocations == 1);  // since the signal occured, a timeout should *not* have in the subsequent 400ms
+            registered.Unregister(are);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.

@@ -6,17 +6,6 @@ using System.Reflection;
 
 namespace AmbientServices.Test
 {
-    interface IJunk
-    { }
-    interface ITest
-    { }
-    [DefaultAmbientService]
-    public class DefaultTest : ITest
-    {
-        static void Load()
-        {
-        }
-    }
     [TestClass]
     public class TestAmbientService
     {
@@ -34,7 +23,7 @@ namespace AmbientServices.Test
 
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext context)
-        { 
+        {
         }
 
         [AssemblyCleanup]
@@ -61,14 +50,13 @@ namespace AmbientServices.Test
             Assert.IsNull(junk);
 
 
-
             ITest compareTest = test;
             Assert.IsNotNull(test);
 
             int changed = 0;
             ITest updatedTest = test;
             Assert.IsNotNull(updatedTest);
-            EventHandler<EventArgs> globalChanged = (o,e) => { updatedTest = _Test.Global; ++changed; }; 
+            EventHandler<EventArgs> globalChanged = (o, e) => { updatedTest = _Test.Global; ++changed; };
             _Test.GlobalChanged += globalChanged;
 
             _Test.Global = null;
@@ -174,8 +162,36 @@ namespace AmbientServices.Test
             Assert.IsInstanceOfType(_LocalTest.Local, typeof(LocalTest3));
             Assert.AreEqual(_LocalTest.Global, _LocalTest.Local);
         }
+        [TestMethod]
+        public void NoDefaultConstructor()
+        {
+            Assert.ThrowsException<TypeInitializationException>(() => Ambient.GetService<INoDefaultConstructor>());
+        }
     }
 
+    interface IJunk
+    { }
+    interface ITest
+    { }
+    [DefaultAmbientService]
+    public class DefaultTest : ITest
+    {
+        static void Load()
+        {
+        }
+    }
+    interface INoDefaultConstructor
+    { }
+    [DefaultAmbientService]
+    public class NoDefaultConstructor : INoDefaultConstructor
+    {
+        public NoDefaultConstructor(int test)
+        {
+        }
+        static void Load()
+        {
+        }
+    }
     interface ITest1 { }
     interface ITest2 { }
 

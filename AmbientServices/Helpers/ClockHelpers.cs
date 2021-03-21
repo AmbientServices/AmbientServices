@@ -70,7 +70,7 @@ namespace AmbientServices
         /// <param name="cancellationTokenSource">An optional <see cref="CancellationTokenSource"/> from the framework to use.  If null (the default), creates a cancellation token source that must be manually cancelled.</param>
         /// <returns>An <see cref="AmbientCancellationTokenSource"/> for the specified <see cref="CancellationTokenSource"/>.</returns>
         [Obsolete("Use new AmbientCancellationTokenSource directly")]
-        public static AmbientCancellationTokenSource CreateCancellationTokenSource(CancellationTokenSource cancellationTokenSource = null)
+        public static AmbientCancellationTokenSource CreateCancellationTokenSource(CancellationTokenSource? cancellationTokenSource = null)
         {
             return new AmbientCancellationTokenSource(cancellationTokenSource);
         }
@@ -94,7 +94,7 @@ namespace AmbientServices
         /// <param name="skipTime">The amount of time to skip ahead.</param>
         public static void SkipAhead(TimeSpan skipTime)
         {
-            PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
+            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null) controllable.SkipAhead(skipTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
         }
         /// <summary>
@@ -107,7 +107,7 @@ namespace AmbientServices
         /// <param name="millisecondsToSleep">The number of milliseconds to sleep.</param>
         public static void ThreadSleep(int millisecondsToSleep)
         {
-            PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
+            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null)
             {
                 controllable.SkipAhead(millisecondsToSleep * Stopwatch.Frequency / 1000);
@@ -136,7 +136,7 @@ namespace AmbientServices
         /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
         private static Task Delay(long millisecondsToDelay)
         {
-            PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
+            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null)
             {
                 controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
@@ -165,7 +165,7 @@ namespace AmbientServices
         }
         private static Task Delay(long millisecondsToDelay, CancellationToken cancel)
         {
-            PausedAmbientClock controllable = _Clock.Override as PausedAmbientClock;
+            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null)
             {
                 controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
@@ -196,7 +196,7 @@ namespace AmbientServices
         }
         sealed class ScopedClockPauser : IDisposable
         {
-            private IAmbientClock _clockToRestore;
+            private IAmbientClock? _clockToRestore;
 
             internal ScopedClockPauser()
             {
@@ -328,7 +328,7 @@ namespace AmbientServices
     {
         private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
 
-        private readonly IAmbientClock _clock;
+        private readonly IAmbientClock? _clock;
         private long _accumulatedTicks;
         private long _resumeTicks;
         private bool _running;
@@ -356,7 +356,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="clock">The <see cref="IAmbientClock"/> to use, or null to use the system clock.</param>
         /// <param name="run">Whether or not the stopwatch should start in a running state (as opposed to a paused state).</param>
-        public AmbientStopwatch(IAmbientClock clock, bool run = true)
+        public AmbientStopwatch(IAmbientClock? clock, bool run = true)
         {
             _clock = clock;
             _resumeTicks = Ticks;
@@ -364,6 +364,7 @@ namespace AmbientServices
         }
         /// <summary>
         /// Gets a timestamp number that may be used to determine how many ticks have elapsed between calls.
+        /// The timestamp is retrieved from the default local ambient clock.
         /// </summary>
         /// <returns>A timestamp.</returns>
         public static long GetTimestamp()
@@ -464,10 +465,10 @@ namespace AmbientServices
     {
         private static readonly System.Reflection.ConstructorInfo _ElapsedEventArgsConstructor = typeof(System.Timers.ElapsedEventArgs).GetConstructor(
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null,
-            new Type[] { typeof(long) }, null);
+            new Type[] { typeof(long) }, null)!;    // since we know the type, we know that this constructor will be found
         private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
 
-        private readonly IAmbientClock _clock;           // if this is null, everything falls through to the base class (ie. the system implementation)
+        private readonly IAmbientClock? _clock;           // if this is null, everything falls through to the base class (ie. the system implementation)
         private long _periodStopwatchTicks;
         private long _nextRaiseStopwatchTicks;
         private int _autoReset;
@@ -516,8 +517,8 @@ namespace AmbientServices
         /// Constructs an AmbientEventTimer that will use the specified clock to determine when to raise the <see cref="Elapsed"/> event.
         /// The timer starts with <see cref="AutoReset"/> set to true and <see cref="Enabled"/> set to false.
         /// </summary>
-        /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
-        public AmbientEventTimer(IAmbientClock clock)
+        /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to raise the <see cref="Elapsed"/> event, or null to use the system clock.</param>
+        public AmbientEventTimer(IAmbientClock? clock)
             : base()
         {
             _clock = clock;
@@ -541,7 +542,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
         /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be raised.  If zero, the timer will not be enabled.  If non-zero, the timer will start immediately.</param>
-        public AmbientEventTimer(IAmbientClock clock, TimeSpan period)
+        public AmbientEventTimer(IAmbientClock? clock, TimeSpan period)
             : base(period.TotalMilliseconds)
         {
             _clock = clock;
@@ -662,7 +663,7 @@ namespace AmbientServices
         private void SetupNextRaise()
         {
             System.Diagnostics.Debug.Assert(_clock != null);
-            long now = _clock.Ticks;
+            long now = _clock!.Ticks;   // this function is only called where _clock is not null
             System.Threading.Interlocked.Exchange(ref _nextRaiseStopwatchTicks, now + _periodStopwatchTicks);
         }
 
@@ -772,9 +773,9 @@ namespace AmbientServices
 #endif
 
         private readonly TimerCallback _callback;
-        private readonly object _state;
-        private readonly IAmbientClock _clock;           // exactly one of _clock and _timer should be null
-        private readonly System.Threading.Timer _timer;
+        private readonly object? _state;
+        private readonly IAmbientClock? _clock;           // exactly one of _clock and _timer should be null
+        private readonly System.Threading.Timer? _timer;
 
         private long _periodStopwatchTicks;
         private long _nextRaiseStopwatchTicks;
@@ -794,10 +795,10 @@ namespace AmbientServices
         /// Constructs an AmbientCallbackTimer using the ambient clock and the specified period.
         /// </summary>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
-        /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
+        /// <param name="state">The state <see cref="Object"/> to pass to the callback, or null if no such object is needed.</param>
         /// <param name="dueTime">The number of milliseconds to delay before calling the callback.  <see cref="Timeout.Infinite"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
-        public AmbientCallbackTimer(TimerCallback callback, object state, int dueTime, int period)
+        public AmbientCallbackTimer(TimerCallback callback, object? state, int dueTime, int period)
             : this(_Clock.Local, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
         {
         }
@@ -843,7 +844,7 @@ namespace AmbientServices
         /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
         /// <param name="dueTime">A <see cref="TimeSpan"/> indicating the number of milliseconds to delay before calling the callback.  <see cref="Timeout.InfiniteTimeSpan"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
-        public AmbientCallbackTimer(IAmbientClock clock, TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period)
+        public AmbientCallbackTimer(IAmbientClock? clock, TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
         {
             if (callback == null) throw new ArgumentNullException(nameof(callback));
             if (dueTime != Timeout.InfiniteTimeSpan && dueTime.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(dueTime), "The dueTime parameter must not be negative unless it is Infinite!");
@@ -877,10 +878,9 @@ namespace AmbientServices
         /// <param name="newTicks">The new number of elapsed ticks.</param>
         /// <param name="oldUtcDateTime">The old UTC <see cref="DateTime"/>.</param>
         /// <param name="newUtcDateTime">The new UTC <see cref="DateTime"/>.</param>
-        public void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
+        void IAmbientClockTimeChangedNotificationSink.TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
         {
-            // there should be a clock and NOT a timer if we get here
-            System.Diagnostics.Debug.Assert(_clock != null && _timer == null);
+            if (_clock == null) throw new InvalidOperationException("TimeChanged may only be used with non-system ambient clocks!");
             // is the timer enabled?
             if (_enabled != 0)
             {
@@ -908,17 +908,19 @@ namespace AmbientServices
 
         private void Disable()
         {
-            // race to disable us-- did we win the race?
+            // this currently only gets called when there is NOT a clock
+            System.Diagnostics.Debug.Assert(_clock != null && _timer == null);
+            // race to disable us--did we win the race?
             if (1 == System.Threading.Interlocked.Exchange(ref _enabled, 0))
             {
-                _clock.DeregisterTimeChangedNotificationSink(this);
+                _clock!.DeregisterTimeChangedNotificationSink(this);
                 System.Threading.Interlocked.Decrement(ref _TimerCount);
             }
         }
         private void Enable(TimeSpan dueTime, TimeSpan period)
         {
             System.Threading.Interlocked.Increment(ref _TimerCount);
-            long nowStopwatchTicks = _clock.Ticks;
+            long nowStopwatchTicks = _clock!.Ticks; // this is only called where _clock is not null
             IAmbientClock tempClock = _clock;
             _clock.RegisterTimeChangedNotificationSink(this);
             _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
@@ -986,7 +988,7 @@ namespace AmbientServices
             }
             else
             {
-                return _timer.Change(dueTime, period);
+                return _timer!.Change(dueTime, period); // if _clock is null, _timer cannot be!
             }
         }
 
@@ -1012,7 +1014,7 @@ namespace AmbientServices
                 }
                 else
                 {
-                    ret = _timer.Dispose(waitHandle);
+                    ret = _timer!.Dispose(waitHandle);  // if _clock is null, _timer cannot be!
                 }
                 System.Threading.Interlocked.Decrement(ref _TimerCount);
                 _disposed = true;
@@ -1059,7 +1061,7 @@ namespace AmbientServices
                 }
                 else
                 {
-                    _timer.Dispose();
+                    _timer!.Dispose();  // if _clock is null, _timer cannot be
                 }
                 System.Threading.Interlocked.Decrement(ref _TimerCount);
                 _disposed = true;
@@ -1082,37 +1084,38 @@ namespace AmbientServices
 
 
         private readonly RegisteredWaitHandle _registeredWaitHandle;
-        private readonly IAmbientClock _clock;
+        private readonly IAmbientClock? _clock;
         private readonly WaitOrTimerCallback _callback;
         private readonly bool _executeOnlyOnce;
-        private readonly object _state;
+        private readonly object? _state;
         private readonly long _periodStopwatchTicks;
-        private readonly ExecutionContext _executionContext;
+        private readonly ExecutionContext? _executionContext;
         private long _nextCallbackTimeStopwatchTicks;
 
-        internal AmbientRegisteredWaitHandle(bool safe, WaitHandle waitHandle, WaitOrTimerCallback callback, object state, int millisecondTimeoutInterval, bool executeOnlyOnce)
+        internal AmbientRegisteredWaitHandle(bool safe, WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, int millisecondTimeoutInterval, bool executeOnlyOnce)
             : this(waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce, safe)
         {
         }
-        internal AmbientRegisteredWaitHandle(bool safe, WaitHandle waitHandle, WaitOrTimerCallback callback, object state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
+        internal AmbientRegisteredWaitHandle(bool safe, WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
             : this(waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce, safe)
         {
         }
-        internal AmbientRegisteredWaitHandle(bool safe, WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce)
+        internal AmbientRegisteredWaitHandle(bool safe, WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, long millisecondTimeoutInterval, bool executeOnlyOnce)
             : this(waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce, safe)
         {
         }
-        internal AmbientRegisteredWaitHandle(bool safe, WaitHandle waitHandle, WaitOrTimerCallback callback, object state, TimeSpan timeoutInterval, bool executeOnlyOnce)
+        internal AmbientRegisteredWaitHandle(bool safe, WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, TimeSpan timeoutInterval, bool executeOnlyOnce)
             : this(waitHandle, callback, state, (long)timeoutInterval.TotalMilliseconds, executeOnlyOnce, safe)
         {
         }
-        private AmbientRegisteredWaitHandle(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce, bool safe)
+        private AmbientRegisteredWaitHandle(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, long millisecondTimeoutInterval, bool executeOnlyOnce, bool safe)
         {
             if ((_clock = _Clock.Local) == null)
             {
                 _registeredWaitHandle = safe
                     ? ThreadPool.RegisterWaitForSingleObject(waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce)
                     : ThreadPool.UnsafeRegisterWaitForSingleObject(waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
+                _callback = (o, b) => { };
             }
             else
             {
@@ -1133,8 +1136,9 @@ namespace AmbientServices
             }
         }
 
-        private void OnWaitHandleSignaled(object state, bool timedOut)
+        private void OnWaitHandleSignaled(object? state, bool timedOut)
         {
+            System.Diagnostics.Debug.Assert(_clock != null);
             // only execute once?
             if (_executeOnlyOnce)
             {
@@ -1148,7 +1152,7 @@ namespace AmbientServices
             }
             else
             {   // schedule the next callback
-                System.Threading.Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, _clock.Ticks + _periodStopwatchTicks);
+                System.Threading.Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, _clock!.Ticks + _periodStopwatchTicks);  // this function should only be called when _clock is not null
             }
             // the wait handle was signaled--we should always call the callback in this case
             _callback(_state, false);
@@ -1203,7 +1207,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="waitObject">The <see cref="System.Threading.WaitHandle"/> to be signaled.</param>
         /// <returns>true if the function succeeds; otherwise, false.</returns>
-        public bool Unregister(WaitHandle waitObject)
+        public bool Unregister(WaitHandle? waitObject)
         {
             bool ret = _registeredWaitHandle.Unregister(waitObject);
             _clock?.DeregisterTimeChangedNotificationSink(this);
@@ -1227,7 +1231,7 @@ namespace AmbientServices
 #if NET5_0
         [UnsupportedOSPlatform("browser")]
 #endif
-        public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, int millisecondTimeoutInterval, bool executeOnlyOnce)
+        public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, int millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
@@ -1244,7 +1248,7 @@ namespace AmbientServices
         [UnsupportedOSPlatform("browser")]
 #endif
         [CLSCompliant(false)]
-        public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
+        public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
@@ -1260,7 +1264,7 @@ namespace AmbientServices
 #if NET5_0
         [UnsupportedOSPlatform("browser")]
 #endif
-        public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce)
+        public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, long millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
@@ -1276,7 +1280,7 @@ namespace AmbientServices
 #if NET5_0
         [UnsupportedOSPlatform("browser")]
 #endif
-        public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, TimeSpan timeoutInterval, bool executeOnlyOnce)
+        public static AmbientRegisteredWaitHandle RegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, TimeSpan timeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(true, waitHandle, callback, state, timeoutInterval, executeOnlyOnce);
         }
@@ -1292,7 +1296,7 @@ namespace AmbientServices
 #if NET5_0
         [UnsupportedOSPlatform("browser")]
 #endif
-        public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, int millisecondTimeoutInterval, bool executeOnlyOnce)
+        public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, int millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
@@ -1309,7 +1313,7 @@ namespace AmbientServices
         [UnsupportedOSPlatform("browser")]
 #endif
         [CLSCompliant(false)]
-        public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
+        public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, uint millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
@@ -1325,7 +1329,7 @@ namespace AmbientServices
 #if NET5_0
         [UnsupportedOSPlatform("browser")]
 #endif
-        public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, long millisecondTimeoutInterval, bool executeOnlyOnce)
+        public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, long millisecondTimeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, millisecondTimeoutInterval, executeOnlyOnce);
         }
@@ -1341,7 +1345,7 @@ namespace AmbientServices
 #if NET5_0
         [UnsupportedOSPlatform("browser")]
 #endif
-        public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object state, TimeSpan timeoutInterval, bool executeOnlyOnce)
+        public static AmbientRegisteredWaitHandle UnsafeRegisterWaitForSingleObject(WaitHandle waitHandle, WaitOrTimerCallback callback, object? state, TimeSpan timeoutInterval, bool executeOnlyOnce)
         {
             return new AmbientRegisteredWaitHandle(false, waitHandle, callback, state, timeoutInterval, executeOnlyOnce);
         }

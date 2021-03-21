@@ -35,7 +35,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ExceptionTypeNameNull()
         {
-            Assert.ThrowsException<ArgumentNullException>(() => ExceptionExtensions.TypeName(null));
+            Assert.ThrowsException<ArgumentNullException>(() => ExceptionExtensions.TypeName(null!));
+        }
+        [TestMethod]
+        public void ExceptionNullArgumentException()
+        {
+            Assert.ThrowsException<ArgumentNullException>(() => ExceptionExtensions.ToFilteredString(null!));
         }
     }
 }

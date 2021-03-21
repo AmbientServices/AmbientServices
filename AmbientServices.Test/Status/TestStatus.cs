@@ -36,37 +36,37 @@ namespace AmbientServices.Test
 
                 StatusResults sampleDisk = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == "SampleDisk" && c.Children.Any()) as StatusResults;
                 Assert.IsNotNull(sampleDisk);
-                StatusResults disk = sampleDisk.Children.FirstOrDefault() as StatusResults;
+                StatusResults disk = sampleDisk!.Children.FirstOrDefault() as StatusResults;
                 Assert.IsNotNull(disk);
-                Assert.IsTrue(disk.Properties.Count() > 0); // the properties in the node itself are the constant properties, ie. the path for a disk test
-                Assert.IsFalse(string.IsNullOrEmpty(sampleDisk.ToString()));
+                Assert.IsTrue(disk!.Properties.Count() > 0); // the properties in the node itself are the constant properties, ie. the path for a disk test
+                Assert.IsFalse(string.IsNullOrEmpty(sampleDisk!.ToString()));
 
                 StatusProperty att = disk.Properties.FirstOrDefault(a => a.Name == "TotalBytes");
-                Assert.IsFalse(string.IsNullOrEmpty(att.ToString()));
                 Assert.IsNotNull(att);
-                Assert.IsFalse(String.IsNullOrEmpty(att.Name));
-                Assert.IsFalse(String.IsNullOrEmpty(att.Value));
+                Assert.IsFalse(string.IsNullOrEmpty(att!.ToString()));
+                Assert.IsFalse(String.IsNullOrEmpty(att!.Name));
+                Assert.IsFalse(String.IsNullOrEmpty(att!.Value));
 
                 HashSet<StatusResults> test = new HashSet<StatusResults>();
                 StatusResults c1 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestHeterogenousExplicitRating));
                 Assert.IsNotNull(c1);
-                Assert.IsNotNull(c1.Report);
-                Assert.IsNotNull(c1.Report.Alert.Rating);
-                Assert.IsFalse(string.IsNullOrEmpty(c1.ToString()));
+                Assert.IsNotNull(c1!.Report);
+                Assert.IsNotNull(c1!.Report?.Alert?.Rating);
+                Assert.IsFalse(string.IsNullOrEmpty(c1!.ToString()));
                 test.Add(c1);
 
                 StatusResults c2 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestHomogeneousExplicitFailure));
                 Assert.IsNotNull(c2);
-                Assert.IsNotNull(c2.Report);
-                Assert.IsNotNull(c2.Report.Alert.Rating);
-                Assert.AreNotEqual(c1.Report.Alert, c2.Report.Alert);
-                Assert.IsFalse(string.IsNullOrEmpty(c2.ToString()));
+                Assert.IsNotNull(c2!.Report);
+                Assert.IsNotNull(c2!.Report?.Alert?.Rating);
+                Assert.AreNotEqual(c1!.Report?.Alert, c2!.Report?.Alert);
+                Assert.IsFalse(string.IsNullOrEmpty(c2!.ToString()));
                 test.Add(c2);
 
                 StatusResults c3 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestMachineConstantStatus));
                 Assert.IsNotNull(c3);
-                Assert.IsNull(c3.Report);
-                Assert.IsFalse(string.IsNullOrEmpty(c3.ToString()));
+                Assert.IsNull(c3!.Report);
+                Assert.IsFalse(string.IsNullOrEmpty(c3!.ToString()));
                 test.Add(c3);
 
                 StatusAuditAlert auditResult = overallStatus.GetSummaryAlerts(true, StatusRating.Alert, false);
@@ -106,7 +106,9 @@ namespace AmbientServices.Test
             Status s = new Status(false);
             await s.Start();
             Assert.ThrowsException<InvalidOperationException>(() => s.Start());
-            Assert.ThrowsException<ArgumentNullException>(() => Status.IsTestableStatusCheckerClass(null));
+            Assert.ThrowsException<ArgumentNullException>(() => Status.IsTestableStatusCheckerClass(null!));
+            Assert.ThrowsException<ArgumentNullException>(() => s.AddCheckerOrAuditor(null!));
+            Assert.ThrowsException<ArgumentNullException>(() => s.RemoveCheckerOrAuditor(null!));
         }
         [TestMethod]
         public async Task StatusEmpty()
@@ -216,7 +218,6 @@ namespace AmbientServices.Test
         public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
-            statusBuilder.TargetSystem = nameof(TestAuditableStatusNoChildren);
             statusBuilder.AddProperty("nc1", "a");
             statusBuilder.AddProperty("nc2", "b");
             statusBuilder.AddProperty("nc2", AmbientClock.UtcNow.AddMinutes(-3));
@@ -244,7 +245,6 @@ namespace AmbientServices.Test
         public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
-            statusBuilder.TargetSystem = nameof(TestConstantAuditResults);
             if (_rating <= StatusRating.Fail)
             {
                 statusBuilder.AddFailure(_auditCode, _terse, _details, _rating);
@@ -511,8 +511,8 @@ namespace AmbientServices.Test
         public TestHomogeneousWithFailure()
             : base(nameof(TestHomogeneousWithFailure), TimeSpan.FromSeconds(10))
         {
-            _alwaysSuperlative = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysSuperlative", StatusRating.Superlative, "TestSuperlativeCode", null, null);
-            _alwaysOkay = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysOkay", StatusRating.Okay, "TestOkayCode", null, null);
+            _alwaysSuperlative = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysSuperlative", StatusRating.Superlative, "TestSuperlativeCode", "", "");
+            _alwaysOkay = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysOkay", StatusRating.Okay, "TestOkayCode", "", "");
             _alwaysAlerting = StatusResultsBuilder.CreateRawStatusResults("Child2AlwaysAlerting", StatusRating.Alert, "TestAlertCode", "test-alert", "This status node always alerts!");
             _alwaysFailing = StatusResultsBuilder.CreateRawStatusResults("Child3AlwaysFailing", StatusRating.Fail, "TestFailCode", "test-fail", "This status node always fails!");
             _alwaysCatastrophic = StatusResultsBuilder.CreateRawStatusResults("Child3AlwaysCatastrophic", StatusRating.Catastrophic, "TestCatastrophicCode", "test-catastrophic", "This status node always catastrophic!");

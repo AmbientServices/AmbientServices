@@ -98,7 +98,7 @@ namespace AmbientServices
         /// <param name="positiveSign">Whether or not to includ a positive sign on positive numbers.</param>
         /// <param name="culture">The <see cref="System.Globalization.CultureInfo"/> to use to format the number, defaults to the current thread culture.</param>
         /// <returns>The SI representation of the number, for example for 5342432, the return value might be "5.34MB".</returns>
-        public static string ToSi(this double number, int maxCharacters = 4, string postfix = null, bool longName = false, bool positiveSign = false, System.Globalization.CultureInfo culture = null)
+        public static string ToSi(this double number, int maxCharacters = 4, string? postfix = null, bool longName = false, bool positiveSign = false, System.Globalization.CultureInfo? culture = null)
         {
             if (culture == null) culture = System.Threading.Thread.CurrentThread.CurrentCulture;
             if (postfix == null) postfix = string.Empty;
@@ -173,7 +173,7 @@ namespace AmbientServices
         /// <param name="positiveSign">Whether or not to includ a positive sign on positive numbers.</param>
         /// <param name="culture">The <see cref="System.Globalization.CultureInfo"/> to use to format the number, defaults to the current thread culture.</param>
         /// <returns>The SI representation of the number, for example for 5342432, the return value might be "5.34MB".</returns>
-        public static string ToSi(this float number, int maxCharacters = 4, string postfix = null, bool longName = false, bool positiveSign = false, System.Globalization.CultureInfo culture = null)
+        public static string ToSi(this float number, int maxCharacters = 4, string? postfix = null, bool longName = false, bool positiveSign = false, System.Globalization.CultureInfo? culture = null)
         {
             return ToSi((double)number, maxCharacters, postfix, longName, positiveSign, culture);
         }

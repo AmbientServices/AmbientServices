@@ -234,7 +234,7 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
 
-        internal (AmbientBottleneckAccessor, AmbientBottleneckAccessor) Split(long oldWindowBeginStopwatchTicks, long splitStopwatchTicks, long windowStartAccessCount, double windowStartLimitUsage)
+        internal (AmbientBottleneckAccessor, AmbientBottleneckAccessor?) Split(long oldWindowBeginStopwatchTicks, long splitStopwatchTicks, long windowStartAccessCount, double windowStartLimitUsage)
         {
             long accessCount;
             double limitUsedSoFar;
@@ -289,9 +289,9 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">The other AmbientBottleneckAccessRecord.</param>
         /// <returns>&gt;0 if this one has used more than <paramref name="other"/>, &lt;0 if this one has used less than <paramref name="other"/>, or 0 if they have used the same amount.</returns>
-        public int CompareTo(AmbientBottleneckAccessor other)
+        public int CompareTo(AmbientBottleneckAccessor? other)
         {
-            if (other == null) return 1;
+            if (ReferenceEquals(other, null)) return 1;
             int diff = this._utilization.CompareTo(other._utilization);
             if (diff != 0) return diff;
             diff = this._limitUsed.CompareTo(other._limitUsed);
@@ -303,9 +303,9 @@ namespace AmbientServices
         /// </summary>
         /// <param name="obj">The object to compare to.</param>
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            AmbientBottleneckAccessor that = obj as AmbientBottleneckAccessor;
+            AmbientBottleneckAccessor? that = obj as AmbientBottleneckAccessor;
             if (ReferenceEquals(this, obj)) return true;
             if (ReferenceEquals(that, null)) return false;
             return this._bottleneck.Equals(that._bottleneck) && this._accessBeginStopwatchTimestamp.Equals(that._accessBeginStopwatchTimestamp) && this._accessEndStopwatchTimestamp.Equals(that._accessEndStopwatchTimestamp);
@@ -325,7 +325,7 @@ namespace AmbientServices
         /// <param name="left">The left AmbientBottleneckAccessRecord.</param>
         /// <param name="right">The right AmbientBottleneckAccessRecord.</param>
         /// <returns>true if the AmbientBottleneckAccessRecords are logically equal, false if they are not.</returns>
-        public static bool operator ==(AmbientBottleneckAccessor left, AmbientBottleneckAccessor right)
+        public static bool operator ==(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
             if (ReferenceEquals(left, null)) return ReferenceEquals(right, null);
             return left.Equals(right);
@@ -336,7 +336,7 @@ namespace AmbientServices
         /// <param name="left">The left AmbientBottleneckAccessRecord.</param>
         /// <param name="right">The right AmbientBottleneckAccessRecord.</param>
         /// <returns>true if the AmbientBottleneckAccessRecords are logically not equal, false if they are logically equal.</returns>
-        public static bool operator !=(AmbientBottleneckAccessor left, AmbientBottleneckAccessor right)
+        public static bool operator !=(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
             return !(left == right);
         }
@@ -346,7 +346,7 @@ namespace AmbientServices
         /// <param name="left">The left AmbientBottleneckAccessRecord.</param>
         /// <param name="right">The right AmbientBottleneckAccessRecord.</param>
         /// <returns>true if the <paramref name="left"/> is less than <paramref name="right"/>, false if not.</returns>
-        public static bool operator <(AmbientBottleneckAccessor left, AmbientBottleneckAccessor right)
+        public static bool operator <(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
             return ReferenceEquals(left, null) ? !ReferenceEquals(right, null) : left.CompareTo(right) < 0;
         }
@@ -356,7 +356,7 @@ namespace AmbientServices
         /// <param name="left">The left AmbientBottleneckAccessRecord.</param>
         /// <param name="right">The right AmbientBottleneckAccessRecord.</param>
         /// <returns>true if the <paramref name="left"/> is less than or equal to <paramref name="right"/>, false if not.</returns>
-        public static bool operator <=(AmbientBottleneckAccessor left, AmbientBottleneckAccessor right)
+        public static bool operator <=(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
             return ReferenceEquals(left, null) || left.CompareTo(right) <= 0;
         }
@@ -366,7 +366,7 @@ namespace AmbientServices
         /// <param name="left">The left AmbientBottleneckAccessRecord.</param>
         /// <param name="right">The right AmbientBottleneckAccessRecord.</param>
         /// <returns>true if the <paramref name="left"/> is greater than <paramref name="right"/>, false if not.</returns>
-        public static bool operator >(AmbientBottleneckAccessor left, AmbientBottleneckAccessor right)
+        public static bool operator >(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
             return !ReferenceEquals(left, null) && left.CompareTo(right) > 0;
         }
@@ -376,7 +376,7 @@ namespace AmbientServices
         /// <param name="left">The left AmbientBottleneckAccessRecord.</param>
         /// <param name="right">The right AmbientBottleneckAccessRecord.</param>
         /// <returns>true if the <paramref name="left"/> is greater than or equal to <paramref name="right"/>, false if not.</returns>
-        public static bool operator >=(AmbientBottleneckAccessor left, AmbientBottleneckAccessor right)
+        public static bool operator >=(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
             return ReferenceEquals(left, null) ? ReferenceEquals(right, null) : left.CompareTo(right) >= 0;
         }

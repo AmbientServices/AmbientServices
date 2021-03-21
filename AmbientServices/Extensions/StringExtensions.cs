@@ -162,7 +162,8 @@ namespace AmbientServices
         /// <returns><paramref name="source"/> string with instances of <paramref name="find"/> replaced with <paramref name="target"/>.</returns>
         public static string Replace(this string source, string find, string target, StringComparison compare)
         {
-            return source?.Replace(find, target);
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            return source.Replace(find, target);
         }
         /// <summary>
         /// Checks to see if a string contains the specified character.
@@ -173,7 +174,7 @@ namespace AmbientServices
         /// <returns>Whether or not <paramref name="source"/> contains <paramref name="find"/>.</returns>
         public static bool Contains(this string source, char find, StringComparison compare)
         {
-            return source?.Contains(find) ?? false;
+            return source.Contains(find);
         }
         /// <summary>
         /// Checks to see if a string contains a specified string.
@@ -184,7 +185,8 @@ namespace AmbientServices
         /// <returns>Whether or not <paramref name="source"/> contains <paramref name="find"/>.</returns>
         public static bool Contains(this string source, string find, StringComparison compare)
         {
-            return source?.Contains(find) ?? false;
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            return source.Contains(find);
         }
         /// <summary>
         /// Gets a 32-bit hash code for the specified string.
@@ -194,7 +196,8 @@ namespace AmbientServices
         /// <returns>A 32-bit hash code for <paramref name="source"/>.</returns>
         public static int GetHashCode(this string source, StringComparison compare)
         {
-            return source?.GetHashCode() ?? 0;
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            return source.GetHashCode();
         }
 #pragma warning restore CA1801
 #endif

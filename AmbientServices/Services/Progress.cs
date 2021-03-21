@@ -20,7 +20,7 @@ namespace AmbientServices
         /// Resets the associated cancellation token source to one from a framework source.
         /// </summary>
         /// <param name="cancellationTokenSource">A <see cref="CancellationTokenSource"/> from which to construct an ambient cancellation token source.  If not specified, creates a new cancellation token source that much be cancelled manually.</param>
-        void ResetCancellation(CancellationTokenSource cancellationTokenSource = null);
+        void ResetCancellation(CancellationTokenSource? cancellationTokenSource = null);
         /// <summary>
         /// Checks <see cref="CancellationToken"/> and throws the <see cref="OperationCanceledException"/> if the operation should be cancelled.
         /// </summary>
@@ -62,7 +62,7 @@ namespace AmbientServices
         /// <remarks>
         /// The <see cref="IDisposable"/>s returned by this function must be disposed in order, ie. those created as sub-parts must all be disposed before the parent part is.
         /// </remarks>
-        IDisposable TrackPart(float startPortion, float portionPart, string prefix = null, bool inheritCancellationTokenSource = false);
+        IDisposable TrackPart(float startPortion, float portionPart, string? prefix = null, bool inheritCancellationTokenSource = false);
     }
     /// <summary>
     /// An interface that abstracts an ambient progress tracking service.
@@ -72,13 +72,13 @@ namespace AmbientServices
         /// <summary>
         /// Gets the most recent <see cref="IAmbientProgress"/> for the current execution context.  
         /// </summary>
-        /// <returns>An <see cref="IAmbientProgress"/> tracker to track the progress of the calling process.</returns>
+        /// <returns>An <see cref="IAmbientProgress"/> tracker to track the progress of the calling process, or null if progress tracking is not active.</returns>
         /// <remarks>
         /// The first time this property is retrieved, a new top-level <see cref="IAmbientProgress"/> is created.
         /// The <see cref="IAmbientProgress"/> that is returned is thread-safe, but since each execution context gets its own progress tracker,
         /// cross-thread calls should only happen when the executing thread is working on the same operation as the thread whose progress 
         /// tracker is being called and when the threads are using some external method for coordinating the processing.
         /// </remarks>
-        IAmbientProgress Progress { get; }
+        IAmbientProgress? Progress { get; }
     }
 }

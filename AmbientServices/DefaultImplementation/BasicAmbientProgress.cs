@@ -8,19 +8,19 @@ namespace AmbientServices
     [DefaultAmbientService]
     internal class BasicAmbientProgress : IAmbientProgressService
     {
-        private readonly AsyncLocal<Progress> _progress;
+        private readonly AsyncLocal<Progress?> _progress;
 
         public BasicAmbientProgress()
         {
-            _progress = new AsyncLocal<Progress>();
+            _progress = new AsyncLocal<Progress?>();
         }
 
-        public IAmbientProgress Progress
+        public IAmbientProgress? Progress
         {
             get
             {
-                IAmbientProgress ambientProgress = _progress.Value;
-                Progress topProgress = ambientProgress as Progress;
+                IAmbientProgress? ambientProgress = _progress.Value;
+                Progress? topProgress = ambientProgress as Progress;
                 // no progress in this context yet, or the context has been disposed (the docs say not to do that, but we have no control over it).
                 if (ambientProgress == null || (topProgress?.Disposed ?? false))
                 {
@@ -42,15 +42,15 @@ namespace AmbientServices
         }
         public void PopSubProgress(Progress specified)
         {
-            Progress expected = _progress.Value;
-            Progress pop = expected;
+            Progress? expected = _progress.Value;
+            Progress? pop = expected;
             // are the specified progress and the one at the top of the stack *not* the same?
             if (expected != specified)
             {
                 // walk up from both the expected progress and the specified progress to try to find the others
-                Progress tryFindExpected = Progress as Progress;
-                Progress specifiedPopperAncestor = specified;
-                Progress expectedPopperAncestor = tryFindExpected;
+                Progress? tryFindExpected = Progress as Progress;
+                Progress? specifiedPopperAncestor = specified;
+                Progress? expectedPopperAncestor = tryFindExpected;
                 while (specifiedPopperAncestor != null || expectedPopperAncestor != null)
                 {
                     specifiedPopperAncestor = specifiedPopperAncestor?.Parent as Progress;
@@ -80,16 +80,16 @@ namespace AmbientServices
             }
             Pop(pop);
         }
-        private void Pop(Progress subProgress)
+        private void Pop(Progress? subProgress)
         {
-            IAmbientProgress parent = subProgress.Parent;
+            IAmbientProgress? parent = subProgress?.Parent;
             _progress.Value = parent as Progress;
         }
     }
     class Progress : IAmbientProgress, IDisposable
     {
         private readonly BasicAmbientProgress _tracker;
-        private readonly IAmbientProgress _parentProgress;
+        private readonly IAmbientProgress? _parentProgress;
         private readonly string _prefix;
         private AmbientCancellationTokenSource _cancelSource;       // Note that this should never be null
         private bool _inheritedCancelSource;                        // if we inherited the cancel source, there is no need to dispose of it, as the parent progress is the owner
@@ -103,7 +103,7 @@ namespace AmbientServices
              : this (progress, null, 0.0f, 1.0f, null, false)
         {
         }
-        public Progress(BasicAmbientProgress progressService, IAmbientProgress parentProgress, float startPortion, float portionPart, string prefix = null, bool inheritCancellationSource = true)
+        public Progress(BasicAmbientProgress progressService, IAmbientProgress? parentProgress, float startPortion, float portionPart, string? prefix = null, bool inheritCancellationSource = true)
         {
             _tracker = progressService;
             _prefix = prefix ?? "";
@@ -116,7 +116,7 @@ namespace AmbientServices
             _portionPart = portionPart;
             if (_inheritedCancelSource = inheritCancellationSource) // note that this is an ASSIGNMENT in addition to a test
             {
-                _cancelSource = parentProgress.CancellationTokenSource;
+                _cancelSource = parentProgress?.CancellationTokenSource ?? new AmbientCancellationTokenSource();
             }
             else
             {
@@ -133,9 +133,9 @@ namespace AmbientServices
             _inheritedCancelSource = false;
             _cancelSource = cancelSource;
         }
-        public void ResetCancellation(CancellationTokenSource cancellationTokenSource = null)
+        public void ResetCancellation(CancellationTokenSource? cancellationTokenSource = null)
         {
-            AmbientCancellationTokenSource cancelSource = (cancellationTokenSource == null) ? new AmbientCancellationTokenSource(null) :  new AmbientCancellationTokenSource(cancellationTokenSource);
+            AmbientCancellationTokenSource? cancelSource = (cancellationTokenSource == null) ? new AmbientCancellationTokenSource(null) :  new AmbientCancellationTokenSource(cancellationTokenSource);
             // dispose of any previously-held cancellation token source and swap in the new one
             if (!_inheritedCancelSource) _cancelSource.Dispose();
             _inheritedCancelSource = false;
@@ -161,14 +161,14 @@ namespace AmbientServices
         {
             get => _currentItem;
         }
-        public void Update(float portionComplete, string itemCurrentlyBeingProcessed = null)
+        public void Update(float portionComplete, string? itemCurrentlyBeingProcessed = null)
         {
             if (portionComplete < 0.0 || portionComplete > 1.0) throw new ArgumentOutOfRangeException(nameof(portionComplete), "The portion complete must be between 0.0 and 1.0, inclusive!");
             System.Threading.Interlocked.Exchange(ref _portionComplete, portionComplete);
             if (itemCurrentlyBeingProcessed != null) System.Threading.Interlocked.Exchange(ref _currentItem, itemCurrentlyBeingProcessed);
             _parentProgress?.Update(_startPortion + _portionPart * portionComplete, _prefix + itemCurrentlyBeingProcessed);
         }
-        public IDisposable TrackPart(float startPortion, float portionPart, string prefix = null, bool inheritCancellationTokenSource = false)
+        public IDisposable TrackPart(float startPortion, float portionPart, string? prefix = null, bool inheritCancellationTokenSource = false)
         {
             _parentProgress?.Update(startPortion);
             return new Progress(_tracker, this, startPortion, portionPart, _prefix + prefix, inheritCancellationTokenSource);
@@ -187,6 +187,6 @@ namespace AmbientServices
             }
         }
         internal bool Disposed { get { return _disposed; } }
-        internal IAmbientProgress Parent { get { return _parentProgress; } }
+        internal IAmbientProgress? Parent { get { return _parentProgress; } }
     }
 }

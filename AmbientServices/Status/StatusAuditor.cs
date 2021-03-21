@@ -11,14 +11,16 @@ namespace AmbientServices
     /// </summary>
     public sealed class StatusAuditAlert : IEquatable<StatusAuditAlert>
     {
+        private static readonly StatusAuditAlert _Empty = new StatusAuditAlert();
+        private static readonly StatusAuditAlert _None = new StatusAuditAlert(StatusRating.Okay, "NoAlert", "No Alerts", "There are no alerts.");
         /// <summary>
         /// An empty <see cref="StatusAuditAlert"/> in case they need to be compared.
         /// </summary>
-        public static readonly StatusAuditAlert Empty = new StatusAuditAlert();
+        public static StatusAuditAlert Empty {  get { return _Empty; } }
         /// <summary>
         /// A <see cref="StatusAuditAlert"/> for when no alert was reported.
         /// </summary>
-        public static readonly StatusAuditAlert None = new StatusAuditAlert(StatusRating.Okay, "NoAlert", "No Alerts", "There are no alerts.");
+        public static StatusAuditAlert None { get { return _None; } }
 
         private readonly float _rating;
         private readonly string _auditAlertCode;
@@ -75,13 +77,15 @@ namespace AmbientServices
         /// Constructs a <see cref="StatusAuditAlert"/> with the specified values.
         /// </summary>
         /// <param name="rating">A status rating indicating whether or not the system is working.</param>
-        /// <param name="auditAlertCode">The code for this audit result.</param>
+        /// <param name="auditAlertCode">The code for this audit result, or empty string if the alert is a composite alert.</param>
         /// <param name="terse">The terse alert message.</param>
         /// <param name="details">The details alert message.</param>
         public StatusAuditAlert(float rating, string auditAlertCode, string terse, string details)
         {
+            if (auditAlertCode == null) throw new ArgumentNullException(nameof(auditAlertCode));
+            if (terse == null) throw new ArgumentNullException(nameof(terse));
+            if (details == null) throw new ArgumentNullException(nameof(details));
             _rating = rating;
-            if (auditAlertCode == null) throw new ArgumentNullException(nameof(auditAlertCode), "The audit alert code may not be empty");
             _auditAlertCode = auditAlertCode;
             _terse = terse;
             _details = details;
@@ -100,10 +104,10 @@ namespace AmbientServices
         /// </summary>
         /// <param name="obj">The other object to compare to.</param>
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            StatusAuditAlert alert = obj as StatusAuditAlert;
-            if (alert == null) return false;
+            StatusAuditAlert? alert = obj as StatusAuditAlert;
+            if (ReferenceEquals(alert, null)) return false;
             return Equals(alert);
         }
 
@@ -112,9 +116,9 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">The other <see cref="StatusAuditAlert"/> to compare to.</param>
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
-        public bool Equals(StatusAuditAlert other)
+        public bool Equals(StatusAuditAlert? other)
         {
-            if (other == null) return false;
+            if (ReferenceEquals(other, null)) return false;
             return this._rating.Equals(other._rating) && String.Equals(this._auditAlertCode, other._auditAlertCode, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -124,7 +128,7 @@ namespace AmbientServices
         /// <param name="a">The first <see cref="StatusAuditAlert"/> to compare.</param>
         /// <param name="b">The second <see cref="StatusAuditAlert"/> to compare.</param>
         /// <returns><b>true</b> if <paramref name="a"/> is equal to <paramref name="b"/>.</returns>
-        public static bool operator ==(StatusAuditAlert a, StatusAuditAlert b)
+        public static bool operator ==(StatusAuditAlert? a, StatusAuditAlert? b)
         {
             if (ReferenceEquals(a, null)) return ReferenceEquals(b, null);
             return a.Equals(b);
@@ -135,7 +139,7 @@ namespace AmbientServices
         /// <param name="a">The first <see cref="StatusAuditAlert"/> to compare.</param>
         /// <param name="b">The second <see cref="StatusAuditAlert"/> to compare.</param>
         /// <returns><b>true</b> if <paramref name="a"/> is NOT equal to <paramref name="b"/>.</returns>
-        public static bool operator !=(StatusAuditAlert a, StatusAuditAlert b)
+        public static bool operator !=(StatusAuditAlert? a, StatusAuditAlert? b)
         {
             if (ReferenceEquals(a, null)) return !ReferenceEquals(b, null);
             return !a.Equals(b);
@@ -164,7 +168,7 @@ namespace AmbientServices
         private readonly DateTime _auditStartTime;
         private readonly TimeSpan _auditDuration;
         private readonly DateTime? _nextAuditTime;
-        private readonly StatusAuditAlert _alert;
+        private readonly StatusAuditAlert? _alert;
 
         /// <summary>
         /// Gets the time when the audit of the target system started.
@@ -191,7 +195,7 @@ namespace AmbientServices
         /// Gets the <see cref="StatusAuditAlert"/> for this audit, if any.
         /// No <see cref="StatusAuditAlert"/> implies that there were no issues, which should default to <see cref="StatusRating.Okay"/>.
         /// </summary>
-        public StatusAuditAlert Alert
+        public StatusAuditAlert? Alert
         {
             get { return _alert; }
         }
@@ -213,7 +217,7 @@ namespace AmbientServices
         /// <param name="auditDuration">A <see cref="TimeSpan"/> indicating how long the audit took.</param>
         /// <param name="nextAuditTime">The next time the audit should happen (if any).</param>
         /// <param name="alert">A <see cref="StatusAuditAlert"/> if the audit includes an alert, if any</param>
-        public StatusAuditReport(DateTime auditStartTime, TimeSpan auditDuration, DateTime? nextAuditTime = null, StatusAuditAlert alert = null)
+        public StatusAuditReport(DateTime auditStartTime, TimeSpan auditDuration, DateTime? nextAuditTime = null, StatusAuditAlert? alert = null)
         {
             _auditStartTime = auditStartTime;
             _auditDuration = auditDuration;
@@ -256,10 +260,10 @@ namespace AmbientServices
         /// </summary>
         /// <param name="obj">The other object to compare to.</param>
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            StatusAuditReport alert = obj as StatusAuditReport;
-            if (alert == null) return false;
+            StatusAuditReport? alert = obj as StatusAuditReport;
+            if (ReferenceEquals(alert, null)) return false;
             return Equals(alert);
         }
 
@@ -268,9 +272,9 @@ namespace AmbientServices
         /// </summary>
         /// <param name="other">The other <see cref="StatusAuditReport"/> to compare to.</param>
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
-        public bool Equals(StatusAuditReport other)
+        public bool Equals(StatusAuditReport? other)
         {
-            if (other == null) return false;
+            if (ReferenceEquals(other, null)) return false;
             return Object.Equals(this._alert, other._alert);
         }
 
@@ -280,7 +284,7 @@ namespace AmbientServices
         /// <param name="a">The first <see cref="StatusAuditReport"/> to compare.</param>
         /// <param name="b">The second <see cref="StatusAuditReport"/> to compare.</param>
         /// <returns><b>true</b> if <paramref name="a"/> is equal to <paramref name="b"/>.</returns>
-        public static bool operator ==(StatusAuditReport a, StatusAuditReport b)
+        public static bool operator ==(StatusAuditReport? a, StatusAuditReport? b)
         {
             if (ReferenceEquals(a, null)) return ReferenceEquals(b, null);
             return a.Equals(b);
@@ -291,7 +295,7 @@ namespace AmbientServices
         /// <param name="a">The first <see cref="StatusAuditReport"/> to compare.</param>
         /// <param name="b">The second <see cref="StatusAuditReport"/> to compare.</param>
         /// <returns><b>true</b> if <paramref name="a"/> is NOT equal to <paramref name="b"/>.</returns>
-        public static bool operator !=(StatusAuditReport a, StatusAuditReport b)
+        public static bool operator !=(StatusAuditReport? a, StatusAuditReport? b)
         {
             if (ReferenceEquals(a, null)) return !ReferenceEquals(b, null);
             return !a.Equals(b);
@@ -303,11 +307,12 @@ namespace AmbientServices
     /// </summary>
     public abstract class StatusAuditor : StatusChecker
     {
-        private readonly Status _status;
+        private readonly StatusResults _shutdownInProgress;     // may be returned if results are requested during shutdown
+        private readonly Status? _status;
         private readonly TimeSpan _baselineAuditFrequency;
         private readonly System.Timers.Timer _initialAuditTimer;    // only used until the initial audit happens, then disposed
 
-        private AmbientCancellationTokenSource _backgroundCancelSource = new AmbientCancellationTokenSource(); // interlocked
+        private AmbientCancellationTokenSource? _backgroundCancelSource = new AmbientCancellationTokenSource(); // interlocked
         private AmbientEventTimer _auditTimer;  // interlocked
         private int _backgroundAuditCount;      // interlocked
         private int _foregroundAuditCount;      // interlocked
@@ -326,7 +331,7 @@ namespace AmbientServices
         /// <see cref="TimeSpan.Zero"/> and negative time spans are treated as if they were <see cref="TimeSpan.MaxValue"/>.
         /// </param>
         /// <param name="status">The <see cref="Status"/> this auditor belongs to, or null if this should be a standalone auditor owned by the caller.</param>
-        protected internal StatusAuditor(string targetSystem, TimeSpan baselineAuditFrequency, Status status)
+        protected internal StatusAuditor(string targetSystem, TimeSpan baselineAuditFrequency, Status? status)
             : base(targetSystem)
         {
             _status = status;
@@ -348,8 +353,9 @@ namespace AmbientServices
             {
                 _auditTimer = new AmbientEventTimer(Int32.MaxValue - 1);
             }
-            _auditTimer.AutoReset = false;  
+            _auditTimer.AutoReset = false;
             // note that the audit timer should remain stopped until we start it after the first audit happens
+            _shutdownInProgress = StatusResults.GetPendingResults(null, targetSystem);
         }
 
         /// <summary>
@@ -372,24 +378,25 @@ namespace AmbientServices
         {
             _initialAuditTimer.Enabled = true;
         }
-        internal async void InitialAuditTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        internal async void InitialAuditTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs? e)
         {
             CancellationToken cancel = _backgroundCancelSource?.Token ?? default;
             _initialAuditTimer.Enabled = false;
             await InternalAuditAsync(false, cancel).ConfigureAwait(false);
             _initialAuditTimer.Close();
         }
-        private async void AuditTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        internal async void AuditTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs? e)
         {
-            await InternalAuditAsync(false, _backgroundCancelSource.Token).ConfigureAwait(false);
+            CancellationToken cancel = _backgroundCancelSource?.Token ?? default;
+            await InternalAuditAsync(false, cancel).ConfigureAwait(false);
         }
         /// <summary>
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        sealed public override Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        sealed public override async Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
         {
-            return InternalAuditAsync(true, cancel);
+            return await InternalAuditAsync(true, cancel).ConfigureAwait(false);
         }
         private async Task<StatusResults> InternalAuditAsync(bool foreground = false, CancellationToken cancel = default(CancellationToken))
         {
@@ -422,7 +429,7 @@ namespace AmbientServices
             {
                 // ignore this exception--given the design of System.Timers.Timer, it's impossible to prevent
                 // it happens when an audit happens to get triggered just before shutdown/disposal
-                return null;
+                return _shutdownInProgress;
             }
             // get the results
             StatusResults newStatusResults = builder.FinalResults;
@@ -517,7 +524,7 @@ namespace AmbientServices
                 if (_backgroundCancelSource != null)
                 {
                     _backgroundCancelSource.Dispose();
-                    System.Threading.Interlocked.Exchange(ref _backgroundCancelSource, null);
+                    _backgroundCancelSource = null;
                 }
             }
         }

@@ -28,7 +28,7 @@ namespace AmbientServices
         /// <param name="fileExtension">The file extension (with leading .) to use for the files.  Defaults to ".log".</param>
         /// <param name="rotationPeriodMinutes">The number of minutes after which a new file should be used.  Suffixes will roll over to zero at midnight UTC every day.  Defaults to 60 minutes.</param>
         /// <param name="autoFlushSeconds">The number of seconds between automatic flushes of the log file.  Zero or negative values will disable automatic flushing, so all log messages will be buffered until the log file is rotated or <see cref="Flush"/> is called explicitly.</param>
-        public AmbientFileLogger(string filePrefix = null, string fileExtension = null, int rotationPeriodMinutes = 60, int autoFlushSeconds = 5)
+        public AmbientFileLogger(string? filePrefix = null, string? fileExtension = null, int rotationPeriodMinutes = 60, int autoFlushSeconds = 5)
         {
             if (filePrefix == null) filePrefix = Path.GetTempPath() + nameof(AmbientFileLogger);
             if (fileExtension == null) fileExtension = ".log";
@@ -114,8 +114,9 @@ namespace AmbientServices
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
         public static Task TryDeleteAllFiles(string filePathPrefix, CancellationToken cancel = default)
         {
-            string directory = Path.GetDirectoryName(filePathPrefix);
-            string filename = Path.GetFileName(filePathPrefix);
+            string? directory = Path.GetDirectoryName(filePathPrefix);
+            if (directory == null) throw new ArgumentException("The specified file path must be non-null and a non-root path!", nameof(filePathPrefix));
+            string filename = Path.GetFileName(filePathPrefix)!;
             // clean up the files
             foreach (string file in Directory.GetFiles(directory, filename + "*.log"))
             {
@@ -179,7 +180,7 @@ namespace AmbientServices
         private readonly AmbientEventTimer _timer;
         private readonly string _baselineFilename;
         private readonly string _startingSuffix;
-        private TextWriter _currentFileWriter;          // only accessed while the write lock is held
+        private TextWriter? _currentFileWriter;          // only accessed while the write lock is held
         private bool _disposedValue;
 
         /// <summary>
@@ -211,7 +212,7 @@ namespace AmbientServices
             {
                 await FlushInternal().ConfigureAwait(false);
             }
-            // this code is pretty-much impossible to test because the time has to go off AFTER this instance is marked as disposed but before the timer is disposed (or at least before it's last invocation happens)
+            // Coverage note: this code is pretty-much impossible to test because the time has to go off AFTER this instance is marked as disposed but before the timer is disposed (or at least before it's last invocation happens)
             catch (ObjectDisposedException)
             {
                 // ignore this error (it can happen during the race to dispose)
@@ -255,14 +256,13 @@ namespace AmbientServices
                 await _writeLock.WaitAsync(cancel).ConfigureAwait(false);
                 // loop through the queue processing log lines until we get to that message
                 string logString;
-                while (_queue.TryDequeue(out logString))
+                while (_queue.TryDequeue(out logString!))   // while TryQueue *can* put null into logString, it can only do so if it returns false, and we don't use logString in that case
                 {
                     // no file yet?
                     if (_currentFileWriter == null)
                     {
                         // open the starting file
-                        string filename = _baselineFilename + _startingSuffix;
-                        _currentFileWriter = new StreamWriter(new FileStream(filename, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite));
+                        await SwitchFiles(_startingSuffix).ConfigureAwait(false);
                     }
                     // time to switch files?
                     else if (logString.StartsWith(_SwitchFilesPrefix, StringComparison.Ordinal))
@@ -292,7 +292,7 @@ namespace AmbientServices
         {
             string filename = _baselineFilename + suffix;
             // close the old file
-            _currentFileWriter.Close();
+            _currentFileWriter?.Close();
             // open a new one
             _currentFileWriter = new StreamWriter(new FileStream(filename, FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
             // this really SHOULD be async--why can't windows open files asynchronously still!
@@ -311,6 +311,7 @@ namespace AmbientServices
                     _timer.Dispose();
                     _writeLock.Dispose();
                     _currentFileWriter?.Dispose();
+                    _currentFileWriter = null;
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

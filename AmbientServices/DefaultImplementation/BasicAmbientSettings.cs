@@ -18,7 +18,7 @@ namespace AmbientServices
         public const string DefaultSetName = "Default";
 
         private readonly string _name;
-        private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object, IAmbientSettingInfo> _weakSettingRegistered;
+        private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object?, IAmbientSettingInfo> _weakSettingRegistered;
         private ConcurrentDictionary<string, string> _rawValues;
         private ConcurrentDictionary<string, object> _typedValues;
 
@@ -38,7 +38,7 @@ namespace AmbientServices
             _name = name;
             _rawValues = new ConcurrentDictionary<string, string>();
             _typedValues = new ConcurrentDictionary<string, object>();
-            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object, IAmbientSettingInfo>(
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object?, IAmbientSettingInfo>(
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
             SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
@@ -56,18 +56,18 @@ namespace AmbientServices
             {
                 foreach (string key in values.Keys)
                 {
-                    IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                    IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
                     _typedValues[key] = (ps != null) ? ps.Convert(this, values[key]) : values[key];
                 }
             }
-            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object, IAmbientSettingInfo>(
+            _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object?, IAmbientSettingInfo>(
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
             SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
-        static void NewSettingRegistered(BasicAmbientSettingsSet settingsSet, object sender, IAmbientSettingInfo setting)
+        static void NewSettingRegistered(BasicAmbientSettingsSet settingsSet, object? sender, IAmbientSettingInfo setting)
         {
             // is there a value for this setting?
-            string value;
+            string? value;
             if (settingsSet._rawValues.TryGetValue(setting.Key, out value))
             {
                 // get the typed value
@@ -85,9 +85,9 @@ namespace AmbientServices
         /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
         /// <returns>The setting value, or null if the setting is not set.</returns>
 
-        public string GetRawValue(string key)
+        public string? GetRawValue(string key)
         {
-            string value;
+            string? value;
             return _rawValues.TryGetValue(key, out value) ? value : null;
         }
         /// <summary>
@@ -95,9 +95,9 @@ namespace AmbientServices
         /// </summary>
         /// <param name="key">A key identifying the setting whose value is to be retrieved.</param>
         /// <returns>The setting value, or null if the setting is not set.</returns>
-        public object GetTypedValue(string key)
+        public object? GetTypedValue(string key)
         {
-            object value;
+            object? value;
             return _typedValues.TryGetValue(key, out value) ? value : null;
         }
 
@@ -108,11 +108,11 @@ namespace AmbientServices
         /// <param name="key">A string that uniquely identifies the setting.</param>
         /// <param name="value">The new string value for the setting, or null to remove the setting and revert to the .</param>
         /// <returns>Whether or not the setting actually changed.</returns>
-        public bool ChangeSetting(string key, string value)
+        public bool ChangeSetting(string key, string? value)
         {
             if (value == null)
             {
-                string oldValue;
+                string? oldValue;
                 _rawValues.TryRemove(key, out oldValue);
                 _typedValues.TryRemove(key, out _);
                 // did the value *not* change?  bail out early
@@ -120,11 +120,11 @@ namespace AmbientServices
             }
             else
             {
-                string oldValue = null;
+                string? oldValue = null;
                 _rawValues.AddOrUpdate(key, value, (k, v) => { oldValue = v; return value; });
                 // did the value *not* change?  bail out early
                 if (String.Equals(value, oldValue, StringComparison.Ordinal)) return false;
-                IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
                 _typedValues[key] = (ps != null) ? ps.Convert(this, value) : value;
             }
             return true;

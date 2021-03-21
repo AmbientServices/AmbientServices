@@ -19,8 +19,8 @@ namespace AmbientServices
         {
             return (level >= RenderLevelStrings.Length) ? "div" : RenderLevelStrings[level];
         }
-        private static string RenderTerse(string terse) { return terse ?? "??"; }
-        private static string RenderDetails(string details) { return details ?? "No details specified."; }
+        private static string RenderTerse(string terse) { return terse; }
+        private static string RenderDetails(string details) { return details; }
 
         private readonly StringBuilder _details;
         private readonly StringBuilder _terse;
@@ -50,7 +50,7 @@ namespace AmbientServices
             _notificationTime = notificationTime ?? AmbientClock.UtcNow;
         }
 
-        private static void OpenHeader(StringBuilder details, StringBuilder terse, int tabLevel, StatusRatingRange range = (StatusRatingRange)(-1), string color = null)
+        private static void OpenHeader(StringBuilder details, StringBuilder terse, int tabLevel, StatusRatingRange range = (StatusRatingRange)(-1), string? color = null)
         {
             if (terse != null)
             {
@@ -140,21 +140,15 @@ namespace AmbientServices
             OpenHeader(_details, _terse, _tabLevel, range, rangeColor);
             _currentSectionRatingRange = range;
 
-            if (_terse != null)
-            {
-                _terse.Append(rangeName.ToUpperInvariant());
-            }
+            _terse.Append(rangeName.ToUpperInvariant());
             _details.Append(StatusRating.GetRangeSymbol(range));
             _details.Append(' ');
             _details.Append(rangeName);
 
             if (_notificationTime != null)
             {
-                if (_terse != null)
-                {
-                    _terse.Append(" @");
-                    _terse.Append(_notificationTime.Value.ToShortTimeString());
-                }
+                _terse.Append(" @");
+                _terse.Append(_notificationTime.Value.ToShortTimeString());
                 _details.Append(" at ");
                 _details.Append(_notificationTime.Value.ToLongTimeString());
                 _notificationTime = null;
@@ -185,10 +179,7 @@ namespace AmbientServices
             string rgbColor = StatusRating.GetRatingRgbForegroundColor(rating);
             StatusRatingRange range = StatusRating.FindRange(rating);
             OpenHeader(_details, _terse, _tabLevel, (StatusRatingRange)(-1), rgbColor);
-            if (_terse != null)
-            {
-                _terse.Append(target);
-            }
+            _terse.Append(target);
             _details.Append(target);
             CloseHeader(_details, _terse, _tabLevel);
             EnterTabLevel();
@@ -221,10 +212,7 @@ namespace AmbientServices
 
             OpenHeader(_details, _terse, _tabLevel, (StatusRatingRange)(-1), rgbColor);
 
-            if (_terse != null)
-            {
-                _terse.Append(aggregatedAlert.Target + ": " + aggregatedAlert.TerseSources + "->");
-            }
+            _terse.Append(aggregatedAlert.Target + ": " + aggregatedAlert.TerseSources + "->");
 
 #if RAWRATINGS
             _details.Append("[RATING=" + auditAlert.Rating.ToString(DebugRatingFloatFormat) + "] ");
@@ -232,14 +220,14 @@ namespace AmbientServices
             _details.Append(aggregatedAlert.Target + ": " + aggregatedAlert.DetailsSources + " reporting: ");
 
             // multi-line alert details or properties to list?
-            if ((aggregatedAlert?.CommonAlert?.Details != null && (aggregatedAlert.CommonAlert.Details.Contains("<br/>", StringComparison.Ordinal) || aggregatedAlert.CommonAlert.Details.Contains("</div>", StringComparison.Ordinal))) || (propertyRanges != null && propertyRanges.Count > 0))
+            if ((aggregatedAlert.CommonAlert?.Details != null && (aggregatedAlert.CommonAlert.Details.Contains("<br/>", StringComparison.Ordinal) || aggregatedAlert.CommonAlert.Details.Contains("</div>", StringComparison.Ordinal))) || (propertyRanges != null && propertyRanges.Count > 0))
             {
                 CloseHeader(_details, _terse, _tabLevel);
 
                 EnterTabLevel();
                 OpenHeader(_details, _terse, _tabLevel, (StatusRatingRange)(-1), rgbColor);
 
-                if (_terse != null) _terse.Append(RenderTerse(auditAlert.Terse).Replace("\n", "\n" + new string(' ', _tabLevel), StringComparison.Ordinal));
+                _terse.Append(RenderTerse(auditAlert.Terse).Replace("\n", "\n" + new string(' ', _tabLevel), StringComparison.Ordinal));
                 _details.AppendLine(RenderDetails(auditAlert.Details));
 
                 CloseHeader(_details, _terse, _tabLevel);
@@ -251,7 +239,7 @@ namespace AmbientServices
                     foreach (StatusPropertyRange propertyRange in aggregatedAlert.PropertyRanges)
                     {
                         OpenHeader(_details, _terse, _tabLevel, (StatusRatingRange)(-1), rgbColor);
-                        if (_terse != null) _terse.Append(propertyRange.ToString());
+                        _terse.Append(propertyRange.ToString());
                         _details.AppendLine(propertyRange.ToString());
                         CloseHeader(_details, _terse, _tabLevel);
                     }
@@ -260,7 +248,7 @@ namespace AmbientServices
             }
             else
             {
-                if (_terse != null) _terse.Append(RenderTerse(auditAlert.Terse));
+                _terse.Append(RenderTerse(auditAlert.Terse));
                 _details.Append(' ');
                 _details.Append(RenderDetails(auditAlert.Details));
                 CloseHeader(_details, _terse, _tabLevel);
