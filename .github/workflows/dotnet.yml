@@ -20,7 +20,7 @@ jobs:
       with:
         dotnet-version: 5.0.x
     - name: Set Version
-      run: dotnet SetVersion.dll 0.9.${{ github.run_number }}
+      run: dotnet SetVersion.dll 5.0.1.${{ github.run_number }}
     - name: Build AmbientServices
       run: dotnet build AmbientServices -c Release
     - name: Build AmbientServices.Samples
