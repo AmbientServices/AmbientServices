@@ -352,8 +352,8 @@ namespace AmbientServices.Test
             {
                 BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
                 long limitStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(1000).Ticks);
-                long useTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(100).Ticks);
-                TimeSpan limitPeriod = TimeSpan.FromSeconds(1);
+                long useTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(300).Ticks);
+                TimeSpan limitPeriod = TimeSpan.FromSeconds(7);
                 long limitPeriodTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Ticks);
                 AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck = new AmbientBottleneck("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, limitPeriod);
                 AmbientBottleneckAccessor a1 = null;
