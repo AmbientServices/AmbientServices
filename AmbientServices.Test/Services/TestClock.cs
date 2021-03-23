@@ -911,7 +911,7 @@ namespace AmbientServices.Test
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, null, 100, 100))
+            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, null, 10000, 10000)) // this assumes the test will finish in 10 seconds
             {
                 Assert.IsTrue(AmbientCallbackTimer.ActiveCount > 0);
             }

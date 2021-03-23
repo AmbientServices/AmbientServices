@@ -739,7 +739,7 @@ namespace AmbientServices.Test
             using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
             using (AmbientClock.Pause())
             {
-                AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test1", 1000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
                 AmbientBottleneck bottleneck2 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test2", 2000, TimeSpan.FromSeconds(1));
                 AmbientBottleneck bottleneck3 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test3", 2000, TimeSpan.FromSeconds(1));
                 using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
