@@ -31,9 +31,9 @@ jobs:
       run: dotnet build AmbientServices.Test -c Release
     - name: Package
       run: dotnet pack AmbientServices -c Release
-    - name: Test .NET Core 2.1
-      run: dotnet test -c Release -f netcoreapp2.1
     - name: Test .NET 5
       run: dotnet test -c Release -f net5.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx"
+    - name: Test .NET Core 2.1
+      run: dotnet test -c Release -f netcoreapp2.1
     - name: Publish
       run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.5.0.1.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
