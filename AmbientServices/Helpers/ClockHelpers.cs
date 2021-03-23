@@ -92,10 +92,23 @@ namespace AmbientServices
         /// Note that negative times are allowed, but should only be used to test weird clock issues.
         /// </remarks>
         /// <param name="skipTime">The amount of time to skip ahead.</param>
+        public static void SkipAhead(long stopwatchTicks)
+        {
+            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
+            if (controllable != null) controllable.SkipAhead(stopwatchTicks);
+        }
+        /// <summary>
+        /// Skips a paused clock ahead the specified amount of time.
+        /// If the clock is not paused in the current call context, nothing is done.
+        /// </summary>
+        /// <remarks>
+        /// Note that negative times are allowed, but should only be used to test weird clock issues.
+        /// </remarks>
+        /// <param name="skipTime">The amount of time to skip ahead.</param>
         public static void SkipAhead(TimeSpan skipTime)
         {
             PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
-            if (controllable != null) controllable.SkipAhead(skipTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond);
+            if (controllable != null) controllable.SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(skipTime.Ticks));
         }
         /// <summary>
         /// The ambient clock equivalent of <see cref="Thread.Sleep(int)"/>.
