@@ -213,11 +213,11 @@ namespace AmbientServices.Test
             }
             else if (rating <= StatusRating.Okay)
             {
-                statusBuilder.AddOkay("OkayCode", "Okay", "The sysetm is okay", StatusRating.Okay - rating);
+                statusBuilder.AddOkay("OkayCode", "Okay", "The system is okay", StatusRating.Okay - rating);
             }
             else
             {
-                statusBuilder.AddOkay("SuperCode", "Superlative", "The sysetm is superlative", StatusRating.Superlative - rating);
+                statusBuilder.AddOkay("SuperCode", "Superlative", "The system is superlative", StatusRating.Superlative - rating);
             }
             return Task.CompletedTask;
         }

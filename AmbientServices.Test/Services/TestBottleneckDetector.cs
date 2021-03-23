@@ -366,7 +366,7 @@ namespace AmbientServices.Test
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                     a1.Dispose();
                     Assert.AreEqual(1, a1.AccessCount);
-                    Assert.AreEqual(1000000, a1.AccessDurationStopwatchTicks);
+                    Assert.AreEqual(TimeSpan.TicksPerMillisecond * 100, a1.AccessDurationStopwatchTicks);
                     Assert.AreEqual(start, a1.AccessBegin);
                     Assert.AreEqual(AmbientClock.UtcNow, a1.AccessEnd);
                     Assert.AreEqual(1000000, a1.LimitUsed);
