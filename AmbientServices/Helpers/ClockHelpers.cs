@@ -75,7 +75,7 @@ namespace AmbientServices
             return new AmbientCancellationTokenSource(cancellationTokenSource);
         }
         /// <summary>
-        /// Pauses the time within the current call context so that no time passes until the returned <see cref="IDisposable"/> is disposed or <see cref="SkipAhead"/> is called.
+        /// Pauses the time within the current call context so that no time passes until the returned <see cref="IDisposable"/> is disposed or <see cref="SkipAhead(TimeSpan)"/> is called.
         /// </summary>
         /// <remarks>
         /// The returned instance must be disposed in the same call context.  If disposed in a child call context, the first disposal will unpause the clock for all child call contexts.
@@ -91,7 +91,7 @@ namespace AmbientServices
         /// <remarks>
         /// Note that negative times are allowed, but should only be used to test weird clock issues.
         /// </remarks>
-        /// <param name="skipTime">The amount of time to skip ahead.</param>
+        /// <param name="stopwatchTicks">The number of stopwatch ticks to skip ahead.</param>
         public static void SkipAhead(long stopwatchTicks)
         {
             PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
