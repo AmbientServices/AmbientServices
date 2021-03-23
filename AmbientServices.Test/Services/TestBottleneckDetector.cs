@@ -366,11 +366,11 @@ namespace AmbientServices.Test
                     AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
                     a1.Dispose();
                     Assert.AreEqual(1, a1.AccessCount);
-                    Assert.AreEqual(TimeSpan.TicksPerMillisecond * 100, a1.AccessDurationStopwatchTicks);
+                    Assert.AreEqual(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(100).Ticks), a1.AccessDurationStopwatchTicks);
                     Assert.AreEqual(start, a1.AccessBegin);
                     Assert.AreEqual(AmbientClock.UtcNow, a1.AccessEnd);
-                    Assert.AreEqual(1000000, a1.LimitUsed);
-                    Assert.AreEqual(10000, a1.Utilization);
+                    Assert.AreEqual(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(100).Ticks), a1.LimitUsed);
+                    Assert.AreEqual(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(100).Ticks) * 10 / 1000, a1.Utilization);
 
                     Assert.AreNotEqual(0, a1.GetHashCode());
                 }

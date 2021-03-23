@@ -106,7 +106,7 @@ namespace AmbientServices
         /// </summary>
         public long AccessCount { get { return _accessCount; } }
         /// <summary>
-        /// Gets the amount of the limit which was used.
+        /// Gets the amount of the limit which was used.  Note that this is in units of <see cref="System.Diagnostics.Stopwatch"/> ticks.
         /// </summary>
         public double LimitUsed { get { return _limitUsed; } }
         /// <summary>
