@@ -351,8 +351,11 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
-                long limitStopwatchTicks = 1000;
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck = new AmbientBottleneck("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, TimeSpan.FromSeconds(1));
+                long limitStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(1000).Ticks);
+                long useTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(100).Ticks);
+                TimeSpan limitPeriod = TimeSpan.FromSeconds(1);
+                long limitPeriodTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Ticks);
+                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck = new AmbientBottleneck("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, limitPeriod);
                 AmbientBottleneckAccessor a1 = null;
                 try
                 {
@@ -364,14 +367,14 @@ namespace AmbientServices.Test
                     Assert.AreEqual(null, a1.AccessEnd);
                     Assert.AreEqual(0, a1.LimitUsed);
                     Assert.AreEqual(0, a1.Utilization);
-                    AmbientClock.SkipAhead(100);
+                    AmbientClock.SkipAhead(useTicks);
                     a1.Dispose();
                     Assert.AreEqual(1, a1.AccessCount);
-                    Assert.AreEqual(100, a1.AccessDurationStopwatchTicks);
+                    Assert.AreEqual(useTicks, a1.AccessDurationStopwatchTicks);
                     Assert.AreEqual(start, a1.AccessBegin);
                     Assert.AreEqual(AmbientClock.UtcNow, a1.AccessEnd);
-                    Assert.AreEqual(100, a1.LimitUsed);
-                    Assert.AreEqual(System.Diagnostics.Stopwatch.Frequency / limitStopwatchTicks, a1.Utilization);
+                    Assert.AreEqual(useTicks, a1.LimitUsed);
+                    Assert.AreEqual((1.0 * useTicks * limitPeriodTicks) / (1.0 * useTicks * limitStopwatchTicks), a1.Utilization);
 
                     Assert.AreNotEqual(0, a1.GetHashCode());
                 }
