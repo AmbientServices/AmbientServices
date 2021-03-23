@@ -39,7 +39,7 @@ namespace AmbientServices
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks((_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp()) * TimeSpan.TicksPerSecond / Stopwatch.Frequency); } }
+        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp())); } }
         /// <summary>
         /// Gets the current virtual UTC <see cref="DateTime"/>.
         /// </summary>
