@@ -609,7 +609,7 @@ namespace AmbientServices.Test
                 timer.Enabled = true;
                 timer.Interval = 100;
                 Assert.AreEqual(0, elapsed);
-                clock.SkipAhead(TimeSpan.FromMilliseconds(100).Ticks * System.Diagnostics.Stopwatch.Frequency / TimeSpan.TicksPerSecond);
+                clock.SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(100).Ticks));
                 Assert.AreEqual(1, elapsed);
                 Assert.AreEqual(0, disposed);
             }
@@ -632,11 +632,11 @@ namespace AmbientServices.Test
                 timer.AutoReset = true;
                 timer.Start();
                 Assert.AreEqual(0, elapsed);
-                clock.SkipAhead(TimeSpan.FromMilliseconds(100).Ticks * System.Diagnostics.Stopwatch.Frequency / TimeSpan.TicksPerSecond);
+                clock.SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(100).Ticks));
                 Assert.AreEqual(1, elapsed);
                 Assert.AreEqual(0, disposed);
                 timer.Stop();
-                clock.SkipAhead(TimeSpan.FromMilliseconds(100).Ticks * System.Diagnostics.Stopwatch.Frequency / TimeSpan.TicksPerSecond);
+                clock.SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(100).Ticks));
                 Assert.AreEqual(1, elapsed);
                 Assert.AreEqual(0, disposed);
             }

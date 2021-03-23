@@ -123,7 +123,7 @@ namespace AmbientServices
             PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null)
             {
-                controllable.SkipAhead(millisecondsToSleep * Stopwatch.Frequency / 1000);
+                controllable.SkipAhead((long)millisecondsToSleep * Stopwatch.Frequency / 1000);
             }
             else
             {
@@ -410,7 +410,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>
-        public TimeSpan Elapsed => TimeSpan.FromTicks(ElapsedTicks * TimeSpan.TicksPerSecond / Stopwatch.Frequency);
+        public TimeSpan Elapsed => TimeSpan.FromTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(ElapsedTicks));
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>
@@ -567,7 +567,7 @@ namespace AmbientServices
 
                 long nowStopwatchTicks = clock.Ticks;
                 clock.RegisterTimeChangedNotificationSink(this);
-                _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
+                _periodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(period.Ticks);
                 _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = 0;
             }
@@ -936,8 +936,8 @@ namespace AmbientServices
             long nowStopwatchTicks = _clock!.Ticks; // this is only called where _clock is not null
             IAmbientClock tempClock = _clock;
             _clock.RegisterTimeChangedNotificationSink(this);
-            _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
-            long ticksToNextInvocation = dueTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
+            _periodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(period.Ticks);
+            long ticksToNextInvocation = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(dueTime.Ticks);
             _nextRaiseStopwatchTicks = nowStopwatchTicks + ticksToNextInvocation;
         }
 
