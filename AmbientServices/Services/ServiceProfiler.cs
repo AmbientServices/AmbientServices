@@ -50,7 +50,7 @@ namespace AmbientServices
         /// For example, to transform the group systems by only the main system, database, bucket, and result, without retaining the prefixes, use the following Regex:
         /// (?:([^:/]+)(?:(?:(/)(?:Database:)([^:/]*))|(?:(/)(?:Bucket:)([^:/]*))|(?:(/)(?:Result:)([^:/]*))|(?:/[^/]*))*)
         /// </remarks>
-        void SwitchSystem(string? system, string updatedPreviousSystem = null);
+        void SwitchSystem(string? system, string? updatedPreviousSystem = null);
         /// <summary>
         /// Registers a system switch notification sink with this ambient service profiler.
         /// </summary>
