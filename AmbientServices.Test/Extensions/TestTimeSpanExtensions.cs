@@ -151,5 +151,18 @@ namespace AmbientServices.Test
             Assert.AreEqual(100000, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(100000)));
             Assert.AreEqual(10000000000, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(10000000000)));
         }
+        [TestMethod]
+        public void TimeSpanDateTimeStopwatchTicksRoundTrip()
+        {
+            Assert.AreEqual(100, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(100)));
+            Assert.AreEqual(100000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(100000)));
+            Assert.AreEqual(10000000000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(10000000000)));
+            Assert.AreEqual(100000000000000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(100000000000000)));
+
+            Assert.AreEqual(100, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(100)));
+            Assert.AreEqual(100000, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(100000)));
+            Assert.AreEqual(10000000000, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(10000000000)));
+            Assert.AreEqual(100000000000000, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(100000000000000)));
+        }
     }
 }

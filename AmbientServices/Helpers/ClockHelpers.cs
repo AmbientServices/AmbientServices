@@ -921,7 +921,7 @@ namespace AmbientServices
 
         private void Disable()
         {
-            // this currently only gets called when there is NOT a clock
+            // this currently only gets called when there is a clock and not a timer
             System.Diagnostics.Debug.Assert(_clock != null && _timer == null);
             // race to disable us--did we win the race?
             if (1 == System.Threading.Interlocked.Exchange(ref _enabled, 0))
@@ -1019,7 +1019,7 @@ namespace AmbientServices
                 if (_clock != null)
                 {
                     bool enabled = (_enabled != 0);
-                    Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                    Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan); // note that this disables the timer and decrements the timer count if needed
                     // since notification when we have an ambient clock service is synchronous, there is no need to wait for full disposal
                     WaitHandle.SignalAndWait(waitHandle, _AlwaysSignaled);
                     // return whether or not we were already canceled
@@ -1029,7 +1029,6 @@ namespace AmbientServices
                 {
                     ret = _timer!.Dispose(waitHandle);  // if _clock is null, _timer cannot be!
                 }
-                System.Threading.Interlocked.Decrement(ref _TimerCount);
                 _disposed = true;
             }
             return ret;
