@@ -387,7 +387,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the frequency of the stopwatch.
         /// </summary>
-        public static long Frequency => Stopwatch.Frequency;
+        public static long Frequency => Stopwatch.Frequency;    // on x86 linux, this is 1,000,000,000, but on windows it's only 10,000,000
         /// <summary>
         /// Gets whether or not the stopwatch supports high resolution.
         /// </summary>

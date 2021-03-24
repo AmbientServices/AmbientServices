@@ -272,6 +272,7 @@ namespace AmbientServices.Test
                 stopwatch.Restart();
                 Assert.IsTrue(stopwatch.IsRunning);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(100));
+                
                 Assert.AreEqual(100, stopwatch.ElapsedMilliseconds);
 
                 stopwatch = AmbientStopwatch.StartNew();

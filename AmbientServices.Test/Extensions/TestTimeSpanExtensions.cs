@@ -138,5 +138,18 @@ namespace AmbientServices.Test
             Assert.AreEqual(5UL, TimeSpanExtensions.GCD(60, 5));
             Assert.AreEqual(5UL, TimeSpanExtensions.GCD(35, 15));
         }
+        [TestMethod]
+        public void TimeSpanStopwatchTicksRoundTrip()
+        {
+            Assert.AreEqual(1, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(1)));
+            Assert.AreEqual(100, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(100)));
+            Assert.AreEqual(100000, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(100000)));
+            Assert.AreEqual(10000000000, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(10000000000)));
+
+            Assert.AreEqual(1, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(1)));
+            Assert.AreEqual(100, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(100)));
+            Assert.AreEqual(100000, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(100000)));
+            Assert.AreEqual(10000000000, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(10000000000)));
+        }
     }
 }
