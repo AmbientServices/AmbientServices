@@ -61,7 +61,32 @@ namespace AmbientServices.Test
                 Assert.IsTrue(newUtcDateTime > oldUtcDateTime);
             }
         }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClock"/>.
+        /// </summary>
+        [TestMethod]
+        public async Task AmbientClockPaused()
+        {
+            using (AmbientClock.Pause())
+            {
+                DateTime start = AmbientClock.UtcNow;
+                TimeSpan startElapsed = AmbientClock.Elapsed;
+                await Task.Delay(100);
+                DateTime end = AmbientClock.UtcNow;
+                TimeSpan endElapsed = AmbientClock.Elapsed;
+                Assert.AreEqual(endElapsed, startElapsed, $"Time elapsed ({endElapsed - startElapsed}) when clock was paused!");
+                Assert.AreEqual(end, start, $"Time elapsed ({end - start}) when clock was paused!");
+                Assert.IsFalse(AmbientClock.IsSystemClock);
+                Assert.IsNotNull(Ambient.GetService<IAmbientClock>().Override);
 
+                AmbientClock.ThreadSleep(100);
+                end = AmbientClock.UtcNow;
+                endElapsed = AmbientClock.Elapsed;
+
+                Assert.AreEqual(endElapsed, startElapsed.Add(TimeSpan.FromMilliseconds(100)), $"Time elapsed ({endElapsed - startElapsed}).  Should be 100ms!");
+                Assert.AreEqual(end, start.AddMilliseconds(100));
+            }
+        }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
@@ -140,28 +165,6 @@ namespace AmbientServices.Test
         /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
         [TestMethod]
-        public async Task ClockPaused()
-        {
-            using (AmbientClock.Pause())
-            {
-                DateTime start = AmbientClock.UtcNow;
-                TimeSpan startElapsed = AmbientClock.Elapsed;
-                await Task.Delay(100);
-                DateTime end = AmbientClock.UtcNow;
-                TimeSpan endElapsed = AmbientClock.Elapsed;
-                Assert.AreEqual(endElapsed, startElapsed);
-                Assert.AreEqual(end, start);
-                AmbientClock.ThreadSleep(100);
-                end = AmbientClock.UtcNow;
-                endElapsed = AmbientClock.Elapsed;
-                Assert.AreEqual(endElapsed, startElapsed.Add(TimeSpan.FromMilliseconds(100)));
-                Assert.AreEqual(end, start.AddMilliseconds(100));
-            }
-        }
-        /// <summary>
-        /// Performs tests on <see cref="IAmbientClock"/>.
-        /// </summary>
-        [TestMethod]
         public async Task ClockOverrideNull()
         {
             using (new ScopedLocalServiceOverride<IAmbientClock>(null))
@@ -199,10 +202,12 @@ namespace AmbientServices.Test
                 await Task.Delay(100);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
                 Assert.IsTrue(stopwatch.ElapsedTicks == 0);
+                Assert.IsTrue(stopwatch.Elapsed == TimeSpan.Zero);
                 stopwatch = new AmbientStopwatch(true);
                 TimeSpan delay = TimeSpan.FromMilliseconds(100);
                 AmbientClock.ThreadSleep(delay);
-                Assert.AreEqual(delay, stopwatch.Elapsed);
+                Assert.AreEqual((long)delay.TotalMilliseconds, stopwatch.ElapsedMilliseconds);          
+                Assert.AreEqual(delay, stopwatch.Elapsed);                                              
             }
         }
         /// <summary>

@@ -406,7 +406,7 @@ namespace AmbientServices
         /// Arithmetic wraparound is technically possible, though in practice, at least on Windows, this should not happen unless the stopwatch has run for at least 100 years (50 years before it goes negative).
         /// In most cases, time spans measured in years should use <see cref="DateTime"/> instead of stopwatches.
         /// </remarks>
-        public long ElapsedTicks => _running ? Ticks - _resumeTicks + _accumulatedTicks : _accumulatedTicks;
+        public long ElapsedTicks => _running ? (Ticks - _resumeTicks + _accumulatedTicks) : _accumulatedTicks;
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>

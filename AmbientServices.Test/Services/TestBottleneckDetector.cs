@@ -352,9 +352,9 @@ namespace AmbientServices.Test
             {
                 BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
                 long limitStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(1000).Ticks);
-                long useTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(300).Ticks);
+                long useStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(300).Ticks);
                 TimeSpan limitPeriod = TimeSpan.FromSeconds(7);
-                long limitPeriodTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Ticks);
+                long limitPeriodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Ticks);
                 AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck = new AmbientBottleneck("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, limitPeriod);
                 AmbientBottleneckAccessor a1 = null;
                 try
@@ -367,14 +367,15 @@ namespace AmbientServices.Test
                     Assert.AreEqual(null, a1.AccessEnd);
                     Assert.AreEqual(0, a1.LimitUsed);
                     Assert.AreEqual(0, a1.Utilization);
-                    AmbientClock.SkipAhead(useTicks);
+                    AmbientClock.SkipAhead(useStopwatchTicks);
                     a1.Dispose();
                     Assert.AreEqual(1, a1.AccessCount);
-                    Assert.AreEqual(useTicks, a1.AccessDurationStopwatchTicks);
+                    Assert.AreEqual(useStopwatchTicks, a1.AccessDurationStopwatchTicks);
                     Assert.AreEqual(start, a1.AccessBegin);
                     Assert.AreEqual(AmbientClock.UtcNow, a1.AccessEnd);
-                    Assert.AreEqual(useTicks, a1.LimitUsed);
-                    Assert.AreEqual((1.0 * useTicks * limitPeriodTicks) / (1.0 * useTicks * limitStopwatchTicks), a1.Utilization);
+                    Assert.AreEqual(useStopwatchTicks, a1.LimitUsed);
+                    Assert.AreEqual((1.0 * useStopwatchTicks * limitPeriodStopwatchTicks) / (1.0 * useStopwatchTicks * limitStopwatchTicks), a1.Utilization);
+//                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodTicks);
 
                     Assert.AreNotEqual(0, a1.GetHashCode());
                 }
