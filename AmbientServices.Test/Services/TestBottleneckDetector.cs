@@ -355,12 +355,12 @@ namespace AmbientServices.Test
                 long useStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(300).Ticks);
                 TimeSpan limitPeriod = TimeSpan.FromSeconds(7);
                 long limitPeriodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Ticks);
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck = new AmbientBottleneck("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, limitPeriod);
+                AmbientBottleneck bottleneckDetectorAccessRecordPropertiesBottleneck = new AmbientBottleneck("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, limitPeriod);
                 AmbientBottleneckAccessor a1 = null;
                 try
                 {
                     DateTime start = AmbientClock.UtcNow;
-                    a1 = new AmbientBottleneckAccessor(bd, BottleneckDetectorAccessRecordPropertiesBottleneck, start);
+                    a1 = new AmbientBottleneckAccessor(bd, bottleneckDetectorAccessRecordPropertiesBottleneck, start);
                     Assert.AreEqual(0, a1.AccessCount);
                     Assert.AreEqual(0, a1.AccessDurationStopwatchTicks);
                     Assert.AreEqual(start, a1.AccessBegin);
@@ -373,10 +373,10 @@ namespace AmbientServices.Test
                     Assert.AreEqual(useStopwatchTicks, a1.AccessDurationStopwatchTicks);
                     Assert.AreEqual(start, a1.AccessBegin);
                     Assert.AreEqual(AmbientClock.UtcNow, a1.AccessEnd);
-                    Assert.AreEqual(useStopwatchTicks, a1.LimitUsed);
-                    Assert.AreEqual((1.0 * useStopwatchTicks * limitPeriodStopwatchTicks) / (1.0 * useStopwatchTicks * limitStopwatchTicks), a1.Utilization);
-//                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodTicks);
-
+                    DateTime accessEnd = a1.AccessEnd ?? AmbientClock.UtcNow;
+                    Assert.AreEqual(useStopwatchTicks, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks((accessEnd - a1.AccessBegin).Ticks));
+                    Assert.AreEqual(useStopwatchTicks, (long)a1.LimitUsed);
+                    Assert.AreEqual((1.0 * useStopwatchTicks / useStopwatchTicks) / (1.0 * limitStopwatchTicks / limitPeriodStopwatchTicks), a1.Utilization);
                     Assert.AreNotEqual(0, a1.GetHashCode());
                 }
                 finally

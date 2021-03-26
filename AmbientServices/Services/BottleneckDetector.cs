@@ -200,12 +200,12 @@ namespace AmbientServices
         {
             double result;
             if (limit == null || Math.Abs(limit.Value) < 1) limit = 1.0;
-            double limitPeriodTicks = (limitPeriod == null) ? 1.0 : limitPeriod.Value.Ticks;
+            double limitPeriodStopwatchTicks = (limitPeriod == null) ? 1.0 : TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Value.Ticks);
             if (totalStopwatchTicks < 1) totalStopwatchTicks = 1;
             switch (limitType)
             {
                 case AmbientBottleneckUtilizationAlgorithm.Linear:
-                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodTicks);
+                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodStopwatchTicks);
                     break;
                 case AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach:
                     result = 1.0 - 1.0 / (2.0 * limitUsed / totalStopwatchTicks + 1.0);
