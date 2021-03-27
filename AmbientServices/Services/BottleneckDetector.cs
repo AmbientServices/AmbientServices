@@ -156,7 +156,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="owner">The <see cref="BasicAmbientBottleneckDetector"/> that owns this access.</param>
         /// <param name="bottleneck">The <see cref="AmbientBottleneck"/> being accessed.</param>
-        /// <param name="accessBegin">The <see cref="DateTime"/> indicating the beginning of the access (presumably now, or just a bit ago).</param>
+        /// <param name="accessBegin">The <see cref="DateTime"/> indicating the beginning of the access (presumably now, or just a bit ago).  Note that <see cref="DateTime"/> may not have the resolution of stopwatch ticks, so the start time may be slightly truncated as a result of the conversion.</param>
         internal AmbientBottleneckAccessor(BasicAmbientBottleneckDetector owner, AmbientBottleneck bottleneck, DateTime accessBegin)
         {
             if (owner == null) throw new ArgumentNullException(nameof(owner));

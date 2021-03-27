@@ -486,7 +486,7 @@ namespace AmbientServices
     class ThreadSurveyManager : IAmbientBottleneckExitNotificationSink, IDisposable
     {
         private readonly IAmbientBottleneckDetector? _bottleneckDetector;
-        private readonly ThreadLocal<ThreadAccessDistributor> _threadDistributors;
+        private ThreadLocal<ThreadAccessDistributor>? _threadDistributors;
         private bool disposedValue;
 
         public ThreadSurveyManager(IAmbientBottleneckDetector? bottleneckDetector)
@@ -503,7 +503,7 @@ namespace AmbientServices
         {
             get
             {
-                ThreadAccessDistributor? threadDistributor = _threadDistributors.Value;
+                ThreadAccessDistributor? threadDistributor = _threadDistributors?.Value;
                 if (threadDistributor == null)
                 {
                     _threadDistributors.Value = threadDistributor = new ThreadAccessDistributor();
@@ -530,6 +530,7 @@ namespace AmbientServices
                 {
                     _bottleneckDetector?.DeregisterAccessNotificationSink(this);
                     _threadDistributors.Dispose();
+                    _threadDistributors = null;
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
