@@ -175,14 +175,20 @@ namespace AmbientServices.Test
         [TestMethod]
         public void TimeSpanDateTimeStopwatchTicksRoundTrip()
         {
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000)));
+            long diff;
+
+            diff = DateTimeTicksDifference(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100)));
+            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
+            diff = DateTimeTicksDifference(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000)));
+            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
+            diff = DateTimeTicksDifference(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000)));
+            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
+            diff = DateTimeTicksDifference(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000)));
+            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
 
             long baseTicks = DateTime.UtcNow.Ticks;
 
-            long diff = DateTimeTicksDifference(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100)));
+            diff = DateTimeTicksDifference(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100)));
             Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
             diff = DateTimeTicksDifference(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000)));
             Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);

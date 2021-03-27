@@ -36,7 +36,12 @@ namespace AmbientServices
             StopwatchToTimeSpanDivisor = (long)(stopwatchTicksPerSecond / gcd);
             StopwatchToTimeSpanRatio = (double)StopwatchToTimeSpanMultiplier / (double)StopwatchToTimeSpanDivisor;
             BaselineStopwatchTimestamp = Stopwatch.GetTimestamp();     // note that it doesn't matter if AmbientClock is in use--these are *relative* numbers, so the conversion should work either way
+#if DEBUG   // delay this a little bit just in case it makes a difference
+            System.Threading.Thread.Sleep(73);
+#endif
             BaselineDateTimeTicks = DateTime.UtcNow.Ticks;
+            // make sure that nobody else gets times before these
+            System.Threading.Thread.MemoryBarrier();
             _TimeSpanStopwatchConversionLeastCommonMultiple = TimeSpanToStopwatchMultiplier * TimeSpanToStopwatchDivisor;
         }
         internal static ulong GCD(ulong a, ulong b)

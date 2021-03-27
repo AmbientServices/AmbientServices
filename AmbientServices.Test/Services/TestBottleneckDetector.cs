@@ -361,12 +361,14 @@ namespace AmbientServices.Test
                 {
                     DateTime start = AmbientClock.UtcNow;
                     a1 = new AmbientBottleneckAccessor(bd, bottleneckDetectorAccessRecordPropertiesBottleneck, start);
+                    // time should be paused here, so we should always get zero back when we ask how long it's been
                     Assert.AreEqual(0, a1.AccessCount);
                     Assert.AreEqual(0, a1.AccessDurationStopwatchTicks);
                     Assert.AreEqual(start, a1.AccessBegin);
                     Assert.AreEqual(null, a1.AccessEnd);
                     Assert.AreEqual(0, a1.LimitUsed);
                     Assert.AreEqual(0, a1.Utilization);
+                    // now we'll unpause time, skip ahead, and pause again
                     AmbientClock.SkipAhead(useStopwatchTicks);
                     a1.Dispose();
                     Assert.AreEqual(1, a1.AccessCount);

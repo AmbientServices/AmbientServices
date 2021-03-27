@@ -253,6 +253,8 @@ namespace AmbientServices
             public PausedAmbientClock()
             {
                 _baseStopwatchTicks = Stopwatch.GetTimestamp();
+                // make sure that subsequent operations don't get a timestamp earlier than this
+                System.Threading.Thread.MemoryBarrier();
             }
             /// <summary>
             /// Gets the number of ticks elapsed.  (In units of <see cref="Stopwatch.Frequency"/>).
