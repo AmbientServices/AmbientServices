@@ -528,8 +528,8 @@ namespace AmbientServices
             {
                 if (disposing)
                 {
-                    _threadDistributors.Dispose();
                     _bottleneckDetector?.DeregisterAccessNotificationSink(this);
+                    _threadDistributors.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer

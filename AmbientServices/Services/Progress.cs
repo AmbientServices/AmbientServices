@@ -48,7 +48,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="portionComplete">A number between 0.0 and 1.0 indicating how much of the operation has been completed.</param>
         /// <param name="itemCurrentlyBeingProcessed">The item currently being processed, null to not update the item being processed, <see cref="string.Empty"/> to clear the item.</param>
-        void Update(float portionComplete, string itemCurrentlyBeingProcessed = null);
+        void Update(float portionComplete, string? itemCurrentlyBeingProcessed = null);
         /// <summary>
         /// Starts a sub-part of the processing and begins tracking that specified range of the process.
         /// The sub-progress becomes the new ambient progress returned by <see cref="IAmbientProgressService"/>.

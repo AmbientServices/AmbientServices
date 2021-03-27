@@ -106,7 +106,7 @@ namespace AmbientServices
         /// </summary>
         public long AccessCount { get { return _accessCount; } }
         /// <summary>
-        /// Gets the amount of the limit which was used.
+        /// Gets the amount of the limit which was used.  Note that this is in units of <see cref="System.Diagnostics.Stopwatch"/> ticks.
         /// </summary>
         public double LimitUsed { get { return _limitUsed; } }
         /// <summary>
@@ -200,12 +200,12 @@ namespace AmbientServices
         {
             double result;
             if (limit == null || Math.Abs(limit.Value) < 1) limit = 1.0;
-            double limitPeriodTicks = (limitPeriod == null) ? 1.0 : limitPeriod.Value.Ticks;
+            double limitPeriodStopwatchTicks = (limitPeriod == null) ? 1.0 : TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Value.Ticks);
             if (totalStopwatchTicks < 1) totalStopwatchTicks = 1;
             switch (limitType)
             {
                 case AmbientBottleneckUtilizationAlgorithm.Linear:
-                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodTicks);
+                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodStopwatchTicks);
                     break;
                 case AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach:
                     result = 1.0 - 1.0 / (2.0 * limitUsed / totalStopwatchTicks + 1.0);

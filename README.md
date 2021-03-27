@@ -1312,11 +1312,18 @@ public sealed class LocalDiskAuditor : StatusAuditor
     /// </summary>
     public LocalDiskAuditor() : base ("/LocalDisk", TimeSpan.FromMinutes(15))
     {
-        string tempPath = System.IO.Path.GetTempPath();
-        string tempDrive = Path.GetPathRoot(tempPath)!; // this better not return null, because System.IO.Path.GetTempPath() better not be null or empty!
-        string tempPathRelative = tempPath.Substring(tempDrive.Length);
+        string tempPath = System.IO.Path.GetTempPath()!;
+        string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+        if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+        if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+        string tempPathRelative = tempPath!.Substring(tempDrive.Length);
         _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative,  true);
-        _systemAuditor = new DiskAuditor(Environment.GetFolderPath(Environment.SpecialFolder.System), "", false);
+        string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
+        string systemDrive = Path.GetPathRoot(systemPath) ?? "/";
+        if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
+        if (systemPath?[0] == '/') systemDrive = "/";    // on linux, the only "drive" is /
+        string systemPathRelative = systemPath!.Substring(systemDrive.Length);
+        _systemAuditor = new DiskAuditor(systemDrive, systemPath, false);
         _ready = true;
     }
     protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
