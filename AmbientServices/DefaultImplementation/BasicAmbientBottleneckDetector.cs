@@ -506,7 +506,8 @@ namespace AmbientServices
                 ThreadAccessDistributor? threadDistributor = _threadDistributors?.Value;
                 if (threadDistributor == null)
                 {
-                    _threadDistributors.Value = threadDistributor = new ThreadAccessDistributor();
+                    threadDistributor = new ThreadAccessDistributor();
+                    if (_threadDistributors != null) _threadDistributors.Value = threadDistributor;
                 }
                 return threadDistributor;
             }
@@ -529,7 +530,7 @@ namespace AmbientServices
                 if (disposing)
                 {
                     _bottleneckDetector?.DeregisterAccessNotificationSink(this);
-                    _threadDistributors.Dispose();
+                    _threadDistributors?.Dispose();
                     _threadDistributors = null;
                 }
 
