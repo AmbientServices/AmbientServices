@@ -89,6 +89,8 @@ namespace AmbientServices
         private double _limitUsed;                  // interlocked, zero until set by Dispose, SetUsage or AddUsage
         private double _utilization;                // interlocked, zero until set by Dispose, SetUsage or AddUsage
 
+        internal long AccessBeginStopwatchTimestamp { get { return _accessBeginStopwatchTimestamp; } }
+        internal long AccessEndStopwatchTimestamp { get { return _accessEndStopwatchTimestamp; } }
         /// <summary>
         /// Gets the <see cref="AmbientBottleneck"/> for the bottleneck.
         /// </summary>

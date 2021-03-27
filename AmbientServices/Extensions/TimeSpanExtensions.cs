@@ -15,8 +15,8 @@ namespace AmbientServices
         internal static readonly long TimeSpanToStopwatchMultiplier;
         internal static readonly long TimeSpanToStopwatchDivisor;
         private static readonly double TimeSpanToStopwatchRatio;
-        private static readonly long StopwatchToTimeSpanMultiplier;
-        private static readonly long StopwatchToTimeSpanDivisor;
+        internal static readonly long StopwatchToTimeSpanMultiplier;
+        internal static readonly long StopwatchToTimeSpanDivisor;
         private static readonly double StopwatchToTimeSpanRatio;
         private static readonly long BaselineStopwatchTimestamp;
         private static readonly long BaselineDateTimeTicks;
