@@ -8,7 +8,7 @@ namespace AmbientServices
     /// <summary>
     /// A static class that extends <see cref="System.TimeSpan"/>.
     /// </summary>
-    public static class TimeSpanExtensions
+    internal static class TimeSpanExtensions
     {
         private static readonly char[] Alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
         private static readonly char[] Numeric = "-0123456789. \t".ToCharArray();

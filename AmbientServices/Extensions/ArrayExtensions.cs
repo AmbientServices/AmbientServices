@@ -8,7 +8,7 @@ namespace AmbientServices
     /// <summary>
     /// A static class that extends <see cref="System.Array"/>.
     /// </summary>
-    public static class ArrayExtensions
+    internal static class ArrayExtensions
     {
         /// <summary>
         /// Compares two arrays of arbitrary type to see if the contents are the same.

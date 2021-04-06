@@ -8,7 +8,7 @@ namespace AmbientServices
     /// <summary>
     /// A static partial class that extends <see cref="System.String"/>.
     /// </summary>
-    public static partial class StringExtensions
+    internal static partial class StringExtensions
     {
         private static readonly char[] DecimalPointCharArray = ".,".ToCharArray();
         private static readonly char[] NumberSeparatorCharArray = ".,-".ToCharArray();
