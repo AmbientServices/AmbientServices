@@ -44,7 +44,7 @@ namespace AmbientServices
             _logFilter = (loggerSettingsSet == null) ? AmbientLogFilter.Default : new AmbientLogFilter(_typeName, loggerSettingsSet);
         }
 
-        protected void InnerLog(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
+        internal void InnerLog(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
         {
             if (!_logFilter.IsBlocked(level, _typeName, category))
             {
