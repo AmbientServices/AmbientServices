@@ -1,9 +1,8 @@
-﻿
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class that extends <see cref="System.TimeSpan"/>.

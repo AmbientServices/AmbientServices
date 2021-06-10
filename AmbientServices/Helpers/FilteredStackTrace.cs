@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using static System.FormattableString;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A class that is a stack trace that always filters the output to hide file paths and not-very-helpful system stack frames.

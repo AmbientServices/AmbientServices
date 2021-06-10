@@ -17,17 +17,14 @@ For example, logging and performance tracking should never alter function output
 
 ## Performance Services
 Advanced ambient services provide detailed system performance monitoring.
-With them you can easily track how various parts of your system are performing all the time, not just when you run it with a profiler.
 
-The statistics service can be used to track statistics such as cache hits and misses, requests processed, time spent processing requests, etc., similar to windows performance counters, but with less complexity, fewer limits, cross-platform support, and better results when aggregating over time or across multiple systems.
+There are three primary questions that may be answered through performance monitoring.  
+    1. How well are the various systems functioning under how much load?  This question may be answered using AmbientStatistics that track the usage, performance, and effectiveness of major system functions.
+    2. Why did an operation take as long as it did?  This question may be answered using AmbientServiceProfiler to track which operations delayed the response by how much.
+    3. How close is the system to maxing out?  This question may be answered using AmbientBottleneckDetector to track saturation of possible system bottlenecks so you can determine scalability even before load testing.
 
-The bottleneck detector service tracks system bottlenecks, allowing you to determine how close your system is to overloading any particular bottleneck, allowing you to better predict scalability even before load testing.
-
-The service profiler allows you to determine what backend systems used up all the wall clock time for a particular process, during the execution of a request, or during a particular time window.
-This information gives you insight into what optimizations would improve response times the most and by how much.
-
-Using these services, you can see performance issues in near-real-time and identify which backend systems or local bottlenecks caused those issues.
-Advanced ambient services allow you to track this information with little overhead and in turn provide it for consumers of your systems.
+By using these services, with very little overhead, you can easily track how various parts of your system are performing all the time, not just when you run it with a code profiler.
+You can also expose this across the network to roll-up this data throughout the whole system, even up through the client.
 
 ## Status
 The status system enables periodic background testing of backend systems, with summarization of overall process status and across both heterogenous and homogenous server farms.
@@ -828,6 +825,146 @@ public static class StatisticsReporter
 ### Default Implementation
 The default implementation uses thread-safe lock-free statistics instances, keeping all the information associated with each statistic.
 
+## AmbientServiceProfiler
+The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on course-grained profiling.  
+This profiling can be used to determine how the time for a request, program, or time window was used.
+The code being profiled calls into the `IAmbientServiceProfiler` each time the system that is executing switches (only one system can be active per call context at a time).
+A system identifier contains a main system name followed by various subsystem and result identifiers (of course results aren't available until the next system begins executing, so the profiler allows the service to update the system identifier after execution completes).
+The consumer of the service profiler may want to ignore some or all of the susbsystem and result parts of the identifier and can do so using the system group transform setting, which is a regular expression that matches only the desired pieces of the identifier, causing statistics from one or more subsystems and/or results to be grouped together.
+For example, a system identifier might be `SQL/Database:My-database/Table:User/Result:Failed`.
+The fully-detailed system identifier would allow the service profile consumer to distinguish how much time was spent waiting for SQL results that failed from those that timed out or succeeded, and those from one database and/or table from another.
+This level of information is usually too-detailed, so the consumer may want to group everything to just the top-level system, in which case, all SQL access, no matter which database or table, and no matter whether the operation was successful, timed out, or threw an exception, would all be grouped into a single profile entry.
+When no other system is executing, the service should set the system identifier to the empty string, which will also be tracked.
+Some systems may allow tracking of CPU time, so that could be another system identifier.
+As of .NET 5, it does not provide any way to track this, so the consumer can assume that the empty string system accounts for any remaining CPU time.
+Of course, this estimate will be wildly incorrect if the service, while running under the empty string system, calls something that blocks execution (such as waiting for a mutex or performing IO), or when the system CPU is high enough that available threads don't get scheduled.
+
+### Helpers
+The `AmbientServiceProfilerCoordinator` allows users to create service profilers for various contexts, including the current call context, rotating time windows of a given time span, or the process as a whole.
+The call context profiler and process-wide profiler implement the `IAmbientServiceProfile` interface, and the time window profiler calls an async delegate with an instance of that interface, each contains the profile for the context it came from.
+`IAmbientServiceProfile` provides access to a scope name and and enumeration of `AmbientServiceProfilerAccumulator` instance, each of which has the statistics for a given system or system group.
+
+### Settings
+`AmbientServiceProfilerCoordinator-DefaultSystemGroupTransform`: A `Regex` string used to transform the system identifier to a group identifier.
+The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.
+
+### Sample
+[//]: # (AmbientServiceProfilerSample)
+```csharp
+/// <summary>
+/// A class that access a SQL database and reports profiling information to the system profiling system.
+/// </summary>
+class SqlAccessor
+{
+    private static readonly AmbientService<IAmbientServiceProfiler> ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
+
+    private readonly string _connectionString;
+    private readonly SqlConnection _connection;
+    private readonly string _systemIdPrefix;
+
+    /// <summary>
+    /// Creates a SQL accessor for the specified connection string.
+    /// </summary>
+    /// <param name="connectionString">A connection string with information on how to connect to a SQL Server database.</param>
+    public SqlAccessor(string connectionString)
+    {
+        _connectionString = connectionString;
+        _connection = new SqlConnection(connectionString);
+        _systemIdPrefix = $"SQL/Server:{_connection.DataSource}/Database:{_connection.Database}";
+    }
+
+    /// <summary>
+    /// Creates a <see cref="SqlCommand"/> that uses this connection.
+    /// </summary>
+    /// <returns>A <see cref="SqlCommand"/> for this connection.</returns>
+    public SqlCommand CreateCommand() { return _connection.CreateCommand(); }
+
+    private async Task<T> ExecuteAsync<T>(SqlCommand command, Func<CancellationToken, Task<T>> f, string? table = null, CancellationToken cancel = default(CancellationToken))
+    {
+        string systemId = _systemIdPrefix + (string.IsNullOrEmpty(table) ? "" : $"/Table:{table}");
+        T ret;
+        try
+        {
+            ServiceProfiler.Local?.SwitchSystem(systemId);
+            ret = await f(cancel);
+            systemId = systemId + $"/Result:Success";
+        }
+        catch (Exception e)
+        {
+            if (e.Message.ToUpperInvariant().Contains("TIMEOUT")) systemId = systemId + $"/Result:Timeout";
+            else systemId = systemId + $"/Result:Error";
+            throw;
+        }
+        finally
+        {
+            ServiceProfiler.Local?.SwitchSystem("", systemId);
+        }
+        return ret;
+    }
+
+    public Task<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    {
+        return ExecuteAsync<int>(command, command.ExecuteNonQueryAsync, table, cancel);
+    }
+    public Task<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    {
+        return ExecuteAsync<SqlDataReader>(command, command.ExecuteReaderAsync, table, cancel);
+    }
+    public Task<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    {
+        return ExecuteAsync<object>(command, command.ExecuteScalarAsync, table, cancel);
+    }
+    public Task<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    {
+        return ExecuteAsync<XmlReader>(command, command.ExecuteXmlReaderAsync, table, cancel);
+    }
+}
+/// <summary>
+/// A class that collects bottleneck statistics and reports on them.
+/// </summary>
+class ProfileReporter
+{
+    private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
+    private Dictionary<string, long>? _mostRecentWindowServiceProfile;  // interlocked
+    private AmbientServiceProfilerCoordinator _coordinator;
+    private IDisposable? _timeWindow;
+    /// <summary>
+    /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
+    /// </summary>
+    public ProfileReporter()
+    {
+        _coordinator = new AmbientServiceProfilerCoordinator();
+        _timeWindow = _coordinator.CreateTimeWindowProfiler(nameof(ProfileReporter), TimeSpan.FromMilliseconds(100), OnMostRecentWindowClosed);
+    }
+
+    private Task OnMostRecentWindowClosed(IAmbientServiceProfile profile)
+    {
+        Dictionary<string, long> serviceProfile = new Dictionary<string, long>();
+        foreach (AmbientServiceProfilerAccumulator record in profile.ProfilerStatistics)
+        {
+            serviceProfile.Add(record.Group, record.TotalStopwatchTicksUsed);
+        }
+        System.Threading.Interlocked.Exchange(ref _mostRecentWindowServiceProfile, serviceProfile);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Gets a dictionary containing the service profile for the most recent time window.
+    /// </summary>
+    public Dictionary<string, long>? RecentProfile
+    {
+        get
+        {
+            return _mostRecentWindowServiceProfile;
+        }
+    }
+}
+```
+
+### Default Implementation
+The default implementation uses thread-safe lock-free instances.  
+Each system switch is transformed according to the setting and then distributed to all the profilers the switch applies to.
+
 ## AmbientBottleneckDetector
 The `IAmbientBottleneckDetector` interface provides access to a function to measure access to a bottleneck and events that the are used to track usage over time.  
 The gathered data can be used to determine how close that part of the system is to maxing-out, so that scalability limits can be more accurately estimated.  
@@ -835,11 +972,12 @@ The gathered data can be used to determine how close that part of the system is 
 ### Helpers
 An instance of the `AmbientBottleneck` class is used to represent each bottleneck in the system.
 Each bottleneck has a unique string identifier, a description, an algorithm indicating how blocking occurs, and an optional limit and time window for that limit.
-When code enters the bottleneck, it calls `EnterBottleneck` on the `AmbientBottleneck` object.
+When code enters the bottleneck, it calls `EnterBottleneck` on the `AmbientBottleneck` instance.
 This function returns an `AmbientBottleneckAccessor` instance which scopes access to the bottleneck.
 The Automatic property on `AmbientBottleneck` identifies whether or not the timing of the scope of the `AmbientBottleneckAccessor` instance automatically sets the bottleneck usage, or whether the usage is set manually using `SetUsage` and/or `AddUsage` on the `AmbientBottleneckAccessor` instance.
+Note that bottlenecks will sometimes overlap, such that multiple bottlenecks have been entered at the same time, but users of the system should be sure that if the bottlenecks are associated with exclusive access, such as a mutex, that in order to avoid deadlock, entry to such bottlenecks should be strictly ordered.
 
-The `AmbientBottleneckSurveyorCoordinator` class provides access to surveyors for various contexts such as the current call context, the entire process, the current thread, and/or a rotating time window.  
+The `AmbientBottleneckSurveyorCoordinator` class provides access to surveyors for various contexts such as the current call context, the entire process, the current thread, and/or a rotating time window.
 The surveyor coordinator collects the bottleneck usage events and distributes them to each of the applicable surveyors that have been created so they can track access within their context and provide survey results.
 
 ### Settings
@@ -988,146 +1126,6 @@ class BottleneckReporter
 ### Default Implementation
 The default implementation uses thread-safe lock-free instances.  
 In order to effectively users must strike a balance between conservative estimates of bottleneck saturation vs. having only inaccurate top bottlenecks in summaries.
-
-## AmbientServiceProfiler
-The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on course-grained profiling.  
-This profiling can be used to determine how the time for a request, program, or time window was used.
-The code being profiled calls into the `IAmbientServiceProfiler` each time the system that is executing switches.
-A system identifier contains a main system name followed by various subsystem and result identifiers (of course results aren't available until the next system begins executing, so the profiler allows the service to update the system identifier after execution completes).
-The consumer of the service profiler may want to ignore some or all of the susbsystem and result parts of the identifier and can do so using the system group transform setting, which is a regular expression that matches only the desired pieces of the identifier, causing statistics from one or more subsystems and/or results to be grouped together.
-For example, a system identifier might be `SQL/Database:My-database/Table:User/Result:Failed`.
-The fully-detailed system identifier would allow the service profile consumer to distinguish how much time was spent waiting for SQL results that failed from those that timed out or succeeded, and those from one database and/or table from another.
-This level of information is usually too-detailed, so the consumer may want to group everything to just the top-level system, in which case, all SQL access, no matter which database or table, and no matter whether the operation was successful, timed out, or threw an exception, would all be grouped into a single profile entry.
-When no other system is executing, the service should set the system identifier to the empty string, which will also be tracked.
-Some systems may allow tracking of CPU time, so that could be another system identifier.
-As of .NET Core 3.1, it does not provide any way to track this, so the consumer can assume that the empty string system accounts for any remaining CPU time.
-Of course, this estimate will be wildly incorrect if the service, while running under the empty string system, calls something that blocks execution (such as waiting for a mutex or performing IO), or when the system CPU is high enough that available threads don't get scheduled.
-
-### Helpers
-The `AmbientServiceProfilerCoordinator` allows users to create service profilers for various contexts, including the current call context, rotating time windows of a given time span, or the process as a whole.
-The call context profiler and process-wide profiler implement the `IAmbientServiceProfile` interface, and the time window profiler calls an async delegate with an instance of that interface, each contains the profile for the context it came from.
-`IAmbientServiceProfile` provides access to a scope name and and enumeration of `AmbientServiceProfilerAccumulator` instance, each of which has the statistics for a given system or system group.
-
-### Settings
-`AmbientServiceProfilerCoordinator-DefaultSystemGroupTransform`: A `Regex` string used to transform the system identifier to a group identifier.
-The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.
-
-### Sample
-[//]: # (AmbientServiceProfilerSample)
-```csharp
-/// <summary>
-/// A class that access a SQL database and reports profiling information to the system profiling system.
-/// </summary>
-class SqlAccessor
-{
-    private static readonly AmbientService<IAmbientServiceProfiler> ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
-
-    private readonly string _connectionString;
-    private readonly SqlConnection _connection;
-    private readonly string _systemIdPrefix;
-
-    /// <summary>
-    /// Creates a SQL accessor for the specified connection string.
-    /// </summary>
-    /// <param name="connectionString">A connection string with information on how to connect to a SQL Server database.</param>
-    public SqlAccessor(string connectionString)
-    {
-        _connectionString = connectionString;
-        _connection = new SqlConnection(connectionString);
-        _systemIdPrefix = $"SQL/Server:{_connection.DataSource}/Database:{_connection.Database}";
-    }
-
-    /// <summary>
-    /// Creates a <see cref="SqlCommand"/> that uses this connection.
-    /// </summary>
-    /// <returns>A <see cref="SqlCommand"/> for this connection.</returns>
-    public SqlCommand CreateCommand() { return _connection.CreateCommand(); }
-
-    private async Task<T> ExecuteAsync<T>(SqlCommand command, Func<CancellationToken, Task<T>> f, string? table = null, CancellationToken cancel = default(CancellationToken))
-    {
-        string systemId = _systemIdPrefix + (string.IsNullOrEmpty(table) ? "" : $"/Table:{table}");
-        T ret;
-        try
-        {
-            ServiceProfiler.Local?.SwitchSystem(systemId);
-            ret = await f(cancel);
-            systemId = systemId + $"/Result:Success";
-        }
-        catch (Exception e)
-        {
-            if (e.Message.ToUpperInvariant().Contains("TIMEOUT")) systemId = systemId + $"/Result:Timeout";
-            else systemId = systemId + $"/Result:Error";
-            throw;
-        }
-        finally
-        {
-            ServiceProfiler.Local?.SwitchSystem("", systemId);
-        }
-        return ret;
-    }
-
-    public Task<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
-    {
-        return ExecuteAsync<int>(command, command.ExecuteNonQueryAsync, table, cancel);
-    }
-    public Task<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
-    {
-        return ExecuteAsync<SqlDataReader>(command, command.ExecuteReaderAsync, table, cancel);
-    }
-    public Task<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
-    {
-        return ExecuteAsync<object>(command, command.ExecuteScalarAsync, table, cancel);
-    }
-    public Task<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
-    {
-        return ExecuteAsync<XmlReader>(command, command.ExecuteXmlReaderAsync, table, cancel);
-    }
-}
-/// <summary>
-/// A class that collects bottleneck statistics and reports on them.
-/// </summary>
-class ProfileReporter
-{
-    private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
-    private Dictionary<string, long>? _mostRecentWindowServiceProfile;  // interlocked
-    private AmbientServiceProfilerCoordinator _coordinator;
-    private IDisposable? _timeWindow;
-    /// <summary>
-    /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
-    /// </summary>
-    public ProfileReporter()
-    {
-        _coordinator = new AmbientServiceProfilerCoordinator();
-        _timeWindow = _coordinator.CreateTimeWindowProfiler(nameof(ProfileReporter), TimeSpan.FromMilliseconds(100), OnMostRecentWindowClosed);
-    }
-
-    private Task OnMostRecentWindowClosed(IAmbientServiceProfile profile)
-    {
-        Dictionary<string, long> serviceProfile = new Dictionary<string, long>();
-        foreach (AmbientServiceProfilerAccumulator record in profile.ProfilerStatistics)
-        {
-            serviceProfile.Add(record.Group, record.TotalStopwatchTicksUsed);
-        }
-        System.Threading.Interlocked.Exchange(ref _mostRecentWindowServiceProfile, serviceProfile);
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Gets a dictionary containing the service profile for the most recent time window.
-    /// </summary>
-    public Dictionary<string, long>? RecentProfile
-    {
-        get
-        {
-            return _mostRecentWindowServiceProfile;
-        }
-    }
-}
-```
-
-### Default Implementation
-The default implementation uses thread-safe lock-free instances.  
-Each system switch is transformed according to the setting and then distributed to all the profilers the switch applies to.
 
 
 ## Status

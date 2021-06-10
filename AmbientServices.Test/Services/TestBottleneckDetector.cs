@@ -1,4 +1,5 @@
 ﻿using AmbientServices;
+using AmbientServices.Utility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;

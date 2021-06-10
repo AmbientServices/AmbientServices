@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class that extends <see cref="DateTime"/>.

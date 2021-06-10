@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class that extends <see cref="System.Exception"/>.

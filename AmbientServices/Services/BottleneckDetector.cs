@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AmbientServices.Utility;
+using System;
 
 namespace AmbientServices
 {
