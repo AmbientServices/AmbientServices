@@ -28,7 +28,7 @@ namespace AmbientServices
         /// </summary>
         public AmbientBottleneckUtilizationAlgorithm UtilizationAlgorithm { get; private set; }
         /// <summary>
-        /// Whether or not this bottleneck is measured automatically using elapsed time.
+        /// Whether or not this bottleneck is measured automatically using elapsed time (in units of stopwatch ticks).
         /// If not automatic, no usage will be recorded unless either <see cref="AmbientBottleneckAccessor.SetUsage"/> or <see cref="AmbientBottleneckAccessor.AddUsage"/> is called.
         /// </summary>
         public bool Automatic { get; private set; }
@@ -38,6 +38,7 @@ namespace AmbientServices
         public string Description { get; private set; }
         /// <summary>
         /// The limit that is enforced, if any.  See <see cref="AmbientBottleneckUtilizationAlgorithm"/> for what this value means.
+        /// For automatic bottlenecks, the limit is in terms of stopwatch ticks.
         /// </summary>
         public double? Limit { get; private set; }
         /// <summary>
@@ -51,7 +52,7 @@ namespace AmbientServices
         /// <param name="utilizationAlgorithm">An <see cref="AmbientBottleneckUtilizationAlgorithm"/> indicating the algorithm to use to calculate the utilization.</param>
         /// <param name="automatic">Whether or not the bottleneck's usage is measured automaticall or using <see cref="AmbientBottleneckAccessor.SetUsage"/> or <see cref="AmbientBottleneckAccessor.AddUsage"/>.</param>
         /// <param name="description">A description of the bottleneck.</param>
-        /// <param name="limit">An optional limit.</param>
+        /// <param name="limit">An optional limit (for automatic bottlenecks, in units of stopwatch ticks).</param>
         /// <param name="limitPeriod">A <see cref="TimeSpan"/> indicating the period during which the limit is applied.</param>
         public AmbientBottleneck(string id, AmbientBottleneckUtilizationAlgorithm utilizationAlgorithm, bool automatic, string description, double? limit = null, TimeSpan? limitPeriod = null)
         {

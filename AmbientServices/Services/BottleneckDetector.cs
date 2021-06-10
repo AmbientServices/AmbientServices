@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AmbientServices.Utility;
+using System;
 
 namespace AmbientServices
 {
@@ -89,6 +90,8 @@ namespace AmbientServices
         private double _limitUsed;                  // interlocked, zero until set by Dispose, SetUsage or AddUsage
         private double _utilization;                // interlocked, zero until set by Dispose, SetUsage or AddUsage
 
+        internal long AccessBeginStopwatchTimestamp { get { return _accessBeginStopwatchTimestamp; } }
+        internal long AccessEndStopwatchTimestamp { get { return _accessEndStopwatchTimestamp; } }
         /// <summary>
         /// Gets the <see cref="AmbientBottleneck"/> for the bottleneck.
         /// </summary>
@@ -154,7 +157,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="owner">The <see cref="BasicAmbientBottleneckDetector"/> that owns this access.</param>
         /// <param name="bottleneck">The <see cref="AmbientBottleneck"/> being accessed.</param>
-        /// <param name="accessBegin">The <see cref="DateTime"/> indicating the beginning of the access (presumably now, or just a bit ago).</param>
+        /// <param name="accessBegin">The <see cref="DateTime"/> indicating the beginning of the access (presumably now, or just a bit ago).  Note that <see cref="DateTime"/> may not have the resolution of stopwatch ticks, so the start time may be slightly truncated as a result of the conversion.</param>
         internal AmbientBottleneckAccessor(BasicAmbientBottleneckDetector owner, AmbientBottleneck bottleneck, DateTime accessBegin)
         {
             if (owner == null) throw new ArgumentNullException(nameof(owner));
@@ -200,12 +203,12 @@ namespace AmbientServices
         {
             double result;
             if (limit == null || Math.Abs(limit.Value) < 1) limit = 1.0;
-            double limitPeriodTicks = (limitPeriod == null) ? 1.0 : limitPeriod.Value.Ticks;
+            double limitPeriodStopwatchTicks = (limitPeriod == null) ? 1.0 : TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Value.Ticks);
             if (totalStopwatchTicks < 1) totalStopwatchTicks = 1;
             switch (limitType)
             {
                 case AmbientBottleneckUtilizationAlgorithm.Linear:
-                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodTicks);
+                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodStopwatchTicks);
                     break;
                 case AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach:
                     result = 1.0 - 1.0 / (2.0 * limitUsed / totalStopwatchTicks + 1.0);

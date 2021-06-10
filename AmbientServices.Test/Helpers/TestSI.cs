@@ -1,4 +1,5 @@
 ﻿using AmbientServices;
+using AmbientServices.Utility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -90,29 +91,29 @@ namespace AmbientServices.Test
             result = (-1000.0).ToSi(longName: true, postfix: "byte");
             Assert.AreEqual("-1.00 kilobyte", result);
 
-            result = (AmbientServices.SI.Yotta * 1000).ToSi();
+            result = (AmbientServices.Utility.SI.Yotta * 1000).ToSi();
             Assert.AreEqual("1.00kY", result);
-            result = (AmbientServices.SI.Yotta * 1000).ToSi(positiveSign: true);
+            result = (AmbientServices.Utility.SI.Yotta * 1000).ToSi(positiveSign: true);
             Assert.AreEqual("+1.00kY", result);
-            result = (-AmbientServices.SI.Yotta * 1000).ToSi();
+            result = (-AmbientServices.Utility.SI.Yotta * 1000).ToSi();
             Assert.AreEqual("-1.00kY", result);
 
-            result = (AmbientServices.SI.Yotta * AmbientServices.SI.Yotta).ToSi();
+            result = (AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta).ToSi();
             Assert.AreEqual("1.00YY", result);
-            result = (AmbientServices.SI.Yotta * AmbientServices.SI.Yotta).ToSi(positiveSign: true);
+            result = (AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta).ToSi(positiveSign: true);
             Assert.AreEqual("+1.00YY", result);
-            result = (-AmbientServices.SI.Yotta * AmbientServices.SI.Yotta).ToSi();
+            result = (-AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta).ToSi();
             Assert.AreEqual("-1.00YY", result);
 
-            result = (AmbientServices.SI.Yotta * AmbientServices.SI.Yotta * AmbientServices.SI.Yotta).ToSi();
+            result = (AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta).ToSi();
             Assert.AreEqual("1.00YYY", result);
-            result = (AmbientServices.SI.Yotta * AmbientServices.SI.Yotta * AmbientServices.SI.Yotta).ToSi(positiveSign: true);
+            result = (AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta).ToSi(positiveSign: true);
             Assert.AreEqual("+1.00YYY", result);
-            result = (-AmbientServices.SI.Yotta * AmbientServices.SI.Yotta * AmbientServices.SI.Yotta).ToSi();
+            result = (-AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta).ToSi();
             Assert.AreEqual("-1.00YYY", result);
-            result = (AmbientServices.SI.Yotta * AmbientServices.SI.Yotta * AmbientServices.SI.Yotta).ToSi(longName: true);
+            result = (AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta).ToSi(longName: true);
             Assert.AreEqual("1.00 yottayottayotta", result);
-            result = (AmbientServices.SI.Yotta * AmbientServices.SI.Yotta * AmbientServices.SI.Yotta).ToSi(longName: true, positiveSign: true);
+            result = (AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta * AmbientServices.Utility.SI.Yotta).ToSi(longName: true, positiveSign: true);
             Assert.AreEqual("+1.00 yottayottayotta", result);
 
             result = 0.001.ToSi();
@@ -122,29 +123,29 @@ namespace AmbientServices.Test
             result = (-0.001).ToSi();
             Assert.AreEqual("-1.00m", result);
 
-            result = (AmbientServices.SI.Yocto / 1000.0).ToSi();
+            result = (AmbientServices.Utility.SI.Yocto / 1000.0).ToSi();
             Assert.AreEqual("1.00my", result);
-            result = (AmbientServices.SI.Yocto / 1000.0).ToSi(positiveSign: true);
+            result = (AmbientServices.Utility.SI.Yocto / 1000.0).ToSi(positiveSign: true);
             Assert.AreEqual("+1.00my", result);
-            result = (-AmbientServices.SI.Yocto / 1000.0).ToSi();
+            result = (-AmbientServices.Utility.SI.Yocto / 1000.0).ToSi();
             Assert.AreEqual("-1.00my", result);
 
-            result = (AmbientServices.SI.Yocto * AmbientServices.SI.Yocto).ToSi();
+            result = (AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto).ToSi();
             Assert.AreEqual("1.00yy", result);
-            result = (AmbientServices.SI.Yocto * AmbientServices.SI.Yocto).ToSi(positiveSign: true);
+            result = (AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto).ToSi(positiveSign: true);
             Assert.AreEqual("+1.00yy", result);
-            result = (-AmbientServices.SI.Yocto * AmbientServices.SI.Yocto).ToSi();
+            result = (-AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto).ToSi();
             Assert.AreEqual("-1.00yy", result);
 
-            result = (AmbientServices.SI.Yocto * AmbientServices.SI.Yocto * AmbientServices.SI.Yocto).ToSi();
+            result = (AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto).ToSi();
             Assert.AreEqual("1.00yyy", result);
-            result = (AmbientServices.SI.Yocto * AmbientServices.SI.Yocto * AmbientServices.SI.Yocto).ToSi(positiveSign: true);
+            result = (AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto).ToSi(positiveSign: true);
             Assert.AreEqual("+1.00yyy", result);
-            result = (-AmbientServices.SI.Yocto * AmbientServices.SI.Yocto * AmbientServices.SI.Yocto).ToSi();
+            result = (-AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto).ToSi();
             Assert.AreEqual("-1.00yyy", result);
-            result = (AmbientServices.SI.Yocto * AmbientServices.SI.Yocto * AmbientServices.SI.Yocto).ToSi(longName: true);
+            result = (AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto).ToSi(longName: true);
             Assert.AreEqual("1.00 yoctoyoctoyocto", result);
-            result = (AmbientServices.SI.Yocto * AmbientServices.SI.Yocto * AmbientServices.SI.Yocto).ToSi(longName: true, positiveSign: true);
+            result = (AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto * AmbientServices.Utility.SI.Yocto).ToSi(longName: true, positiveSign: true);
             Assert.AreEqual("+1.00 yoctoyoctoyocto", result);
         }
         [TestMethod]

@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Text;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class that extends <see cref="System.Exception"/>.
     /// </summary>
-    public static class ExceptionExtensions
+    internal static class ExceptionExtensions
     {
         /// <summary>
         /// Gets a filtered version of the exception string, with irrelevant stack frames and file paths stripped out.

@@ -20,7 +20,7 @@ jobs:
       with:
         dotnet-version: 5.0.x
     - name: Set Version
-      run: dotnet SetVersion.dll 5.0.1.${{ github.run_number }}
+      run: dotnet SetVersion.dll 5.2.${{ github.run_number }}
     - name: Build AmbientServices
       run: dotnet build AmbientServices -c Release
     - name: Build AmbientServices.Samples
@@ -33,7 +33,30 @@ jobs:
       run: dotnet pack AmbientServices -c Release
     - name: Test .NET 5
       run: dotnet test -c Release -f net5.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx"
+    - name: Find Output
+      run: echo 'coverageoutput='\'$(find . -type f -name "coverage.cobertura.xml")\' >> $GITHUB_ENV
+    - name: ReportGenerator
+      uses: danielpalme/ReportGenerator-GitHub-Action@4.8.9
+      with:
+        reports: '${{ env.coverageoutput }}' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
+        targetdir: 'coveragereport' # REQUIRED # The directory where the generated report should be saved.
+        reporttypes: 'HtmlInline' # The output formats and scope (separated by semicolon) Values: Badges, Clover, Cobertura, CsvSummary, Html, HtmlChart, HtmlInline, HtmlInline_AzurePipelines, HtmlInline_AzurePipelines_Dark, HtmlSummary, JsonSummary, Latex, LatexSummary, lcov, MHtml, PngChart,     SonarQube, TeamCitySummary, TextSummary, Xml, XmlSummary
+        sourcedirs: '' # Optional directories which contain the corresponding source code (separated by semicolon). The source directories are used if coverage report contains classes without path information.
+        historydir: '' # Optional directory for storing persistent coverage information. Can be used in future reports to show coverage evolution.
+        plugins: '' # Optional plugin files for custom reports or custom history storage (separated by semicolon).
+        assemblyfilters: '+*' # Optional list of assemblies that should be included or excluded in the report. Exclusion filters take precedence over inclusion filters. Wildcards are allowed.
+        classfilters: '+*' # Optional list of classes that should be included or excluded in the report. Exclusion filters take precedence over inclusion filters. Wildcards are allowed.
+        filefilters: '+*' # Optional list of files that should be included or excluded in the report. Exclusion filters take precedence over inclusion filters. Wildcards are allowed.
+        verbosity: 'Info' # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
+        title: '' # Optional title.
+        tag: '${{ github.run_number }}_${{ github.run_id }}' # Optional tag or build version.
+        customSettings: '' # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
+    - name: Upload coverage report artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: CoverageReport # Artifact name        
+        path: coveragereport # Directory containing files to upload
     - name: Test .NET Core 2.1
       run: dotnet test -c Release -f netcoreapp2.1
     - name: Publish
-      run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.5.0.1.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.5.2.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json

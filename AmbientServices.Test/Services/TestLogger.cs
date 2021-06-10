@@ -108,7 +108,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task LoggerDefault()
         {
-            AmbientLogger<TestLogger> logger = new AmbientLogger<TestLogger>();
+            AmbientLogger logger = new AmbientLogger(typeof(TestLogger));
             logger.Log(new ApplicationException());
             logger.Log(new ApplicationException(), "category", AmbientLogLevel.Information);
             logger.Log("test message");
@@ -204,6 +204,7 @@ namespace AmbientServices.Test
             AmbientLogger<TestLogger> logger = new AmbientLogger<TestLogger>(_Logger.Global);
             Func<string> nullLambda = null;
             Exception nullException = null;
+            Assert.ThrowsException<ArgumentNullException>(() => new AmbientLogger(null!));
             Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda!, "category", AmbientLogLevel.Information));
             Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullException!, "category", AmbientLogLevel.Information));
             Assert.ThrowsException<ArgumentNullException>(() => logger.Log("message", nullException!, "category", AmbientLogLevel.Information));

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class to hold units and unit conversions for the International System of Units (SI).

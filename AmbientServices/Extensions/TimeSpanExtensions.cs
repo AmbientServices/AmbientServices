@@ -1,25 +1,25 @@
-﻿
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class that extends <see cref="System.TimeSpan"/>.
     /// </summary>
-    public static class TimeSpanExtensions
+    internal static class TimeSpanExtensions
     {
         private static readonly char[] Alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
         private static readonly char[] Numeric = "-0123456789. \t".ToCharArray();
-        private static readonly long TimeSpanToStopwatchMultiplier;
-        private static readonly long TimeSpanToStopwatchDivisor;
+        internal static readonly long TimeSpanToStopwatchMultiplier;
+        internal static readonly long TimeSpanToStopwatchDivisor;
         private static readonly double TimeSpanToStopwatchRatio;
-        private static readonly long StopwatchToTimeSpanMultiplier;
-        private static readonly long StopwatchToTimeSpanDivisor;
+        internal static readonly long StopwatchToTimeSpanMultiplier;
+        internal static readonly long StopwatchToTimeSpanDivisor;
         private static readonly double StopwatchToTimeSpanRatio;
         private static readonly long BaselineStopwatchTimestamp;
         private static readonly long BaselineDateTimeTicks;
+        private static readonly long _TimeSpanStopwatchConversionLeastCommonMultiple;
 #pragma warning disable CA1810  // it should be faster in this case to do it this way because the values depend on each other
         static TimeSpanExtensions()
 #pragma warning restore CA1810
@@ -28,24 +28,33 @@ namespace AmbientServices
             ulong stopwatchTicksPerSecond = (ulong)System.Diagnostics.Stopwatch.Frequency;
             // adjust the multipliers and divisors to reduce the range of values that will cause overflow during conversion by removing all common divisors
             ulong gcd = GCD(timeSpanTicksPerSecond, stopwatchTicksPerSecond);
-            TimeSpanToStopwatchMultiplier = (long)(timeSpanTicksPerSecond / gcd);
-            TimeSpanToStopwatchDivisor = (long)(stopwatchTicksPerSecond / gcd);
+            TimeSpanToStopwatchMultiplier = (long)(stopwatchTicksPerSecond / gcd);
+            TimeSpanToStopwatchDivisor = (long)(timeSpanTicksPerSecond / gcd);
             TimeSpanToStopwatchRatio = (double)TimeSpanToStopwatchMultiplier / (double)TimeSpanToStopwatchDivisor;
-            StopwatchToTimeSpanMultiplier = (long)(stopwatchTicksPerSecond / gcd);
-            StopwatchToTimeSpanDivisor = (long)(timeSpanTicksPerSecond / gcd);
+            StopwatchToTimeSpanMultiplier = (long)(timeSpanTicksPerSecond / gcd);
+            StopwatchToTimeSpanDivisor = (long)(stopwatchTicksPerSecond / gcd);
             StopwatchToTimeSpanRatio = (double)StopwatchToTimeSpanMultiplier / (double)StopwatchToTimeSpanDivisor;
             BaselineStopwatchTimestamp = Stopwatch.GetTimestamp();     // note that it doesn't matter if AmbientClock is in use--these are *relative* numbers, so the conversion should work either way
+#if DEBUG   // delay this a little bit just in case it makes a difference
+            System.Threading.Thread.Sleep(73);
+#endif
             BaselineDateTimeTicks = DateTime.UtcNow.Ticks;
+            // make sure that nobody else gets times before these
+            System.Threading.Thread.MemoryBarrier();
+            _TimeSpanStopwatchConversionLeastCommonMultiple = TimeSpanToStopwatchMultiplier * TimeSpanToStopwatchDivisor;
         }
         internal static ulong GCD(ulong a, ulong b)
         {
             while (a != 0 && b != 0)
             {
-                // the testability of this code depends on the values of system constants which cannot be altered by the test code
                 if (a > b) a %= b; else b %= a;
             }
             return a | b;
         }
+        /// <summary>
+        /// Gets the smallest number of ticks than can be successfully roundtripped between stopwatch ticks and timespan ticks without any loss of accuracy.
+        /// </summary>
+        internal static long TimeSpanStopwatchConversionLeastCommonMultiple { get { return _TimeSpanStopwatchConversionLeastCommonMultiple; } }
         /// <summary>
         /// Converts <see cref="TimeSpan"/> ticks to <see cref="System.Diagnostics.Stopwatch"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="Double"/> multipliation if not.
         /// </summary>
@@ -93,20 +102,20 @@ namespace AmbientServices
         /// <returns>The number of UTC <see cref="DateTime "/>ticks.</returns>
         public static long StopwatchTimestampToDateTime(long stopwatchTimestamp)
         {
-            long stopwatchTicksAgo = BaselineStopwatchTimestamp - stopwatchTimestamp;
+            long stopwatchTicksAgo = stopwatchTimestamp - BaselineStopwatchTimestamp;
             long dateTimeTicksAgo = StopwatchTicksToTimeSpanTicks(stopwatchTicksAgo);
-            return BaselineDateTimeTicks - dateTimeTicksAgo;
+            return BaselineDateTimeTicks + dateTimeTicksAgo;
         }
         /// <summary>
-        /// Converts UTC <see cref="DateTime"/> ticks to a stopwatc timestamp.
+        /// Converts UTC <see cref="DateTime"/> ticks to a stopwatch timestamp.
         /// </summary>
         /// <param name="dateTimeTicks">Ticks from a UTC <see cref="DateTime"/>.</param>
         /// <returns>The corresponding <see cref="Stopwatch"/> timestamp.</returns>
         public static long DateTimeToStopwatchTimestamp(long dateTimeTicks)
         {
-            long dateTimeTicksAgo = BaselineDateTimeTicks - dateTimeTicks;
+            long dateTimeTicksAgo = dateTimeTicks - BaselineDateTimeTicks;
             long stopwatchTicksAgo = TimeSpanTicksToStopwatchTicks(dateTimeTicksAgo);
-            return BaselineStopwatchTimestamp - stopwatchTicksAgo;
+            return BaselineStopwatchTimestamp + stopwatchTicksAgo;
         }
         /// <summary>
         /// Attempts to parse a string as a timespan.

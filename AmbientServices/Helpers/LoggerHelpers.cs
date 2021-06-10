@@ -13,41 +13,43 @@ namespace AmbientServices
     /// As code complexity grows over time, more and more details are usually logged, so this interface provides a way to do that.
     /// Log filtering is generally done centrally, so it does not need to be abstracted or ambient and should be done by using settings or by calling into the logger service directly.
     /// </summary>
-    /// <typeparam name="TOWNER">The type that owns the log messages.</typeparam>
-    public class AmbientLogger<TOWNER>
+    public class AmbientLogger
     {
-        private static readonly string TypeName = typeof(TOWNER).Name;
+        internal static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting(nameof(AmbientLogger) + "-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
+        internal static readonly AmbientService<IAmbientLogger> _AmbientLogger = Ambient.GetService<IAmbientLogger>();
 
-        private static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting("AmbientLogger-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
-        private static readonly AmbientService<IAmbientLogger> _AmbientLogger = Ambient.GetService<IAmbientLogger>();
-
+        private string _typeName;
         private IAmbientLogger? _logger;
         private AmbientLogFilter _logFilter;
 
         /// <summary>
         /// Constructs an AmbientLogger using the ambient logger and ambient settings set.
         /// </summary>
-        public AmbientLogger()
-            : this (_AmbientLogger.Local, null)
+        /// <param name="type">The type doing the logging.</param>
+        public AmbientLogger(Type type)
+            : this(type, _AmbientLogger.Local, null)
         {
         }
         /// <summary>
         /// Constructs an AmbientLogger with the specified logger and settings set.
         /// </summary>
+        /// <param name="type">The type doing the logging.</param>
         /// <param name="logger">The <see cref="IAmbientLogger"/> to use for the logging.</param>
         /// <param name="loggerSettingsSet">A <see cref="IAmbientSettingsSet"/> from which the settings should be queried.</param>
-        public AmbientLogger(IAmbientLogger? logger, IAmbientSettingsSet? loggerSettingsSet = null)
+        public AmbientLogger(Type type, IAmbientLogger? logger, IAmbientSettingsSet? loggerSettingsSet = null)
         {
+            if (type == null) throw new ArgumentNullException(nameof(type));
+            _typeName = type.Name;
             _logger = logger;
-            _logFilter = (loggerSettingsSet == null) ? AmbientLogFilter.Default : new AmbientLogFilter(TypeName, loggerSettingsSet);
+            _logFilter = (loggerSettingsSet == null) ? AmbientLogFilter.Default : new AmbientLogFilter(_typeName, loggerSettingsSet);
         }
 
-        private void InnerLog(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
+        internal void InnerLog(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
         {
-            if (!_logFilter.IsBlocked(level, TypeName, category))
+            if (!_logFilter.IsBlocked(level, _typeName, category))
             {
                 if (!string.IsNullOrEmpty(category)) category = category + ":";
-                message = String.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, TypeName, category, message);
+                message = String.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, _typeName, category, message);
                 _logger!.Log(message);  // the calling of this method is short-circuited when _logger is null
             }
         }
@@ -112,6 +114,34 @@ namespace AmbientServices
             if (_logger == null) return;
             if (messageLambda == null) throw new ArgumentNullException(nameof(messageLambda));
             InnerLog(messageLambda() + Environment.NewLine + ex.ToString(), category, level);
+        }
+    }
+    /// <summary>
+    /// A generic type-specific logging class.  The name of the type is prepended to each log message.
+    /// When the log target requires I/O (as it usually will), the log messages should be buffered asynchronously so that only the flush has to wait for I/O.
+    /// Note that some functions take a delegate-generating string rather than a string.  This is to be used when computation of the string is expensive so that in scenarios where the log message is getting filtered anyway, that expense is not incurred.
+    /// While this isn't the most basic logging interface, using it can be as simple as just passing in a string.  
+    /// As code complexity grows over time, more and more details are usually logged, so this interface provides a way to do that.
+    /// Log filtering is generally done centrally, so it does not need to be abstracted or ambient and should be done by using settings or by calling into the logger service directly.
+    /// </summary>
+    /// <typeparam name="TOWNER">The type that owns the log messages.</typeparam>
+    public class AmbientLogger<TOWNER> : AmbientLogger
+    {
+        /// <summary>
+        /// Constructs an AmbientLogger using the ambient logger and ambient settings set.
+        /// </summary>
+        public AmbientLogger()
+            : this(_AmbientLogger.Local, null)
+        {
+        }
+        /// <summary>
+        /// Constructs an AmbientLogger with the specified logger and settings set.
+        /// </summary>
+        /// <param name="logger">The <see cref="IAmbientLogger"/> to use for the logging.</param>
+        /// <param name="loggerSettingsSet">A <see cref="IAmbientSettingsSet"/> from which the settings should be queried.</param>
+        public AmbientLogger(IAmbientLogger? logger, IAmbientSettingsSet? loggerSettingsSet = null)
+            : base (typeof(TOWNER), logger, loggerSettingsSet)
+        {
         }
     }
     internal class AmbientLogFilter

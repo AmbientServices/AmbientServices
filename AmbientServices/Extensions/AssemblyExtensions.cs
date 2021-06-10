@@ -5,12 +5,12 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class with extension functions for <see cref="System.Reflection.Assembly"/>.
     /// </summary>
-    public static class AssemblyExtensions
+    internal static class AssemblyExtensions
     {
         /// <summary>
         /// Enumerates loadable types from the assembly, even if referencing one or more of the types throws a <see cref="ReflectionTypeLoadException"/> exception.

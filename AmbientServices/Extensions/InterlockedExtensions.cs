@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class to hold enhanced functions for performing interlocked operations.
@@ -199,6 +199,6 @@ namespace AmbientServices
             }
             return true;
         }
-        private static Pseudorandom _Rand = new AmbientServices.Pseudorandom(true);
+        private static Pseudorandom _Rand = new AmbientServices.Utility.Pseudorandom(true);
     }
 }

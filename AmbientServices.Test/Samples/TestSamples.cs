@@ -39,6 +39,12 @@ namespace AmbientServices.Test.Samples
                 LocalDiskAuditor lda = null;
                 try
                 {
+                    //System.Text.StringBuilder str = new System.Text.StringBuilder();
+                    //str.AppendLine();
+                    //str.AppendLine(Environment.GetFolderPath(Environment.SpecialFolder.System));
+                    //str.AppendLine(System.IO.Path.GetTempPath());
+                    //str.AppendLine(Path.GetPathRoot(System.IO.Path.GetTempPath()));
+                    //Assert.Fail(str.ToString());
                     lda = new LocalDiskAuditor();
                     s.AddCheckerOrAuditor(lda);
                     await s.Start();
@@ -50,7 +56,7 @@ namespace AmbientServices.Test.Samples
                 finally
                 {
                     await s.Stop();
-                    s.RemoveCheckerOrAuditor(lda!);
+                    if (lda != null) s.RemoveCheckerOrAuditor(lda);     // note that lda could be null if the constructor throws!
                 }
             }
         }

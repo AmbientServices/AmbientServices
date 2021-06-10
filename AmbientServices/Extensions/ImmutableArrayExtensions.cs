@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     internal static class ImmutableArrayExtensions
     {

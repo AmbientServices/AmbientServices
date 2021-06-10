@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A class that represents just a date (no time, no timezone).  Can represent Gregorian dates from 0001.01.01 to a little after 9999.12.31

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AmbientServices.Utility;
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -183,7 +184,7 @@ The regular expression will attempt to match the system identifier, with the val
         /// <summary>
         /// Gets the amount of time used by this system group.
         /// </summary>
-        public TimeSpan TimeUsed { get { return new TimeSpan(_totalStopwatchTicksUsed * TimeSpan.TicksPerSecond / System.Diagnostics.Stopwatch.Frequency); } }
+        public TimeSpan TimeUsed { get { return new TimeSpan(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_totalStopwatchTicksUsed)); } }
 
         /// <summary>
         /// Constructs a AmbientServiceProfileAccumulator for the specified system.

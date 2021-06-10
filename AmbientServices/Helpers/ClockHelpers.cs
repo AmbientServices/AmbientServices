@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AmbientServices.Utility;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -39,7 +40,7 @@ namespace AmbientServices
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks((_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp()) * TimeSpan.TicksPerSecond / Stopwatch.Frequency); } }
+        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp())); } }
         /// <summary>
         /// Gets the current virtual UTC <see cref="DateTime"/>.
         /// </summary>
@@ -123,7 +124,7 @@ namespace AmbientServices
             PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null)
             {
-                controllable.SkipAhead(millisecondsToSleep * Stopwatch.Frequency / 1000);
+                controllable.SkipAhead((long)millisecondsToSleep * Stopwatch.Frequency / 1000);
             }
             else
             {
@@ -253,6 +254,8 @@ namespace AmbientServices
             public PausedAmbientClock()
             {
                 _baseStopwatchTicks = Stopwatch.GetTimestamp();
+                // make sure that subsequent operations don't get a timestamp earlier than this
+                System.Threading.Thread.MemoryBarrier();
             }
             /// <summary>
             /// Gets the number of ticks elapsed.  (In units of <see cref="Stopwatch.Frequency"/>).
@@ -387,7 +390,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the frequency of the stopwatch.
         /// </summary>
-        public static long Frequency => Stopwatch.Frequency;
+        public static long Frequency => Stopwatch.Frequency;    // on x86 linux, this is 1,000,000,000, but on windows it's only 10,000,000
         /// <summary>
         /// Gets whether or not the stopwatch supports high resolution.
         /// </summary>
@@ -406,11 +409,11 @@ namespace AmbientServices
         /// Arithmetic wraparound is technically possible, though in practice, at least on Windows, this should not happen unless the stopwatch has run for at least 100 years (50 years before it goes negative).
         /// In most cases, time spans measured in years should use <see cref="DateTime"/> instead of stopwatches.
         /// </remarks>
-        public long ElapsedTicks => _running ? Ticks - _resumeTicks + _accumulatedTicks : _accumulatedTicks;
+        public long ElapsedTicks => _running ? (Ticks - _resumeTicks + _accumulatedTicks) : _accumulatedTicks;
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>
-        public TimeSpan Elapsed => TimeSpan.FromTicks(ElapsedTicks * TimeSpan.TicksPerSecond / Stopwatch.Frequency);
+        public TimeSpan Elapsed => TimeSpan.FromTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(ElapsedTicks));
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>
@@ -567,7 +570,7 @@ namespace AmbientServices
 
                 long nowStopwatchTicks = clock.Ticks;
                 clock.RegisterTimeChangedNotificationSink(this);
-                _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
+                _periodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(period.Ticks);
                 _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = 0;
             }
@@ -921,7 +924,7 @@ namespace AmbientServices
 
         private void Disable()
         {
-            // this currently only gets called when there is NOT a clock
+            // this currently only gets called when there is a clock and not a timer
             System.Diagnostics.Debug.Assert(_clock != null && _timer == null);
             // race to disable us--did we win the race?
             if (1 == System.Threading.Interlocked.Exchange(ref _enabled, 0))
@@ -936,8 +939,8 @@ namespace AmbientServices
             long nowStopwatchTicks = _clock!.Ticks; // this is only called where _clock is not null
             IAmbientClock tempClock = _clock;
             _clock.RegisterTimeChangedNotificationSink(this);
-            _periodStopwatchTicks = period.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
-            long ticksToNextInvocation = dueTime.Ticks * Stopwatch.Frequency / TimeSpan.TicksPerSecond;
+            _periodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(period.Ticks);
+            long ticksToNextInvocation = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(dueTime.Ticks);
             _nextRaiseStopwatchTicks = nowStopwatchTicks + ticksToNextInvocation;
         }
 
@@ -1019,7 +1022,7 @@ namespace AmbientServices
                 if (_clock != null)
                 {
                     bool enabled = (_enabled != 0);
-                    Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                    Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan); // note that this disables the timer and decrements the timer count if needed
                     // since notification when we have an ambient clock service is synchronous, there is no need to wait for full disposal
                     WaitHandle.SignalAndWait(waitHandle, _AlwaysSignaled);
                     // return whether or not we were already canceled
@@ -1029,7 +1032,6 @@ namespace AmbientServices
                 {
                     ret = _timer!.Dispose(waitHandle);  // if _clock is null, _timer cannot be!
                 }
-                System.Threading.Interlocked.Decrement(ref _TimerCount);
                 _disposed = true;
             }
             return ret;

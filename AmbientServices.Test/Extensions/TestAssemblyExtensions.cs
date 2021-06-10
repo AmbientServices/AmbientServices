@@ -1,4 +1,5 @@
 ﻿using AmbientServices;
+using AmbientServices.Utility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -48,23 +49,23 @@ namespace AmbientServices.Test
         public void TypesFromException()
         {
             ReflectionTypeLoadException ex = new ReflectionTypeLoadException(new Type[] { typeof(string) }, new Exception[0]);
-            Assert.AreEqual(1, AmbientServices.AssemblyExtensions.TypesFromException(ex).Count());
+            Assert.AreEqual(1, AmbientServices.Utility.AssemblyExtensions.TypesFromException(ex).Count());
             ex = new ReflectionTypeLoadException(new Type[] { typeof(string), null }, new Exception[0]);
-            Assert.AreEqual(1, AmbientServices.AssemblyExtensions.TypesFromException(ex).Count());
+            Assert.AreEqual(1, AmbientServices.Utility.AssemblyExtensions.TypesFromException(ex).Count());
         }
         [TestMethod]
         public void DoesAssemblyReferToAssembly()
         {
-            Assert.IsFalse(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(typeof(System.ValueTuple).Assembly, Assembly.GetExecutingAssembly()));
-            Assert.IsTrue(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), typeof(IAmbientCache).Assembly));
-            Assert.IsTrue(AmbientServices.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), Assembly.GetExecutingAssembly()));
+            Assert.IsFalse(AmbientServices.Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(typeof(System.ValueTuple).Assembly, Assembly.GetExecutingAssembly()));
+            Assert.IsTrue(AmbientServices.Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), typeof(IAmbientCache).Assembly));
+            Assert.IsTrue(AmbientServices.Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), Assembly.GetExecutingAssembly()));
         }
         [TestMethod]
         public void ReflectionTypeLoadException()
         {
             // Note that Assembly.Location returns empty string if the assembly is a single file application, but this is a test application, which is *not* a single file executable, so we should get a location
             string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "ReflectionTypeLoadException.Assembly.dll");
-            Type[] types = AmbientServices.AssemblyExtensions.GetLoadableTypes(Assembly.LoadFrom(dllPath)).ToArray();
+            Type[] types = AmbientServices.Utility.AssemblyExtensions.GetLoadableTypes(Assembly.LoadFrom(dllPath)).ToArray();
         }
         [TestMethod]
         public void AssemblyExtensionsNullArgumentExceptions()
@@ -73,7 +74,7 @@ namespace AmbientServices.Test
             Assert.ThrowsException<ArgumentNullException>(() => n.GetLoadableTypes());
             Assert.ThrowsException<ArgumentNullException>(() => n.DoesAssemblyReferToAssembly(n));
             ReflectionTypeLoadException ex = null!;
-            Assert.ThrowsException<ArgumentNullException>(() => AssemblyExtensions.TypesFromException(ex));
+            Assert.ThrowsException<ArgumentNullException>(() => AmbientServices.Utility.AssemblyExtensions.TypesFromException(ex));
         }
     }
 }

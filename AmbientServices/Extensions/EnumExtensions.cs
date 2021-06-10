@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     /// <summary>
     /// A static class that holds extensions to the system <see cref="Enum"/> class.
     /// </summary>
-    public static class EnumExtensions
+    internal static class EnumExtensions
     {
         /// <summary>
         /// Returns the highest possible value for an enum.
