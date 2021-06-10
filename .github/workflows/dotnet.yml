@@ -35,11 +35,6 @@ jobs:
       run: dotnet test -c Release -f net5.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx"
     - name: ReportGenerator
       uses: danielpalme/ReportGenerator-GitHub-Action@4.8.9
-
-
-
-    - name: ReportGenerator
-      uses: danielpalme/ReportGenerator-GitHub-Action@4.8.7
       with:
         reports: 'coverage.cobertura.xml' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
         targetdir: 'coveragereport' # REQUIRED # The directory where the generated report should be saved.
