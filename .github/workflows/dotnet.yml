@@ -32,7 +32,7 @@ jobs:
     - name: Package
       run: dotnet pack AmbientServices -c Release
     - name: Test .NET 5
-      run: dotnet test -c Release -f net5.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx"
+      run: dotnet test -c Release -f net5.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
     - name: ReportGenerator
       uses: danielpalme/ReportGenerator-GitHub-Action@4.8.9
       with:
@@ -55,6 +55,6 @@ jobs:
         name: CoverageReport # Artifact name        
         path: coveragereport # Directory containing files to upload
     - name: Test .NET Core 2.1
-      run: dotnet test -c Release -f netcoreapp2.1
+      run: dotnet test -c Release -f netcoreapp2.1 --blame-hang-timeout 120s
     - name: Publish
       run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.5.2.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
