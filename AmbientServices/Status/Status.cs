@@ -174,7 +174,7 @@ namespace AmbientServices
             Logger.Log("Explicit Refreshing", "Check");
             // asynchronously get the status of each system
             IEnumerable<Task<StatusResults>> checkerTasks = _checkers.Select(checker => checker.GetStatus(cancel));
-            await Task.WhenAll(checkerTasks).ConfigureAwait(false);
+            await Task.WhenAny(Task.WhenAll(checkerTasks), cancel.AsTask()).ConfigureAwait(false);
             // sort the results
             List<StatusResults> results = new List<StatusResults>(checkerTasks.Select(t => t.Result));
             results.Sort((a, b) => RatingCompare(a, b));

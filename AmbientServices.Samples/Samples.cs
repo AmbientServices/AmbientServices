@@ -1088,6 +1088,7 @@ class DiskAuditor
             statusBuilder.AddChild(readBuilder);
             try
             {
+                int attempt = 0;
                 // attempt to read a file (if one exists)
                 foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, _testPath)))
                 {
@@ -1106,6 +1107,8 @@ class DiskAuditor
                     }
                     catch (IOException) // this will be thrown if the file cannot be accessed because it is open exclusively by another process (this happens a lot with temp files)
                     {
+                        // only attempt to read up to 100 files
+                        if (++attempt > 100) throw;
                         // just move on and try the next file
                         continue;
                     }
@@ -1162,13 +1165,19 @@ public sealed class LocalDiskAuditor : StatusAuditor
         string tempPathRelative = tempPath!.Substring(tempDrive.Length);
         _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative,  true);
         string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
-        string systemDrive = Path.GetPathRoot(systemPath) ?? "/";
+        string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
         if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
-        if (systemPath?[0] == '/') systemDrive = "/";    // on linux, the only "drive" is /
+        if (systemPath?[0] == '/') systemDrive = "/";
         string systemPathRelative = systemPath!.Substring(systemDrive.Length);
         _systemAuditor = new DiskAuditor(systemDrive, systemPath, false);
         _ready = true;
     }
+    private static string GetApplicationCodePath()
+    {
+        AppDomain current = AppDomain.CurrentDomain;
+        return (current.RelativeSearchPath ?? current.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
+    }
+
     protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
     public override async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
