@@ -1262,8 +1262,8 @@ class DiskAuditor
                     }
                     catch (IOException) // this will be thrown if the file cannot be accessed because it is open exclusively by another process (this happens a lot with temp files)
                     {
-                        // only attempt to read up to 100 files
-                        if (++attempt > 100) throw;
+                        // only attempt to read up to 10 files
+                        if (++attempt > 10) throw;
                         // just move on and try the next file
                         continue;
                     }

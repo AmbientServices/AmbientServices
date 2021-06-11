@@ -43,7 +43,8 @@ namespace AmbientServices.Test.Samples
                     s.AddCheckerOrAuditor(lda);
                     await s.Start();
                     // run all the tests (just the one here) right now
-                    await s.RefreshAsync();
+                    AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(1000);
+                    await s.RefreshAsync(cts.Token);
                     StatusAuditAlert a = s.Summary;
                     Assert.AreEqual(StatusRatingRange.Okay, StatusRating.FindRange(a.Rating));
                 }
