@@ -99,10 +99,14 @@ namespace AmbientServices
         /// This function is only called once when the status system is started and then again whenever <see cref="Status.RefreshAsync(CancellationToken)"/> is called.
         /// As a result, some <see cref="StatusChecker"/> implementations may build a <see cref="StatusResults"/> during initialization and return the same instance whenever this function is called.
         /// The default implementation simply returns <see cref="LatestResults"/>.
+        /// Any exceptions should be caught and converted into meaningful <see cref="StatusResults"/>.
+        /// Results should always be recorded using <see cref="SetLatestResults"/>.
         /// </remarks>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
         public virtual Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
         {
+            // POSSIBLE BREAKING CHANGE: maybe it would be good to have a public function that 
+            // catches exceptions and handles them properly and also always saves results using SetLatestResults?
             return Task.FromResult(LatestResults);
         }
         /// <summary>

@@ -44,9 +44,9 @@ namespace AmbientServices.Test.Samples
                     s.AddCheckerOrAuditor(lda);
                     await s.Start(cts.Token);
                     // run all the tests (just the one here) right now
-                    //await s.RefreshAsync(cts.Token);
-                    //StatusAuditAlert a = s.Summary;
-                    //Assert.AreEqual(StatusRatingRange.Okay, StatusRating.FindRange(a.Rating));
+                    await s.RefreshAsync(cts.Token);
+                    StatusAuditAlert a = s.Summary;
+                    Assert.AreEqual(StatusRatingRange.Okay, StatusRating.FindRange(a.Rating));
                 }
                 finally
                 {

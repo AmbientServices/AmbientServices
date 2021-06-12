@@ -311,7 +311,7 @@ namespace AmbientServices
         private readonly StatusResults _shutdownInProgress;     // may be returned if results are requested during shutdown
         private readonly Status? _status;
         private readonly TimeSpan _baselineAuditFrequency;
-        private readonly System.Timers.Timer _initialAuditTimer;    // only used until the initial audit happens, then disposed
+        private readonly AmbientEventTimer _initialAuditTimer;    // only used until the initial audit happens, then disposed
 
         private AmbientCancellationTokenSource? _backgroundCancelSource = new AmbientCancellationTokenSource(); // interlocked
         private AmbientEventTimer _auditTimer;  // interlocked
@@ -330,6 +330,7 @@ namespace AmbientServices
         /// This means that systems that process status audits faster will automatically be more responsive in reporting issues.
         /// If audits start to timeout, audits will happen less frequently even if they are failing so that the status tests don't contribute to system congestion.
         /// <see cref="TimeSpan.Zero"/> and negative time spans are treated as if they were <see cref="TimeSpan.MaxValue"/>.
+        /// An initial audit will be scheduled to begin ten milliseconds after the start of construction, using an <see cref="AmbientEventTimer"/> so that the caller can control the timing of the initial audit in testing scenarios.
         /// </param>
         /// <param name="status">The <see cref="Status"/> this auditor belongs to, or null if this should be a standalone auditor owned by the caller.</param>
         protected internal StatusAuditor(string targetSystem, TimeSpan baselineAuditFrequency, Status? status)
@@ -341,7 +342,7 @@ namespace AmbientServices
             _frequencyTicks = baselineAuditFrequency.Ticks;
             _nextAuditTime = AmbientClock.UtcNow.AddMilliseconds(10).Ticks;
             // create a timer for the initial audit (we'll dispose of this one immediately as soon as that audit finishes)
-            _initialAuditTimer = new System.Timers.Timer(10);
+            _initialAuditTimer = new AmbientEventTimer(10);
             _initialAuditTimer.Elapsed += InitialAuditTimer_Elapsed;
             _initialAuditTimer.AutoReset = false;
             // should we update periodically?
@@ -489,13 +490,15 @@ namespace AmbientServices
         /// Computes the current status, filling in <paramref name="statusBuilder"/> with information about the status.
         /// Note that this function is only public instead of protected so that it can be unit tested more easily.
         /// The status system calls this function internally.
+        /// Due to race conditions, audits may occur even after the status system shuts down, but should never happen more than once.
         /// </summary>
         /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to put the audit results into.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
         public abstract Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
-        /// Starts stopping any asynchronous activity.
+        /// Starts stopping any asynchronous activity (such as periodic audits).
+        /// Due to race conditions, occasionally one more audit may occur after this function returns.
         /// </summary>
         protected internal sealed override Task BeginStop()
         {

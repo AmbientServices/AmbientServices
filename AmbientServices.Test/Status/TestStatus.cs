@@ -101,6 +101,51 @@ namespace AmbientServices.Test
             }
         }
         [TestMethod]
+        public async Task StatusRefreshCanceled()
+        {
+            using (AmbientClock.Pause())
+            {
+                Status status = new Status(false);
+                try
+                {
+                    AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource();
+                    TestAuditCancelTokenSourceAndHangOnAudit ahuc = new TestAuditCancelTokenSourceAndHangOnAudit();
+                    status.AddCheckerOrAuditor(ahuc);
+                    await status.Start();
+                    // note that in this case, the initial audit should never run because the clock is paused, and that's just fine--manual refreshes can still happen
+                    ahuc.TokenSource = cts;
+                    IEnumerable<StatusChecker> canceledCheckers = await status.RefreshAsync(cts.Token);
+                    Assert.IsTrue(canceledCheckers.FirstOrDefault() == ahuc);
+                    // unpause the clock to run the "initial" audit, even after this forced audit completes
+                    await AmbientClock.TaskDelay(100);
+                }
+                finally
+                {
+                    await status.Stop();
+                }
+            }
+        }
+        [TestMethod]
+        public async Task StatusRefreshException()
+        {
+            using (AmbientClock.Pause())
+            {
+                Status status = new Status(false);
+                try
+                {
+                    TestCheckerException ce = new TestCheckerException();
+                    status.AddCheckerOrAuditor(ce);
+                    await status.Start();
+                    AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(1);
+                    await status.RefreshAsync(cts.Token);
+                }
+                finally
+                {
+                    await status.Stop();
+                }
+            }
+        }
+        [TestMethod]
         public async Task StatusExceptions()
         {
             Status s = new Status(false);
@@ -687,6 +732,40 @@ namespace AmbientServices.Test
         public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             throw new ExpectedException(nameof(TestAuditException));
+        }
+    }
+    [StatusIgnoreChecker]
+    internal class TestCheckerException : StatusChecker
+    {
+        public TestCheckerException()
+            : base(nameof(TestAuditException))
+        {
+        }
+        protected internal override bool Applicable { get { return true; } }
+        public override Task<StatusResults> GetStatus(CancellationToken cancel = default)
+        {
+            throw new ExpectedException(nameof(TestAuditException));
+        }
+    }
+    [StatusIgnoreChecker]
+    internal class TestAuditCancelTokenSourceAndHangOnAudit : StatusAuditor
+    {
+        private int _auditCount;
+        private AmbientCancellationTokenSource _cts;
+        public TestAuditCancelTokenSourceAndHangOnAudit()
+            : base(nameof(TestAuditCancelTokenSourceAndHangOnAudit), TimeSpan.FromHours(3))
+        {
+        }
+        public AmbientCancellationTokenSource TokenSource { get { return _cts; } set { System.Threading.Interlocked.Exchange(ref _cts, value); } }
+        public int AuditCount { get { return _auditCount; } }
+
+        protected internal override bool Applicable { get { return true; } }
+        public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        {
+            _cts?.Cancel();
+            int auditNumber = System.Threading.Interlocked.Increment(ref _auditCount);
+            if (auditNumber <= 1) return Task.Delay(TimeSpan.FromHours(4));
+            return Task.CompletedTask;
         }
     }
 }

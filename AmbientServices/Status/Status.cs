@@ -34,6 +34,7 @@ namespace AmbientServices
         /// Constructs a new Status instance which will keep track of status checkers and auditors and shut them down when instructed.
         /// If <paramref name="loadAllCheckers"/> is true, constructs and registers all <see cref="StatusChecker"/> classes currently loaded and subsequently loaded so that status information may be gathered.
         /// If <paramref name="loadAllCheckers"/> is false, constructs an empty collection of checkers which may be added to manually using <see cref="AddCheckerOrAuditor"/>.
+        /// Note that checkers with <see cref="StatusIgnoreCheckerAttribute"/> applied will never be included automatically.
         /// </summary>
         /// <param name="loadAllCheckers">Whether or not to load all checkers (and auditors) in all loaded assemblies and any assemblies that are subsequently loaded.</param>
         public Status(bool loadAllCheckers)
@@ -47,7 +48,7 @@ namespace AmbientServices
         internal bool ShuttingDown { get { return _shuttingDown != 0; } }
 
         /// <summary>
-        /// Starts the status system.
+        /// Starts the status system by searching the system for checkers and auditors (unless the constructor parameter says not to), constructing them, and adding them to the system, just as if <see cref="AddCheckerOrAuditor(StatusChecker)"/> had been called for each one.
         /// A call to Start must be matched by a call to <see cref="Stop"/> or else disposable items will not be disposed and DEBUG warnings may occur.
         /// Start may only be called once.
         /// </summary>
@@ -118,6 +119,8 @@ namespace AmbientServices
                 // loop through all the types looking for types that are not abstract, inherit from StatusNode (directly or indirectly) and have a public empty constructor
                 foreach (Type type in assembly.GetLoadableTypes())
                 {
+                    // does this checker have the IgnoreCheckerAttribute? skip this one
+                    if (type.GetCustomAttribute<StatusIgnoreCheckerAttribute>() != null) continue;
                     if (IsTestableStatusCheckerClass(type))
                     {
                         // construct an instance (it will be added to the list by the constructor)
@@ -128,7 +131,8 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Adds the specified checker or auditor to the global list.
+        /// Adds the specified checker or auditor to the list of checkers and auditors and for auditors, 
+        /// schedules the initial audit for 10ms afterwards (using an <see cref="AmbientEventTimer"/> so that the timing of the initial audit can be controlled in testing scenarios).
         /// </summary>
         /// <param name="checker">The <see cref="StatusChecker"/> to add.</param>
         public void AddCheckerOrAuditor(StatusChecker checker)
@@ -143,6 +147,7 @@ namespace AmbientServices
         }
         /// <summary>
         /// Removes the specified checker or auditor from the global list.
+        /// Subsequent audits may still occur, as they are controlled by the <see cref="StatusAuditor"/> class.
         /// No further audits will be scheduled, but no blocking wil occur if one is already in progress.
         /// </summary>
         /// <param name="checker">The <see cref="StatusChecker"/> to remove.</param>
@@ -166,20 +171,43 @@ namespace AmbientServices
             return (fb == null) ? 1 : fa.Value.CompareTo(fb.Value);
         }
         /// <summary>
-        /// Refreshes the status audits immediately.
+        /// Refreshes the status audits immediately, returning an enumeration of status checkers that did not complete before cancellation or catastrophically failed (no need for async enumerable here).
         /// Normally audits will be refreshed automatically in the background, but in some circumstances, users may want to force an immediate update.
         /// </summary>
-        public async Task<StatusResults> RefreshAsync(CancellationToken cancel = default(CancellationToken))
+        /// <returns>An enumeration of <see cref="StatusChecker"/>s that did not complete refreshing before being cancelled.</returns>
+        public async Task<IEnumerable<StatusChecker>> RefreshAsync(CancellationToken cancel = default(CancellationToken))
         {
             Logger.Log("Explicit Refreshing", "Check");
             // asynchronously get the status of each system
-            IEnumerable<Task<StatusResults>> checkerTasks = _checkers.Select(checker => checker.GetStatus(cancel));
-            await Task.WhenAny(Task.WhenAll(checkerTasks), cancel.AsTask()).ConfigureAwait(false);
-            // sort the results
-            List<StatusResults> results = new List<StatusResults>(checkerTasks.Select(t => t.Result));
-            results.Sort((a, b) => RatingCompare(a, b));
-            StatusResults overallResults = new StatusResults(null, "/", results);
-            return overallResults;
+            Dictionary<StatusChecker, Task<StatusResults>> checkerTasks = new Dictionary<StatusChecker, Task<StatusResults>>(_checkers.Count);
+            foreach (StatusChecker checker in _checkers)
+            {
+                Task<StatusResults> task = Task.Run(() => checker.GetStatus(cancel), cancel);
+                checkerTasks.Add(checker, task);
+            }
+            // wait for either all the checker tasks to complete, or for the cancellation token to be canceled
+            await Task.WhenAny(Task.WhenAll(checkerTasks.Values), cancel.AsTask()).ConfigureAwait(false);
+            // make a list of those that got canceled or catastrophically failed (GetStatus should never throw an exception, but it's theoretically possible)
+            List<StatusChecker> canceledOrFailedCheckers = new List<StatusChecker>();
+            foreach (KeyValuePair<StatusChecker, Task<StatusResults>> kvp in checkerTasks)
+            {
+                StatusChecker checker = kvp.Key;
+                Task<StatusResults> resultsTask = kvp.Value;
+                if (resultsTask.IsFaulted) // this means that GetStatus threw an exception--this should have been caught internally, but we'll handle it here anyway
+                {
+                    StatusResultsBuilder builder = new StatusResultsBuilder(checker);
+                    builder.AddException(resultsTask.Exception!);   // if IsFaulted, there should be a non-null Exception!
+                    checker.SetLatestResults(builder.FinalResults);
+                    // in this case the checker failed, but we put the results back into the checker, so we've made it appear as if it succeeded with an exception
+                }
+                else if (resultsTask.Status != TaskStatus.RanToCompletion || resultsTask.IsCanceled) // cancelled (or somehow otherwise didn't run to completion??)
+                {
+                    // in this case, we won't update the checker itself, because the caller could have just specified a very small timeout, and we have another way to return results here
+                    canceledOrFailedCheckers.Add(checker);
+                }
+                // else the task completed successfully so the results are in the latest results
+            }
+            return canceledOrFailedCheckers;
         }
         /// <summary>
         /// Gets the <see cref="StatusResults"/> for the entire system.
@@ -249,6 +277,19 @@ namespace AmbientServices
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
             return !type.IsAbstract && typeof(StatusChecker).IsAssignableFrom(type) && type.GetConstructor(Array.Empty<Type>()) != null;
+        }
+    }
+    /// <summary>
+    /// A class attribute used mostly for testing that causes a <see cref="StatusChecker"/> or <see cref="StatusAuditor"/> class to be ignored by the status system unless explicitly added.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class)]
+    sealed public class StatusIgnoreCheckerAttribute : Attribute 
+    {
+        /// <summary>
+        /// Constructs the IgnoreCheckerAttribute.
+        /// </summary>
+        public StatusIgnoreCheckerAttribute()
+        {
         }
     }
 }

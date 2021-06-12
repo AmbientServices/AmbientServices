@@ -88,6 +88,8 @@ namespace AmbientServices
         /// <summary>
         /// Skips a paused clock ahead the specified amount of time.
         /// If the clock is not paused in the current call context, nothing is done.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <remarks>
         /// Note that negative times are allowed, but should only be used to test weird clock issues.
@@ -101,6 +103,8 @@ namespace AmbientServices
         /// <summary>
         /// Skips a paused clock ahead the specified amount of time.
         /// If the clock is not paused in the current call context, nothing is done.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <remarks>
         /// Note that negative times are allowed, but should only be used to test weird clock issues.
@@ -114,6 +118,8 @@ namespace AmbientServices
         /// <summary>
         /// The ambient clock equivalent of <see cref="Thread.Sleep(int)"/>.
         /// If the clock is paused, skips the virtual clock forward by the specified number of milliseconds, otherwise calls <see cref="Thread.Sleep(int)"/>.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <remarks>
         /// Note that negative times are allowed, but should only be used to test weird clock issues.
@@ -135,6 +141,8 @@ namespace AmbientServices
         /// The ambient clock equivalent of <see cref="Thread.Sleep(TimeSpan)"/>.
         /// Skips a paused clock ahead the specified amount of time.
         /// If the clock is paused, skips the virtual clock forward by the specified amount, otherwise calls <see cref="Thread.Sleep(TimeSpan)"/>.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <remarks>
         /// Note that negative times are allowed, but should only be used to test weird clock issues.
@@ -146,6 +154,8 @@ namespace AmbientServices
         }
         /// <summary>
         /// Asynchronously delays for a specified amount of time.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
         private static Task Delay(long millisecondsToDelay)
@@ -163,6 +173,8 @@ namespace AmbientServices
         }
         /// <summary>
         /// Asynchronously delays for a specified amount of time.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
         public static Task TaskDelay(int millisecondsToDelay)
@@ -171,6 +183,8 @@ namespace AmbientServices
         }
         /// <summary>
         /// Asynchronously delays for a specified amount of time.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <param name="delayTime">The amount of time to skip ahead.</param>
         public static Task TaskDelay(TimeSpan delayTime)
@@ -192,6 +206,8 @@ namespace AmbientServices
         }
         /// <summary>
         /// Asynchronously delays for a specified amount of time.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <param name="millisecondsToDelay">The number of milliseconds to delay</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to cancel the delay.</param>
@@ -201,6 +217,8 @@ namespace AmbientServices
         }
         /// <summary>
         /// Asynchronously delays for a specified amount of time.
+        /// This method should only ever be called from test code that controls the passage of time.
+        /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <param name="delayTime">The amount of time to skip ahead.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to cancel the delay.</param>
