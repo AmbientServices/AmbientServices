@@ -31,6 +31,18 @@ namespace AmbientServices.Test.Samples
         /// Performs tests on the Status sample code.
         /// </summary>
         [TestMethod]
+        public async Task LocalDiskAuditor()
+        {
+            LocalDiskAuditor lda = new LocalDiskAuditor();
+            StatusResultsBuilder builder = new StatusResultsBuilder(lda);
+            await lda.Audit(builder);
+            StatusAuditAlert? alert = builder.WorstAlert;
+            Assert.IsNull(alert, alert?.ToString());
+        }
+        /// <summary>
+        /// Performs tests on the Status sample code.
+        /// </summary>
+        [TestMethod]
         public async Task Status()
         {
             using (AmbientClock.Pause())
