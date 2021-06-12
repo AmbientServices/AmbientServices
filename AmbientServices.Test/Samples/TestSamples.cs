@@ -28,7 +28,63 @@ namespace AmbientServices.Test.Samples
             CallStackTest.OuterFunc();
         }
         /// <summary>
-        /// Performs tests on the Status sample code.
+        /// Performs tests on the DiskAuditor sample code.
+        /// </summary>
+        [TestMethod]
+        public void DiskInformation()
+        {
+            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+            string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
+            string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
+            if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
+            if (systemPath?[0] == '/') systemDrive = "/";
+            string systemPathRelative = systemPath!.Substring(systemDrive.Length);
+        }
+        /// <summary>
+        /// Performs tests on the DiskAuditor sample code.
+        /// </summary>
+        [TestMethod]
+        public async Task DiskAuditorTemp()
+        {
+            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+            DiskAuditor da = new DiskAuditor(tempDrive, tempPathRelative, true);
+            StatusResultsBuilder builder = new StatusResultsBuilder("TempDisk");
+            await da.Audit(builder);
+            StatusAuditAlert alert = builder.WorstAlert;
+            Assert.IsNull(alert, alert?.ToString());
+        }
+        /// <summary>
+        /// Performs tests on the DiskAuditor sample code.
+        /// </summary>
+        [TestMethod]
+        public async Task DiskAuditorSystem()
+        {
+            string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
+            string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
+            if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
+            if (systemPath?[0] == '/') systemDrive = "/";
+            string systemPathRelative = systemPath!.Substring(systemDrive.Length);
+            DiskAuditor da = new DiskAuditor(systemDrive, systemPath, false);
+            StatusResultsBuilder builder = new StatusResultsBuilder("TempDisk");
+            await da.Audit(builder);
+            StatusAuditAlert alert = builder.WorstAlert;
+            Assert.IsNull(alert, alert?.ToString());
+        }
+        private static string GetApplicationCodePath()
+        {
+            AppDomain current = AppDomain.CurrentDomain;
+            return (current.RelativeSearchPath ?? current.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
+        }
+        /// <summary>
+        /// Performs tests on the LocalDiskAuditor sample code.
         /// </summary>
         [TestMethod]
         public async Task LocalDiskAuditor()
@@ -36,7 +92,7 @@ namespace AmbientServices.Test.Samples
             LocalDiskAuditor lda = new LocalDiskAuditor();
             StatusResultsBuilder builder = new StatusResultsBuilder(lda);
             await lda.Audit(builder);
-            StatusAuditAlert? alert = builder.WorstAlert;
+            StatusAuditAlert alert = builder.WorstAlert;
             Assert.IsNull(alert, alert?.ToString());
         }
         /// <summary>
