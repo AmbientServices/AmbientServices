@@ -1315,7 +1315,7 @@ namespace AmbientServices.Test
                     ManualResetEvent mre = new ManualResetEvent(false);
                     Assert.IsTrue(registered.Unregister(mre));
                     Assert.IsFalse(registered.Unregister(mre));
-                    Assert.IsTrue(mre.WaitOne(0));
+                    if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
 
                     AmbientRegisteredWaitHandle wh = new AmbientRegisteredWaitHandle(false, mre, (s, b) => { }, null, 10000, true);
                     wh.Unregister(mre);
@@ -1409,7 +1409,7 @@ namespace AmbientServices.Test
                     ManualResetEvent mre = new ManualResetEvent(false);
                     Assert.IsTrue(registered.Unregister(mre));
                     Assert.IsFalse(registered.Unregister(mre));
-                    Assert.IsTrue(mre.WaitOne(0));
+                    if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
 
 
                     are = new AutoResetEvent(false);
