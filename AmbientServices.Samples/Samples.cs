@@ -1132,7 +1132,7 @@ class DiskAuditor
                         byte[] b = new byte[1];
                         await fs.WriteAsync(b, 0, 1);
                         await fs.FlushAsync();
-                        readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                        writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                         writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
                     }
                 }
