@@ -8,6 +8,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -88,6 +89,37 @@ namespace AmbientServices.Test.Samples
             long availableFreeSpace = _driveInfo.AvailableFreeSpace;
             long totalFreeBytes = _driveInfo.TotalFreeSpace;
             long totalBytes = _driveInfo.TotalSize;
+        }
+        /// <summary>
+        /// Performs tests on the DiskAuditor sample code.
+        /// </summary>
+        [TestMethod]
+        public async Task TempDiskAuditorEmulateEnumerate()
+        {
+            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+            DriveInfo _driveInfo = new DriveInfo(tempDrive);
+            StringBuilder sb = new StringBuilder();
+
+            if (!string.IsNullOrEmpty(tempPath))
+            {
+                StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+                try
+                {
+                    // attempt to read a file (if one exists)
+                    foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, tempPath)))
+                    {
+                        sb.Append(file);
+                    }
+                }
+                catch (Exception e)
+                {
+                    readBuilder.AddException(e);
+                }
+            }
         }
         /// <summary>
         /// Performs tests on the DiskAuditor sample code.
