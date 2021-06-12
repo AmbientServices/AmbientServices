@@ -48,6 +48,31 @@ namespace AmbientServices.Test.Samples
         /// Performs tests on the DiskAuditor sample code.
         /// </summary>
         [TestMethod]
+        public void GetTempPathRoot()
+        {
+            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+        }
+        /// <summary>
+        /// Performs tests on the DiskAuditor sample code.
+        /// </summary>
+        [TestMethod]
+        public void DiskAuditorTempSetup()
+        {
+            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+            DiskAuditor da = new DiskAuditor(tempDrive, tempPathRelative, true);
+        }
+        /// <summary>
+        /// Performs tests on the DiskAuditor sample code.
+        /// </summary>
+        [TestMethod]
         public async Task DiskAuditorTemp()
         {
             string tempPath = System.IO.Path.GetTempPath()!;
