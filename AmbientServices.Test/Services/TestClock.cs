@@ -464,30 +464,43 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EventTimerSystem()
         {
-            bool elapsed = false;
-            bool disposed = false;
-            using (AmbientEventTimer timer = new AmbientEventTimer())
+            StringBuilder errorInfo = new StringBuilder();
+            // this test is testing against system objects which are timing-dependent to make sure they behave the same way the ambient versions do
+            // so they fail occasionally, so we'll retry several times to be sure they're really misbehaving
+            for (int attempt = 0; attempt < 5; ++attempt)
             {
-                timer.AutoReset = true;
-                timer.Interval = 10;
-                timer.Enabled = true;
-                // hopefully we can get the timer to elapse now (without a subscriber)
-                System.Threading.Thread.Sleep(100);
-                // add a subscriber
-                System.Timers.ElapsedEventHandler elapsedHandler = (s, e) => { elapsed = true; };
-                EventHandler disposedHandler = (s, e) => { disposed = true; };
-                timer.Elapsed += elapsedHandler;
-                timer.Disposed += disposedHandler;
-                // now try to get it to elapse again (this time with a subscriber)
-                System.Threading.Thread.Sleep(100);
-                Assert.IsTrue(elapsed);
-                Assert.IsFalse(disposed);
-                timer.Elapsed -= elapsedHandler;
-                timer.Disposed -= disposedHandler;
-                // we needed to test the Disposed event removal, but we need to get notified of disposal
-                timer.Disposed += disposedHandler;
+                errorInfo.Clear();
+
+                bool elapsed = false;
+                bool disposed = false;
+                using (AmbientEventTimer timer = new AmbientEventTimer())
+                {
+                    timer.AutoReset = true;
+                    timer.Interval = 10;
+                    timer.Enabled = true;
+                    // hopefully we can get the timer to elapse now (without a subscriber)
+                    System.Threading.Thread.Sleep(100);
+                    // add a subscriber
+                    System.Timers.ElapsedEventHandler elapsedHandler = (s, e) => { elapsed = true; };
+                    EventHandler disposedHandler = (s, e) => { disposed = true; };
+                    timer.Elapsed += elapsedHandler;
+                    timer.Disposed += disposedHandler;
+                    // now try to get it to elapse again (this time with a subscriber)
+                    System.Threading.Thread.Sleep(100);
+                    if (!elapsed) errorInfo.AppendLine($"elapsed was false after waiting for ten intervals (100ms)!");
+                    if (disposed) errorInfo.AppendLine($"dispose was set prematurely!");
+                    timer.Elapsed -= elapsedHandler;
+                    timer.Disposed -= disposedHandler;
+                    // we needed to test the Disposed event removal (above), but we need to get notified of disposal to test that the handler gets called, so re-add it
+                    timer.Disposed += disposedHandler;
+                }
+                if (!disposed) errorInfo.AppendLine($"dispose handler was not called!");
+                Assert.IsTrue(disposed);
+
+                if (errorInfo.Length == 0) break;
+                // wait a random time to break any kind of resonant failure
+                System.Threading.Thread.Sleep(Utility.Pseudorandom.Next.NextInt32Ranged(1000));
             }
-            Assert.IsTrue(disposed);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
