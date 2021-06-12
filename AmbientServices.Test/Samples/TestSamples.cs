@@ -94,7 +94,7 @@ namespace AmbientServices.Test.Samples
         /// Performs tests on the DiskAuditor sample code.
         /// </summary>
         [TestMethod]
-        public async Task TempDiskAuditorEmulateEnumerate()
+        public void TempDiskAuditorEmulateEnumerate()
         {
             string tempPath = System.IO.Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
@@ -208,7 +208,24 @@ namespace AmbientServices.Test.Samples
         /// Performs tests on the DiskAuditor sample code.
         /// </summary>
         [TestMethod]
-        public async Task DiskAuditorTemp()
+        public async Task DiskAuditorTempReadWrite()
+        {
+            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+            DiskAuditor da = new DiskAuditor(tempDrive, tempPathRelative, false);
+            StatusResultsBuilder builder = new StatusResultsBuilder("TempDisk");
+            await da.Audit(builder);
+            StatusAuditAlert alert = builder.WorstAlert;
+            Assert.IsNull(alert, alert?.ToString());
+        }
+        /// <summary>
+        /// Performs tests on the DiskAuditor sample code.
+        /// </summary>
+        [TestMethod]
+        public async Task DiskAuditorTempReadOnly()
         {
             string tempPath = System.IO.Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";

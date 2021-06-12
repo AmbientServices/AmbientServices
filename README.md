@@ -1239,18 +1239,73 @@ class DiskAuditor
         statusBuilder.AddProperty("TotalBytes", _driveInfo.TotalSize);
         if (!string.IsNullOrEmpty(_testPath))
         {
-            StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
-            statusBuilder.AddChild(readBuilder);
-            try
+            if (_readonly)
             {
-                int attempt = 0;
-                // attempt to read a file (if one exists)
-                foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, _testPath)))
+                StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+                statusBuilder.AddChild(readBuilder);
+                try
+                {
+                    int attempt = 0;
+                    // attempt to read a file (if one exists)
+                    foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, _testPath)))
+                    {
+                        AmbientStopwatch s = AmbientStopwatch.StartNew();
+                        try
+                        {
+                            using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            {
+                                byte[] b = new byte[1];
+                                await fs.ReadAsync(b, 0, 1, cancel);
+                                await fs.FlushAsync();
+                            }
+                            readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                            readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
+                            break;
+                        }
+                        catch (IOException) // this will be thrown if the file cannot be accessed because it is open exclusively by another process (this happens a lot with temp files)
+                        {
+                            // only attempt to read up to 10 files
+                            if (++attempt > 10) throw;
+                            // just move on and try the next file
+                            continue;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    readBuilder.AddException(e);
+                }
+            }
+            else
+            {
+                StatusResultsBuilder writeBuilder = new StatusResultsBuilder("Write");
+                StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+                statusBuilder.AddChild(writeBuilder);
+                statusBuilder.AddChild(readBuilder);
+                // attempt to write a temporary file
+                string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
+                try
                 {
                     AmbientStopwatch s = AmbientStopwatch.StartNew();
                     try
                     {
-                        using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        using (FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096))
+                        {
+                            byte[] b = new byte[1];
+                            await fs.WriteAsync(b, 0, 1);
+                            await fs.FlushAsync();
+                            writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                            writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        writeBuilder.AddException(e);
+                    }
+                    s.Reset();
+                    try
+                    {
+                        using (FileStream fs = new FileStream(targetPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         {
                             byte[] b = new byte[1];
                             await fs.ReadAsync(b, 0, 1, cancel);
@@ -1258,42 +1313,15 @@ class DiskAuditor
                         }
                         readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                         readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
-                        break;
                     }
-                    catch (IOException) // this will be thrown if the file cannot be accessed because it is open exclusively by another process (this happens a lot with temp files)
+                    catch (Exception e)
                     {
-                        // only attempt to read up to 10 files
-                        if (++attempt > 10) throw;
-                        // just move on and try the next file
-                        continue;
+                        readBuilder.AddException(e);
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                readBuilder.AddException(e);
-            }
-            if (!_readonly)
-            {
-                StatusResultsBuilder writeBuilder = new StatusResultsBuilder("Write");
-                statusBuilder.AddChild(writeBuilder);
-                try
+                finally
                 {
-                    // attempt to write a temporary file
-                    string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
-                    AmbientStopwatch s = AmbientStopwatch.StartNew();
-                    using (FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
-                    {
-                        byte[] b = new byte[1];
-                        await fs.WriteAsync(b, 0, 1);
-                        await fs.FlushAsync();
-                        writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
-                        writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
-                    }
-                }
-                catch (Exception e)
-                {
-                    writeBuilder.AddException(e);
+                    File.Delete(targetPath);
                 }
             }
         }
@@ -1318,7 +1346,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
         if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
         if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
         string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-        _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative,  true);
+        _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative, false);
         string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
         string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
         if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
