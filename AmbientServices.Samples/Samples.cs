@@ -1091,7 +1091,7 @@ class DiskAuditor
                 try
                 {
                     int attempt = 0;
-                    // attempt to read a file (if one exists)
+                    // attempt to read a file (if one exists).  note that under Linux, some files in the temp path may be inaccessible in such a way as to timeout attempting to open even as few as ten of them.  this is probably a flaw in the .NET Core implementation on Linux.
                     foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, _testPath)))
                     {
                         AmbientStopwatch s = AmbientStopwatch.StartNew();
@@ -1191,7 +1191,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
         if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
         if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
         string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-        _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative, false);
+        _tempAuditor = new DiskAuditor(tempDrive, tempPathRelative, false);     // note that under Linux, some files in the temp path may be inaccessible in such a way as to timeout attempting to open even as few as ten of them.  this is probably a flaw in the .NET Core implementation on Linux.
         string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
         string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
         if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";

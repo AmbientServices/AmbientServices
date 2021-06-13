@@ -125,56 +125,6 @@ namespace AmbientServices.Test.Samples
         /// Performs tests on the DiskAuditor sample code.
         /// </summary>
         [TestMethod]
-        public async Task TempDiskAuditorEmulateRead()
-        {
-            string tempPath = System.IO.Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DriveInfo _driveInfo = new DriveInfo(tempDrive);
-
-            if (!string.IsNullOrEmpty(tempPath))
-            {
-                StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
-                try
-                {
-                    int attempt = 0;
-                    // attempt to read a file (if one exists)
-                    foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, tempPath)))
-                    {
-                        AmbientStopwatch s = AmbientStopwatch.StartNew();
-                        try
-                        {
-                            using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                            {
-                                byte[] b = new byte[1];
-                                await fs.ReadAsync(b, 0, 1);
-                                await fs.FlushAsync();
-                            }
-                            readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
-                            readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
-                            break;
-                        }
-                        catch (IOException) // this will be thrown if the file cannot be accessed because it is open exclusively by another process (this happens a lot with temp files)
-                        {
-                            // only attempt to read up to 10 files
-                            if (++attempt > 10) throw;
-                            // just move on and try the next file
-                            continue;
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    readBuilder.AddException(e);
-                }
-            }
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
         public async Task TempDiskAuditorEmulateWrite()
         {
             string tempPath = System.IO.Path.GetTempPath()!;
@@ -216,23 +166,6 @@ namespace AmbientServices.Test.Samples
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
             string tempPathRelative = tempPath!.Substring(tempDrive.Length);
             DiskAuditor da = new DiskAuditor(tempDrive, tempPathRelative, false);
-            StatusResultsBuilder builder = new StatusResultsBuilder("TempDisk");
-            await da.Audit(builder);
-            StatusAuditAlert alert = builder.WorstAlert;
-            Assert.IsNull(alert, alert?.ToString());
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public async Task DiskAuditorTempReadOnly()
-        {
-            string tempPath = System.IO.Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DiskAuditor da = new DiskAuditor(tempDrive, tempPathRelative, true);
             StatusResultsBuilder builder = new StatusResultsBuilder("TempDisk");
             await da.Audit(builder);
             StatusAuditAlert alert = builder.WorstAlert;
