@@ -164,4 +164,8 @@ namespace AmbientServices
         }
         #endregion
     }
+    [AttributeUsage(AttributeTargets.All)]
+    sealed class ExcludeFromCoverageAttribute : Attribute
+    {
+    }
 }
