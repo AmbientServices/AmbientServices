@@ -54,7 +54,7 @@ jobs:
       with:
         name: CoverageReport # Artifact name        
         path: coveragereport # Directory containing files to upload
-    - name: Test .NET Core 2.1
-      run: dotnet test -c Release -f netcoreapp2.1 --blame-hang-timeout 120s
+    - name: Test .NET 5.0
+      run: dotnet test -c Release -f net5.0 --blame-hang-timeout 120s
     - name: Publish
       run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.6.0.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
