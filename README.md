@@ -1425,3 +1425,6 @@ Contributions are welcome under the following conditions:
 3. code coverage by unit tests cover all new lines and conditions whenever possible
 4. documentation (both inline and here) is updated appropriately
 5. style for code and documentation contributions remains consistent
+
+## Status
+[![.NET](https://github.com/AmbientServices/AmbientServices/actions/workflows/dotnet.yml/badge.svg)](https://github.com/AmbientServices/AmbientServices/actions/workflows/dotnet.yml)
