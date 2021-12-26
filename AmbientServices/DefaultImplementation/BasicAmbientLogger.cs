@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AmbientServices
+namespace AmbientServices.Utility
 {
     [DefaultAmbientService]
     internal class BasicAmbientLogger : IAmbientLogger
@@ -29,7 +29,7 @@ namespace AmbientServices
     /// <summary>
     /// A class to buffer debug trace messages and display them asynchronously.
     /// </summary>
-    static class TraceBuffer
+    public static class TraceBuffer
     {
         static private readonly string _FlushString = Guid.NewGuid().ToString();
         static private readonly ConcurrentQueue<string> _Queue = new ConcurrentQueue<string>();

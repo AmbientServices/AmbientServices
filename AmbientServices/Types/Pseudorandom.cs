@@ -488,6 +488,31 @@ namespace AmbientServices.Utility
                 if (offset + 7 < endOffset) target[offset + 7] = (byte)((rawData & 0xff00000000000000) >> 56);
             }
         }
+        /// <summary>
+        /// Populates an existing byte span with random values.
+        /// </summary>
+        /// <param name="target">The target <see cref="Span"/> of bytes.</param>
+        /// <param name="offset">The offset in the byte array to begin filling with random bytes.</param>
+        /// <param name="length">The number of random bytes to put in the returned array.</param>
+        /// <returns>An array of bytes of the specified length populated with random byte values.</returns>
+        public void NextBytes(Span<byte> target, int offset = 0, int length = -1)
+        {
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            int index = 0;
+            ulong rawData;
+            for (int endOffset = (length < 0 || offset + length > target.Length) ? target.Length : (offset + length); offset < endOffset; offset += 8, index = ((index + 1) % 8))
+            {
+                rawData = NextUInt32;
+                target[offset] = (byte)(rawData & 0xff);
+                if (offset + 1 < endOffset) target[offset + 1] = (byte)((rawData & 0xff00) >> 8);
+                if (offset + 2 < endOffset) target[offset + 2] = (byte)((rawData & 0xff0000) >> 16);
+                if (offset + 3 < endOffset) target[offset + 3] = (byte)((rawData & 0xff000000) >> 24);
+                if (offset + 4 < endOffset) target[offset + 4] = (byte)((rawData & 0xff00000000) >> 32);
+                if (offset + 5 < endOffset) target[offset + 5] = (byte)((rawData & 0xff0000000000) >> 40);
+                if (offset + 6 < endOffset) target[offset + 6] = (byte)((rawData & 0xff000000000000) >> 48);
+                if (offset + 7 < endOffset) target[offset + 7] = (byte)((rawData & 0xff00000000000000) >> 56);
+            }
+        }
         const int DecimalMaxScalePlusOne = 29;
         /// <summary>
         /// Gets a <see cref="Decimal"/> with a random value.  All possible values should be roughly evenly distributed.

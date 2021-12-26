@@ -19,9 +19,13 @@ For example, logging and performance tracking should never alter function output
 Advanced ambient services provide detailed system performance monitoring.
 
 There are three primary questions that may be answered through performance monitoring.  
-    1. How well are the various systems functioning under how much load?  This question may be answered using AmbientStatistics that track the usage, performance, and effectiveness of major system functions.
-    2. Why did an operation take as long as it did?  This question may be answered using AmbientServiceProfiler to track which operations delayed the response by how much.
-    3. How close is the system to maxing out?  This question may be answered using AmbientBottleneckDetector to track saturation of possible system bottlenecks so you can determine scalability even before load testing.
+
+    Q: How well are the various systems functioning under how much load?  
+        A: This question may be answered using AmbientStatistics that track the usage, performance, and effectiveness of major system functions.
+    Q: Why did an operation take as long as it did?  
+        A: This question may be answered using AmbientServiceProfiler to track which operations delayed the response by how much.
+    Q: How close is the system to maxing out?  
+        A: This question may be answered using AmbientBottleneckDetector to track saturation of possible system bottlenecks so you can determine scalability even before load testing.
 
 By using these services, with very little overhead, you can easily track how various parts of your system are performing all the time, not just when you run it with a code profiler.
 You can also expose this across the network to roll-up this data throughout the whole system, even up through the client.
