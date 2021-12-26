@@ -23,13 +23,19 @@ namespace AmbientServices
         private bool _disposedValue;                    // too small to need interlocking
 
         /// <summary>
+        /// Constructs a default ambient file logger that writes files that start with a default prefix.
+        /// </summary>
+        public AmbientFileLogger() : this (null)
+        {
+        }
+        /// <summary>
         /// Constructs an ambient file logger that writes files that start with the specified prefix.
         /// </summary>
         /// <param name="filePrefix">The path and filename prefix to use for the log files.  Defaults to the temp folder with "AmbientFileLogger" as a filename prefix.</param>
         /// <param name="fileExtension">The file extension (with leading .) to use for the files.  Defaults to ".log".</param>
         /// <param name="rotationPeriodMinutes">The number of minutes after which a new file should be used.  Suffixes will roll over to zero at midnight UTC every day.  Defaults to 60 minutes.</param>
         /// <param name="autoFlushSeconds">The number of seconds between automatic flushes of the log file.  Zero or negative values will disable automatic flushing, so all log messages will be buffered until the log file is rotated or <see cref="Flush"/> is called explicitly.</param>
-        public AmbientFileLogger(string? filePrefix = null, string? fileExtension = null, int rotationPeriodMinutes = 60, int autoFlushSeconds = 5)
+        public AmbientFileLogger(string? filePrefix, string? fileExtension = null, int rotationPeriodMinutes = 60, int autoFlushSeconds = 5)
         {
             if (filePrefix == null) filePrefix = Path.GetTempPath() + nameof(AmbientFileLogger);
             if (fileExtension == null) fileExtension = ".log";
