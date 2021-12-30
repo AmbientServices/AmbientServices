@@ -54,7 +54,7 @@ namespace AmbientServices.Test
         {
             Assert.AreEqual(parentStackFrames + 1, new FilteredStackTrace().FrameCount);
 
-            IEnumerable<StackFrame> filtered = AmbientServices.Utility.FilteredStackTrace.FilterSystemAndMicrosoftFrames(new FilteredStackTrace().GetFrames());
+            IEnumerable<StackFrame> filtered = AmbientServices.Utility.FilteredStackTrace.FilterSystemAndMicrosoftFrames(new FilteredStackTrace().GetFrames().Where(f => f != null)!);  // we filter null frames at runtime
             Assert.IsTrue(filtered.Count() > 1);
         }
     }

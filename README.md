@@ -64,7 +64,7 @@ BasicAmbientCache-ItemCount: the maximum number of both timed and untimed items 
 /// </summary>
 class UserManager
 {
-    private static readonly AmbientCache<UserManager> Cache = new AmbientCache<UserManager>();
+    private static readonly AmbientCache<UserManager> Cache = new AmbientCache<UserManager>(localOnly: false);
 
     /// <summary>
     /// Finds the user with the specified emali address.
@@ -78,7 +78,7 @@ class UserManager
         if (user != null)
         {
             user = User.Find(email);
-            if (user != null) await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(false, userKey);
+            if (user != null) await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(userKey);
         }
         return user;
     }
@@ -90,7 +90,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Create();
-        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Updates the specified user. (Presumably with a new password)
@@ -100,7 +100,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Update();
-        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Deletes the specified user.
@@ -110,7 +110,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + email;
         User.Delete(email);
-        await Cache.Remove<User>(false, userKey);
+        await Cache.Remove<User>(userKey);
     }
 }
 ```
@@ -219,6 +219,30 @@ class DownloadAndUnzip
             await Unzip();
         }
     }
+#if NET5_0_OR_GREATER
+    public async Task Download()
+    {
+        IAmbientProgress? progress = AmbientProgressService.Progress;
+        CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
+        HttpClient client = new HttpClient();
+        using (HttpResponseMessage response = await client.GetAsync(_downlaodUrl))
+        {
+            long totalBytesRead = 0;
+            int bytesRead;
+            byte[] buffer = new byte[8192];
+            long contentLength = response.Content.Headers.ContentLength ?? 1000000;
+            using (Stream downloadReader = await response.Content.ReadAsStreamAsync())
+            {
+                while ((bytesRead = await downloadReader.ReadAsync(buffer, 0, buffer.Length, cancel)) != 0)
+                {
+                    await _package.WriteAsync(buffer, 0, bytesRead, cancel);
+                    totalBytesRead += bytesRead;
+                    progress?.Update(totalBytesRead * 1.0f / contentLength);
+                }
+            }
+        }
+    }
+#else
     public async Task Download()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
@@ -241,6 +265,7 @@ class DownloadAndUnzip
             }
         }
     }
+#endif
     public Task Unzip()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
@@ -1362,7 +1387,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
     private static string GetApplicationCodePath()
     {
         AppDomain current = AppDomain.CurrentDomain;
-        return (current.RelativeSearchPath ?? current.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
+        return (current.RelativeSearchPath ?? current.BaseDirectory?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
     }
 
     protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration

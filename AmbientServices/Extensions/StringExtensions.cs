@@ -150,7 +150,7 @@ namespace AmbientServices.Utility
             return builder.ToString();
         }
 
-#if !NET5_0
+#if !NET5_0_OR_GREATER
 #pragma warning disable CA1801  // these functions specifically make the code behave the old pre net5.0 way.
         /// <summary>
         /// Replaces matching parts of the string with another string.

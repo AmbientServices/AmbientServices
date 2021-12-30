@@ -491,7 +491,7 @@ namespace AmbientServices.Utility
         /// <summary>
         /// Populates an existing byte span with random values.
         /// </summary>
-        /// <param name="target">The target <see cref="Span"/> of bytes.</param>
+        /// <param name="target">The target Span of bytes.</param>
         /// <param name="offset">The offset in the byte array to begin filling with random bytes.</param>
         /// <param name="length">The number of random bytes to put in the returned array.</param>
         /// <returns>An array of bytes of the specified length populated with random byte values.</returns>
@@ -589,7 +589,11 @@ namespace AmbientServices.Utility
                     enumStringValue = "," + enumValues[enumValueSelectorIndex[value]].GetValue(type);
                 }
                 // have the CLR parse that value and give us a typed enum back
+#if NET6_0_OR_GREATER
+                return Enum.Parse(type, enumStringValue.AsSpan(1));
+#else
                 return Enum.Parse(type, enumStringValue.Substring(1));
+#endif
             }
             return enumValues[NextUInt32 % enumValues.Length].GetValue(type)!;  // enum field values better not be null!
         }
@@ -603,11 +607,6 @@ namespace AmbientServices.Utility
         {
             return (TEnum)NextEnum(typeof(TEnum));
         }
-
-
-
-
-
         /// <summary>
         /// Gets a 32-bit hash code for this instance.
         /// </summary>

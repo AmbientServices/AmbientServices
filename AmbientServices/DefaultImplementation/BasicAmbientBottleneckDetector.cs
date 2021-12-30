@@ -8,9 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-#if NET5_0
 using System.Runtime.Versioning;
-#endif
 
 namespace AmbientServices
 {
@@ -401,7 +399,7 @@ namespace AmbientServices
             }
         }
     }
-#if NET5_0
+#if NET5_0_OR_GREATER
     [UnsupportedOSPlatform("browser")]
 #endif
     internal class ProcessBottleneckSurveyor : IAmbientBottleneckExitNotificationSink, IAmbientBottleneckSurveyor
@@ -589,7 +587,7 @@ namespace AmbientServices
 
         public ThreadBottleneckSurveyor(string? scopeName, ThreadAccessDistributor threadDistributor, Regex? allow, Regex? block)
         {
-            _scopeName = (string.IsNullOrEmpty(scopeName) ? (string.IsNullOrEmpty(System.Threading.Thread.CurrentThread.Name) ? $"Thread {System.Threading.Thread.CurrentThread.ManagedThreadId}" : System.Threading.Thread.CurrentThread.Name) : scopeName)!;
+            _scopeName = (string.IsNullOrEmpty(scopeName) ? (string.IsNullOrEmpty(System.Threading.Thread.CurrentThread.Name) ? $"Thread {Environment.CurrentManagedThreadId}" : System.Threading.Thread.CurrentThread.Name) : scopeName)!;
             _allow = allow;
             _block = block;
             _metrics = new Dictionary<string, AmbientBottleneckAccessor>();

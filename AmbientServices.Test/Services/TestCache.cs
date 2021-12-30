@@ -31,29 +31,29 @@ namespace AmbientServices.Test
                 {
                     TestCache ret;
                     AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
-                    await cache.Store(true, "Test1", this);
-                    await cache.Store(true, "Test1", this);
+                    await cache.Store("Test1", this);
+                    await cache.Store("Test1", this);
                     ret = await cache.Retrieve<TestCache>("Test1", null);
                     Assert.AreEqual(this, ret);
-                    await cache.Remove<TestCache>(true, "Test1");
+                    await cache.Remove<TestCache>("Test1");
                     ret = await cache.Retrieve<TestCache>("Test1", null);
                     Assert.IsNull(ret);
-                    await cache.Store(true, "Test2", this, null, DateTime.MinValue);
+                    await cache.Store("Test2", this, null, DateTime.MinValue);
                     ret = await cache.Retrieve<TestCache>("Test2", null);
                     Assert.AreEqual(this, ret);
                     await Eject(cache, 2);
                     ret = await cache.Retrieve<TestCache>("Test2", null);
                     Assert.IsNull(ret);
-                    await cache.Store(true, "Test3", this, TimeSpan.FromMinutes(-1));
+                    await cache.Store("Test3", this, TimeSpan.FromMinutes(-1));
                     ret = await cache.Retrieve<TestCache>("Test3", null);
                     Assert.IsNull(ret);
-                    await cache.Store(true, "Test4", this, TimeSpan.FromMinutes(10), DateTime.UtcNow.AddMinutes(11));
+                    await cache.Store("Test4", this, TimeSpan.FromMinutes(10), DateTime.UtcNow.AddMinutes(11));
                     ret = await cache.Retrieve<TestCache>("Test4", null);
                     Assert.AreEqual(this, ret);
-                    await cache.Store(true, "Test5", this, TimeSpan.FromMinutes(10), DateTime.Now.AddMinutes(11));
+                    await cache.Store("Test5", this, TimeSpan.FromMinutes(10), DateTime.Now.AddMinutes(11));
                     ret = await cache.Retrieve<TestCache>("Test5", null);
                     Assert.AreEqual(this, ret);
-                    await cache.Store(true, "Test6", this, TimeSpan.FromMinutes(60), DateTime.UtcNow.AddMinutes(10));
+                    await cache.Store("Test6", this, TimeSpan.FromMinutes(60), DateTime.UtcNow.AddMinutes(10));
                     ret = await cache.Retrieve<TestCache>("Test6", null);
                     Assert.AreEqual(this, ret);
                     ret = await cache.Retrieve<TestCache>("Test6", TimeSpan.FromMinutes(10));
@@ -75,10 +75,10 @@ namespace AmbientServices.Test
             {
                 TestCache ret;
                 AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
-                await cache.Store(true, "Test1", this);
+                await cache.Store("Test1", this);
                 ret = await cache.Retrieve<TestCache>("Test1");
                 Assert.IsNull(ret);
-                await cache.Remove<TestCache>(true, "Test1");
+                await cache.Remove<TestCache>("Test1");
                 ret = await cache.Retrieve<TestCache>("Test1", null);
                 Assert.IsNull(ret);
                 await cache.Clear();
@@ -105,20 +105,20 @@ namespace AmbientServices.Test
                 string keyName7 = nameof(CacheExpiration) + "7";
                 TestCache ret;
                 AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
-                await cache.Store(true, keyName1, this, TimeSpan.FromMilliseconds(50));
-                await cache.Store(true, keyName1, this, TimeSpan.FromMilliseconds(51));
-                await cache.Store(true, keyName2, this);
-                await cache.Store(true, keyName2, this);
-                await cache.Store(true, keyName3, this, TimeSpan.FromMilliseconds(-51));    // this should never get cached because the time span is negative
-                await cache.Store(true, keyName3, this, TimeSpan.FromMilliseconds(-50));    // this should never get cached because the time span is negative
-                await cache.Store(true, keyName4, this);
-                await cache.Store(true, keyName4, this);
-                await cache.Store(true, keyName5, this, TimeSpan.FromMilliseconds(50));
-                await cache.Store(true, keyName5, this, TimeSpan.FromMilliseconds(50));
-                await cache.Store(true, keyName6, this, TimeSpan.FromMilliseconds(1000));
-                await cache.Store(true, keyName6, this, TimeSpan.FromMilliseconds(1000));
-                await cache.Store(true, keyName7, this, TimeSpan.FromMilliseconds(75));
-                await cache.Store(true, keyName7, this, TimeSpan.FromMilliseconds(1000));
+                await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(50));
+                await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(51));
+                await cache.Store(keyName2, this);
+                await cache.Store(keyName2, this);
+                await cache.Store(keyName3, this, TimeSpan.FromMilliseconds(-51));    // this should never get cached because the time span is negative
+                await cache.Store(keyName3, this, TimeSpan.FromMilliseconds(-50));    // this should never get cached because the time span is negative
+                await cache.Store(keyName4, this);
+                await cache.Store(keyName4, this);
+                await cache.Store(keyName5, this, TimeSpan.FromMilliseconds(50));
+                await cache.Store(keyName5, this, TimeSpan.FromMilliseconds(50));
+                await cache.Store(keyName6, this, TimeSpan.FromMilliseconds(1000));
+                await cache.Store(keyName6, this, TimeSpan.FromMilliseconds(1000));
+                await cache.Store(keyName7, this, TimeSpan.FromMilliseconds(75));
+                await cache.Store(keyName7, this, TimeSpan.FromMilliseconds(1000));
                 ret = await cache.Retrieve<TestCache>(keyName1);
                 Assert.IsNotNull(ret);
                 ret = await cache.Retrieve<TestCache>(keyName2);
@@ -185,9 +185,9 @@ namespace AmbientServices.Test
                     //string keyName7 = nameof(CacheExpiration) + "7";
                     TestCache ret;
                     AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
-                    await cache.Store(true, keyName1, this, TimeSpan.FromMilliseconds(100));
-                    await cache.Store(true, keyName2, this, TimeSpan.FromMilliseconds(50));
-                    await cache.Store(true, keyName3, this, TimeSpan.FromMilliseconds(100));
+                    await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(100));
+                    await cache.Store(keyName2, this, TimeSpan.FromMilliseconds(50));
+                    await cache.Store(keyName3, this, TimeSpan.FromMilliseconds(100));
                     ret = await cache.Retrieve<TestCache>(keyName1);
                     Assert.IsNotNull(ret);
                     ret = await cache.Retrieve<TestCache>(keyName2, TimeSpan.FromMilliseconds(100));
@@ -211,7 +211,7 @@ namespace AmbientServices.Test
                     Assert.IsNull(ret);
 
                     // change key2 to be untimed
-                    await cache.Store(true, keyName2, this);
+                    await cache.Store(keyName2, this);
                     await Eject(cache, 1);  // this should skip over the timed entry for 2 but then eject it because it is untimed
                 }
             }
@@ -234,12 +234,12 @@ namespace AmbientServices.Test
 //                string keyName6 = nameof(CacheDoubleExpiration) + "6";
                 TestCache ret;
                 AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
-                await cache.Store(true, keyName1, this, TimeSpan.FromMilliseconds(51));
-                await cache.Store(true, keyName2, this, TimeSpan.FromMilliseconds(50));
-                await cache.Store(true, keyName3, this, TimeSpan.FromSeconds(50));
-                await cache.Store(true, keyName4, this, TimeSpan.FromSeconds(50));
-                await cache.Store(true, keyName5, this, TimeSpan.FromSeconds(50));
-//                await cache.Store(true, keyName6, this, TimeSpan.FromSeconds(50));
+                await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(51));
+                await cache.Store(keyName2, this, TimeSpan.FromMilliseconds(50));
+                await cache.Store(keyName3, this, TimeSpan.FromSeconds(50));
+                await cache.Store(keyName4, this, TimeSpan.FromSeconds(50));
+                await cache.Store(keyName5, this, TimeSpan.FromSeconds(50));
+//                await cache.Store(keyName6, this, TimeSpan.FromSeconds(50));
                 ret = await cache.Retrieve<TestCache>(keyName2);
                 Assert.IsNotNull(ret);
                 await Eject(cache, 1);  // this should eject 1 because it's the LRU item
@@ -283,28 +283,28 @@ namespace AmbientServices.Test
                 TestCache ret;
                 IAmbientCache cacheService = new BasicAmbientCache(localSettingsSet);
                 AmbientCache<TestCache> cache = new AmbientCache<TestCache>(cacheService, "prefix");
-                await cache.Store<TestCache>(true, "Test1", this);
+                await cache.Store<TestCache>("Test1", this);
                 ret = await cache.Retrieve<TestCache>("Test1", null);
                 Assert.AreEqual(this, ret);
-                await cache.Remove<TestCache>(true, "Test1");
+                await cache.Remove<TestCache>("Test1");
                 ret = await cache.Retrieve<TestCache>("Test1", null);
                 Assert.IsNull(ret);
-                await cache.Store<TestCache>(true, "Test2", this, null, DateTime.MinValue);
+                await cache.Store<TestCache>("Test2", this, null, DateTime.MinValue);
                 ret = await cache.Retrieve<TestCache>("Test2", null);
                 Assert.AreEqual(this, ret);
                 await Eject(cache, 1);
                 ret = await cache.Retrieve<TestCache>("Test2", null);
                 Assert.IsNull(ret);
-                await cache.Store<TestCache>(true, "Test3", this, TimeSpan.FromMinutes(-1));
+                await cache.Store<TestCache>("Test3", this, TimeSpan.FromMinutes(-1));
                 ret = await cache.Retrieve<TestCache>("Test3", null);
                 Assert.IsNull(ret);
-                await cache.Store<TestCache>(true, "Test4", this, TimeSpan.FromMinutes(10), AmbientClock.UtcNow.AddMinutes(11));
+                await cache.Store<TestCache>("Test4", this, TimeSpan.FromMinutes(10), AmbientClock.UtcNow.AddMinutes(11));
                 ret = await cache.Retrieve<TestCache>("Test4", null);
                 Assert.AreEqual(this, ret);
-                await cache.Store<TestCache>(true, "Test5", this, TimeSpan.FromMinutes(10), AmbientClock.Now.AddMinutes(11));
+                await cache.Store<TestCache>("Test5", this, TimeSpan.FromMinutes(10), AmbientClock.Now.AddMinutes(11));
                 ret = await cache.Retrieve<TestCache>("Test5", null);
                 Assert.AreEqual(this, ret);
-                await cache.Store<TestCache>(true, "Test6", this, TimeSpan.FromMinutes(60), AmbientClock.UtcNow.AddMinutes(10));
+                await cache.Store<TestCache>("Test6", this, TimeSpan.FromMinutes(60), AmbientClock.UtcNow.AddMinutes(10));
                 ret = await cache.Retrieve<TestCache>("Test6", null);
                 Assert.AreEqual(this, ret);
                 ret = await cache.Retrieve<TestCache>("Test6", TimeSpan.FromMinutes(10));
@@ -331,21 +331,21 @@ namespace AmbientServices.Test
 
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(1100));
 
-                ret = await cache.Retrieve<TestCache>("CacheRefresh1", null);
+                ret = await cache.Retrieve<TestCache>(true, "CacheRefresh1", null);
                 Assert.IsNull(ret);
                 await cache.Store<TestCache>(true, "CacheRefresh1", this, TimeSpan.FromMinutes(10));
-                ret = await cache.Retrieve<TestCache>("CacheRefresh1", null);
+                ret = await cache.Retrieve<TestCache>(true, "CacheRefresh1", null);
                 Assert.AreEqual(this, ret);
                 await Eject(cache, 1);
 
                 await cache.Store<TestCache>(true, "CacheRefresh2", this);
-                ret = await cache.Retrieve<TestCache>("CacheRefresh2", null);
+                ret = await cache.Retrieve<TestCache>(true, "CacheRefresh2", null);
                 Assert.AreEqual(this, ret);
                 await cache.Store<TestCache>(true, "CacheRefresh3", this);
-                ret = await cache.Retrieve<TestCache>("CacheRefresh3", null);
+                ret = await cache.Retrieve<TestCache>(true, "CacheRefresh3", null);
                 Assert.AreEqual(this, ret);
                 await cache.Remove<TestCache>(true, "CacheRefresh3");
-                ret = await cache.Retrieve<TestCache>("CacheRefresh3", null);
+                ret = await cache.Retrieve<TestCache>(true, "CacheRefresh3", null);
                 Assert.IsNull(ret);
 
                 await Eject(cache, 1);
@@ -367,7 +367,7 @@ namespace AmbientServices.Test
                 for (int i = 0; i < countsToEject; ++i)
                 {
                     string shouldNotBeFoundValue;
-                    shouldNotBeFoundValue = await cache.Retrieve<string>("vhxcjklhdsufihs");
+                    shouldNotBeFoundValue = await cache.Retrieve<string>(true, "vhxcjklhdsufihs");
                 }
             }
         }

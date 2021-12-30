@@ -7,11 +7,15 @@ using System.Collections.Immutable;
 using System.Data.SqlClient;
 using System.IO;
 using System.IO.Compression;
-using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+#if NET5_0_OR_GREATER
+using System.Net.Http;
+#else
+using System.Net;
+#endif
 
 [assembly: System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 
@@ -110,7 +114,7 @@ class User
 /// </summary>
 class UserManager
 {
-    private static readonly AmbientCache<UserManager> Cache = new AmbientCache<UserManager>();
+    private static readonly AmbientCache<UserManager> Cache = new AmbientCache<UserManager>(localOnly: false);
 
     /// <summary>
     /// Finds the user with the specified emali address.
@@ -124,7 +128,7 @@ class UserManager
         if (user != null)
         {
             user = User.Find(email);
-            if (user != null) await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(false, userKey);
+            if (user != null) await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(userKey);
         }
         return user;
     }
@@ -136,7 +140,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Create();
-        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Updates the specified user. (Presumably with a new password)
@@ -146,7 +150,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Update();
-        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Deletes the specified user.
@@ -156,7 +160,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + email;
         User.Delete(email);
-        await Cache.Remove<User>(false, userKey);
+        await Cache.Remove<User>(userKey);
     }
 }
 #endregion
@@ -237,6 +241,30 @@ class DownloadAndUnzip
             await Unzip();
         }
     }
+#if NET5_0_OR_GREATER
+    public async Task Download()
+    {
+        IAmbientProgress? progress = AmbientProgressService.Progress;
+        CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
+        HttpClient client = new HttpClient();
+        using (HttpResponseMessage response = await client.GetAsync(_downlaodUrl))
+        {
+            long totalBytesRead = 0;
+            int bytesRead;
+            byte[] buffer = new byte[8192];
+            long contentLength = response.Content.Headers.ContentLength ?? 1000000;
+            using (Stream downloadReader = await response.Content.ReadAsStreamAsync())
+            {
+                while ((bytesRead = await downloadReader.ReadAsync(buffer, 0, buffer.Length, cancel)) != 0)
+                {
+                    await _package.WriteAsync(buffer, 0, bytesRead, cancel);
+                    totalBytesRead += bytesRead;
+                    progress?.Update(totalBytesRead * 1.0f / contentLength);
+                }
+            }
+        }
+    }
+#else
     public async Task Download()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
@@ -259,6 +287,7 @@ class DownloadAndUnzip
             }
         }
     }
+#endif
     public Task Unzip()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
@@ -353,68 +382,6 @@ class BufferPool
     {
         SizedBufferRecycler recycler = _recycler;
         recycler.Recycle(buffer);
-    }
-}
-#endregion
-
-
-
-
-
-
-#region AmbientClockSample
-/// <summary>
-/// A test for TimeDependentService.
-/// </summary>
-[TestClass]
-public class TimeDependentServiceTest
-{
-    [TestMethod]
-    public async Task TestCancellation()
-    {
-        // this first part *should* get cancelled because we're using the system clock
-        AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token));
-
-        // switch the current call context to the artifically-paused ambient clock and try again
-        using (AmbientClock.Pause())
-        {
-            AmbientCancellationTokenSource cts2 = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
-            // this should *not* throw because the clock has been paused
-            await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
-
-            // this skips the artifical paused clock ahead, raising the cancellation
-            AmbientClock.SkipAhead(TimeSpan.FromSeconds(1));
-            // make sure the cancellation got raised
-            Assert.ThrowsException<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
-        }
-    }
-    private async Task AsyncFunctionThatShouldCancelAfterOneSecond(CancellationToken cancel)
-    {
-        for (int loop = 0; loop < 20; ++loop)
-        {
-            await Task.Delay(100);
-            cancel.ThrowIfCancellationRequested();
-        }
-    }
-    [TestMethod]
-    public async Task TestCodeThatCouldTimeoutUnderHeavyLoad()
-    {
-        using (AmbientClock.Pause())
-        {
-            AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
-            await AsyncFunctionThatCouldTimeoutUnderHeavyLoad(cts.Token);
-        }
-    }
-    private async Task AsyncFunctionThatCouldTimeoutUnderHeavyLoad(CancellationToken cancel)
-    {
-        AmbientStopwatch stopwatch = new AmbientStopwatch(true);
-        for (int count = 0; count < 9; ++count)
-        {
-            await Task.Delay(100);
-            cancel.ThrowIfCancellationRequested();
-        }
-        // if we finished before getting cancelled, we must have been scheduled within about 10 milliseconds on average, or we must be running using a paused ambient clock
     }
 }
 #endregion
@@ -1203,7 +1170,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
     private static string GetApplicationCodePath()
     {
         AppDomain current = AppDomain.CurrentDomain;
-        return (current.RelativeSearchPath ?? current.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
+        return (current.RelativeSearchPath ?? current.BaseDirectory?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
     }
 
     protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
@@ -1233,3 +1200,74 @@ class Application
     }
 }
 #endregion
+
+
+
+
+
+
+
+namespace Tests // 2021-12-29: under net6.0 currently, tests cannot be discovered if they're not in a namespace
+{
+#region AmbientClockSample
+/// <summary>
+/// A test for TimeDependentService.
+/// </summary>
+[TestClass]
+public class TimeDependentServiceTest
+{
+    [TestMethod]
+    public async Task TestCancellation()
+    {
+        // this first part *should* get cancelled because we're using the system clock
+        AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token));
+
+        // switch the current call context to the artifically-paused ambient clock and try again
+        using (AmbientClock.Pause())
+        {
+            AmbientCancellationTokenSource cts2 = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
+            // this should *not* throw because the clock has been paused
+            await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
+
+            // this skips the artifical paused clock ahead, raising the cancellation
+            AmbientClock.SkipAhead(TimeSpan.FromSeconds(1));
+            // make sure the cancellation got raised
+            Assert.ThrowsException<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
+        }
+    }
+    private async Task AsyncFunctionThatShouldCancelAfterOneSecond(CancellationToken cancel)
+    {
+        for (int loop = 0; loop < 20; ++loop)
+        {
+            await Task.Delay(100);
+            cancel.ThrowIfCancellationRequested();
+        }
+    }
+    [TestMethod]
+    public async Task TestCodeThatCouldTimeoutUnderHeavyLoad()
+    {
+        using (AmbientClock.Pause())
+        {
+            AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
+            await AsyncFunctionThatCouldTimeoutUnderHeavyLoad(cts.Token);
+        }
+    }
+    private async Task AsyncFunctionThatCouldTimeoutUnderHeavyLoad(CancellationToken cancel)
+    {
+        AmbientStopwatch stopwatch = new AmbientStopwatch(true);
+        for (int count = 0; count < 9; ++count)
+        {
+            await Task.Delay(100);
+            cancel.ThrowIfCancellationRequested();
+        }
+        // if we finished before getting cancelled, we must have been scheduled within about 10 milliseconds on average, or we must be running using a paused ambient clock
+    }
+}
+#endregion
+}
+
+
+
+
+

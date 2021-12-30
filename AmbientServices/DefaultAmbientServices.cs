@@ -64,11 +64,11 @@ namespace AmbientServices
 
         static DefaultAmbientServices()
         {
+            AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
             foreach (Type type in AllLoadedReferringTypes())
             {
                 AddDefaultImplementation(type);
             }
-            AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
         }
 
         private static void AddDefaultImplementation(Type type)
@@ -94,7 +94,13 @@ namespace AmbientServices
         private static void CurrentDomain_AssemblyLoad(object? sender, AssemblyLoadEventArgs args)
         {
             Assembly assembly = args.LoadedAssembly;
-            AssemblyLoader.OnLoad(assembly);
+            try
+            {
+                AssemblyLoader.OnLoad(assembly);
+            }
+#pragma warning disable CA1031
+            catch { }  // ignore errors in user event handlers
+#pragma warning restore CA1031
             // does this assembly reference THIS assembly?
             if (assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
             {

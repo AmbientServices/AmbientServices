@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Versioning;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -17,10 +18,16 @@ namespace AmbientServices.Utility
         {
         }
 
+#if NET5_0_OR_GREATER
+        [UnsupportedOSPlatform("browser")]
+#endif
         public void Log(string message)
         {
             TraceBuffer.BufferLine(message);
         }
+#if NET5_0_OR_GREATER
+        [UnsupportedOSPlatform("browser")]
+#endif
         public Task Flush(CancellationToken cancel = default(CancellationToken))
         {
             return TraceBuffer.Flush(cancel);
@@ -29,6 +36,9 @@ namespace AmbientServices.Utility
     /// <summary>
     /// A class to buffer debug trace messages and display them asynchronously.
     /// </summary>
+#if NET5_0_OR_GREATER
+    [UnsupportedOSPlatform("browser")]
+#endif
     public static class TraceBuffer
     {
         static private readonly string _FlushString = Guid.NewGuid().ToString();
@@ -47,7 +57,10 @@ namespace AmbientServices.Utility
             thread.Start();
             return thread;
         }
-
+        /// <summary>
+        /// Buffers the specified line to the concurrent buffer.
+        /// </summary>
+        /// <param name="s">The string to buffer.</param>
         public static void BufferLine(string s)
         {
             Buffer(s + Environment.NewLine);
@@ -96,6 +109,10 @@ namespace AmbientServices.Utility
                 if (flush) _FlusherThread.Priority = ThreadPriority.BelowNormal;
             }
         }
+        /// <summary>
+        /// Asynchronously flushes any queued trace lines.
+        /// </summary>
+        /// <param name="cancel">A <see cref="CancellationToken"/> that the caller can use to interrupt the operation before completion.</param>
         public static async Task Flush(CancellationToken cancel = default(CancellationToken))
         {
             // queue a flush command

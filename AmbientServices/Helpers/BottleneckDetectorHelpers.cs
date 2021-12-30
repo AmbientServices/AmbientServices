@@ -4,9 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-#if NET5_0
 using System.Runtime.Versioning;
-#endif
 
 namespace AmbientServices
 {
@@ -190,7 +188,7 @@ namespace AmbientServices
         /// whereas this will survey all threads and call contexts in the process.  
         /// They will produce the same results only for programs where there is only a single call context (no parallelization).
         /// </remarks>
-#if NET5_0
+#if NET5_0_OR_GREATER
         [UnsupportedOSPlatform("browser")]
 #endif
         public IAmbientBottleneckSurveyor CreateProcessSurveyor(string? processScopeName = null, string? overrideAllowRegex = null, string? overrideBlockRegex = null)

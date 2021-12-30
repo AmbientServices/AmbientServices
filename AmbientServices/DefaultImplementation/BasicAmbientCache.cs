@@ -50,7 +50,7 @@ namespace AmbientServices
                 Entry = entry;
             }
         }
-        public Task<T?> Retrieve<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public Task<T?> Retrieve<T>(bool localOnly, string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
             CacheEntry? entry;
             if (_cache.TryGetValue(key, out entry))

@@ -191,7 +191,7 @@ namespace AmbientServices.Test.Samples
         private static string GetApplicationCodePath()
         {
             AppDomain current = AppDomain.CurrentDomain;
-            return (current.RelativeSearchPath ?? current.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
+            return (current.RelativeSearchPath ?? current.BaseDirectory?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
         }
         /// <summary>
         /// Performs tests on the LocalDiskAuditor sample code.

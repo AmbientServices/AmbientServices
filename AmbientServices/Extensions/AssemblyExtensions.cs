@@ -18,28 +18,36 @@ namespace AmbientServices.Utility
         /// <param name="assembly">The assembly to attempt to enumerate types from.</param>
         /// <returns>An enumeration of <see cref="Type"/>s.</returns>
         [DebuggerNonUserCode]
-        public static IEnumerable<Type> GetLoadableTypes(this System.Reflection.Assembly assembly)
+        public static Type[] GetLoadableTypes(this System.Reflection.Assembly assembly)
         {
-            try
+            Type[] types;
+            int loop = 0;
+            do
             {
-                if (assembly == null) throw new ArgumentNullException(nameof(assembly));
-                return assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException ex)
-            {
-                // can't figure out how to force this exception for the moment, but this code is from several popular posts on the internet
-                return TypesFromException(ex);
-            }
+                try
+                {
+                    if (assembly == null) throw new ArgumentNullException(nameof(assembly));
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException ex)
+                {
+                    // can't figure out how to force this exception for the moment, but this code is from several popular posts on the internet
+                    types = TypesFromException(ex);
+                }
+                if ((types?.Length ?? 0) > 0) break;
+                System.Threading.Thread.Sleep(100);
+            } while (loop++ < 5);
+            return types ?? Array.Empty<Type>();
         }
         /// <summary>
         /// Gets the loadable types from the <see cref="ReflectionTypeLoadException"/>.
         /// </summary>
         /// <param name="ex">The <see cref="ReflectionTypeLoadException"/> that was thrown.</param>
         /// <returns>The list of types that *are* loadable, as obtained from the exception.</returns>
-        internal static IEnumerable<Type> TypesFromException(ReflectionTypeLoadException ex)
+        internal static Type[] TypesFromException(ReflectionTypeLoadException ex)
         {
             if (ex == null) throw new ArgumentNullException(nameof(ex));
-            return ex.Types.Where(t => t != null)!; // the where condition filters out null values!
+            return ex.Types.Where(t => t != null).ToArray()!; // the where condition filters out null values!
         }
         /// <summary>
         /// Checks to see if this assembly refers to the specified assembly.

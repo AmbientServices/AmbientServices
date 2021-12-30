@@ -213,7 +213,7 @@ namespace AmbientServices
             }
         }
 
-        private async void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private async void Timer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             try
             {

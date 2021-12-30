@@ -16,11 +16,12 @@ namespace AmbientServices
         /// Retrieves the item with the specified key from the cache (if possible).
         /// </summary>
         /// <typeparam name="T">The type of the cached object.</typeparam>
+        /// <param name="localOnly">Whether or not this item should only be retrieved from the local cache (as opposed to a nonlocal shared cache).  When true, only the local cache will be checked.  When false, the local cache will be checked first, followed by the shared cache.</param>
         /// <param name="itemKey">The unique key used when the object was cached.</param>
         /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some implementations may ignore this value.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// <returns>The cached object, or null if it was not found in the cache.</returns>
-        Task<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class;
+        Task<T?> Retrieve<T>(bool localOnly, string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class;
         /// <summary>
         /// Stores the specified item in the cache.
         /// </summary>

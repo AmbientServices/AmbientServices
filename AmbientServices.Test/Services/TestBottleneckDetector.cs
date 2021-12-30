@@ -199,7 +199,11 @@ namespace AmbientServices.Test
                 Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.GetMostUtilizedBottlenecks(10).First().Bottleneck);
 
                 Assert.IsTrue(collector.ProcessAnalyzer.ScopeName.StartsWith("Process"));
+#if NET6_0_OR_GREATER   // starting in net6.0, the thread's name is automatically assigned
+                Assert.IsTrue(collector.ThreadAnalyzer.ScopeName.StartsWith(".NET Long Running Task"));
+#else
                 Assert.IsTrue(collector.ThreadAnalyzer.ScopeName.StartsWith("Thread"));
+#endif
                 Assert.IsTrue(collector.ScopeAnalyzer.ScopeName.StartsWith(".ctor"));
                 Assert.IsTrue(collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.ScopeName.StartsWith("TimeWindow"));
             }

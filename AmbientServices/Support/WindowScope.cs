@@ -42,11 +42,11 @@ namespace AmbientServices
             }
             else if (resolution > TimeSpan.FromSeconds(1))
             {
-                timestamp = timestamp.Substring(14) + "." + dateTime.Millisecond.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                timestamp = string.Concat(timestamp.Substring(14), ".", dateTime.Millisecond.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
             else
             {
-                timestamp = timestamp.Substring(17) + "." + dateTime.Millisecond.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                timestamp = string.Concat(timestamp.Substring(17), ".", dateTime.Millisecond.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
             return timestamp;
         }
