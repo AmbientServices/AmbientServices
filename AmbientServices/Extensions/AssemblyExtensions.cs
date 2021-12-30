@@ -21,9 +21,9 @@ namespace AmbientServices.Utility
         public static Type[] GetLoadableTypes(this System.Reflection.Assembly assembly)
         {
             Type[] types;
-            int loop = 0;
-            do
-            {
+            //int loop = 0;
+            //do
+            //{
                 try
                 {
                     if (assembly == null) throw new ArgumentNullException(nameof(assembly));
@@ -34,9 +34,9 @@ namespace AmbientServices.Utility
                     // can't figure out how to force this exception for the moment, but this code is from several popular posts on the internet
                     types = TypesFromException(ex);
                 }
-                if ((types?.Length ?? 0) > 0) break;
-                System.Threading.Thread.Sleep(100);
-            } while (loop++ < 5);
+            //    if ((types?.Length ?? 0) > 0) break;
+            //    System.Threading.Thread.Sleep(100);
+            //} while (loop++ < 5);
             return types ?? Array.Empty<Type>();
         }
         /// <summary>

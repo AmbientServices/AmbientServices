@@ -59,75 +59,30 @@ namespace AmbientServices
     /// </summary>
     static class DefaultAmbientServices
     {
-        private static readonly ConcurrentDictionary<Type, Type> _DefaultImplementations = new ConcurrentDictionary<Type, Type>();
-        private static Assembly _ThisAssembly = Assembly.GetExecutingAssembly();
+        private static Assembly _ThisAssembly;
+        private static readonly ConcurrentDictionary<Type, Type> _DefaultImplementations;
 
         static DefaultAmbientServices()
         {
+            _ThisAssembly = Assembly.GetExecutingAssembly();
+            _DefaultImplementations = InitializeAlreadyLoadedDefaultAmbientServices();
+            // start hooking into assembly loading now, but only do this ONCE
             AppDomain.CurrentDomain.AssemblyLoad += CurrentDomain_AssemblyLoad;
-            foreach (Type type in AllLoadedReferringTypes())
-            {
-                AddDefaultImplementation(type);
-            }
         }
-
-        private static void AddDefaultImplementation(Type type)
-        {
-            DefaultAmbientServiceAttribute? attribute = type.GetCustomAttribute<DefaultAmbientServiceAttribute>();
-            if (attribute != null)
-            {
-                IReadOnlyList<Type>? registrationInterfaces = attribute.RegistrationInterfaces;
-                if ((registrationInterfaces?.Count ?? 0) == 0)
-                {
-                    registrationInterfaces = type.GetInterfaces();   // this could be null if the specified type doesn't support *any* interfaces
-                }
-                if (registrationInterfaces != null)
-                {
-                    foreach (Type iface in registrationInterfaces)
-                    {
-                        _DefaultImplementations.TryAdd(iface, type);
-                    }
-                }
-            }
-        }
-
         private static void CurrentDomain_AssemblyLoad(object? sender, AssemblyLoadEventArgs args)
         {
             Assembly assembly = args.LoadedAssembly;
-            try
-            {
-                AssemblyLoader.OnLoad(assembly);
-            }
-#pragma warning disable CA1031
-            catch { }  // ignore errors in user event handlers
-#pragma warning restore CA1031
-            // does this assembly reference THIS assembly?
-            if (assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
-            {
-                // check every type in this assembly to see if the type indicates a default service implementation
-                foreach (Type type in assembly.GetLoadableTypes())
-                {
-                    AddDefaultImplementation(type);
-                }
-            }
+            OnAssemblyLoad(assembly);
         }
 
-        /// <summary>
-        /// Tries to find the default implementation of the specified interface, if one exists.
-        /// Thread-safe.
-        /// </summary>
-        /// <param name="iface">The <see cref="Type"/> of interface whose implementation is wanted.</param>
-        /// <returns>The <see cref="Type"/> that implements that interface, or null if no implementation could be found.</returns>
-        public static Type? TryFind(Type iface)
+        static ConcurrentDictionary<Type, Type> InitializeAlreadyLoadedDefaultAmbientServices()
         {
-            if (!iface.IsInterface) throw new ArgumentException("The specified type is not an interface type!", nameof(iface));
-            Type? impType;
-            if (_DefaultImplementations.TryGetValue(iface, out impType))
+            ConcurrentDictionary<Type, Type> dictionary = new ConcurrentDictionary<Type, Type>();
+            foreach (Type type in AllLoadedReferringTypes())
             {
-                System.Diagnostics.Debug.Assert(iface.IsAssignableFrom(impType));
-                return impType;
+                AddDefaultImplementation(dictionary, type);
             }
-            return null;
+            return dictionary;
         }
         /// <summary>
         /// Enuemrates all the types in all currently loaded assemblies that refer to this assembly (they can't possibly have the appropriate attribute without referencing this assembly).
@@ -148,17 +103,63 @@ namespace AmbientServices
                 }
             }
         }
-    }
-    /// <summary>
-    /// A class that loads assemblies and logs information about the loading.
-    /// </summary>
-    class AssemblyLoader
-    {
-        private static readonly AmbientLogger<AssemblyLoader> Logger = new AmbientLogger<AssemblyLoader>();
-
-        internal static void OnLoad(Assembly assembly)
+        /// <summary>
+        /// Adds the default implementation for the specified interface type.
+        /// </summary>
+        /// <param name="dictionary">The dictionary to add to (usually <see cref="_DefaultImplementations"/>).</param>
+        /// <param name="type">The interface type whose default implemenation type is to be added.</param>
+        private static void AddDefaultImplementation(ConcurrentDictionary<Type, Type> dictionary, Type type)
         {
-            Logger.Log(assembly.GetName().Name!, "AssemblyLoad", AmbientLogLevel.Trace);
+            DefaultAmbientServiceAttribute? attribute = type.GetCustomAttribute<DefaultAmbientServiceAttribute>();
+            if (attribute != null)
+            {
+                IReadOnlyList<Type>? registrationInterfaces = attribute.RegistrationInterfaces;
+                if ((registrationInterfaces?.Count ?? 0) == 0)
+                {
+                    registrationInterfaces = type.GetInterfaces();   // this could be null if the specified type doesn't support *any* interfaces
+                }
+                if (registrationInterfaces != null)
+                {
+                    foreach (Type iface in registrationInterfaces)
+                    {
+                        dictionary.TryAdd(iface, type);
+                    }
+                }
+            }
+        }
+        /// <summary>
+        /// Loads the default implementations in the specified assembly and notifies subscribers that the assembly has been loaded.
+        /// </summary>
+        /// <param name="assembly">The <see cref="Assembly"/> whose default implementations are to be found and registered.</param>
+        internal static void OnAssemblyLoad(Assembly assembly)
+        {
+            // does this assembly reference THIS assembly?
+            if (assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
+            {
+                // check every type in this assembly to see if the type indicates a default service implementation
+                foreach (Type type in assembly.GetLoadableTypes())
+                {
+                    AddDefaultImplementation(_DefaultImplementations, type);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tries to find the default implementation of the specified interface, if one exists.
+        /// Thread-safe.
+        /// </summary>
+        /// <param name="iface">The <see cref="Type"/> of interface whose implementation is wanted.</param>
+        /// <returns>The <see cref="Type"/> that implements that interface, or null if no implementation could be found.</returns>
+        public static Type? TryFind(Type iface)
+        {
+            if (!iface.IsInterface) throw new ArgumentException("The specified type is not an interface type!", nameof(iface));
+            Type? impType;
+            if (_DefaultImplementations.TryGetValue(iface, out impType))
+            {
+                System.Diagnostics.Debug.Assert(iface.IsAssignableFrom(impType));
+                return impType;
+            }
+            return null;
         }
     }
     /// <summary>

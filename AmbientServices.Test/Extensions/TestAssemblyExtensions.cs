@@ -19,14 +19,6 @@ namespace AmbientServices.Test
         private static readonly AmbientService<ILateAssignmentTest> _LateAssignmentTest = Ambient.GetService<ILateAssignmentTest>();
 
         [TestMethod]
-        public void NoOpAssemblyOnLoad()
-        {
-            using (new ScopedLocalServiceOverride<IAmbientLogger>(null))
-            {
-                AssemblyLoader.OnLoad(Assembly.GetExecutingAssembly());
-            }
-        }
-        [TestMethod]
         public void AssemblyLoadAndLateAssignment()
         {
             // try to get this one now

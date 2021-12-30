@@ -51,7 +51,7 @@ namespace AmbientServices
     public class AmbientService<T> where T : class
     {
         private static readonly AmbientService<T> _Instance = new AmbientService<T>();
-        /// <summary>
+        // <summary>
         /// Gets the <see cref="AmbientService{T}"/> for the service indicated by the type.
         /// </summary>
         internal static AmbientService<T> Instance

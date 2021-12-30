@@ -21,6 +21,9 @@ namespace AmbientServices
     /// <summary>
     /// An interface that abstracts an ambient clock which can be overridden in order to provide a different resolution or to artificially manipulate the current date-time and timing.
     /// </summary>
+    /// <remarks>
+    /// Note that there is no default implementation for this interface.  This results in a default of null, which falls back to using the native system calls.
+    /// </remarks>
     public interface IAmbientClock
     {
         /// <summary>

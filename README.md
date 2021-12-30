@@ -64,7 +64,7 @@ BasicAmbientCache-ItemCount: the maximum number of both timed and untimed items 
 /// </summary>
 class UserManager
 {
-    private static readonly AmbientCache<UserManager> Cache = new AmbientCache<UserManager>(localOnly: false);
+    private static readonly AmbientCache<UserManager> Cache = new AmbientCache<UserManager>();
 
     /// <summary>
     /// Finds the user with the specified emali address.
@@ -74,11 +74,11 @@ class UserManager
     public static async Task<User?> FindUser(string email)
     {
         string userKey = nameof(User) + "-" + email;
-        User? user = await Cache.Retrieve<User>(userKey, TimeSpan.FromMinutes(15));
+        User? user = await Cache.Retrieve<User>(false, userKey, TimeSpan.FromMinutes(15));
         if (user != null)
         {
             user = User.Find(email);
-            if (user != null) await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(userKey);
+            if (user != null) await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(false, userKey);
         }
         return user;
     }
@@ -90,7 +90,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Create();
-        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Updates the specified user. (Presumably with a new password)
@@ -100,7 +100,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Update();
-        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Deletes the specified user.
@@ -110,7 +110,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + email;
         User.Delete(email);
-        await Cache.Remove<User>(userKey);
+        await Cache.Remove<User>(false, userKey);
     }
 }
 ```
