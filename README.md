@@ -327,7 +327,7 @@ using (AmbientClock.Pause())
 public class TimeDependentServiceTest
 {
     [TestMethod]
-    public async ValueTask TestCancellation()
+    public async Task TestCancellation()
     {
         // this first part *should* get cancelled because we're using the system clock
         AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
@@ -355,7 +355,7 @@ public class TimeDependentServiceTest
         }
     }
     [TestMethod]
-    public async ValueTask TestCodeThatCouldTimeoutUnderHeavyLoad()
+    public async Task TestCodeThatCouldTimeoutUnderHeavyLoad()
     {
         using (AmbientClock.Pause())
         {
