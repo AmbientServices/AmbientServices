@@ -1,0 +1,66 @@
+name: Build .NET
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET 3.1
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.x
+    - name: Setup .NET 5.0
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+    - name: Setup .NET 6.0
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 6.0.x
+    - name: Set Version
+      run: dotnet SetVersion.dll 0.8.${{ github.run_number }} -NoPackageOutputPath
+    - name: Build AmbientServices
+      run: dotnet build AmbientServices -c Release
+    - name: Build AmbientServices.Samples
+      run: dotnet build AmbientServices.Samples -c Release
+    - name: Build AmbientServices.Test.DelayedLoad
+      run: dotnet build AmbientServices.Test.DelayedLoad -c Release
+    - name: Build AmbientServices.Test
+      run: dotnet build AmbientServices.Test -c Release
+    - name: Package
+      run: dotnet pack AmbientServices -c Release
+    - name: Test .NET 6 with coverage
+      run: dotnet test -c Release -f net6.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
+    - name: ReportGenerator
+      uses: danielpalme/ReportGenerator-GitHub-Action@4.8.9
+      with:
+        reports: '**/coverage.cobertura.xml' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
+        targetdir: 'coveragereport' # REQUIRED # The directory where the generated report should be saved.
+        reporttypes: 'HtmlInline' # The output formats and scope (separated by semicolon) Values: Badges, Clover, Cobertura, CsvSummary, Html, HtmlChart, HtmlInline, HtmlInline_AzurePipelines, HtmlInline_AzurePipelines_Dark, HtmlSummary, JsonSummary, Latex, LatexSummary, lcov, MHtml, PngChart,     SonarQube, TeamCitySummary, TextSummary, Xml, XmlSummary
+        sourcedirs: '' # Optional directories which contain the corresponding source code (separated by semicolon). The source directories are used if coverage report contains classes without path information.
+        historydir: '' # Optional directory for storing persistent coverage information. Can be used in future reports to show coverage evolution.
+        plugins: '' # Optional plugin files for custom reports or custom history storage (separated by semicolon).
+        assemblyfilters: '+*' # Optional list of assemblies that should be included or excluded in the report. Exclusion filters take precedence over inclusion filters. Wildcards are allowed.
+        classfilters: '+*' # Optional list of classes that should be included or excluded in the report. Exclusion filters take precedence over inclusion filters. Wildcards are allowed.
+        filefilters: '+*' # Optional list of files that should be included or excluded in the report. Exclusion filters take precedence over inclusion filters. Wildcards are allowed.
+        verbosity: 'Info' # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
+        title: '' # Optional title.
+        tag: '${{ github.run_number }}_${{ github.run_id }}' # Optional tag or build version.
+        customSettings: '' # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
+    - name: Upload coverage report artifact
+      uses: actions/upload-artifact@v1.0.0
+      with:
+        name: CoverageReport # Artifact name        
+        path: coveragereport # Directory containing files to upload
+    - name: Test .NET 5.0
+      run: dotnet test -c Release -f net5.0 --blame-hang-timeout 120s
+    - name: Test .NET Core 3.1
+      run: dotnet test -c Release -f netcoreapp3.1 --blame-hang-timeout 120s
+    - name: Publish
+      run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.0.8.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
