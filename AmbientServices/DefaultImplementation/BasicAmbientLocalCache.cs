@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     [DefaultAmbientService]
-    internal class BasicAmbientCache : IAmbientCache
+    internal class BasicAmbientLocalCache : IAmbientLocalCache
     {
         private static readonly AmbientService<IAmbientSettingsSet> _Settings = Ambient.GetService<IAmbientSettingsSet>();
 
@@ -20,16 +20,16 @@ namespace AmbientServices
         private ConcurrentQueue<string> _untimedQueue = new ConcurrentQueue<string>();
         private ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>();
 
-        public BasicAmbientCache()
+        public BasicAmbientLocalCache()
             : this(_Settings.Local)
         {
         }
 
-        public BasicAmbientCache(IAmbientSettingsSet? settings)
+        public BasicAmbientLocalCache(IAmbientSettingsSet? settings)
         {
-            _callFrequencyToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientCache) + "-EjectFrequency", "The number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "100");
-            _countToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientCache) + "-MaximumItemCount", "The maximum number of both timed and untimed items to allow in the cache before ejecting items.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "1000");
-            _minCacheEntries = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientCache) + "-MinimumItemCount", "The minimum number of unexpired both timed and untimed items to keep in the cache at all times.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "1");
+            _callFrequencyToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-EjectFrequency", "The number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "100");
+            _countToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-MaximumItemCount", "The maximum number of both timed and untimed items to allow in the cache before ejecting items.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "1000");
+            _minCacheEntries = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-MinimumItemCount", "The minimum number of unexpired both timed and untimed items to keep in the cache at all times.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "1");
         }
 
         struct TimedQueueEntry
@@ -49,8 +49,23 @@ namespace AmbientServices
                 Expiration = expiration;
                 Entry = entry;
             }
+#if NET5_0_OR_GREATER
+            public async ValueTask Dispose()
+            {
+                // if the entry is disposable, dispose it after removing it
+                if (Entry is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                if (Entry is IDisposable disposable) disposable.Dispose();
+            }
+#else
+            public async ValueTask Dispose()
+            {
+                // if the entry is disposable, dispose it after removing it
+                if (Entry is IDisposable disposable) disposable.Dispose();
+                await Task.CompletedTask.ConfigureAwait(false);
+            }
+#endif
         }
-        public Task<T?> Retrieve<T>(bool localOnly, string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public async ValueTask<T?> Retrieve<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
             CacheEntry? entry;
             if (_cache.TryGetValue(key, out entry))
@@ -64,23 +79,23 @@ namespace AmbientServices
                     entry.Expiration = newExpiration;
                     _timedQueue.Enqueue(new TimedQueueEntry { Key = key, Expiration = newExpiration });
                 }
-                EjectIfNeeded();
+                await EjectIfNeeded().ConfigureAwait(false);
                 // no expiration or NOT expired? return the item now
                 if (!(entry.Expiration < now))
                 {
-                    return Task.FromResult<T?>(entry.Entry as T);
+                    return entry.Entry as T;
                 }
                 // else this item is expired so remove it from the cache
-                _cache.TryRemove(entry.Key, out entry);
+                await EjectEntry(entry, cancel).ConfigureAwait(false);
             }
             else
             {
-                EjectIfNeeded();
+                await EjectIfNeeded().ConfigureAwait(false);
             }
-            return Task.FromResult<T?>(null);
+            return null;
         }
 
-        public Task Store<T>(bool localOnly, string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public async ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
             // does this entry *not* expire in the past?
             if (!(maxCacheDuration < TimeSpan.FromTicks(0)))
@@ -101,22 +116,21 @@ namespace AmbientServices
                     _timedQueue.Enqueue(new TimedQueueEntry { Key = itemKey, Expiration = actualExpiration.Value });
                 }
             }
-            EjectIfNeeded();
-            return Task.CompletedTask;
+            await EjectIfNeeded().ConfigureAwait(false);
         }
-        void EjectIfNeeded()
+        async ValueTask EjectIfNeeded()
         {
             int callFrequencyToEject = _callFrequencyToEject.Value;
             int countToEject = _countToEject.Value;
             // time to eject?
             while ((System.Threading.Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
             {
-                EjectOneTimed();
-                EjectOneUntimed();
+                await EjectOneTimed().ConfigureAwait(false);
+                await EjectOneUntimed().ConfigureAwait(false);
             }
         }
 
-        private void EjectOneTimed()
+        private async ValueTask EjectOneTimed(CancellationToken cancel = default)
         {
             // have we hit the minimum number of items?
             if (_timedQueue.Count <= _minCacheEntries.Value) return;
@@ -133,7 +147,7 @@ namespace AmbientServices
                     if (qEntry.Expiration == entry.Expiration)
                     {
                         // remove it from the cache, even though it may not have expired yet because it's time to eject something
-                        _cache.TryRemove(qEntry.Key, out entry);
+                        await EjectEntry(entry, cancel).ConfigureAwait(false);
                         // fall through and check to wee if the next item is already expired
                         unexpiredItemEjected = true;
                     }
@@ -160,7 +174,7 @@ namespace AmbientServices
             }
         }
 
-        private void EjectOneUntimed()
+        private async ValueTask EjectOneUntimed(CancellationToken cancel = default)
         {
             // have we hit the minimum number of items?
             if (_untimedQueue.Count <= _minCacheEntries.Value) return;
@@ -176,7 +190,7 @@ namespace AmbientServices
                     if (entry.Expiration == null)
                     {
                         // remove it from the cache
-                        _cache.TryRemove(key, out entry);
+                        await EjectEntry(entry, cancel).ConfigureAwait(false);
                         // fall through and stop looping
                     }
                     else // else the item was refreshed, so we should ignore this entry and go around again to remove another entry
@@ -194,20 +208,37 @@ namespace AmbientServices
             }
         }
 
-        public Task Remove<T>(bool localOnly, string itemKey, CancellationToken cancel = default(CancellationToken))
+        public async ValueTask Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
         {
-            CacheEntry? entry;
-            _cache.TryRemove(itemKey, out entry);
-            // we don't remove the entry from the queue, but that's okay because we'll just ignore that entry when we get to it
-            return Task.CompletedTask;
+            CacheEntry? disposeEntry;
+            if (_cache.TryRemove(itemKey, out disposeEntry))
+            { 
+                // we don't remove the entry from the queue, but that's okay because we'll just ignore that entry when we get to it
+                await disposeEntry!.Dispose().ConfigureAwait(false);  // if it was successfully removed, it can't be null
+            }
         }
 
-        public Task Clear(bool localOnly = true, CancellationToken cancel = default(CancellationToken))
+        private async ValueTask EjectEntry(CacheEntry entry, CancellationToken cancel = default(CancellationToken))
+        {
+            CacheEntry? disposeEntry;
+            // race to remove the item from the cache--did we win the race?
+            if (_cache.TryRemove(entry.Key, out disposeEntry))
+            {
+                await disposeEntry!.Dispose().ConfigureAwait(false);  // if it was successfully removed, it can't be null
+            }
+        }
+
+        public async ValueTask Clear(CancellationToken cancel = default(CancellationToken))
         {
             _untimedQueue = new ConcurrentQueue<string>();
             _timedQueue = new ConcurrentQueue<TimedQueueEntry>();
-            _cache.Clear();
-            return Task.CompletedTask;
+            while (!_cache.IsEmpty)
+            {
+                foreach (CacheEntry entry in _cache.Values)
+                {
+                    await EjectEntry(entry, cancel).ConfigureAwait(false);
+                }
+            }
         }
     }
 }

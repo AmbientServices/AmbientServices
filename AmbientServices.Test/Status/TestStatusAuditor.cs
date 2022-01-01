@@ -199,7 +199,7 @@ namespace AmbientServices.Test
             SetLatestResults(results);  // set the results twice so the first results (which are the same as the second) end up in the history
         }
         protected internal override bool Applicable { get { return true; } }
-        public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
             StatusRatingRange currentAuditRating = (StatusRatingRange)(_auditNumber++ % (int)EnumExtensions.MaxEnumValue<StatusRatingRange>());
@@ -220,7 +220,7 @@ namespace AmbientServices.Test
             {
                 statusBuilder.AddOkay("SuperCode", "Superlative", "The system is superlative", StatusRating.Superlative - rating);
             }
-            return Task.CompletedTask;
+            return TaskExtensions.CompletedValueTask;
         }
     }
     internal class StatusAuditorAuditExceptionTest : StatusAuditor
@@ -233,7 +233,7 @@ namespace AmbientServices.Test
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
         }
         protected internal override bool Applicable { get { return true; } }
-        public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             throw new ExpectedException("This exception is expected!");
         }
@@ -248,9 +248,9 @@ namespace AmbientServices.Test
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
         }
         protected internal override bool Applicable { get { return true; } }
-        public override Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
-            return Task.CompletedTask;
+            return TaskExtensions.CompletedValueTask;
         }
     }
 }

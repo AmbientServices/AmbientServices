@@ -396,11 +396,11 @@ namespace AmbientServices
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        sealed public override async Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        sealed public override async ValueTask<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
         {
             return await InternalAuditAsync(true, cancel).ConfigureAwait(false);
         }
-        private async Task<StatusResults> InternalAuditAsync(bool foreground = false, CancellationToken cancel = default(CancellationToken))
+        private async ValueTask<StatusResults> InternalAuditAsync(bool foreground = false, CancellationToken cancel = default(CancellationToken))
         {
             StatusResultsBuilder builder = new StatusResultsBuilder(this);
             try
@@ -494,25 +494,25 @@ namespace AmbientServices
         /// </summary>
         /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to put the audit results into.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        public abstract Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken));
+        public abstract ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken));
 
         /// <summary>
         /// Starts stopping any asynchronous activity (such as periodic audits).
         /// Due to race conditions, occasionally one more audit may occur after this function returns.
         /// </summary>
-        protected internal sealed override Task BeginStop()
+        protected internal sealed override ValueTask BeginStop()
         {
             _initialAuditTimer.Close();  // just in case--we must have shut down pretty quickly to get here without this timer already being closed
             _auditTimer.Stop();
             _backgroundCancelSource?.Cancel();
-            return Task.CompletedTask;
+            return TaskExtensions.CompletedValueTask;
         }
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
-        protected internal sealed override Task FinishStop()
+        protected internal sealed override ValueTask FinishStop()
         {
-            return Task.CompletedTask;
+            return TaskExtensions.CompletedValueTask;
         }
         /// <summary>
         /// Dispose the instance (only used by derived classes).

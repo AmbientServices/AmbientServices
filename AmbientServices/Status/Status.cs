@@ -53,7 +53,7 @@ namespace AmbientServices
         /// Start may only be called once.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to stop the operation before it completes.</param>
-        public Task Start(CancellationToken cancel = default(CancellationToken))
+        public ValueTask Start(CancellationToken cancel = default(CancellationToken))
         {
             Logger.Log("Starting", "StartStop");
             if (System.Threading.Interlocked.Exchange(ref _started, 1) != 0) throw new InvalidOperationException("The Status system has already been started!");
@@ -70,12 +70,12 @@ namespace AmbientServices
                 }
             }
             Logger.Log("Started", "StartStop");
-            return Task.CompletedTask;
+            return TaskExtensions.CompletedValueTask;
         }
         /// <summary>
         /// Stops the status system by disposing of all the status nodes.
         /// </summary>
-        public async Task Stop()
+        public async ValueTask Stop()
         {
             Logger.Log("Stopping", "StartStop");
             // make sure everyone can tell we're shutting down
@@ -175,14 +175,14 @@ namespace AmbientServices
         /// Normally audits will be refreshed automatically in the background, but in some circumstances, users may want to force an immediate update.
         /// </summary>
         /// <returns>An enumeration of <see cref="StatusChecker"/>s that did not complete refreshing before being cancelled.</returns>
-        public async Task<IEnumerable<StatusChecker>> RefreshAsync(CancellationToken cancel = default(CancellationToken))
+        public async ValueTask<IEnumerable<StatusChecker>> RefreshAsync(CancellationToken cancel = default(CancellationToken))
         {
             Logger.Log("Explicit Refreshing", "Check");
             // asynchronously get the status of each system
             Dictionary<StatusChecker, Task<StatusResults>> checkerTasks = new Dictionary<StatusChecker, Task<StatusResults>>(_checkers.Count);
             foreach (StatusChecker checker in _checkers)
             {
-                Task<StatusResults> task = Task.Run(() => checker.GetStatus(cancel), cancel);
+                Task<StatusResults> task = Task.Run(() => checker.GetStatus(cancel).AsTask(), cancel);
                 checkerTasks.Add(checker, task);
             }
             // wait for either all the checker tasks to complete, or for the cancellation token to be canceled

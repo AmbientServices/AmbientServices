@@ -114,21 +114,21 @@ class User
 /// </summary>
 class UserManager
 {
-    private static readonly AmbientCache<UserManager> Cache = new AmbientCache<UserManager>();
+    private static readonly AmbientLocalCache<UserManager> Cache = new AmbientLocalCache<UserManager>();
 
     /// <summary>
     /// Finds the user with the specified emali address.
     /// </summary>
     /// <param name="email">The emali address for the user.</param>
     /// <returns>The <see cref="User"/>, if one was found, or null if the user was not found.</returns>
-    public static async Task<User?> FindUser(string email)
+    public static async ValueTask<User?> FindUser(string email)
     {
         string userKey = nameof(User) + "-" + email;
-        User? user = await Cache.Retrieve<User>(false, userKey, TimeSpan.FromMinutes(15));
+        User? user = await Cache.Retrieve<User>(userKey, TimeSpan.FromMinutes(15));
         if (user != null)
         {
             user = User.Find(email);
-            if (user != null) await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(false, userKey);
+            if (user != null) await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(userKey);
         }
         return user;
     }
@@ -136,31 +136,31 @@ class UserManager
     /// Updates the specified user. (Presumably with a new password)
     /// </summary>
     /// <param name="user">The updated <see cref="User"/>.</param>
-    public static async Task CreateUser(User user)
+    public static async ValueTask CreateUser(User user)
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Create();
-        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Updates the specified user. (Presumably with a new password)
     /// </summary>
     /// <param name="user">The updated <see cref="User"/>.</param>
-    public static async Task UpdateUser(User user)
+    public static async ValueTask UpdateUser(User user)
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Update();
-        await Cache.Store<User>(false, userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Deletes the specified user.
     /// </summary>
     /// <param name="email">The email of the user to be deleted.</param>
-    public static async Task DeleteUser(string email)
+    public static async ValueTask DeleteUser(string email)
     {
         string userKey = nameof(User) + "-" + email;
         User.Delete(email);
-        await Cache.Remove<User>(false, userKey);
+        await Cache.Remove<User>(userKey);
     }
 }
 #endregion
@@ -229,7 +229,7 @@ class DownloadAndUnzip
         _package = new MemoryStream();
     }
 
-    public async Task MainOperation(CancellationToken cancel = default(CancellationToken))
+    public async ValueTask MainOperation(CancellationToken cancel = default(CancellationToken))
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
         using (progress?.TrackPart(0.01f, 0.75f, "Download "))
@@ -242,7 +242,7 @@ class DownloadAndUnzip
         }
     }
 #if NET5_0_OR_GREATER
-    public async Task Download()
+    public async ValueTask Download()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
@@ -265,7 +265,7 @@ class DownloadAndUnzip
         }
     }
 #else
-    public async Task Download()
+    public async ValueTask Download()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
@@ -288,7 +288,7 @@ class DownloadAndUnzip
         }
     }
 #endif
-    public Task Unzip()
+    public ValueTask Unzip()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
@@ -302,7 +302,7 @@ class DownloadAndUnzip
             progress?.Update(entry * 1.0f / entries, archiveEntry.FullName);
             archiveEntry.ExtractToFile(Path.Combine(_targetFolder, archiveEntry.FullName));
         }
-        return Task.CompletedTask;
+        return AmbientServices.TaskExtensions.CompletedValueTask;
     }
 }
 #endregion
@@ -484,7 +484,7 @@ class BasicAmbientCallStack : IAmbientCallStack
 /// </summary>
 class Setup
 {
-    private static readonly AmbientService<IAmbientCache> Cache = Ambient.GetService<IAmbientCache>();
+    private static readonly AmbientService<IAmbientLocalCache> Cache = Ambient.GetService<IAmbientLocalCache>();
     static Setup()
     {
         Cache.Global = null;
@@ -932,12 +932,12 @@ class SqlAccessor
         {
             ServiceProfiler.Local?.SwitchSystem(systemId);
             ret = await f(cancel);
-            systemId = systemId + $"/Result:Success";
+            systemId += $"/Result:Success";
         }
         catch (Exception e)
         {
-            if (e.Message.ToUpperInvariant().Contains("TIMEOUT")) systemId = systemId + $"/Result:Timeout";
-            else systemId = systemId + $"/Result:Error";
+            if (e.Message.ToUpperInvariant().Contains("TIMEOUT")) systemId += $"/Result:Timeout";
+            else systemId += $"/Result:Error";
             throw;
         }
         finally
@@ -947,21 +947,21 @@ class SqlAccessor
         return ret;
     }
 
-    public Task<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    public async ValueTask<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
     {
-        return ExecuteAsync<int>(command, command.ExecuteNonQueryAsync, table, cancel);
+        return await ExecuteAsync<int>(command, command.ExecuteNonQueryAsync, table, cancel);
     }
-    public Task<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    public async ValueTask<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
     {
-        return ExecuteAsync<SqlDataReader>(command, command.ExecuteReaderAsync, table, cancel);
+        return await ExecuteAsync<SqlDataReader>(command, command.ExecuteReaderAsync, table, cancel);
     }
-    public Task<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    public async ValueTask<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
     {
-        return ExecuteAsync<object>(command, command.ExecuteScalarAsync, table, cancel);
+        return await ExecuteAsync<object>(command, command.ExecuteScalarAsync, table, cancel);
     }
-    public Task<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    public async ValueTask<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
     {
-        return ExecuteAsync<XmlReader>(command, command.ExecuteXmlReaderAsync, table, cancel);
+        return await ExecuteAsync<XmlReader>(command, command.ExecuteXmlReaderAsync, table, cancel);
     }
 }
 /// <summary>
@@ -1039,7 +1039,7 @@ class DiskAuditor
     /// </summary>
     /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to write the results into.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
-    public async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    public async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
         statusBuilder.NatureOfSystem = StatusNatureOfSystem.Leaf;
         statusBuilder.AddProperty("_Path", _driveInfo.Name);
@@ -1174,7 +1174,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
     }
 
     protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
-    public override async Task Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
+    public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
         statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
         await _tempAuditor.Audit(statusBuilder.AddChild("Temp"));
@@ -1187,14 +1187,14 @@ class Application
     /// <summary>
     /// Starts the status system.
     /// </summary>
-    public static async Task StartStatus()
+    public static async ValueTask StartStatus()
     {
         await Status.DefaultInstance.Start();
     }
     /// <summary>
     /// Stops the status system.
     /// </summary>
-    public static async Task StopStatus()
+    public static async ValueTask StopStatus()
     {
         await Status.DefaultInstance.Stop();
     }
@@ -1217,11 +1217,11 @@ namespace Tests // 2021-12-29: under net6.0 currently, tests cannot be discovere
 public class TimeDependentServiceTest
 {
     [TestMethod]
-    public async Task TestCancellation()
+    public async ValueTask TestCancellation()
     {
         // this first part *should* get cancelled because we're using the system clock
         AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token));
+        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token).AsTask());
 
         // switch the current call context to the artifically-paused ambient clock and try again
         using (AmbientClock.Pause())
@@ -1236,7 +1236,7 @@ public class TimeDependentServiceTest
             Assert.ThrowsException<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
         }
     }
-    private async Task AsyncFunctionThatShouldCancelAfterOneSecond(CancellationToken cancel)
+    private async ValueTask AsyncFunctionThatShouldCancelAfterOneSecond(CancellationToken cancel)
     {
         for (int loop = 0; loop < 20; ++loop)
         {
@@ -1245,7 +1245,7 @@ public class TimeDependentServiceTest
         }
     }
     [TestMethod]
-    public async Task TestCodeThatCouldTimeoutUnderHeavyLoad()
+    public async ValueTask TestCodeThatCouldTimeoutUnderHeavyLoad()
     {
         using (AmbientClock.Pause())
         {
@@ -1253,7 +1253,7 @@ public class TimeDependentServiceTest
             await AsyncFunctionThatCouldTimeoutUnderHeavyLoad(cts.Token);
         }
     }
-    private async Task AsyncFunctionThatCouldTimeoutUnderHeavyLoad(CancellationToken cancel)
+    private async ValueTask AsyncFunctionThatCouldTimeoutUnderHeavyLoad(CancellationToken cancel)
     {
         AmbientStopwatch stopwatch = new AmbientStopwatch(true);
         for (int count = 0; count < 9; ++count)

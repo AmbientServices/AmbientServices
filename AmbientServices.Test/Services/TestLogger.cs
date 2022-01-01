@@ -171,9 +171,9 @@ namespace AmbientServices.Test
         public async Task LoggerSettings()
         {
             BasicAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet("LoggerSettingsTest");
-            settingsSet.ChangeSetting(nameof(BasicAmbientLogger) + "-LogLevel", AmbientLogLevel.Error.ToString());
-            settingsSet.ChangeSetting(nameof(BasicAmbientLogger) + "-TypeFilter", "AllowedLoggerType");
-            settingsSet.ChangeSetting(nameof(BasicAmbientLogger) + "-CategoryFilter", "AllowedCategory");
+            settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Error.ToString());
+            settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-TypeFilter", "AllowedLoggerType");
+            settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryFilter", "AllowedCategory");
             using (ScopedLocalServiceOverride<IAmbientSettingsSet> o = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
             {
                 AmbientLogger<AllowedLoggerType> logger = new AmbientLogger<AllowedLoggerType>();

@@ -49,7 +49,7 @@ namespace AmbientServices.Test
         public void DoesAssemblyReferToAssembly()
         {
             Assert.IsFalse(AmbientServices.Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(typeof(System.ValueTuple).Assembly, Assembly.GetExecutingAssembly()));
-            Assert.IsTrue(AmbientServices.Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), typeof(IAmbientCache).Assembly));
+            Assert.IsTrue(AmbientServices.Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), typeof(IAmbientLocalCache).Assembly));
             Assert.IsTrue(AmbientServices.Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), Assembly.GetExecutingAssembly()));
         }
         [TestMethod]

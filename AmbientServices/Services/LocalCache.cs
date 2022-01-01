@@ -8,14 +8,13 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     /// <summary>
-    /// An interface that abstracts an ambient caching service.
+    /// An interface that abstracts a local ambient caching service.
     /// </summary>
     /// <remarks>
-    /// This interface works with serializable objects.
-    /// Objects that contain pointers or are disposable should not be used with this interface.
-    /// For that kind of object, see <see cref="IAmbientLocalCache"/>.
+    /// Note that a local cache differs from a shared/remote cache in that it can properly cache objects that contain pointers as well as disposable objects.
+    /// For non-local cache, see <see cref="IAmbientLocalCache"/>.
     /// </remarks>
-    public interface IAmbientCache
+    public interface IAmbientLocalCache
     {
         /// <summary>
         /// Retrieves the item with the specified key from the cache (if possible).

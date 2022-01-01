@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using static System.FormattableString;
 
 namespace AmbientServices.Utility
@@ -20,10 +21,14 @@ namespace AmbientServices.Utility
             return new Lazy<StackFrame[]>(() =>
             {
                 List<StackFrame> filteredFrames = new List<StackFrame>();
+#if NETSTANDARD2_1 || NETCOREAPP3_1 || NET5_0_OR_GREATER
+                StackFrame?[] baseFrames = base.GetFrames();
+#else
                 StackFrame[] baseFrames = base.GetFrames();
+#endif
                 if (baseFrames != null)
                 {
-                    filteredFrames.AddRange(FilterSystemAndMicrosoftFrames(baseFrames));
+                    filteredFrames.AddRange(FilterSystemAndMicrosoftFrames(baseFrames.Where(f => f != null)!));
                 }
                 return filteredFrames.ToArray();
             }, System.Threading.LazyThreadSafetyMode.PublicationOnly);
@@ -121,7 +126,15 @@ namespace AmbientServices.Utility
                 foreach (StackFrame frame in frames)
                 {
                     string fullMethodName = frame!.GetMethod()!.DeclaringType!.FullName!;  // I don't think the method of a stack frame or its declaring type or its name can be null
-                    if (first || (!fullMethodName.StartsWith("Microsoft.", StringComparison.Ordinal) && !fullMethodName.StartsWith("System.", StringComparison.Ordinal)))
+                    if (
+                        !fullMethodName.StartsWith("AmbientServices.Async.", StringComparison.Ordinal) && (
+                            first || (
+                                    !fullMethodName.StartsWith("Microsoft.", StringComparison.Ordinal)
+                                    && !fullMethodName.StartsWith("System.", StringComparison.Ordinal)
+                                    && !fullMethodName.StartsWith("Amazon.", StringComparison.Ordinal)
+                            )
+                        )
+                    )
                     {
                         yield return frame;
                     }

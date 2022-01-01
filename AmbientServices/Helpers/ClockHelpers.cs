@@ -156,17 +156,17 @@ namespace AmbientServices
         /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
-        private static Task Delay(long millisecondsToDelay)
+        private static async ValueTask Delay(long millisecondsToDelay)
         {
             PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null)
             {
                 controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
-                return Task.Delay(0);
+                await Task.Delay(0).ConfigureAwait(false);
             }
             else
             {
-                return Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay));
+                await Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay)).ConfigureAwait(false);
             }
         }
         /// <summary>
@@ -175,7 +175,7 @@ namespace AmbientServices
         /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
-        public static Task TaskDelay(int millisecondsToDelay)
+        public static ValueTask TaskDelay(int millisecondsToDelay)
         {
             return Delay((long)millisecondsToDelay);
         }
@@ -185,21 +185,21 @@ namespace AmbientServices
         /// Calling it from non-test code will likely cause unexpected behavior for other code.
         /// </summary>
         /// <param name="delayTime">The amount of time to skip ahead.</param>
-        public static Task TaskDelay(TimeSpan delayTime)
+        public static ValueTask TaskDelay(TimeSpan delayTime)
         {
             return Delay((long)delayTime.TotalMilliseconds);
         }
-        private static Task Delay(long millisecondsToDelay, CancellationToken cancel)
+        private static async ValueTask Delay(long millisecondsToDelay, CancellationToken cancel)
         {
             PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
             if (controllable != null)
             {
                 controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
-                return Task.Delay(0, cancel);
+                await Task.Delay(0, cancel).ConfigureAwait(false);
             }
             else
             {
-                return Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay), cancel);
+                await Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay), cancel).ConfigureAwait(false);
             }
         }
         /// <summary>
@@ -209,7 +209,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="millisecondsToDelay">The number of milliseconds to delay</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to cancel the delay.</param>
-        public static Task TaskDelay(int millisecondsToDelay, CancellationToken cancel)
+        public static ValueTask TaskDelay(int millisecondsToDelay, CancellationToken cancel)
         {
             return Delay((long)millisecondsToDelay, cancel);
         }
@@ -220,7 +220,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="delayTime">The amount of time to skip ahead.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to cancel the delay.</param>
-        public static Task TaskDelay(TimeSpan delayTime, CancellationToken cancel)
+        public static ValueTask TaskDelay(TimeSpan delayTime, CancellationToken cancel)
         {
             return Delay((long)delayTime.TotalMilliseconds, cancel);
         }
@@ -789,8 +789,8 @@ namespace AmbientServices
     /// <remarks>
     /// AmbientCallbackTimer is thread-safe.
     /// </remarks>
-    public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTimeChangedNotificationSink, 
-#if !NETSTANDARD2_0
+    public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTimeChangedNotificationSink,
+#if NETCOREAPP3_1 || NET5_0_OR_GREATER
         IAsyncDisposable, 
 #endif
         IDisposable
@@ -800,7 +800,7 @@ namespace AmbientServices
         private static readonly object _UseTimerInstanceForStateIndicator = new object();
         private static long _TimerCount;
 
-#if !NETSTANDARD2_0
+#if NETCOREAPP3_1 || NET5_0_OR_GREATER
         /// <summary>
         /// Gets the number of <see cref="AmbientCallbackTimer"/>s and <see cref="System.Threading.Timer"/> that are currently active.
         /// Does not double-count <see cref="AmbientCallbackTimer"/> that pass through to a <see cref="System.Threading.Timer"/>.
@@ -1063,7 +1063,7 @@ namespace AmbientServices
             return ret;
         }
 
-#if !NETSTANDARD2_0
+#if NETCOREAPP3_1 || NET5_0_OR_GREATER
         /// <summary>
         /// Asynchronously disposes the instance.
         /// </summary>

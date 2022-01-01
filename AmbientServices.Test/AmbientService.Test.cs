@@ -14,7 +14,7 @@ namespace AmbientServices.Test
         private static readonly AmbientService<IAmbientLogger> _Logger = Ambient.GetService<IAmbientLogger>();
         private static readonly AmbientService<IAmbientProgressService> _ProgressService = Ambient.GetService<IAmbientProgressService>();
         private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
-        private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
+        private static readonly AmbientService<IAmbientLocalCache> _Cache = Ambient.GetService<IAmbientLocalCache>();
         private static readonly AmbientService<IJunk> _Junk = Ambient.GetService<IJunk>();
         private static readonly AmbientService<ILocalTest> _LocalTest = Ambient.GetService<ILocalTest>();
         private static readonly AmbientService<ITest1> _Test1 = Ambient.GetService<ITest1>();
@@ -30,7 +30,7 @@ namespace AmbientServices.Test
         [AssemblyCleanup]
         public static void AssemblyCleanup()
         {
-            System.Threading.Tasks.Task t = TraceBuffer.Flush();
+            System.Threading.Tasks.ValueTask t = TraceBuffer.Flush();
             t.ConfigureAwait(false).GetAwaiter().GetResult();
         }
 

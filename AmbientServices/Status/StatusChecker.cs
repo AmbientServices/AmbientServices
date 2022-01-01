@@ -59,16 +59,16 @@ namespace AmbientServices
         /// <summary>
         /// Starts stopping any asynchronous activity.
         /// </summary>
-        protected internal virtual Task BeginStop()
+        protected internal virtual ValueTask BeginStop()
         {
-            return Task.CompletedTask;
+            return TaskExtensions.CompletedValueTask;
         }
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
-        protected internal virtual Task FinishStop()
+        protected internal virtual ValueTask FinishStop()
         {
-            return Task.CompletedTask;
+            return TaskExtensions.CompletedValueTask;
         }
 
         /// <summary>
@@ -103,11 +103,11 @@ namespace AmbientServices
         /// Results should always be recorded using <see cref="SetLatestResults"/>.
         /// </remarks>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        public virtual Task<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        public virtual ValueTask<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
         {
             // POSSIBLE BREAKING CHANGE: maybe it would be good to have a public function that 
             // catches exceptions and handles them properly and also always saves results using SetLatestResults?
-            return Task.FromResult(LatestResults);
+            return TaskExtensions.ValueTaskFromResult(LatestResults);
         }
         /// <summary>
         /// Disposes of the instance.

@@ -13,20 +13,20 @@ namespace AmbientServices.Test
     /// Summary description for StatusTest.
     /// </summary>
     [TestClass]
-    public class TestAmbientFileLogger
+    public class TestBasicAmbientLogger
     {
         private static AmbientService<IAmbientLogger> Logger = Ambient.GetService<IAmbientLogger>();
         [TestMethod]
-        public async Task AmbientFileLoggerBasic()
+        public async Task BasicAmbientLoggerBasic()
         {
             string tempPath = Path.GetTempPath() + Guid.NewGuid().ToString("N");
             try
             {
                 using (AmbientClock.Pause())
-                using (AmbientFileLogger loggerImp = new AmbientFileLogger(tempPath, ".log", 8 * 60))
+                using (BasicAmbientLogger loggerImp = new BasicAmbientLogger(tempPath, ".log", 8 * 60))
                 {
                     // delete any preexisting files
-                    await AmbientFileLogger.TryDeleteAllFiles(loggerImp.FilePrefix);
+                    await BasicAmbientLogger.TryDeleteAllFiles(loggerImp.FilePrefix);
 
                     using (IDisposable over = Logger.ScopedLocalOverride(loggerImp))
                     {
@@ -45,22 +45,22 @@ namespace AmbientServices.Test
             }
             finally
             {
-                await AmbientFileLogger.TryDeleteAllFiles(tempPath);
+                await BasicAmbientLogger.TryDeleteAllFiles(tempPath);
             }
         }
 
         [TestMethod]
-        public async Task AmbientFileLoggerFileRotation()
+        public async Task BasicAmbientLoggerFileRotation()
         {
             string logFilePrefix = null;
             try
             {
                 using (AmbientClock.Pause())
-                using (AmbientFileLogger logger = new AmbientFileLogger(null, null, 8 * 60))
+                using (BasicAmbientLogger logger = new BasicAmbientLogger(null, null, 8 * 60))
                 {
                     logFilePrefix = logger.FilePrefix;
                     // delete any preexisting files
-                    await AmbientFileLogger.TryDeleteAllFiles(logFilePrefix);
+                    await BasicAmbientLogger.TryDeleteAllFiles(logFilePrefix);
 
                     using (IDisposable over = Logger.ScopedLocalOverride(logger))
                     {
@@ -111,7 +111,7 @@ namespace AmbientServices.Test
                         Assert.IsTrue(firstLogContents.Contains("test4"));
 
                         // try to delete files here (this will cause an ignored exception)
-                        await AmbientFileLogger.TryDeleteAllFiles(logFilePrefix);
+                        await BasicAmbientLogger.TryDeleteAllFiles(logFilePrefix);
                     }
                     // dispose a little early so we can test flushing after disposal
                     logger.Dispose();
@@ -120,16 +120,15 @@ namespace AmbientServices.Test
             }
             finally
             {
-                await AmbientFileLogger.TryDeleteAllFiles(logFilePrefix!);
+                await BasicAmbientLogger.TryDeleteAllFiles(logFilePrefix!);
             }
         }
         [TestMethod]
-        public async Task AmbientFileLoggerExceptions()
+        public async Task BasicAmbientLoggerExceptions()
         {
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => new AmbientFileLogger(null, "log"));
             try
             {
-                await AmbientFileLogger.TryDeleteAllFiles(null!);
+                await BasicAmbientLogger.TryDeleteAllFiles(null!);
                 Assert.Fail("No ArgumentException thrown!");
             }
             catch (ArgumentException)
@@ -138,7 +137,7 @@ namespace AmbientServices.Test
             }
             try
             {
-                await AmbientFileLogger.TryDeleteAllFiles("C:\\");
+                await BasicAmbientLogger.TryDeleteAllFiles("C:\\");
                 Assert.Fail("No ArgumentException thrown!");
             }
             catch (ArgumentException)

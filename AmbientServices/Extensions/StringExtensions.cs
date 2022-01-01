@@ -150,7 +150,7 @@ namespace AmbientServices.Utility
             return builder.ToString();
         }
 
-#if !NET5_0_OR_GREATER
+#if !NETCOREAPP3_1 && !NET5_0_OR_GREATER
 #pragma warning disable CA1801  // these functions specifically make the code behave the old pre net5.0 way.
         /// <summary>
         /// Replaces matching parts of the string with another string.
@@ -163,7 +163,7 @@ namespace AmbientServices.Utility
         public static string Replace(this string source, string find, string target, StringComparison compare)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return source.Replace(find, target);
+            return source.Replace(find, target, StringComparison.Ordinal);
         }
         /// <summary>
         /// Checks to see if a string contains the specified character.
@@ -174,7 +174,7 @@ namespace AmbientServices.Utility
         /// <returns>Whether or not <paramref name="source"/> contains <paramref name="find"/>.</returns>
         public static bool Contains(this string source, char find, StringComparison compare)
         {
-            return source.Contains(find);
+            return source.Contains(find, StringComparison.Ordinal);
         }
         /// <summary>
         /// Checks to see if a string contains a specified string.
@@ -186,7 +186,7 @@ namespace AmbientServices.Utility
         public static bool Contains(this string source, string find, StringComparison compare)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return source.Contains(find);
+            return source.Contains(find, StringComparison.Ordinal);
         }
         /// <summary>
         /// Gets a 32-bit hash code for the specified string.
@@ -197,7 +197,7 @@ namespace AmbientServices.Utility
         public static int GetHashCode(this string source, StringComparison compare)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
-            return source.GetHashCode();
+            return source.GetHashCode(StringComparison.Ordinal);
         }
 #pragma warning restore CA1801
 #endif

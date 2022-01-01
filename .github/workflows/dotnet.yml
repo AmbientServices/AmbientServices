@@ -11,10 +11,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Setup .NET 2.1
+    - name: Setup .NET 3.1
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 2.1.x
+        dotnet-version: 3.1.x
     - name: Setup .NET 5.0
       uses: actions/setup-dotnet@v1
       with:
@@ -24,7 +24,7 @@ jobs:
       with:
         dotnet-version: 6.0.x
     - name: Set Version
-      run: dotnet SetVersion.dll 7.0.${{ github.run_number }}
+      run: dotnet SetVersion.dll 0.8.${{ github.run_number }}
     - name: Build AmbientServices
       run: dotnet build AmbientServices -c Release
     - name: Build AmbientServices.Samples
@@ -60,7 +60,7 @@ jobs:
         path: coveragereport # Directory containing files to upload
     - name: Test .NET 5.0
       run: dotnet test -c Release -f net5.0 --blame-hang-timeout 120s
-    - name: Test .NET Core 2.1
-      run: dotnet test -c Release -f netcoreapp2.1 --blame-hang-timeout 120s
+    - name: Test .NET Core 3.1
+      run: dotnet test -c Release -f netcoreapp3.1 --blame-hang-timeout 120s
     - name: Publish
-      run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.7.0.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.0.8.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json

@@ -1,201 +1,344 @@
-﻿using System;
+﻿using AmbientServices.Utility;
+using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.Versioning;
-using System.Text;
-using System.Text.RegularExpressions;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AmbientServices.Utility
+namespace AmbientServices
 {
+    /// <summary>
+    /// A basic implementation of <see cref="IAmbientLogger"/> that writes log messages to a rotating set of files.
+    /// Turn the logger off for maximum performance.
+    /// </summary>
     [DefaultAmbientService]
-    internal class BasicAmbientLogger : IAmbientLogger
+    public class BasicAmbientLogger : IAmbientLogger, IDisposable
     {
-        public BasicAmbientLogger()
+        private readonly string _filePrefix;
+        private readonly string _fileExtension;
+        private readonly int _rotationPeriodMinutes;
+        private readonly RotatingFileBuffer _fileBuffers;
+        private int _periodNumber;                      // interlocked
+        private bool _disposedValue;                    // too small to need interlocking
+
+        /// <summary>
+        /// Constructs a default ambient file logger that writes files that start with a default prefix.
+        /// </summary>
+        public BasicAmbientLogger() : this(null)
         {
         }
-
-#if NET5_0_OR_GREATER
-        [UnsupportedOSPlatform("browser")]
-#endif
+        /// <summary>
+        /// Constructs an ambient file logger that writes files that start with the specified prefix.
+        /// </summary>
+        /// <param name="filePrefix">The path and filename prefix to use for the log files.  Defaults to the temp folder with "AmbientFileLogger" as a filename prefix.</param>
+        /// <param name="fileExtension">The file extension (with leading .) to use for the files.  Defaults to ".log".</param>
+        /// <param name="rotationPeriodMinutes">The number of minutes after which a new file should be used.  Suffixes will roll over to zero at midnight UTC every day.  Defaults to 60 minutes.</param>
+        /// <param name="autoFlushSeconds">The number of seconds between automatic flushes of the log file.  Zero or negative values will disable automatic flushing, so all log messages will be buffered until the log file is rotated or <see cref="Flush"/> is called explicitly.</param>
+        public BasicAmbientLogger(string? filePrefix, string? fileExtension = null, int rotationPeriodMinutes = 60, int autoFlushSeconds = 5)
+        {
+            if (filePrefix == null) filePrefix = Path.GetTempPath() + nameof(BasicAmbientLogger);
+            if (fileExtension == null) fileExtension = ".log";
+            if (!fileExtension.StartsWith(".", StringComparison.Ordinal)) fileExtension = "." + fileExtension;
+            _filePrefix = filePrefix;
+            _fileExtension = fileExtension;
+            _rotationPeriodMinutes = rotationPeriodMinutes;
+            // which period number within the day are we in right now?
+            _periodNumber = GetPeriodNumber(AmbientClock.UtcNow);
+            // use that for the starting suffix
+            string startingSuffix = PeriodString(_periodNumber);
+            _fileBuffers = new RotatingFileBuffer(filePrefix, startingSuffix + _fileExtension, TimeSpan.FromSeconds(autoFlushSeconds));
+        }
+        /// <summary>
+        /// Gets the file prefix.
+        /// </summary>
+        public string FilePrefix { get { return _filePrefix; } }
+        /// <summary>
+        /// Buffers the specified message to be asynchronously logged.
+        /// </summary>
+        /// <param name="message">The message to log.</param>
         public void Log(string message)
         {
-            TraceBuffer.BufferLine(message);
+            // which period number within the day are we in right now?
+            TimeSpan timeOfDay = AmbientClock.UtcNow.TimeOfDay;
+            int newPeriodNumber = (int)(timeOfDay.TotalMinutes / _rotationPeriodMinutes);
+
+            int attempt = 0;
+            // loop attempting to update the period number if we need to or until we win the race or timeout
+            while (true)
+            {
+                // get the latest value
+                int oldValue = _periodNumber;
+                // someone beat us to it?
+                if (newPeriodNumber == oldValue) break;
+                // try to put in our value--did we win the race?
+                if (oldValue == System.Threading.Interlocked.CompareExchange(ref _periodNumber, newPeriodNumber, oldValue))
+                {
+                    // we won the race to update the period number
+                    _fileBuffers.BufferFileRotation(PeriodString(newPeriodNumber) + _fileExtension);
+                    break;
+                }
+                // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
+                if (!InterlockedExtensions.TryAgainAfterOptomisticMissDelay(attempt++)) break;
+            }
+            if (!_disposedValue) _fileBuffers.BufferLine(message);
         }
-#if NET5_0_OR_GREATER
-        [UnsupportedOSPlatform("browser")]
-#endif
-        public Task Flush(CancellationToken cancel = default(CancellationToken))
+        /// <summary>
+        /// Flushes everything that has been previously logged to the appropriate file on disk.
+        /// </summary>
+        /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
+        public ValueTask Flush(CancellationToken cancel = default)
         {
-            return TraceBuffer.Flush(cancel);
+            return _disposedValue ? TaskExtensions.CompletedValueTask : _fileBuffers.Flush(cancel);
+        }
+        private int GetPeriodNumber(DateTime dateTime)
+        {
+            // which period number within the day are we in right now?
+            TimeSpan timeOfDay = dateTime.TimeOfDay;
+            return (int)(timeOfDay.TotalMinutes / _rotationPeriodMinutes);
+        }
+        private static string PeriodString(int periodNumber)
+        {
+            return periodNumber.ToString("D4", System.Globalization.CultureInfo.InvariantCulture);
+        }
+        /// <summary>
+        /// Gets the log file name for the specified time.
+        /// </summary>
+        /// <param name="dateTime">The time whose log filename should be constructed.</param>
+        /// <returns>The filename for log messages logged at the specified time.</returns>
+        internal string GetLogFileName(DateTime dateTime)
+        {
+            _periodNumber = GetPeriodNumber(dateTime);
+            // use that for the starting suffix
+            string suffix = PeriodString(_periodNumber) + _fileExtension;
+            return _filePrefix + suffix;
+        }
+        /// <summary>
+        /// Attempts to delete all log files using the specified file prefix.
+        /// If they cannot be deleted, they are skipped.
+        /// </summary>
+        /// <param name="filePathPrefix">The file prefix (the same one that would be passed as the filePrefix parameter to the constructor).</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
+        public static ValueTask TryDeleteAllFiles(string filePathPrefix, CancellationToken cancel = default)
+        {
+            string? directory = Path.GetDirectoryName(filePathPrefix);
+            if (directory == null) throw new ArgumentException("The specified file path must be non-null and a non-root path!", nameof(filePathPrefix));
+            string filename = Path.GetFileName(filePathPrefix)!;
+            // clean up the files
+            foreach (string file in Directory.GetFiles(directory, filename + "*.log"))
+            {
+                if (cancel.IsCancellationRequested) break;
+                try
+                {
+                    System.IO.File.Delete(file);
+                }
+#pragma warning disable CA1031  // we REALLY want to catch everything here--delete can throw a lot of different exceptions and we don't want ANY of them to make it through--this is a "do your best" function
+                catch { }   // ignore all errors and just skip files we can't delete
+#pragma warning restore CA1031
+            }
+            return TaskExtensions.CompletedValueTask;
+        }
+        /// <summary>
+        /// Disposes of this instance.
+        /// </summary>
+        /// <param name="disposing">Whether or not the instance is being disposed (as opposed to finalized).</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                _disposedValue = true;
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                    _fileBuffers.Dispose();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
+            }
+        }
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~AmbientFileLogger()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
+        /// <summary>
+        /// Disposes of the instance.
+        /// </summary>
+        public void Dispose()
+        {
+            // Do not change or override this method. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
     /// <summary>
-    /// A class to buffer debug trace messages and display them asynchronously.
+    /// A class to buffer log messages and write them asynchronously.
     /// </summary>
-#if NET5_0_OR_GREATER
-    [UnsupportedOSPlatform("browser")]
-#endif
-    public static class TraceBuffer
+    class RotatingFileBuffer : IDisposable
     {
-        static private readonly string _FlushString = Guid.NewGuid().ToString();
-        static private readonly ConcurrentQueue<string> _Queue = new ConcurrentQueue<string>();
-        static private readonly SemaphoreSlim _Semaphore = new SemaphoreSlim(0, Int16.MaxValue);
-        static private readonly Thread _FlusherThread = FlusherThread();
-        static private readonly SemaphoreSlim _FlusherSemaphore = new SemaphoreSlim(0, Int16.MaxValue);
+        private static readonly string _FlushString = Guid.NewGuid().ToString();
+        private static readonly string _SwitchFilesPrefix = Guid.NewGuid().ToString() + ":";
 
-        private static Thread FlusherThread()
+        private readonly ConcurrentQueue<string> _queue = new ConcurrentQueue<string>();
+        private readonly SemaphoreSlim _writeLock = new SemaphoreSlim(1);
+        private readonly AmbientEventTimer _timer;
+        private readonly string _baselineFilename;
+        private readonly string _startingSuffix;
+        private TextWriter? _currentFileWriter;          // only accessed while the write lock is held
+        private bool _disposedValue;
+
+        /// <summary>
+        /// Constructs a file buffers instance that uses the specified properties.
+        /// </summary>
+        /// <param name="baselineFilename">The baseline filename (full path).</param>
+        /// <param name="startingSuffix">The starting suffix.</param>
+        /// <param name="autoFlushFrequency">A <see cref="TimeSpan"/> indicating how often to autoflush the log files.</param>
+        public RotatingFileBuffer(string baselineFilename, string startingSuffix, TimeSpan autoFlushFrequency)
         {
-            // fire up a background thread to flush the trace data
-            Thread thread = new Thread(new ThreadStart(_BackgroundThread));
-            thread.Name = "TraceBuffer.FlusherThread";
-            thread.Priority = ThreadPriority.BelowNormal;
-            thread.IsBackground = true;
-            thread.Start();
-            return thread;
+            _baselineFilename = baselineFilename;
+            _startingSuffix = startingSuffix;
+            if (autoFlushFrequency > TimeSpan.Zero)
+            {
+                _timer = new AmbientEventTimer(autoFlushFrequency);
+                _timer.AutoReset = true;
+                _timer.Elapsed += Timer_Elapsed;
+                _timer.Enabled = true;
+            }
+            else // just create a default timer with nothing attached (so we still have something to dispose)
+            {
+                _timer = new AmbientEventTimer();
+            }
+        }
+
+        private async void Timer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        {
+            try
+            {
+                await FlushInternal().ConfigureAwait(false);
+            }
+            // Coverage note: this code is pretty-much impossible to test because the time has to go off AFTER this instance is marked as disposed but before the timer is disposed (or at least before it's last invocation happens)
+            catch (ObjectDisposedException)
+            {
+                // ignore this error (it can happen during the race to dispose)
+            }
+        }
+
+        /// <summary>
+        /// Buffer the specified line (this function should NOT block on I/O of any kind).
+        /// </summary>
+        /// <param name="line">The string to put into the log.</param>
+        public void BufferLine(string line)
+        {
+            if (_disposedValue) throw new ObjectDisposedException(_baselineFilename);
+            _queue.Enqueue(line);
         }
         /// <summary>
-        /// Buffers the specified line to the concurrent buffer.
+        /// Buffers an instruction to rotate files.
         /// </summary>
-        /// <param name="s">The string to buffer.</param>
-        public static void BufferLine(string s)
+        /// <param name="newSuffix">The new filename suffix.</param>
+        public void BufferFileRotation(string newSuffix)
         {
-            Buffer(s + Environment.NewLine);
+            if (_disposedValue) throw new ObjectDisposedException(_baselineFilename);
+            _queue.Enqueue(_SwitchFilesPrefix + newSuffix);
         }
-        private static void Buffer(string s)
+        /// <summary>
+        /// Flushes any buffered data to the appropriate file(s).
+        /// </summary>
+        /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
+        public async ValueTask Flush(CancellationToken cancel = default)
         {
-            // enqueue the string given to us
-            _Queue.Enqueue(s);
-            // release the semaphore so the data gets processed
-            Release(false).Wait();
+            await FlushInternal(cancel).ConfigureAwait(false);
         }
-        [DebuggerStepThrough]
-        private static bool Release()
+        private async ValueTask FlushInternal(CancellationToken cancel = default)
         {
+            if (_disposedValue) throw new ObjectDisposedException(_baselineFilename);
+            // queue up a special message so we know when we have processed up to the current spot in the queue
+            _queue.Enqueue(_FlushString);
             try
             {
-                _Semaphore.Release();
-                return true;
-            }
-            catch (SemaphoreFullException)
-            {
-                // failure!
-                return false;
-            }
-        }
-        private static async Task Release(bool flush, CancellationToken cancel = default(CancellationToken))
-        {
-            try
-            {
-                // if the release fails, flush the queue
-                if (!Release()) flush = true;
-                cancel.ThrowIfCancellationRequested();
-                // are we flushing?
-                if (flush)
+                // make sure only one thread at a time processes the queue
+                await _writeLock.WaitAsync(cancel).ConfigureAwait(false);
+                // loop through the queue processing log lines until we get to that message
+                string logString;
+                while (_queue.TryDequeue(out logString!))   // while TryQueue *can* put null into logString, it can only do so if it returns false, and we don't use logString in that case
                 {
-                    // boost the priority of the flusher thread for a bit
-                    _FlusherThread.Priority = ThreadPriority.AboveNormal;
+                    // no file yet?
+                    if (_currentFileWriter == null)
+                    {
+                        // open the starting file
+                        await SwitchFiles(_startingSuffix).ConfigureAwait(false);
+                    }
+                    // time to switch files?
+                    else if (logString.StartsWith(_SwitchFilesPrefix, StringComparison.Ordinal))
+                    {
+                        await SwitchFiles(logString.Substring(_SwitchFilesPrefix.Length)).ConfigureAwait(false);
+                    }
+                    // reached the flush command queued above?
+                    else if (logString.Equals(_FlushString, StringComparison.Ordinal))
+                    {
+                        // stop here even if there are more messages (they were queued AFTER we started flushing)
+                        break;
+                    }
+                    else // this is just a regular log string
+                    {
+                        await _currentFileWriter.WriteLineAsync(logString).ConfigureAwait(false);
+                    }
                     cancel.ThrowIfCancellationRequested();
-                    // wait for the flush to happen
-                    await _FlusherSemaphore.WaitAsync(cancel).ConfigureAwait(false);
                 }
             }
             finally
             {
-                // restore the thread priority
-                if (flush) _FlusherThread.Priority = ThreadPriority.BelowNormal;
+                _writeLock.Release();
             }
         }
-        /// <summary>
-        /// Asynchronously flushes any queued trace lines.
-        /// </summary>
-        /// <param name="cancel">A <see cref="CancellationToken"/> that the caller can use to interrupt the operation before completion.</param>
-        public static async Task Flush(CancellationToken cancel = default(CancellationToken))
+        // NOTE: This function may only be called while the write lock is held
+        private ValueTask SwitchFiles(string suffix)
         {
-            // queue a flush command
-            _Queue.Enqueue(_FlushString);
-            // release the semaphore so the data gets processed
-            await Release(true, cancel).ConfigureAwait(false);
+            string filename = _baselineFilename + suffix;
+            // close the old file
+            _currentFileWriter?.Close();
+            // open a new one
+            _currentFileWriter = new StreamWriter(new FileStream(filename, FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
+            // this really SHOULD be async--why can't windows open files asynchronously still!
+            return TaskExtensions.CompletedValueTask;
         }
-        /// <summary>
-        /// Peeks at all unflushed messages synchronously (for diagnostic purposes only).
-        /// </summary>
-        [ExcludeFromCoverage]
-        [ExcludeFromCodeCoverage, Obsolete("This property should not be used directly--it's only for debugging!")]
-        public static string PeekUnflushed
+
+        protected virtual void Dispose(bool disposing)
         {
-            get
+            if (!_disposedValue)
             {
-                StringBuilder ret = new StringBuilder();
-                foreach (string s in _Queue)
+                _disposedValue = true;
+
+                if (disposing)
                 {
-                    // add this to the result
-                    ret.Append(s);
+                    // TODO: dispose managed state (managed objects)
+                    _timer.Dispose();
+                    _writeLock.Dispose();
+                    _currentFileWriter?.Dispose();
+                    _currentFileWriter = null;
                 }
-                // return the data
-                return ret.ToString();
+
+                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
+                // TODO: set large fields to null
             }
         }
-        private static void _BackgroundThread()
+
+        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
+        // ~FileBuffers()
+        // {
+        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        //     Dispose(disposing: false);
+        // }
+        /// <summary>
+        /// Disposes of the file buffers.  No more messages should be processed.  <see cref="Flush"/> should have been called after message processing is interrupted and before disposal.
+        /// </summary>
+        public void Dispose()
         {
-            // loop forever!
-            while (true)
-            {
-                try
-                {
-                    StringBuilder traceData = new StringBuilder();
-                    // get up to 10 lines of trace data
-                    for (int line = 0; line < 10; ++line)
-                    {
-                        // get the oldest item on the queue
-                        string? s;
-                        // is there a string to trace?
-                        if (_Queue.TryDequeue(out s))
-                        {
-                            if (s == _FlushString)
-                            {
-                                // release the flusher that told us to flush
-                                _FlusherSemaphore.Release();
-                            }
-                            else
-                            {
-                                // add this to the trace data
-                                traceData.Append(s);
-                            }
-                            // is there more data? (don't wait if there isn't)
-                            if (_Semaphore.Wait(0))
-                            {
-                                // try to get some more data (up to ten lines)
-                                continue;
-                            }
-                            // else no data left in queue--no point in waiting before we flush to the output
-                        }
-                        // else nothing left in the queue
-                        else break;
-                    }
-                    // is there a string to trace?
-                    if (traceData.Length > 0)
-                    {
-                        // trace out this string
-                        System.Diagnostics.Trace.Write(traceData.ToString());
-                    }
-                    else
-                    {
-                        // wait for more work (ie. stop using CPU until there is more work to do)
-                        _Semaphore.Wait(TimeSpan.FromMinutes(5));   // we shouldn't ever hang here, but just in case, exit *eventually*
-                    }
-                }
-#pragma warning disable CA1031 // Do not catch general exception types
-                catch (Exception ex)
-#pragma warning restore CA1031 // Do not catch general exception types
-                {
-                    // trace out this string
-                    System.Diagnostics.Trace.Write(ex.ToString());
-                }
-            }
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }
