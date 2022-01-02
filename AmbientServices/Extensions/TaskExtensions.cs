@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 
 namespace AmbientServices
 {
@@ -15,13 +16,34 @@ namespace AmbientServices
         /// Gets the specified <see cref="CancellationToken"/> as a <see cref="Task"/> that gets cancelled when the token is cancelled.
         /// </summary>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> that controls the task.</param>
-        /// <returns>A <see cref="Task"/> that gets cancelled when the <see cref="CancellationToken"/> get cancelled.</returns>
+        /// <returns>A <see cref="Task"/> that completes when the <see cref="CancellationToken"/> get cancelled.</returns>
         public static Task AsTask(this CancellationToken cancellationToken)
         {
             TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
             cancellationToken.Register(() => tcs.TrySetCanceled(), false);
             return tcs.Task;
         }
+#if NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+        /// <summary>
+        /// Gets the specified <see cref="CancellationToken"/> as a <see cref="Task"/> that gets cancelled when the token is cancelled.
+        /// </summary>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> that controls the task.</param>
+        /// <returns>A <see cref="ValueTask"/> that completes when the <see cref="CancellationToken"/> get cancelled.</returns>
+        public static async ValueTask AsValueTask(this CancellationToken cancellationToken)
+        {
+            await Task.Delay(-1, cancellationToken).ContinueWith(_ => { }, default, TaskContinuationOptions.OnlyOnCanceled, TaskScheduler.Current).ConfigureAwait(false);
+        }
+#else
+        /// <summary>
+        /// Gets the specified <see cref="CancellationToken"/> as a <see cref="ValueTask"/> that gets cancelled when the token is cancelled.
+        /// </summary>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> that controls the task.</param>
+        /// <returns>A <see cref="ValueTask"/> that gets cancelled when the <see cref="CancellationToken"/> get cancelled.</returns>
+        public static async ValueTask AsValueTask(this CancellationToken cancellationToken)
+        {
+            await cancellationToken.AsTask().ConfigureAwait(false);
+        }
+#endif
 
 #if NET5_0_OR_GREATER
         /// <summary>
@@ -42,7 +64,7 @@ namespace AmbientServices
             get { return ValueTask.CompletedTask; }
         }
 #else
-#pragma warning disable CS1998
+#pragma warning disable CS1998 
         /// <summary>
         /// Gets a <see cref="ValueTask{TResult}"/> from the specified value.
         /// </summary>
@@ -53,6 +75,7 @@ namespace AmbientServices
         {
             return value;
         }
+#pragma warning restore CS1998 
         /// <summary>
         /// Gets a <see cref="ValueTask"/> that is complete.
         /// </summary>
@@ -64,7 +87,6 @@ namespace AmbientServices
         {
             await Task.CompletedTask.ConfigureAwait(false);
         }
-#pragma warning restore CS1998
 #endif
     }
 }
