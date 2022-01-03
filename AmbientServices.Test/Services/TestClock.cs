@@ -1652,6 +1652,7 @@ namespace AmbientServices.Test
                 Assert.AreEqual(0, timedOutInvocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                 are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                for (int loops = 0; (signaledInvocations < 0 || signaledInvocations > 1) && loops < 100; ++loops) System.Threading.Thread.Sleep(100);
                 Assert.IsTrue(signaledInvocations >= 0 && signaledInvocations <= 1, signaledInvocations.ToString());
                 Assert.AreEqual(0, timedOutInvocations);
                 are.Reset();    // now that we've been signaled, we can reset the event
