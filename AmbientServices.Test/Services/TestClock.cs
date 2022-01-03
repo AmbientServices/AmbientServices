@@ -1620,11 +1620,7 @@ namespace AmbientServices.Test
                 Assert.AreEqual(1, timedOutInvocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                 are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
-                System.Threading.Thread.Sleep(100);
-                System.Threading.Thread.Sleep(100);
-                System.Threading.Thread.Sleep(100);
-                System.Threading.Thread.Sleep(100);
-                System.Threading.Thread.Sleep(100);
+                for (int loops = 0; (signaledInvocations != 0 && timedOutInvocations != 1) && loops < 100; ++loops) System.Threading.Thread.Sleep(100);
                 Assert.AreEqual(0, signaledInvocations);
                 Assert.AreEqual(1, timedOutInvocations);
                 are.Reset();    // now that we've been signaled, we can reset the event
@@ -1656,11 +1652,6 @@ namespace AmbientServices.Test
                 Assert.AreEqual(0, timedOutInvocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                 are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
-                System.Threading.Thread.Sleep(100);
-                System.Threading.Thread.Sleep(100);
-                System.Threading.Thread.Sleep(100);
-                System.Threading.Thread.Sleep(100);
-                System.Threading.Thread.Sleep(100);
                 Assert.IsTrue(signaledInvocations >= 0 && signaledInvocations <= 1, signaledInvocations.ToString());
                 Assert.AreEqual(0, timedOutInvocations);
                 are.Reset();    // now that we've been signaled, we can reset the event
