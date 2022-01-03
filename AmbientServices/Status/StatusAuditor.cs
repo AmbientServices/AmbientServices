@@ -505,14 +505,14 @@ namespace AmbientServices
             _initialAuditTimer.Close();  // just in case--we must have shut down pretty quickly to get here without this timer already being closed
             _auditTimer.Stop();
             _backgroundCancelSource?.Cancel();
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
         protected internal sealed override ValueTask FinishStop()
         {
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
         /// <summary>
         /// Dispose the instance (only used by derived classes).

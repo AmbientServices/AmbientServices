@@ -302,7 +302,7 @@ class DownloadAndUnzip
             progress?.Update(entry * 1.0f / entries, archiveEntry.FullName);
             archiveEntry.ExtractToFile(Path.Combine(_targetFolder, archiveEntry.FullName));
         }
-        return AmbientServices.TaskExtensions.CompletedValueTask;
+        return default(ValueTask);
     }
 }
 #endregion

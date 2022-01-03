@@ -88,7 +88,7 @@ namespace AmbientServices
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
         public ValueTask Flush(CancellationToken cancel = default)
         {
-            return _disposedValue ? TaskExtensions.CompletedValueTask : _fileBuffers.Flush(cancel);
+            return _disposedValue ? default(ValueTask) : _fileBuffers.Flush(cancel);
         }
         private int GetPeriodNumber(DateTime dateTime)
         {
@@ -135,7 +135,7 @@ namespace AmbientServices
                 catch { }   // ignore all errors and just skip files we can't delete
 #pragma warning restore CA1031
             }
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
         /// <summary>
         /// Disposes of this instance.
@@ -302,7 +302,7 @@ namespace AmbientServices
             // open a new one
             _currentFileWriter = new StreamWriter(new FileStream(filename, FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
             // this really SHOULD be async--why can't windows open files asynchronously still!
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
 
         protected virtual void Dispose(bool disposing)

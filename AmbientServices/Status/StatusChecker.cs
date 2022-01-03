@@ -61,14 +61,14 @@ namespace AmbientServices
         /// </summary>
         protected internal virtual ValueTask BeginStop()
         {
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
         protected internal virtual ValueTask FinishStop()
         {
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
 
         /// <summary>

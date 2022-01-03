@@ -56,13 +56,6 @@ namespace AmbientServices
         {
             return ValueTask.FromResult(value);
         }
-        /// <summary>
-        /// Gets a <see cref="ValueTask"/> that is complete.
-        /// </summary>
-        public static ValueTask CompletedValueTask
-        {
-            get { return ValueTask.CompletedTask; }
-        }
 #else
 #pragma warning disable CS1998 
         /// <summary>
@@ -75,18 +68,7 @@ namespace AmbientServices
         {
             return value;
         }
-#pragma warning restore CS1998 
-        /// <summary>
-        /// Gets a <see cref="ValueTask"/> that is complete.
-        /// </summary>
-        public static ValueTask CompletedValueTask
-        {
-            get { return GetCompletedValueTask(); }
-        }
-        private static async ValueTask GetCompletedValueTask()
-        {
-            await Task.CompletedTask.ConfigureAwait(false);
-        }
+#pragma warning restore CS1998
 #endif
     }
 }

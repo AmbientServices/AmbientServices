@@ -402,7 +402,7 @@ namespace AmbientServices.Test
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
         public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
 }

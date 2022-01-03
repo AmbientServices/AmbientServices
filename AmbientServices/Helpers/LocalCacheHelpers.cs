@@ -66,7 +66,7 @@ namespace AmbientServices
         public ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
-            if (cache == null) return TaskExtensions.CompletedValueTask;
+            if (cache == null) return default(ValueTask);
             return cache.Store<T>(_cacheKeyPrefix + itemKey, item, maxCacheDuration, expiration, cancel);
         }
         /// <summary>
@@ -79,7 +79,7 @@ namespace AmbientServices
         public ValueTask Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
-            if (cache == null) return TaskExtensions.CompletedValueTask;
+            if (cache == null) return default(ValueTask);
             return cache.Remove<T>(_cacheKeyPrefix + itemKey, cancel);
         }
         /// <summary>
@@ -90,7 +90,7 @@ namespace AmbientServices
         public ValueTask Clear(CancellationToken cancel = default(CancellationToken))
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
-            if (cache == null) return TaskExtensions.CompletedValueTask;
+            if (cache == null) return default(ValueTask);
             return cache.Clear(cancel);
         }
     }

@@ -220,7 +220,7 @@ namespace AmbientServices.Test
             {
                 statusBuilder.AddOkay("SuperCode", "Superlative", "The system is superlative", StatusRating.Superlative - rating);
             }
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class StatusAuditorAuditExceptionTest : StatusAuditor
@@ -250,7 +250,7 @@ namespace AmbientServices.Test
         protected internal override bool Applicable { get { return true; } }
         public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
 }

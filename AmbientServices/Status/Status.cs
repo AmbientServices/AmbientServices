@@ -70,7 +70,7 @@ namespace AmbientServices
                 }
             }
             Logger.Log("Started", "StartStop");
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
         /// <summary>
         /// Stops the status system by disposing of all the status nodes.

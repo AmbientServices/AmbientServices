@@ -533,7 +533,7 @@ namespace AmbientServices.Test
             }
             for (int count = 0; count < 3; ++count)
             {
-                await Async.Run(() => TaskExtensions.CompletedValueTask);
+                await Async.Run(() => default(ValueTask));
                 threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
                 if (Async.UsingSynchronousExecution)
                 {

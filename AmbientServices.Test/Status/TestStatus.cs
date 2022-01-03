@@ -266,7 +266,7 @@ namespace AmbientServices.Test
             statusBuilder.AddProperty("nc1", "a");
             statusBuilder.AddProperty("nc2", "b");
             statusBuilder.AddProperty("nc2", AmbientClock.UtcNow.AddMinutes(-3));
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestConstantAuditResults : StatusAuditor
@@ -302,7 +302,7 @@ namespace AmbientServices.Test
             {
                 statusBuilder.AddOkay(_auditCode, _terse, _details, StatusRating.Okay - _rating);
             }
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestIrrelevantException : StatusAuditor
@@ -318,7 +318,7 @@ namespace AmbientServices.Test
             StatusResultsBuilder child = new StatusResultsBuilder("IrrelevantChild");
             child.AddException(new ExpectedException(nameof(TestIrrelevantException)));
             statusBuilder.AddChild(child);
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     /// <summary>
@@ -496,7 +496,7 @@ namespace AmbientServices.Test
             statusBuilder.AddProperty("wc2", "b");
             statusBuilder.AddProperty("wc2", AmbientClock.UtcNow.AddMinutes(-10));
             statusBuilder.AddException(new ApplicationException("This is a test"));
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestSuperlativeExplicit : StatusAuditor
@@ -510,7 +510,7 @@ namespace AmbientServices.Test
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
             statusBuilder.AddSuperlative("test-superlative", "superlative terse", "superlative details");
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestHeterogenousNoExplicit : StatusAuditor
@@ -523,7 +523,7 @@ namespace AmbientServices.Test
         public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestHomogeneousExplicitFailure : StatusAuditor
@@ -543,7 +543,7 @@ namespace AmbientServices.Test
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
             statusBuilder.AddProperty("ChildCount", _diskAuditors.Count());
             statusBuilder.AddFailure("TestFailCode", "TEST-FAIL!", "This is the detailed fail message", 0.0f);
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestHomogeneousWithFailure : StatusAuditor
@@ -571,7 +571,7 @@ namespace AmbientServices.Test
             statusBuilder.AddChild(_alwaysAlerting);
             statusBuilder.AddChild(_alwaysFailing);
             statusBuilder.AddChild(_alwaysCatastrophic);
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestHomogeneousWithMultipleFailure : StatusAuditor
@@ -590,7 +590,7 @@ namespace AmbientServices.Test
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
             statusBuilder.AddChild(_alwaysFailing1);
             statusBuilder.AddChild(_alwaysFailing2);
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestHomogeneousWithMultipleAlert : StatusAuditor
@@ -609,7 +609,7 @@ namespace AmbientServices.Test
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
             statusBuilder.AddChild(_alwaysAlerting1);
             statusBuilder.AddChild(_alwaysAlerting2);
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestDeepFailure : StatusAuditor
@@ -635,7 +635,7 @@ namespace AmbientServices.Test
         public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             Recurse(statusBuilder, 4);
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestMultipleSource : StatusAuditor
@@ -672,7 +672,7 @@ namespace AmbientServices.Test
                 AddSource(childBuilder, source);
                 statusBuilder.AddChild(childBuilder.FinalResults);
             }
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestDeepMultipleSource : StatusAuditor
@@ -719,7 +719,7 @@ namespace AmbientServices.Test
                 Recurse(childBuilder, 4, source);
                 statusBuilder.AddChild(childBuilder.FinalResults);
             }
-            return TaskExtensions.CompletedValueTask;
+            return default(ValueTask);
         }
     }
     internal class TestAuditException : StatusAuditor
