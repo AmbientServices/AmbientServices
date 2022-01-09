@@ -128,7 +128,7 @@ class UserManager
         if (user != null)
         {
             user = User.Find(email);
-            if (user != null) await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(userKey);
+            if (user != null) await Cache.Store<User>(userKey, user, false, TimeSpan.FromMinutes(15)); else await Cache.Remove<User>(userKey);
         }
         return user;
     }
@@ -140,7 +140,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Create();
-        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(userKey, user, false, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Updates the specified user. (Presumably with a new password)
@@ -150,7 +150,7 @@ class UserManager
     {
         string userKey = nameof(User) + "-" + user.Email;
         user.Update();
-        await Cache.Store<User>(userKey, user, TimeSpan.FromMinutes(15));
+        await Cache.Store<User>(userKey, user, false, TimeSpan.FromMinutes(15));
     }
     /// <summary>
     /// Deletes the specified user.

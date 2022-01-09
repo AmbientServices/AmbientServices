@@ -39,12 +39,14 @@ namespace AmbientServices
         }
         class CacheEntry
         {
+            public bool DisposeWhenDiscarding { get; private set; }
             public string Key;
             public DateTime? Expiration;
             public object Entry;
 
-            public CacheEntry(string key, DateTime? expiration, object entry)
+            public CacheEntry(string key, DateTime? expiration, object entry, bool disposeWhenDiscarding)
             {
+                DisposeWhenDiscarding = disposeWhenDiscarding;
                 Key = key;
                 Expiration = expiration;
                 Entry = entry;
@@ -52,16 +54,22 @@ namespace AmbientServices
 #if NET5_0_OR_GREATER
             public async ValueTask Dispose()
             {
-                // if the entry is disposable, dispose it after removing it
-                if (Entry is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync().ConfigureAwait(false);
-                if (Entry is IDisposable disposable) disposable.Dispose();
+                if (DisposeWhenDiscarding)
+                {
+                    // if the entry is disposable, dispose it after removing it
+                    if (Entry is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                    if (Entry is IDisposable disposable) disposable.Dispose();
+                }
             }
 #else
             public async ValueTask Dispose()
             {
-                // if the entry is disposable, dispose it after removing it
-                if (Entry is IDisposable disposable) disposable.Dispose();
-                await Task.CompletedTask.ConfigureAwait(false);
+                if (DisposeWhenDiscarding)
+                { 
+                    // if the entry is disposable, dispose it after removing it
+                    if (Entry is IDisposable disposable) disposable.Dispose();
+                    await Task.CompletedTask.ConfigureAwait(false);
+                }
             }
 #endif
         }
@@ -95,7 +103,7 @@ namespace AmbientServices
             return null;
         }
 
-        public async ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public async ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
             // does this entry *not* expire in the past?
             if (!(maxCacheDuration < TimeSpan.FromTicks(0)))
@@ -105,8 +113,8 @@ namespace AmbientServices
                 if (maxCacheDuration != null) actualExpiration = now.Add(maxCacheDuration.Value);
                 if (expiration != null && expiration.Value.Kind == DateTimeKind.Local) expiration = expiration.Value.ToUniversalTime();
                 if (expiration < actualExpiration) actualExpiration = expiration;
-                CacheEntry entry = new CacheEntry(itemKey, actualExpiration, item);
-                _cache.AddOrUpdate(itemKey, entry, (k, v) => entry);
+                CacheEntry entry = new CacheEntry(itemKey, actualExpiration, item, disposeWhenDiscarding);
+                _cache.AddOrUpdate(itemKey, entry, (k, v) => { Async.SynchronizeValue(async () => { CacheEntry c = v; if (c != null) await c.Dispose().ConfigureAwait(true); }); return entry; });
                 if (actualExpiration == null)
                 {
                     _untimedQueue.Enqueue(itemKey);
@@ -115,6 +123,11 @@ namespace AmbientServices
                 {
                     _timedQueue.Enqueue(new TimedQueueEntry { Key = itemKey, Expiration = actualExpiration.Value });
                 }
+            }
+            else
+            {
+                // else this item is expired so dispose of it as if we had put it into the cache and then it expired
+                if (item is IDisposable disposable) disposable.Dispose();
             }
             await EjectIfNeeded().ConfigureAwait(false);
         }
@@ -208,14 +221,14 @@ namespace AmbientServices
             }
         }
 
-        public async ValueTask Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
+        public ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
         {
             CacheEntry? disposeEntry;
             if (_cache.TryRemove(itemKey, out disposeEntry))
-            { 
-                // we don't remove the entry from the queue, but that's okay because we'll just ignore that entry when we get to it
-                await disposeEntry!.Dispose().ConfigureAwait(false);  // if it was successfully removed, it can't be null
+            {
+                if (disposeEntry.Entry is T) return TaskExtensions.ValueTaskFromResult((T?)disposeEntry.Entry);
             }
+            return TaskExtensions.ValueTaskFromResult((T?)default);
         }
 
         private async ValueTask EjectEntry(CacheEntry entry, CancellationToken cancel = default(CancellationToken))

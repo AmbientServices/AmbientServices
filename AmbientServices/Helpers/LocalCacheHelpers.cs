@@ -15,8 +15,8 @@ namespace AmbientServices
         private static readonly string DefaultCacheKeyPrefix = typeof(TOWNER).Name + "-";
         private static readonly AmbientService<IAmbientLocalCache> _Cache = Ambient.GetService<IAmbientLocalCache>();
 
-        private IAmbientLocalCache? _explicitCache;
-        private string _cacheKeyPrefix = DefaultCacheKeyPrefix;
+        private readonly IAmbientLocalCache? _explicitCache;
+        private readonly string _cacheKeyPrefix = DefaultCacheKeyPrefix;
 
         /// <summary>
         /// Creates the AmbientCache using the ambient cache service.
@@ -56,6 +56,7 @@ namespace AmbientServices
         /// <typeparam name="T">The type of the item to be cached.</typeparam>
         /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
         /// <param name="item">The item to be cached.</param>
+        /// <param name="disposeWhenDiscarding">Whether or not to dispose <see cref="IDisposable"/> items when discarding items from the cache.  If true, this will result in <see cref="ObjectDisposedException"/>s if the items are still in use when they get discarded, so when true, items will be automatically removed from the cache when they are retrieved.  This results in items only being availble to one client at a time.</param>
         /// <param name="maxCacheDuration">An optional <see cref="TimeSpan"/> indicating the maximum amount of time to keep the item in the cache.</param>
         /// <param name="expiration">An optional <see cref="DateTime"/> indicating a fixed time for when the item should expire from the cache.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
@@ -63,11 +64,11 @@ namespace AmbientServices
         /// <remarks>
         /// If both <paramref name="expiration"/> and <paramref name="maxCacheDuration"/> are set, the earlier expiration will be used.
         /// </remarks>
-        public ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding = false, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
             if (cache == null) return default(ValueTask);
-            return cache.Store<T>(_cacheKeyPrefix + itemKey, item, maxCacheDuration, expiration, cancel);
+            return cache.Store<T>(_cacheKeyPrefix + itemKey, item, disposeWhenDiscarding, maxCacheDuration, expiration, cancel);
         }
         /// <summary>
         /// Removes the specified item from the cache.
@@ -75,12 +76,12 @@ namespace AmbientServices
         /// <typeparam name="T">The type of the item to be cached.</typeparam>
         /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
-        /// 
-        public ValueTask Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
+        /// <returns>The item that was removed, or default if the specified item was not found.</returns>
+        public async ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
-            if (cache == null) return default(ValueTask);
-            return cache.Remove<T>(_cacheKeyPrefix + itemKey, cancel);
+            if (cache == null) return default;
+            return await cache.Remove<T>(_cacheKeyPrefix + itemKey, cancel).ConfigureAwait(false);
         }
         /// <summary>
         /// Flushes everything from the cache.
