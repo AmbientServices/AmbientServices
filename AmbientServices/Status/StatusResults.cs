@@ -301,12 +301,12 @@ namespace AmbientServices
         public StatusAuditAlert GetSummaryAlerts(bool includeHtmlTag, float ignoreRatingsBetterThan, bool ignorePendingRatings, TimeZoneInfo? notificationTimeZone = null)
         {
             DateTime start = AmbientClock.UtcNow;
-            StatusResultsOrganizer organized = new StatusResultsOrganizer(this);
+            StatusResultsOrganizer organized = new(this);
 
             organized.ComputeOverallRatingAndSort();
 
             DateTime notificationTime = TimeZoneInfo.ConvertTimeFromUtc(organized.MostRecentTime, notificationTimeZone ?? TimeZoneInfo.Utc);
-            StatusNotificationWriter writer = new StatusNotificationWriter(notificationTime);
+            StatusNotificationWriter writer = new(notificationTime);
 
             // build HTML style and header for the indicated rating and rating range
             float overallRating = organized.SortRating;
@@ -343,7 +343,7 @@ namespace AmbientServices
             }
             writer.LeaveStatusRange();
             if (includeHtmlTag) writer.LeaveBodyAndHtml();
-            StatusAuditAlert alert = new StatusAuditAlert(overallRating, string.Empty, writer.Terse, writer.Details);
+            StatusAuditAlert alert = new(overallRating, string.Empty, writer.Terse, writer.Details);
             return alert;
         }
 
@@ -392,7 +392,7 @@ namespace AmbientServices
         /// <returns>A string representing the instance.</returns>
         public override string ToString()
         {
-            StringBuilder output = new StringBuilder();
+            StringBuilder output = new();
             if (_sourceSystem != null)
             {
                 output.Append(SourceDisplayName(_sourceSystem));

@@ -193,7 +193,7 @@ namespace AmbientServices
 #endif
         public IAmbientBottleneckSurveyor CreateProcessSurveyor(string? processScopeName = null, string? overrideAllowRegex = null, string? overrideBlockRegex = null)
         {
-            ProcessBottleneckSurveyor analyzer = new ProcessBottleneckSurveyor(processScopeName, _bottleneckDetector,
+            ProcessBottleneckSurveyor analyzer = new(processScopeName, _bottleneckDetector,
                     (overrideAllowRegex == null) ? _defaultAllowSetting.Value : new Regex(overrideAllowRegex, RegexOptions.Compiled),
                     (overrideBlockRegex == null) ? _defaultBlockSetting.Value : new Regex(overrideBlockRegex, RegexOptions.Compiled)
                 );

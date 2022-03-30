@@ -14,7 +14,7 @@ namespace AmbientServices
     [DefaultAmbientService]
     class BasicAmbientServiceProfiler : IAmbientServiceProfiler
     {
-        private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientServiceProfilerNotificationSink>();
+        private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new();
         private AsyncLocal<CallContextActiveSystemData> _activeSystem;
 
         public BasicAmbientServiceProfiler()
@@ -27,7 +27,7 @@ namespace AmbientServices
             CallContextActiveSystemData oldSystem = _activeSystem.Value;
             // value not yet initialized? // note that this is a struct so it can't be null, so we need to initialize this to the default value for the context, which apparently just started
             if (oldSystem.RawGroup == null) oldSystem = new CallContextActiveSystemData(null, AmbientClock.Ticks);
-            CallContextActiveSystemData newSystem = new CallContextActiveSystemData(system);
+            CallContextActiveSystemData newSystem = new(system);
             _activeSystem.Value = newSystem;
             // call all the notification sinks
             foreach (IAmbientServiceProfilerNotificationSink notificationSink in _notificationSinks)
@@ -115,7 +115,7 @@ namespace AmbientServices
         {
             if (transform == null) return system;
             Match match = transform.Match(system);
-            StringBuilder group = new StringBuilder();
+            StringBuilder group = new();
             GroupCollection groups = match.Groups;
             for (int groupNumber = 1; groupNumber < groups.Count; ++groupNumber)
             {
@@ -207,7 +207,7 @@ namespace AmbientServices
     }
     class ScopeOnSystemSwitchedDistributor : IAmbientServiceProfilerNotificationSink
     {
-        private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientServiceProfilerNotificationSink>();
+        private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new();
         /// <summary>
         /// Notifies the notification sink that the system has switched.
         /// </summary>
@@ -398,7 +398,7 @@ namespace AmbientServices
         {
             string windowName = WindowScope.WindowId(AmbientClock.UtcNow, windowPeriod);
             string newAccumulatorScopeName = _scopeNamePrefix + windowName + "(" + WindowScope.WindowSize(windowPeriod) + ")"; ;
-            ProcessOrSingleTimeWindowServiceProfiler newAccumulator = new ProcessOrSingleTimeWindowServiceProfiler(metrics, newAccumulatorScopeName, systemGroupTransform);
+            ProcessOrSingleTimeWindowServiceProfiler newAccumulator = new(metrics, newAccumulatorScopeName, systemGroupTransform);
             ProcessOrSingleTimeWindowServiceProfiler? oldAccumulator = System.Threading.Interlocked.Exchange(ref _timeWindowCallContextCollector, newAccumulator);
             if (oldAccumulator != null)
             {

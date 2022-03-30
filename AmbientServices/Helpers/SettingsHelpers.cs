@@ -149,14 +149,14 @@ namespace AmbientServices
     /// </summary>
     public class SettingsRegistry
     {
-        private static SettingsRegistry _DefaultRegistry = new SettingsRegistry();
+        private static SettingsRegistry _DefaultRegistry = new();
         /// <summary>
         /// Gets the default registry.
         /// </summary>
         public static SettingsRegistry DefaultRegistry { get { return _DefaultRegistry; } }
 
 
-        private ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>>();
+        private ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new();
         /// <summary>
         /// Registers an <see cref="IAmbientSettingInfo"/> in the global registry.
         /// </summary>
@@ -164,7 +164,7 @@ namespace AmbientServices
         public void Register(IAmbientSettingInfo setting)
         {
             if (setting == null) throw new ArgumentNullException(nameof(setting));
-            WeakReference<IAmbientSettingInfo> newReference = new WeakReference<IAmbientSettingInfo>(setting);
+            WeakReference<IAmbientSettingInfo> newReference = new(setting);
             WeakReference<IAmbientSettingInfo> existingReference;
             int loopCount = 0;
             do
@@ -264,7 +264,7 @@ namespace AmbientServices
     /// </summary>
     public class DefaultSettingsSet : IAmbientSettingsSet
     {
-        private static readonly DefaultSettingsSet _Instance = new DefaultSettingsSet();
+        private static readonly DefaultSettingsSet _Instance = new();
         /// <summary>
         /// Gets the singleton instance of <see cref="DefaultSettingsSet"/>.
         /// </summary>

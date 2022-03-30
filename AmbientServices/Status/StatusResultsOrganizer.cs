@@ -12,8 +12,8 @@ namespace AmbientServices
     class StatusResultsOrganizer
     {
         private readonly IStatusThresholdsRegistry? _thresholds;
-        private readonly List<StatusPropertyRange> _propertyRanges = new List<StatusPropertyRange>();
-        private readonly List<StatusResultsOrganizer> _children = new List<StatusResultsOrganizer>();
+        private readonly List<StatusPropertyRange> _propertyRanges = new();
+        private readonly List<StatusResultsOrganizer> _children = new();
 
         /// <summary>
         /// Gets the most recent time from all the <see cref="StatusResults.Time"/> property of all descendant <see cref="StatusResults"/>.
@@ -116,7 +116,7 @@ namespace AmbientServices
             {
                 // rate this leaf node if we can (we need the ratings here in order to collate and sort results in ComputeOverallRatingAndSort)
                 string localTarget = results.TargetSystem;
-                StatusResultsOrganizer organizedResults = new StatusResultsOrganizer(results, source, localTarget);
+                StatusResultsOrganizer organizedResults = new(results, source, localTarget);
                 StatusResultsOrganizer parent = this;
                 string? localtarget = results.TargetSystem;
                 // a child of the root?
@@ -250,7 +250,7 @@ namespace AmbientServices
                 {
                     // rate based on the value and the thresholds--is this now the worst rating?
                     StatusAuditAlert alert = thresholds.Rate(propertyRange.Name, minValue.Value, maxValue.Value);
-                    if (Object.ReferenceEquals(worstAlert, null) || alert.Rating < worstAlert.Rating)
+                    if (worstAlert is null || alert.Rating < worstAlert.Rating)
                     {
                         worstAlert = alert;
                         worstAlertPropertyRange = propertyRange;
@@ -411,7 +411,7 @@ namespace AmbientServices
 
         public override string ToString()
         {
-            StringBuilder output = new StringBuilder();
+            StringBuilder output = new();
             if (Source == null && string.IsNullOrEmpty(Target.Trim('/')))
             {
                 output.Append("Overall:");

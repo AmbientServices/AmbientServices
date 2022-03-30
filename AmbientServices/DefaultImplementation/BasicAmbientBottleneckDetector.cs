@@ -15,7 +15,7 @@ namespace AmbientServices
     [DefaultAmbientService]
     class BasicAmbientBottleneckDetector : IAmbientBottleneckDetector
     {
-        private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientBottleneckExitNotificationSink>();
+        private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new();
 
         public BasicAmbientBottleneckDetector()
         {
@@ -23,7 +23,7 @@ namespace AmbientServices
 
         public AmbientBottleneckAccessor EnterBottleneck(AmbientBottleneck bottleneck)
         {
-            AmbientBottleneckAccessor access = new AmbientBottleneckAccessor(this, bottleneck, AmbientClock.Ticks);
+            AmbientBottleneckAccessor access = new(this, bottleneck, AmbientClock.Ticks);
             foreach (IAmbientBottleneckExitNotificationSink notificationSink in _notificationSinks)
             {
                 IAmbientBottleneckEnterNotificationSink? enterSink = notificationSink as IAmbientBottleneckEnterNotificationSink;
@@ -84,7 +84,7 @@ namespace AmbientServices
 
         internal IAmbientBottleneckSurveyor CreateCallContextSurveyor(string? scopeName, Regex? allow, Regex? block)
         {
-            ScopedBottleneckSurveyor surveyor = new ScopedBottleneckSurveyor(scopeName, CallContextDistributor, allow, block);
+            ScopedBottleneckSurveyor surveyor = new(scopeName, CallContextDistributor, allow, block);
             return surveyor;
         }
 
@@ -119,7 +119,7 @@ namespace AmbientServices
     }
     class CallContextAccessNotificationDistributor : IAmbientBottleneckExitNotificationSink
     {
-        private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientBottleneckExitNotificationSink>();
+        private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new();
 
         public CallContextAccessNotificationDistributor()
         {
@@ -193,7 +193,7 @@ namespace AmbientServices
 
         public void BottleneckExited(AmbientBottleneckAccessor? bottleneckAccessor)
         {
-            if (Object.ReferenceEquals(bottleneckAccessor, null)) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
@@ -251,17 +251,17 @@ namespace AmbientServices
 
         public TimeWindowSurveyManager(TimeSpan windowSize, Func<IAmbientBottleneckSurvey, Task> onWindowComplete, IAmbientBottleneckDetector? bottleneckDetector, Regex? allow, Regex? block)
         {
-            TimeWindowBottleneckSurvey initialSurvey = new TimeWindowBottleneckSurvey(allow, block, AmbientClock.Ticks, windowSize);
+            TimeWindowBottleneckSurvey initialSurvey = new(allow, block, AmbientClock.Ticks, windowSize);
             _currentWindowSurvey = initialSurvey;
             System.Timers.ElapsedEventHandler rotateTimeWindow = (s, e) =>
             {
-                TimeWindowBottleneckSurvey survey = new TimeWindowBottleneckSurvey(allow, block, AmbientClock.Ticks, windowSize);
+                TimeWindowBottleneckSurvey survey = new(allow, block, AmbientClock.Ticks, windowSize);
                 TimeWindowBottleneckSurvey oldAnalyzer = System.Threading.Interlocked.Exchange(ref _currentWindowSurvey, survey);
                 // copy all the accesses still in progress
                 survey.SwitchAnalyzer(oldAnalyzer);
                 onWindowComplete(oldAnalyzer);
             };
-            AmbientEventTimer timer = new AmbientEventTimer();
+            AmbientEventTimer timer = new();
             timer.AutoReset = true;
             timer.Elapsed += rotateTimeWindow;
             timer.Interval = windowSize.TotalMilliseconds;
@@ -275,13 +275,13 @@ namespace AmbientServices
         }
         public void BottleneckEntered(AmbientBottleneckAccessor? bottleneckAccessor)
         {
-            if (Object.ReferenceEquals(bottleneckAccessor, null)) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             _currentWindowSurvey.BottleneckEntered(bottleneckAccessor);
         }
 
         public void BottleneckExited(AmbientBottleneckAccessor? bottleneckAccessor)
         {
-            if (Object.ReferenceEquals(bottleneckAccessor, null)) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             _currentWindowSurvey.BottleneckExited( bottleneckAccessor);
         }
 
@@ -366,7 +366,7 @@ namespace AmbientServices
                     // replace the entry in the old dictionary
                     oldAnalyzer._metrics[bottleneckId] = records.Item1;
                     // add the new half into the new window.  note that when the original instance (which we don't own) finishes, it  will behave like a new access when combined with the second half we're putting in now
-                    if (!Object.ReferenceEquals(records.Item2, null)) _metrics.AddOrUpdate(bottleneckId, records.Item2, (s, m) => m.Combine(records.Item2));   // note that covering the 'update' case here would require a matching entry in the new window's metrics to have been put in on another thread during the execution of this function
+                    if (records.Item2 is not null) _metrics.AddOrUpdate(bottleneckId, records.Item2, (s, m) => m.Combine(records.Item2));   // note that covering the 'update' case here would require a matching entry in the new window's metrics to have been put in on another thread during the execution of this function
                     // update the starting access count and the limit usage for the new window
                     _startAccessCountAndLimitUsage[bottleneckId] = (access.AccessCount, access.LimitUsed);
                 }
@@ -375,7 +375,7 @@ namespace AmbientServices
 
         public void BottleneckEntered(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (Object.ReferenceEquals(bottleneckAccessor, null)) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             // is this bottleneck being surveyed?
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
@@ -388,7 +388,7 @@ namespace AmbientServices
 
         public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (Object.ReferenceEquals(bottleneckAccessor, null)) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             // is this bottleneck being surveyed?
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
@@ -442,7 +442,7 @@ namespace AmbientServices
 
         public void BottleneckExited(AmbientBottleneckAccessor? bottleneckAccessor)
         {
-            if (Object.ReferenceEquals(bottleneckAccessor, null)) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
@@ -518,7 +518,7 @@ namespace AmbientServices
 
         internal ThreadBottleneckSurveyor CreateThreadSurveyor(string? scopeName, Regex? allow, Regex? block)
         {
-            ThreadBottleneckSurveyor surveyor = new ThreadBottleneckSurveyor(scopeName, ThreadDistributor, allow, block);
+            ThreadBottleneckSurveyor surveyor = new(scopeName, ThreadDistributor, allow, block);
             return surveyor;
         }
 
@@ -555,7 +555,7 @@ namespace AmbientServices
     }
     internal class ThreadAccessDistributor : IAmbientBottleneckExitNotificationSink
     {
-        private ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientBottleneckExitNotificationSink>();
+        private ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new();
 
         public ThreadAccessDistributor()
         {
@@ -612,7 +612,7 @@ namespace AmbientServices
 
         public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
-            if (Object.ReferenceEquals(bottleneckAccessor, null)) throw new ArgumentNullException(nameof(bottleneckAccessor));
+            if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;

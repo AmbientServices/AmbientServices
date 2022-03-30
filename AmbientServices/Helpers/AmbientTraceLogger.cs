@@ -43,7 +43,7 @@ namespace AmbientServices
 #if NET5_0_OR_GREATER
         [UnsupportedOSPlatform("browser")]
 #endif
-        public ValueTask Flush(CancellationToken cancel = default(CancellationToken))
+        public ValueTask Flush(CancellationToken cancel = default)
         {
             return TraceBuffer.Flush(cancel);
         }
@@ -57,15 +57,15 @@ namespace AmbientServices
     public static class TraceBuffer
     {
         static private readonly string _FlushString = Guid.NewGuid().ToString();
-        static private readonly ConcurrentQueue<string> _Queue = new ConcurrentQueue<string>();
-        static private readonly SemaphoreSlim _Semaphore = new SemaphoreSlim(0, Int16.MaxValue);
+        static private readonly ConcurrentQueue<string> _Queue = new();
+        static private readonly SemaphoreSlim _Semaphore = new(0, Int16.MaxValue);
         static private readonly Thread _FlusherThread = FlusherThread();
-        static private readonly SemaphoreSlim _FlusherSemaphore = new SemaphoreSlim(0, Int16.MaxValue);
+        static private readonly SemaphoreSlim _FlusherSemaphore = new(0, Int16.MaxValue);
 
         private static Thread FlusherThread()
         {
             // fire up a background thread to flush the trace data
-            Thread thread = new Thread(new ThreadStart(_BackgroundThread));
+            Thread thread = new(new ThreadStart(_BackgroundThread));
             thread.Name = "TraceBuffer.FlusherThread";
             thread.Priority = ThreadPriority.BelowNormal;
             thread.IsBackground = true;
@@ -101,7 +101,7 @@ namespace AmbientServices
                 return false;
             }
         }
-        private static async Task Release(bool flush, CancellationToken cancel = default(CancellationToken))
+        private static async Task Release(bool flush, CancellationToken cancel = default)
         {
             try
             {
@@ -128,7 +128,7 @@ namespace AmbientServices
         /// Asynchronously flushes any queued trace lines.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> that the caller can use to interrupt the operation before completion.</param>
-        public static async ValueTask Flush(CancellationToken cancel = default(CancellationToken))
+        public static async ValueTask Flush(CancellationToken cancel = default)
         {
             // queue a flush command
             _Queue.Enqueue(_FlushString);
@@ -144,7 +144,7 @@ namespace AmbientServices
         {
             get
             {
-                StringBuilder ret = new StringBuilder();
+                StringBuilder ret = new();
                 foreach (string s in _Queue)
                 {
                     // add this to the result
@@ -161,7 +161,7 @@ namespace AmbientServices
             {
                 try
                 {
-                    StringBuilder traceData = new StringBuilder();
+                    StringBuilder traceData = new();
                     // get up to 10 lines of trace data
                     for (int line = 0; line < 10; ++line)
                     {

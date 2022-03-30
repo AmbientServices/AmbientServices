@@ -52,6 +52,6 @@ namespace AmbientServices
         /// <summary>
         /// Flushes the log messages to the logger service.
         /// </summary>
-        ValueTask Flush(CancellationToken cancel = default(CancellationToken));
+        ValueTask Flush(CancellationToken cancel = default);
     }
 }

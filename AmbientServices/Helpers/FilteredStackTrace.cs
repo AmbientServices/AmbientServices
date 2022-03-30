@@ -20,7 +20,7 @@ namespace AmbientServices.Utility
         {
             return new Lazy<StackFrame[]>(() =>
             {
-                List<StackFrame> filteredFrames = new List<StackFrame>();
+                List<StackFrame> filteredFrames = new();
 #if NETSTANDARD2_1 || NETCOREAPP3_1 || NET5_0_OR_GREATER
                 StackFrame?[] baseFrames = base.GetFrames();
 #else
@@ -155,7 +155,7 @@ namespace AmbientServices.Utility
         /// <remarks>NOTE: Does NOT filter the stack frames--wrap the enumerator in <see cref="FilterFrames"/> if you want to filter out all System and Microsoft frames except the first one.</remarks>
         internal static string ToString(IEnumerable<StackFrame> frames)
         {
-            StringBuilder output = new StringBuilder();
+            StringBuilder output = new();
             foreach (StackFrame frame in frames)
             {
                 string line = Invariant($" at {frame!.GetMethod()!.DeclaringType!.Name!}.{frame!.GetMethod()!.Name!} in {FilterFilename(frame!.GetFileName() ?? "<unknown>")}:{frame!.GetFileLineNumber()}.{frame!.GetFileColumnNumber()}");

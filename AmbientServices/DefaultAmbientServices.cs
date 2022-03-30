@@ -77,7 +77,7 @@ namespace AmbientServices
 
         static ConcurrentDictionary<Type, Type> InitializeAlreadyLoadedDefaultAmbientServices()
         {
-            ConcurrentDictionary<Type, Type> dictionary = new ConcurrentDictionary<Type, Type>();
+            ConcurrentDictionary<Type, Type> dictionary = new();
             foreach (Type type in AllLoadedReferringTypes())
             {
                 AddDefaultImplementation(dictionary, type);

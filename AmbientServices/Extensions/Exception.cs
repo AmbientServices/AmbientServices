@@ -16,7 +16,7 @@ namespace AmbientServices.Utility
         public static string ToFilteredString(this Exception exception)
         {
             if (exception == null) throw new ArgumentNullException(nameof(exception));
-            StringBuilder stack = new StringBuilder();
+            StringBuilder stack = new();
             BuildFilteredString(exception, stack);
             return stack.ToString();
         }

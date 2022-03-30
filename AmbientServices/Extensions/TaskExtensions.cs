@@ -19,7 +19,7 @@ namespace AmbientServices
         /// <returns>A <see cref="Task"/> that completes when the <see cref="CancellationToken"/> get cancelled.</returns>
         public static Task AsTask(this CancellationToken cancellationToken)
         {
-            TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
+            TaskCompletionSource<object> tcs = new();
             cancellationToken.Register(() => tcs.TrySetCanceled(), false);
             return tcs.Task;
         }

@@ -12,9 +12,9 @@ namespace AmbientServices.Utility
     {
         private static readonly char[] DecimalPointCharArray = ".,".ToCharArray();
         private static readonly char[] NumberSeparatorCharArray = ".,-".ToCharArray();
-        private static readonly System.Text.RegularExpressions.Regex DigitSequenceRegex = new System.Text.RegularExpressions.Regex(@"\d+", System.Text.RegularExpressions.RegexOptions.Compiled);
-        private static readonly System.Text.RegularExpressions.Regex CommaSeparatedDigits = new System.Text.RegularExpressions.Regex(@"(?<csn>\d+(?:,\d+)+)", System.Text.RegularExpressions.RegexOptions.Compiled);
-        private static readonly System.Text.RegularExpressions.Regex NumberRegex = new System.Text.RegularExpressions.Regex(
+        private static readonly System.Text.RegularExpressions.Regex DigitSequenceRegex = new(@"\d+", System.Text.RegularExpressions.RegexOptions.Compiled);
+        private static readonly System.Text.RegularExpressions.Regex CommaSeparatedDigits = new(@"(?<csn>\d+(?:,\d+)+)", System.Text.RegularExpressions.RegexOptions.Compiled);
+        private static readonly System.Text.RegularExpressions.Regex NumberRegex = new(
             @"(?<ps>(?:-?\d+)\.(?:(?:\d+)\.)+(?:\d+))" +    // finds a sequence of numbers separated by periods, such as 2020.5.7, and prevents them from being detected as real numbers (they should be treated as a sequence of whole numbers)
             @"|(?<ds>(?:-?\d+)-(?:(?:\d+)-)+(?:\d+))" +     // finds a sequence of numbers separated by dashes, such as 2020-5-7, and prevents them from being detected as negative numbers (they should be treated as a sequence of whole numbers)
             @"|(?<nr>(?<![0-9])(?:-(?:\d*)\.\d+))" +        // finds a negative real
@@ -140,7 +140,7 @@ namespace AmbientServices.Utility
         {
             System.Diagnostics.Debug.Assert(str[0] != '-');
             // use 1 as the 'negative prefix' because it should sort before the 'positive prefix' of 4
-            StringBuilder builder = new StringBuilder(prefix);
+            StringBuilder builder = new(prefix);
             for (int off = 0; off < str.Length; ++off)
             {
                 char c = str[off];

@@ -130,10 +130,8 @@ namespace AmbientServices
         /// </summary>
         internal AmbientBottleneckAccessor(BasicAmbientBottleneckDetector owner, AmbientBottleneck bottleneck, long accessBeginStopwatchTimestamp)
         {
-            if (owner == null) throw new ArgumentNullException(nameof(owner));
-            if (bottleneck == null) throw new ArgumentNullException(nameof(bottleneck));
-            _owner = owner;
-            _bottleneck = bottleneck;
+            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            _bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
             _accessBeginStopwatchTimestamp = accessBeginStopwatchTimestamp;
             _accessEndStopwatchTimestamp = long.MaxValue;
         }
@@ -142,10 +140,8 @@ namespace AmbientServices
         /// </summary>
         internal AmbientBottleneckAccessor(BasicAmbientBottleneckDetector owner, AmbientBottleneck bottleneck, long accessBeginStopwatchTimestamp, long accessEndStopwatchTimestamp, long accessCount, double limitUsed)
         {
-            if (owner == null) throw new ArgumentNullException(nameof(owner));
-            if (bottleneck == null) throw new ArgumentNullException(nameof(bottleneck));
-            _owner = owner;
-            _bottleneck = bottleneck;
+            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            _bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
             _accessBeginStopwatchTimestamp = accessBeginStopwatchTimestamp;
             _accessEndStopwatchTimestamp = accessEndStopwatchTimestamp;
             _accessCount = accessCount;
@@ -160,10 +156,8 @@ namespace AmbientServices
         /// <param name="accessBegin">The <see cref="DateTime"/> indicating the beginning of the access (presumably now, or just a bit ago).  Note that <see cref="DateTime"/> may not have the resolution of stopwatch ticks, so the start time may be slightly truncated as a result of the conversion.</param>
         internal AmbientBottleneckAccessor(BasicAmbientBottleneckDetector owner, AmbientBottleneck bottleneck, DateTime accessBegin)
         {
-            if (owner == null) throw new ArgumentNullException(nameof(owner));
-            if (bottleneck == null) throw new ArgumentNullException(nameof(bottleneck));
-            _owner = owner;
-            _bottleneck = bottleneck;
+            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            _bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
             _accessBeginStopwatchTimestamp = TimeSpanExtensions.DateTimeToStopwatchTimestamp(accessBegin.Ticks);
             _accessEndStopwatchTimestamp = long.MaxValue;
         }
@@ -253,13 +247,13 @@ namespace AmbientServices
                 limitUsedSoFar = _limitUsed - windowStartLimitUsage;
             }
             // the old part will be the usage that has occurred since the last window started and will be clipped to the old window
-            AmbientBottleneckAccessor oldPart = new AmbientBottleneckAccessor( _owner, _bottleneck, 
+            AmbientBottleneckAccessor oldPart = new( _owner, _bottleneck, 
                 Math.Max(_accessBeginStopwatchTimestamp, oldWindowBeginStopwatchTicks), splitStopwatchTicks,
                 accessCount, limitUsedSoFar);
             // is this entry *not* still open?  // the entry is *not* still open, but it could have span multiple windows earlier, so while we're not going to copy it forward to this window, we are going to adjust values to represent usage within that window
             if (_accessEndStopwatchTimestamp < long.MaxValue) return (oldPart, null);
             // else the new part will exist, and it will use the fork time as the start
-            AmbientBottleneckAccessor newPart = new AmbientBottleneckAccessor(_owner, _bottleneck, splitStopwatchTicks, splitStopwatchTicks, 0, 0);
+            AmbientBottleneckAccessor newPart = new(_owner, _bottleneck, splitStopwatchTicks, splitStopwatchTicks, 0, 0);
             return (oldPart, newPart);
         }
         internal AmbientBottleneckAccessor Combine(AmbientBottleneckAccessor that)
@@ -294,7 +288,7 @@ namespace AmbientServices
         /// <returns>&gt;0 if this one has used more than <paramref name="other"/>, &lt;0 if this one has used less than <paramref name="other"/>, or 0 if they have used the same amount.</returns>
         public int CompareTo(AmbientBottleneckAccessor? other)
         {
-            if (ReferenceEquals(other, null)) return 1;
+            if (other is null) return 1;
             int diff = this._utilization.CompareTo(other._utilization);
             if (diff != 0) return diff;
             diff = this._limitUsed.CompareTo(other._limitUsed);
@@ -308,9 +302,8 @@ namespace AmbientServices
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
         public override bool Equals(object? obj)
         {
-            AmbientBottleneckAccessor? that = obj as AmbientBottleneckAccessor;
             if (ReferenceEquals(this, obj)) return true;
-            if (ReferenceEquals(that, null)) return false;
+            if (obj is not AmbientBottleneckAccessor that) return false;
             return this._bottleneck.Equals(that._bottleneck) && this._accessBeginStopwatchTimestamp.Equals(that._accessBeginStopwatchTimestamp) && this._accessEndStopwatchTimestamp.Equals(that._accessEndStopwatchTimestamp);
         }
         /// <summary>
@@ -330,7 +323,7 @@ namespace AmbientServices
         /// <returns>true if the AmbientBottleneckAccessRecords are logically equal, false if they are not.</returns>
         public static bool operator ==(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
-            if (ReferenceEquals(left, null)) return ReferenceEquals(right, null);
+            if (left is null) return right is null;
             return left.Equals(right);
         }
         /// <summary>
@@ -351,7 +344,7 @@ namespace AmbientServices
         /// <returns>true if the <paramref name="left"/> is less than <paramref name="right"/>, false if not.</returns>
         public static bool operator <(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
-            return ReferenceEquals(left, null) ? !ReferenceEquals(right, null) : left.CompareTo(right) < 0;
+            return left is null ? right is not null : left.CompareTo(right) < 0;
         }
         /// <summary>
         /// Checks to see if a AmbientBottleneckAccessRecord is less than or equal to another one.
@@ -361,7 +354,7 @@ namespace AmbientServices
         /// <returns>true if the <paramref name="left"/> is less than or equal to <paramref name="right"/>, false if not.</returns>
         public static bool operator <=(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
-            return ReferenceEquals(left, null) || left.CompareTo(right) <= 0;
+            return left is null || left.CompareTo(right) <= 0;
         }
         /// <summary>
         /// Checks to see if a AmbientBottleneckAccessRecord is greater than another one.
@@ -371,7 +364,7 @@ namespace AmbientServices
         /// <returns>true if the <paramref name="left"/> is greater than <paramref name="right"/>, false if not.</returns>
         public static bool operator >(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
-            return !ReferenceEquals(left, null) && left.CompareTo(right) > 0;
+            return left is not null && left.CompareTo(right) > 0;
         }
         /// <summary>
         /// Checks to see if a AmbientBottleneckAccessRecord is greater than or equal to another one.
@@ -381,7 +374,7 @@ namespace AmbientServices
         /// <returns>true if the <paramref name="left"/> is greater than or equal to <paramref name="right"/>, false if not.</returns>
         public static bool operator >=(AmbientBottleneckAccessor? left, AmbientBottleneckAccessor? right)
         {
-            return ReferenceEquals(left, null) ? ReferenceEquals(right, null) : left.CompareTo(right) >= 0;
+            return left is null ? right is null : left.CompareTo(right) >= 0;
         }
     }
 }

@@ -44,7 +44,7 @@ namespace AmbientServices
         /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some cache implementations may ignore this value.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// <returns>The cached object, or null if it was not found in the cache.</returns>
-        public ValueTask<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public ValueTask<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default) where T : class
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
             if (cache == null) return TaskExtensions.ValueTaskFromResult<T?>(null);
@@ -64,10 +64,10 @@ namespace AmbientServices
         /// <remarks>
         /// If both <paramref name="expiration"/> and <paramref name="maxCacheDuration"/> are set, the earlier expiration will be used.
         /// </remarks>
-        public ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding = false, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding = false, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default) where T : class
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
-            if (cache == null) return default(ValueTask);
+            if (cache == null) return default;
             return cache.Store<T>(_cacheKeyPrefix + itemKey, item, disposeWhenDiscarding, maxCacheDuration, expiration, cancel);
         }
         /// <summary>
@@ -77,7 +77,7 @@ namespace AmbientServices
         /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// <returns>The item that was removed, or default if the specified item was not found.</returns>
-        public async ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
+        public async ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default)
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
             if (cache == null) return default;
@@ -88,10 +88,10 @@ namespace AmbientServices
         /// </summary>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// 
-        public ValueTask Clear(CancellationToken cancel = default(CancellationToken))
+        public ValueTask Clear(CancellationToken cancel = default)
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
-            if (cache == null) return default(ValueTask);
+            if (cache == null) return default;
             return cache.Clear(cancel);
         }
     }

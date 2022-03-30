@@ -127,7 +127,7 @@ namespace AmbientServices
 
         public void ResetCancellation(TimeSpan timeout)
         {
-            AmbientCancellationTokenSource cancelSource = new AmbientCancellationTokenSource(timeout);
+            AmbientCancellationTokenSource cancelSource = new(timeout);
             // dispose of any previously-held cancellation token source and swap in the new one
             if (!_inheritedCancelSource) _cancelSource.Dispose();
             _inheritedCancelSource = false;

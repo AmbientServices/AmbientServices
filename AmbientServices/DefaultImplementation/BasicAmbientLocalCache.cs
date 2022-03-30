@@ -16,9 +16,9 @@ namespace AmbientServices
         private readonly IAmbientSetting<int> _countToEject;
         private readonly IAmbientSetting<int> _minCacheEntries;
         private int _expireCount;
-        private ConcurrentQueue<TimedQueueEntry> _timedQueue = new ConcurrentQueue<TimedQueueEntry>();
-        private ConcurrentQueue<string> _untimedQueue = new ConcurrentQueue<string>();
-        private ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>();
+        private ConcurrentQueue<TimedQueueEntry> _timedQueue = new();
+        private ConcurrentQueue<string> _untimedQueue = new();
+        private ConcurrentDictionary<string, CacheEntry> _cache = new();
 
         public BasicAmbientLocalCache()
             : this(_Settings.Local)
@@ -73,7 +73,7 @@ namespace AmbientServices
             }
 #endif
         }
-        public async ValueTask<T?> Retrieve<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public async ValueTask<T?> Retrieve<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default) where T : class
         {
             CacheEntry? entry;
             if (_cache.TryGetValue(key, out entry))
@@ -103,7 +103,7 @@ namespace AmbientServices
             return null;
         }
 
-        public async ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public async ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default) where T : class
         {
             // does this entry *not* expire in the past?
             if (!(maxCacheDuration < TimeSpan.FromTicks(0)))
@@ -113,7 +113,7 @@ namespace AmbientServices
                 if (maxCacheDuration != null) actualExpiration = now.Add(maxCacheDuration.Value);
                 if (expiration != null && expiration.Value.Kind == DateTimeKind.Local) expiration = expiration.Value.ToUniversalTime();
                 if (expiration < actualExpiration) actualExpiration = expiration;
-                CacheEntry entry = new CacheEntry(itemKey, actualExpiration, item, disposeWhenDiscarding);
+                CacheEntry entry = new(itemKey, actualExpiration, item, disposeWhenDiscarding);
                 _cache.AddOrUpdate(itemKey, entry, (k, v) => { Async.SynchronizeValue(async () => { CacheEntry c = v; if (c != null) await c.Dispose().ConfigureAwait(true); }); return entry; });
                 if (actualExpiration == null)
                 {
@@ -221,7 +221,7 @@ namespace AmbientServices
             }
         }
 
-        public ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
+        public ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default)
         {
             CacheEntry? disposeEntry;
             if (_cache.TryRemove(itemKey, out disposeEntry))
@@ -231,7 +231,7 @@ namespace AmbientServices
             return TaskExtensions.ValueTaskFromResult((T?)default);
         }
 
-        private async ValueTask EjectEntry(CacheEntry entry, CancellationToken cancel = default(CancellationToken))
+        private async ValueTask EjectEntry(CacheEntry entry, CancellationToken cancel = default)
         {
             CacheEntry? disposeEntry;
             // race to remove the item from the cache--did we win the race?
@@ -241,7 +241,7 @@ namespace AmbientServices
             }
         }
 
-        public async ValueTask Clear(CancellationToken cancel = default(CancellationToken))
+        public async ValueTask Clear(CancellationToken cancel = default)
         {
             _untimedQueue = new ConcurrentQueue<string>();
             _timedQueue = new ConcurrentQueue<TimedQueueEntry>();

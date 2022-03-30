@@ -44,7 +44,7 @@ namespace AmbientServices
         private static readonly CancellationToken _AlreadyCancelled = AlreadyCancelledToken();
         private static CancellationToken AlreadyCancelledToken()
         {
-            CancellationTokenSource source = new CancellationTokenSource(); source.Cancel(); return source.Token;
+            CancellationTokenSource source = new(); source.Cancel(); return source.Token;
         }
 
         private IAmbientClock? _clock;

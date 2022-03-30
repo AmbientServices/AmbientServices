@@ -11,7 +11,7 @@ namespace AmbientServices
     class BasicAmbientStatistics : IAmbientStatistics
     {
         private readonly ProcessExecutionTimeStatistic _executionTime;
-        private readonly ConcurrentDictionary<string, IAmbientStatisticReader> _statistics = new ConcurrentDictionary<string, IAmbientStatisticReader>();
+        private readonly ConcurrentDictionary<string, IAmbientStatisticReader> _statistics = new();
 
         public BasicAmbientStatistics()
         {

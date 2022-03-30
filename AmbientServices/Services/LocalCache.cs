@@ -26,7 +26,7 @@ namespace AmbientServices
         /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some implementations may ignore this value.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// <returns>The cached object, or null if it was not found in the cache.</returns>
-        ValueTask<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class;
+        ValueTask<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default) where T : class;
         /// <summary>
         /// Stores the specified item in the cache.
         /// </summary>
@@ -40,7 +40,7 @@ namespace AmbientServices
         /// <remarks>
         /// If both <paramref name="expiration"/> and <paramref name="maxCacheDuration"/> are set, the earlier expiration will be used.
         /// </remarks>
-        ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding = false, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class;
+        ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding = false, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default) where T : class;
         /// <summary>
         /// Removes the specified item from the cache and return it.  If disposable, ownership is transferred to the caller.
         /// </summary>
@@ -48,11 +48,11 @@ namespace AmbientServices
         /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
         /// <returns>The removed item, or default if the item was not found.</returns>
-        ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken));
+        ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default);
         /// <summary>
         /// Flushes everything from the cache.
         /// </summary>
         /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
-        ValueTask Clear(CancellationToken cancel = default(CancellationToken));
+        ValueTask Clear(CancellationToken cancel = default);
     }
 }

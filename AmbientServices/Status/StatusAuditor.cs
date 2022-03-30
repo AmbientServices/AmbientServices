@@ -12,8 +12,8 @@ namespace AmbientServices
     /// </summary>
     public sealed class StatusAuditAlert : IEquatable<StatusAuditAlert>
     {
-        private static readonly StatusAuditAlert _Empty = new StatusAuditAlert();
-        private static readonly StatusAuditAlert _None = new StatusAuditAlert(StatusRating.Okay, "NoAlert", "No Alerts", "There are no alerts.");
+        private static readonly StatusAuditAlert _Empty = new();
+        private static readonly StatusAuditAlert _None = new(StatusRating.Okay, "NoAlert", "No Alerts", "There are no alerts.");
         /// <summary>
         /// An empty <see cref="StatusAuditAlert"/> in case they need to be compared.
         /// </summary>
@@ -83,13 +83,10 @@ namespace AmbientServices
         /// <param name="details">The details alert message.</param>
         public StatusAuditAlert(float rating, string auditAlertCode, string terse, string details)
         {
-            if (auditAlertCode == null) throw new ArgumentNullException(nameof(auditAlertCode));
-            if (terse == null) throw new ArgumentNullException(nameof(terse));
-            if (details == null) throw new ArgumentNullException(nameof(details));
             _rating = rating;
-            _auditAlertCode = auditAlertCode;
-            _terse = terse;
-            _details = details;
+            _auditAlertCode = auditAlertCode ?? throw new ArgumentNullException(nameof(auditAlertCode));
+            _terse = terse ?? throw new ArgumentNullException(nameof(terse));
+            _details = details ?? throw new ArgumentNullException(nameof(details));
         }
 
         /// <summary>
@@ -107,8 +104,7 @@ namespace AmbientServices
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
         public override bool Equals(object? obj)
         {
-            StatusAuditAlert? alert = obj as StatusAuditAlert;
-            if (ReferenceEquals(alert, null)) return false;
+            if (obj is not StatusAuditAlert alert) return false;
             return Equals(alert);
         }
 
@@ -119,7 +115,7 @@ namespace AmbientServices
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
         public bool Equals(StatusAuditAlert? other)
         {
-            if (ReferenceEquals(other, null)) return false;
+            if (other is null) return false;
             return this._rating.Equals(other._rating) && String.Equals(this._auditAlertCode, other._auditAlertCode, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -131,7 +127,7 @@ namespace AmbientServices
         /// <returns><b>true</b> if <paramref name="a"/> is equal to <paramref name="b"/>.</returns>
         public static bool operator ==(StatusAuditAlert? a, StatusAuditAlert? b)
         {
-            if (ReferenceEquals(a, null)) return ReferenceEquals(b, null);
+            if (a is null) return b is null;
             return a.Equals(b);
         }
         /// <summary>
@@ -142,7 +138,7 @@ namespace AmbientServices
         /// <returns><b>true</b> if <paramref name="a"/> is NOT equal to <paramref name="b"/>.</returns>
         public static bool operator !=(StatusAuditAlert? a, StatusAuditAlert? b)
         {
-            if (ReferenceEquals(a, null)) return !ReferenceEquals(b, null);
+            if (a is null) return b is not null;
             return !a.Equals(b);
         }
         /// <summary>
@@ -164,7 +160,7 @@ namespace AmbientServices
         /// <summary>
         /// A <see cref="StatusAuditReport"/> indicating that the first audit is pending.
         /// </summary>
-        public static readonly StatusAuditReport Pending = new StatusAuditReport();
+        public static readonly StatusAuditReport Pending = new();
 
         private readonly DateTime _auditStartTime;
         private readonly TimeSpan _auditDuration;
@@ -232,7 +228,7 @@ namespace AmbientServices
         /// <returns>A string representation of this object.</returns>
         public override string ToString()
         {
-            StringBuilder output = new StringBuilder();
+            StringBuilder output = new();
             output.Append('@');
             output.Append(_auditStartTime.ToShortTimeString().Replace(" ", "", StringComparison.Ordinal));
             if (_alert != null)
@@ -263,8 +259,7 @@ namespace AmbientServices
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
         public override bool Equals(object? obj)
         {
-            StatusAuditReport? alert = obj as StatusAuditReport;
-            if (ReferenceEquals(alert, null)) return false;
+            if (obj is not StatusAuditReport alert) return false;
             return Equals(alert);
         }
 
@@ -275,7 +270,7 @@ namespace AmbientServices
         /// <returns>true if the objects are logically equivalent, false if they are not.</returns>
         public bool Equals(StatusAuditReport? other)
         {
-            if (ReferenceEquals(other, null)) return false;
+            if (other is null) return false;
             return Object.Equals(this._alert, other._alert);
         }
 
@@ -287,7 +282,7 @@ namespace AmbientServices
         /// <returns><b>true</b> if <paramref name="a"/> is equal to <paramref name="b"/>.</returns>
         public static bool operator ==(StatusAuditReport? a, StatusAuditReport? b)
         {
-            if (ReferenceEquals(a, null)) return ReferenceEquals(b, null);
+            if (a is null) return b is null;
             return a.Equals(b);
         }
         /// <summary>
@@ -298,7 +293,7 @@ namespace AmbientServices
         /// <returns><b>true</b> if <paramref name="a"/> is NOT equal to <paramref name="b"/>.</returns>
         public static bool operator !=(StatusAuditReport? a, StatusAuditReport? b)
         {
-            if (ReferenceEquals(a, null)) return !ReferenceEquals(b, null);
+            if (a is null) return b is not null;
             return !a.Equals(b);
         }
     }
@@ -312,9 +307,9 @@ namespace AmbientServices
         private readonly Status? _status;
         private readonly TimeSpan _baselineAuditFrequency;
         private readonly AmbientEventTimer _initialAuditTimer;    // only used until the initial audit happens, then disposed
+        private readonly AmbientEventTimer _auditTimer;
 
-        private AmbientCancellationTokenSource? _backgroundCancelSource = new AmbientCancellationTokenSource(); // interlocked
-        private AmbientEventTimer _auditTimer;  // interlocked
+        private AmbientCancellationTokenSource? _backgroundCancelSource = new(); // interlocked
         private int _backgroundAuditCount;      // interlocked
         private int _foregroundAuditCount;      // interlocked
         private long _nextAuditTime;            // interlocked
@@ -375,6 +370,10 @@ namespace AmbientServices
             : this(targetSystem, baselineAuditFrequency, Status.DefaultInstance)
         {
         }
+        /// <summary>
+        /// Gets the <see cref="Status"/> that owns this auditor, if there is one.
+        /// </summary>
+        public Status? Owner => _status;
 
         internal void ScheduleInitialAudit()
         {
@@ -396,13 +395,13 @@ namespace AmbientServices
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        sealed public override async ValueTask<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        sealed public override async ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
             return await InternalAuditAsync(true, cancel).ConfigureAwait(false);
         }
-        private async ValueTask<StatusResults> InternalAuditAsync(bool foreground = false, CancellationToken cancel = default(CancellationToken))
+        private async ValueTask<StatusResults> InternalAuditAsync(bool foreground = false, CancellationToken cancel = default)
         {
-            StatusResultsBuilder builder = new StatusResultsBuilder(this);
+            StatusResultsBuilder builder = new(this);
             try
             {
                 try
@@ -451,11 +450,17 @@ namespace AmbientServices
         }
         private TimeSpan AdjustedAuditInterval(float? rating, TimeSpan auditDuration)
         {
+            /*
+             * The audit interval is automatically adjusted based on two competing factors:
+             * 1. The status of the system, whether it is failing, alerting, okay, or superlative
+             * 2. The duration required to perform the audit
+             * As the status gets worse, the frequency goes up so that the system can more quickly determine when the failing system has recovered and begin using it again
+             * As the duration gets longer, the frequency goes down to ensure that we don't consume too many resources either here or on the remote system
+             * */
             if (_baselineAuditFrequency.Ticks <= 0 || _baselineAuditFrequency == TimeSpan.MaxValue) return TimeSpan.MaxValue;
             float ratingAdjustment;
             if (rating == null)
             {
-                ratingAdjustment = 1.0f;    // go back to the default and bail out without doing all the complicated calculations
                 Interlocked.Exchange(ref _frequencyTicks, _baselineAuditFrequency.Ticks);
                 return TimeSpan.FromTicks(_frequencyTicks);
             }
@@ -494,7 +499,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> to put the audit results into.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        public abstract ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken));
+        public abstract ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default);
 
         /// <summary>
         /// Starts stopping any asynchronous activity (such as periodic audits).
@@ -505,14 +510,14 @@ namespace AmbientServices
             _initialAuditTimer.Close();  // just in case--we must have shut down pretty quickly to get here without this timer already being closed
             _auditTimer.Stop();
             _backgroundCancelSource?.Cancel();
-            return default(ValueTask);
+            return default;
         }
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
         protected internal sealed override ValueTask FinishStop()
         {
-            return default(ValueTask);
+            return default;
         }
         /// <summary>
         /// Dispose the instance (only used by derived classes).

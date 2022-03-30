@@ -199,6 +199,6 @@ namespace AmbientServices.Utility
             }
             return true;
         }
-        private static Pseudorandom _Rand = new AmbientServices.Utility.Pseudorandom(true);
+        private static Pseudorandom _Rand = new(true);
     }
 }

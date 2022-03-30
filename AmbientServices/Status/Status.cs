@@ -17,8 +17,8 @@ namespace AmbientServices
         internal const string DefaultSource = "LOCALHOST";
         internal const string DefaultTarget = "Unknown Target";
 
-        private readonly static Status _DefaultInstance = new Status(true);
-        internal readonly static AmbientLogger<Status> Logger = new AmbientLogger<Status>();
+        private readonly static Status _DefaultInstance = new(true);
+        internal readonly static AmbientLogger<Status> Logger = new();
         /// <summary>
         /// Gets the base instance that contains the overall status and is initialized with all checkers and auditors with public empty constructors.  
         /// Note that even the default instance must be started by calling <see cref="Start"/> before checks and audits will occur, and that does not happen automatically.
@@ -26,7 +26,7 @@ namespace AmbientServices
         public static Status DefaultInstance { get { return _DefaultInstance; } }
 
         private readonly bool _loadAllCheckers;
-        private ConcurrentHashSet<StatusChecker> _checkers = new ConcurrentHashSet<StatusChecker>();
+        private ConcurrentHashSet<StatusChecker> _checkers = new();
         private int _shuttingDown;          // interlocked
         private int _started;               // interlocked
 
@@ -53,7 +53,7 @@ namespace AmbientServices
         /// Start may only be called once.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to stop the operation before it completes.</param>
-        public ValueTask Start(CancellationToken cancel = default(CancellationToken))
+        public ValueTask Start(CancellationToken cancel = default)
         {
             Logger.Log("Starting", "StartStop");
             if (System.Threading.Interlocked.Exchange(ref _started, 1) != 0) throw new InvalidOperationException("The Status system has already been started!");
@@ -70,7 +70,7 @@ namespace AmbientServices
                 }
             }
             Logger.Log("Started", "StartStop");
-            return default(ValueTask);
+            return default;
         }
         /// <summary>
         /// Stops the status system by disposing of all the status nodes.
@@ -175,11 +175,11 @@ namespace AmbientServices
         /// Normally audits will be refreshed automatically in the background, but in some circumstances, users may want to force an immediate update.
         /// </summary>
         /// <returns>An enumeration of <see cref="StatusChecker"/>s that did not complete refreshing before being cancelled.</returns>
-        public async ValueTask<IEnumerable<StatusChecker>> RefreshAsync(CancellationToken cancel = default(CancellationToken))
+        public async ValueTask<IEnumerable<StatusChecker>> RefreshAsync(CancellationToken cancel = default)
         {
             Logger.Log("Explicit Refreshing", "Check");
             // asynchronously get the status of each system
-            Dictionary<StatusChecker, Task<StatusResults>> checkerTasks = new Dictionary<StatusChecker, Task<StatusResults>>(_checkers.Count);
+            Dictionary<StatusChecker, Task<StatusResults>> checkerTasks = new(_checkers.Count);
             foreach (StatusChecker checker in _checkers)
             {
                 Task<StatusResults> task = Task.Run(() => checker.GetStatus(cancel).AsTask(), cancel);
@@ -188,14 +188,14 @@ namespace AmbientServices
             // wait for either all the checker tasks to complete, or for the cancellation token to be canceled
             await Task.WhenAny(Task.WhenAll(checkerTasks.Values), cancel.AsTask()).ConfigureAwait(false);
             // make a list of those that got canceled or catastrophically failed (GetStatus should never throw an exception, but it's theoretically possible)
-            List<StatusChecker> canceledOrFailedCheckers = new List<StatusChecker>();
+            List<StatusChecker> canceledOrFailedCheckers = new();
             foreach (KeyValuePair<StatusChecker, Task<StatusResults>> kvp in checkerTasks)
             {
                 StatusChecker checker = kvp.Key;
                 Task<StatusResults> resultsTask = kvp.Value;
                 if (resultsTask.IsFaulted) // this means that GetStatus threw an exception--this should have been caught internally, but we'll handle it here anyway
                 {
-                    StatusResultsBuilder builder = new StatusResultsBuilder(checker);
+                    StatusResultsBuilder builder = new(checker);
                     builder.AddException(resultsTask.Exception!);   // if IsFaulted, there should be a non-null Exception!
                     checker.SetLatestResults(builder.FinalResults);
                     // in this case the checker failed, but we put the results back into the checker, so we've made it appear as if it succeeded with an exception
@@ -217,9 +217,9 @@ namespace AmbientServices
             get
             {
                 DateTime now = AmbientClock.UtcNow;
-                List<StatusResults> results = new List<StatusResults>(_checkers.Select(checker => checker.LatestResults));
+                List<StatusResults> results = new(_checkers.Select(checker => checker.LatestResults));
                 results.Sort((a, b) => RatingCompare(a, b));
-                StatusResults overallResults = new StatusResults(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
+                StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
                 return overallResults;
             }
         }
@@ -231,9 +231,9 @@ namespace AmbientServices
             get
             {
                 DateTime now = AmbientClock.UtcNow;
-                List<StatusResults> results = new List<StatusResults>(_checkers.Select(checker => checker.LatestResults));
+                List<StatusResults> results = new(_checkers.Select(checker => checker.LatestResults));
                 results.Sort((a, b) => RatingCompare(a, b));
-                StatusResults overallResults = new StatusResults(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
+                StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
                 StatusAuditAlert alerts = overallResults.GetSummaryAlerts(true, float.MaxValue, false);
                 return alerts;
             }
@@ -246,9 +246,9 @@ namespace AmbientServices
             get
             {
                 DateTime now = AmbientClock.UtcNow;
-                List<StatusResults> results = new List<StatusResults>(_checkers.Select(checker => checker.LatestResults));
+                List<StatusResults> results = new(_checkers.Select(checker => checker.LatestResults));
                 results.Sort((a, b) => RatingCompare(a, b));
-                StatusResults overallResults = new StatusResults(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
+                StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
                 StatusAuditAlert alerts = overallResults.GetSummaryAlerts(true, StatusRating.Alert, false);
                 return alerts;
             }
@@ -261,9 +261,9 @@ namespace AmbientServices
             get
             {
                 DateTime now = AmbientClock.UtcNow;
-                List<StatusResults> results = new List<StatusResults>(_checkers.Select(checker => checker.LatestResults));
+                List<StatusResults> results = new(_checkers.Select(checker => checker.LatestResults));
                 results.Sort((a, b) => RatingCompare(a, b));
-                StatusResults overallResults = new StatusResults(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
+                StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
                 StatusAuditAlert alerts = overallResults.GetSummaryAlerts(true, StatusRating.Fail, false);
                 return alerts;
             }

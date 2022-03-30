@@ -110,7 +110,7 @@ namespace AmbientServices.Utility
         /// <param name="arrayIndex">The offset within the array where the first item is to be placed.</param>
         public void CopyTo(T[] array, int arrayIndex) { _dict.Keys.CopyTo(array, arrayIndex); }
 //        public void CopyTo(T[] array, int arrayIndex, int count) { _dict.Keys.CopyTo(array, arrayIndex, count); }
-        private static readonly HashSetComparer _DefaultComparer = new HashSetComparer();
+        private static readonly HashSetComparer _DefaultComparer = new();
 
 #pragma warning disable CA1000  // not sure how else this could possibly be accomplished?
         /// <summary>
@@ -128,8 +128,8 @@ namespace AmbientServices.Utility
             public bool Equals(ConcurrentHashSet<T>? x, ConcurrentHashSet<T>? y)
             {
                 if (ReferenceEquals(x, y)) return true;
-                if (ReferenceEquals(x, null)) return false;
-                if (ReferenceEquals(null, y)) return false;
+                if (x is null) return false;
+                if (y is null) return false;
                 return x.IsSubsetOf(y) && y.IsSubsetOf(x);
             }
             public int GetHashCode(ConcurrentHashSet<T> obj)
@@ -164,7 +164,7 @@ namespace AmbientServices.Utility
         public void IntersectWith(IEnumerable<T>? other)
         {
             if (other == null) { Clear(); return; }
-            HashSet<T> keep = new HashSet<T>(other);
+            HashSet<T> keep = new(other);
             foreach (T item in this)
             {
                 if (!keep.Contains(item))
@@ -181,7 +181,7 @@ namespace AmbientServices.Utility
         public bool IsProperSubsetOf(IEnumerable<T>? other)
         {
             if (other == null) return false;
-            HashSet<T> valid = new HashSet<T>(other);
+            HashSet<T> valid = new(other);
             if (_dict.Count >= valid.Count) return false;
             foreach (T item in this)
             {
@@ -214,7 +214,7 @@ namespace AmbientServices.Utility
         public bool IsSubsetOf(IEnumerable<T>? other)
         {
             if (other == null) return _dict.IsEmpty;
-            HashSet<T> valid = new HashSet<T>(other);
+            HashSet<T> valid = new(other);
             if (_dict.Count > valid.Count) return false;
             foreach (T item in this)
             {

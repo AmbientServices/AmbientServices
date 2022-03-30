@@ -632,7 +632,7 @@ namespace AmbientServices.Utility
         /// <returns>true if <paramref name="other"/> is logically equal to this instance, false if it is not.</returns>
         public bool Equals(Pseudorandom? other)
         {
-            if (ReferenceEquals(other, null)) return false;
+            if (other is null) return false;
             return _seed.Equals(other._seed);
         }
         /// <summary>
@@ -644,7 +644,7 @@ namespace AmbientServices.Utility
         public static bool operator ==(Pseudorandom? a, Pseudorandom? b)
         {
             if (Object.ReferenceEquals(a, b)) return true;
-            if (Object.ReferenceEquals(a, null) || Object.ReferenceEquals(b, null)) return false;
+            if (a is null || b is null) return false;
             return a._seed == b._seed;
         }
         /// <summary>
@@ -656,7 +656,7 @@ namespace AmbientServices.Utility
         public static bool operator !=(Pseudorandom? a, Pseudorandom? b)
         {
             if (Object.ReferenceEquals(a, b)) return false;
-            if (Object.ReferenceEquals(a, null) || Object.ReferenceEquals(b, null)) return true;
+            if (a is null || b is null) return true;
             return a._seed != b._seed;
         }
     }

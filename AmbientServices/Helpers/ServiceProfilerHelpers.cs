@@ -72,7 +72,7 @@ The regular expression will attempt to match the system identifier, with the val
             {
                 Regex? groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
                 if (_scopeDistributor.Value == null) _scopeDistributor.Value = new ScopeOnSystemSwitchedDistributor();
-                CallContextServiceProfiler analyzer = new CallContextServiceProfiler(_scopeDistributor.Value, scopeName, groupTransform);
+                CallContextServiceProfiler analyzer = new(_scopeDistributor.Value, scopeName, groupTransform);
                 return analyzer;
             }
             return null;
@@ -90,7 +90,7 @@ The regular expression will attempt to match the system identifier, with the val
             IAmbientServiceProfiler? metrics = _AmbientServiceProfiler.Local;
             if (metrics == null) return null;
             Regex? groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
-            TimeWindowServiceProfiler tracker = new TimeWindowServiceProfiler(metrics, scopeNamePrefix, windowPeriod, onWindowComplete, groupTransform);
+            TimeWindowServiceProfiler tracker = new(metrics, scopeNamePrefix, windowPeriod, onWindowComplete, groupTransform);
             return tracker;
         }
         /// <summary>
@@ -112,7 +112,7 @@ The regular expression will attempt to match the system identifier, with the val
             if (metrics != null)
             {
                 Regex? groupTransform = (overrideSystemGroupTransformRegex == null) ? _defaultSystemGroupTransformSetting.Value : new Regex(overrideSystemGroupTransformRegex, RegexOptions.Compiled);
-                ProcessOrSingleTimeWindowServiceProfiler tracker = new ProcessOrSingleTimeWindowServiceProfiler(metrics, scopeName, groupTransform);
+                ProcessOrSingleTimeWindowServiceProfiler tracker = new(metrics, scopeName, groupTransform);
                 return tracker;
             }
             return null;

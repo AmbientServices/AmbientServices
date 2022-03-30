@@ -95,8 +95,7 @@ namespace AmbientServices
         /// <param name="stopwatchTicks">The number of stopwatch ticks to skip ahead.</param>
         public static void SkipAhead(long stopwatchTicks)
         {
-            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
-            if (controllable != null) controllable.SkipAhead(stopwatchTicks);
+            if (_Clock.Override is PausedAmbientClock controllable) controllable.SkipAhead(stopwatchTicks);
         }
         /// <summary>
         /// Skips a paused clock ahead the specified amount of time.
@@ -110,8 +109,7 @@ namespace AmbientServices
         /// <param name="skipTime">The amount of time to skip ahead.</param>
         public static void SkipAhead(TimeSpan skipTime)
         {
-            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
-            if (controllable != null) controllable.SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(skipTime.Ticks));
+            if (_Clock.Override is PausedAmbientClock controllable) controllable.SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(skipTime.Ticks));
         }
         /// <summary>
         /// The ambient clock equivalent of <see cref="Thread.Sleep(int)"/>.
@@ -125,8 +123,7 @@ namespace AmbientServices
         /// <param name="millisecondsToSleep">The number of milliseconds to sleep.</param>
         public static void ThreadSleep(int millisecondsToSleep)
         {
-            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
-            if (controllable != null)
+            if (_Clock.Override is PausedAmbientClock controllable)
             {
                 controllable.SkipAhead((long)millisecondsToSleep * Stopwatch.Frequency / 1000);
             }
@@ -158,8 +155,7 @@ namespace AmbientServices
         /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
         private static async ValueTask Delay(long millisecondsToDelay)
         {
-            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
-            if (controllable != null)
+            if (_Clock.Override is PausedAmbientClock controllable)
             {
                 controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
                 await Task.Delay(0).ConfigureAwait(false);
@@ -191,8 +187,7 @@ namespace AmbientServices
         }
         private static async ValueTask Delay(long millisecondsToDelay, CancellationToken cancel)
         {
-            PausedAmbientClock? controllable = _Clock.Override as PausedAmbientClock;
-            if (controllable != null)
+            if (_Clock.Override is PausedAmbientClock controllable)
             {
                 controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
                 await Task.Delay(0, cancel).ConfigureAwait(false);
@@ -260,7 +255,7 @@ namespace AmbientServices
         /// </summary>
         internal class PausedAmbientClock : IAmbientClock
         {
-            private readonly ConcurrentHashSet<IAmbientClockTimeChangedNotificationSink> _notificationSinks = new ConcurrentHashSet<IAmbientClockTimeChangedNotificationSink>();
+            private readonly ConcurrentHashSet<IAmbientClockTimeChangedNotificationSink> _notificationSinks = new();
             private readonly long _baseStopwatchTicks;
             private long _elapsedStopwatchTicks;
 
@@ -796,8 +791,8 @@ namespace AmbientServices
         IDisposable
     {
         private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
-        private static readonly ManualResetEvent _AlwaysSignaled = new ManualResetEvent(true);
-        private static readonly object _UseTimerInstanceForStateIndicator = new object();
+        private static readonly ManualResetEvent _AlwaysSignaled = new(true);
+        private static readonly object _UseTimerInstanceForStateIndicator = new();
         private static long _TimerCount;
 
 #if NETCOREAPP3_1 || NET5_0_OR_GREATER
@@ -888,11 +883,10 @@ namespace AmbientServices
         /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(IAmbientClock? clock, TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
         {
-            if (callback == null) throw new ArgumentNullException(nameof(callback));
             if (dueTime != Timeout.InfiniteTimeSpan && dueTime.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(dueTime), "The dueTime parameter must not be negative unless it is Infinite!");
             if (period != Timeout.InfiniteTimeSpan && period.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(period), "The period parameter must not be negative unless it is Infinite!");
 
-            _callback = callback;
+            _callback = callback ?? throw new ArgumentNullException(nameof(callback));
             _state = Object.ReferenceEquals(state, _UseTimerInstanceForStateIndicator) ? this : state;
             _clock = clock;
             // is there a clock?
@@ -1121,7 +1115,7 @@ namespace AmbientServices
     public sealed class AmbientRegisteredWaitHandle : IAmbientClockTimeChangedNotificationSink
     {
         private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
-        private static readonly ManualResetEvent _ManualResetEvent = new ManualResetEvent(true);
+        private static readonly ManualResetEvent _ManualResetEvent = new(true);
 
 
         private readonly RegisteredWaitHandle _registeredWaitHandle;

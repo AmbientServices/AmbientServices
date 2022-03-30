@@ -61,14 +61,14 @@ namespace AmbientServices
         /// </summary>
         protected internal virtual ValueTask BeginStop()
         {
-            return default(ValueTask);
+            return default;
         }
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
         protected internal virtual ValueTask FinishStop()
         {
-            return default(ValueTask);
+            return default;
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace AmbientServices
         /// Results should always be recorded using <see cref="SetLatestResults"/>.
         /// </remarks>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        public virtual ValueTask<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        public virtual ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
             // POSSIBLE BREAKING CHANGE: maybe it would be good to have a public function that 
             // catches exceptions and handles them properly and also always saves results using SetLatestResults?

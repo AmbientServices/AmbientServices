@@ -28,7 +28,7 @@ namespace AmbientServices
     public class StatusPropertyThresholds
     {
         private static ConcurrentDictionary<string, StatusPropertyThresholds> _thresholds = InitializeThresholds();
-        private static DefaultStatusThresholds _thresholdsAccessor = new DefaultStatusThresholds(_thresholds);
+        private static DefaultStatusThresholds _thresholdsAccessor = new(_thresholds);
         /// <summary>
         /// Gets a <see cref="IStatusThresholdsRegistry"/> containing the default status thresholds (those assigned via <see cref="DefaultPropertyThresholdsAttribute"/>s).
         /// </summary>

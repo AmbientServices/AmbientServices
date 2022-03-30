@@ -146,7 +146,7 @@ namespace AmbientServices
     }
     internal class AmbientLogFilter
     {
-        private static readonly AmbientLogFilter _Default = new AmbientLogFilter("Default");
+        private static readonly AmbientLogFilter _Default = new("Default");
         /// <summary>
         /// Gets the default log filter.
         /// </summary>

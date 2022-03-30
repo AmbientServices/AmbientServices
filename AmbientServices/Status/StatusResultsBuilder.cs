@@ -19,8 +19,8 @@ namespace AmbientServices
         private DateTime? _nextAuditTime;
         private TimeSpan? _auditDuration;
         private StatusAuditAlert? _worstAlert;
-        private readonly List<StatusProperty> _properties = new List<StatusProperty>();
-        private readonly List<StatusResultsBuilder> _children = new List<StatusResultsBuilder>();
+        private readonly List<StatusProperty> _properties = new();
+        private readonly List<StatusResultsBuilder> _children = new();
 
         //private int? _hiddenFailuresTolerated;
         //private float? _spatialDistributionOfRedundancy;
@@ -174,7 +174,7 @@ namespace AmbientServices
             get
             {
                 TimeSpan duration = (_auditDuration == null) ? (AmbientClock.UtcNow - _auditStartTime) : _auditDuration.Value;
-                StatusAuditReport? report = Object.ReferenceEquals(_worstAlert, null) ? null : new StatusAuditReport(_auditStartTime, duration, _nextAuditTime, _worstAlert);
+                StatusAuditReport? report = _worstAlert is null ? null : new StatusAuditReport(_auditStartTime, duration, _nextAuditTime, _worstAlert);
                 return (report == null)
                     ? new StatusResults(_sourceSystem, _targetSystem, _auditStartTime, _relativeDetailLevel, _properties, _natureOfSystem, _children.Select(c => c.FinalResults))
                     : new StatusResults(_sourceSystem, _targetSystem, _auditStartTime, _relativeDetailLevel, _properties, report);
@@ -229,7 +229,7 @@ namespace AmbientServices
         /// <param name="childName">The name of the child node to add.</param>
         public StatusResultsBuilder AddChild(string childName)
         {
-            StatusResultsBuilder childNode = new StatusResultsBuilder(childName);
+            StatusResultsBuilder childNode = new(childName);
             _children.Add(childNode);
             return childNode;
         }
@@ -245,7 +245,7 @@ namespace AmbientServices
             string exceptionType = ex.TypeName();
             string exceptionTerse = "[" + exceptionType + "] " + ex.Message.Replace(Environment.NewLine, Environment.NewLine + "  ", StringComparison.Ordinal);
             string exceptionDetails = HttpUtility.HtmlEncode(ex.ToFilteredString().Trim()).Replace(Environment.NewLine, "<br/>", StringComparison.Ordinal);
-            if (Object.ReferenceEquals(_worstAlert, null) || rating < _worstAlert.Rating)
+            if (_worstAlert is null || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, exceptionType, exceptionTerse, exceptionDetails);
             }
@@ -261,7 +261,7 @@ namespace AmbientServices
         {
             if (severity < 0.0) throw new ArgumentOutOfRangeException(nameof(severity), "The specified severity must be greater than or equal to zero!");
             float rating = StatusRating.Fail - severity;
-            if (Object.ReferenceEquals(_worstAlert, null) || rating < _worstAlert.Rating)
+            if (_worstAlert is null || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             }
@@ -277,7 +277,7 @@ namespace AmbientServices
         {
             if (severity < 0.0 || severity >= 1.0) throw new ArgumentOutOfRangeException(nameof(severity), "The specified severity must be less than one and greater than or equal to zero!");
             float rating = StatusRating.Alert - severity;
-            if (Object.ReferenceEquals(_worstAlert, null) || rating < _worstAlert.Rating)
+            if (_worstAlert is null || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             }
@@ -293,7 +293,7 @@ namespace AmbientServices
         {
             if (severity >= 1.0) throw new ArgumentOutOfRangeException(nameof(severity), "The specified severity must less than one!");
             float rating = StatusRating.Okay - severity;
-            if (Object.ReferenceEquals(_worstAlert, null) || rating < _worstAlert.Rating)
+            if (_worstAlert is null || rating < _worstAlert.Rating)
             {
                 _worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             }
@@ -307,7 +307,7 @@ namespace AmbientServices
         public void AddSuperlative(string auditAlertCode, string terse, string details)
         {
             float rating = StatusRating.Superlative;
-            if (Object.ReferenceEquals(_worstAlert, null))
+            if (_worstAlert is null)
             {
                 _worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             }
@@ -323,7 +323,7 @@ namespace AmbientServices
         /// <returns>A <see cref="StatusResultsBuilder"/> constructed from the specified parameters.</returns>
         public static StatusResultsBuilder CreateRawStatusResultsBuilder(string targetSystem, float rating, string auditAlertCode, string terse, string details)
         {
-            StatusResultsBuilder temp = new StatusResultsBuilder(targetSystem);
+            StatusResultsBuilder temp = new(targetSystem);
             temp.NatureOfSystem = StatusNatureOfSystem.Leaf;
             temp._worstAlert = new StatusAuditAlert(rating, auditAlertCode, terse, details);
             return temp;

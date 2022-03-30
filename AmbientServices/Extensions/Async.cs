@@ -20,7 +20,7 @@ namespace AmbientServices
     /// </summary>
     public static class Async
     {
-        private static readonly System.Threading.SynchronizationContext sMultithreadedContext = new System.Threading.SynchronizationContext();
+        private static readonly System.Threading.SynchronizationContext sMultithreadedContext = new();
 
         /// <summary>
         /// Gets a multithreaded context to use for spawning tasks to the multithreaded context from within a synchronous context.
@@ -443,7 +443,7 @@ namespace AmbientServices
     /// </summary>
     public sealed class SynchronousTaskScheduler : System.Threading.Tasks.TaskScheduler
     {
-        private static readonly SynchronousTaskScheduler _Default = new SynchronousTaskScheduler();
+        private static readonly SynchronousTaskScheduler _Default = new();
         /// <summary>
         /// Gets the default instance for this singleton class.
         /// </summary>
@@ -492,7 +492,7 @@ namespace AmbientServices
     /// </summary>
     public class SynchronousSynchronizationContext : System.Threading.SynchronizationContext
     {
-        private static readonly SynchronousSynchronizationContext _Default = new SynchronousSynchronizationContext();
+        private static readonly SynchronousSynchronizationContext _Default = new();
         /// <summary>
         /// Gets the instance for this singleton class.
         /// </summary>

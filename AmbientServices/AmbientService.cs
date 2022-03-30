@@ -50,7 +50,7 @@ namespace AmbientServices
     /// <typeparam name="T">The interface for the service.</typeparam>
     public class AmbientService<T> where T : class
     {
-        private static readonly AmbientService<T> _Instance = new AmbientService<T>();
+        private static readonly AmbientService<T> _Instance = new();
         /// <summary>
         /// Gets the <see cref="AmbientService{T}"/> for the service indicated by the type.
         /// </summary>
@@ -64,11 +64,11 @@ namespace AmbientServices
         /// <summary>
         /// The singleton call-context-local service reference (non-singleton reference can be used for unit testing).
         /// </summary>
-        private AsyncLocal<LocalServiceReference<T>?> _localReference = new AsyncLocal<LocalServiceReference<T>?>();
+        private AsyncLocal<LocalServiceReference<T>?> _localReference = new();
         /// <summary>
         /// The global service reference.
         /// </summary>
-        private GlobalServiceReference<T> _globalReference = new GlobalServiceReference<T>();
+        private GlobalServiceReference<T> _globalReference = new();
 
 
         // this is only internal instead of private so that we can diagnose issues in test cases
@@ -265,7 +265,7 @@ namespace AmbientServices
         /// <summary>
         /// A generic object whose instance is used to indicate that the default service implementation has been suppressed.
         /// </summary>
-        private static readonly object SuppressedService = new object();
+        private static readonly object SuppressedService = new();
 
         /// <summary>
         /// A reference to the current service implementation.  Null if not yet initialized.  <see cref="SuppressedService"/> if the service has been explicitly suppressed.
@@ -292,10 +292,9 @@ namespace AmbientServices
             T? newDefaultImplementation = DefaultImplementation();
             // still no default implementation registered?  try again later
             if (newDefaultImplementation == null) return null;
-            T? oldDefaultImplementation = System.Threading.Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) as T;
             // we should almost always get a null back here, but it's theoretically possible if two attempts to retrieve the implementation happen at the same time, but even in this case, the only way we would get back instances of different types would be if the default ambient service changed, which shouldn't be possible given the current implementation
             // as a result, the non-null case below is unlikely to get covered by tests
-            return (oldDefaultImplementation == null)
+            return (System.Threading.Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) is not T oldDefaultImplementation)
                 ? newDefaultImplementation
                 : oldDefaultImplementation;
         }
@@ -343,7 +342,7 @@ namespace AmbientServices
         /// <summary>
         /// An object whose instance is used to indicate that the default implementation has been suppressed.
         /// </summary>
-        internal static readonly object SuppressedImplementation = new object();
+        internal static readonly object SuppressedImplementation = new();
 
         /// <summary>
         /// The call-context-local override.
