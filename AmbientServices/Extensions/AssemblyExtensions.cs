@@ -10,7 +10,7 @@ namespace AmbientServices.Utility
     /// <summary>
     /// A static class with extension functions for <see cref="System.Reflection.Assembly"/>.
     /// </summary>
-    internal static class AssemblyExtensions
+    public static class AssemblyExtensions
     {
         /// <summary>
         /// Enumerates loadable types from the assembly, even if referencing one or more of the types throws a <see cref="ReflectionTypeLoadException"/> exception.
