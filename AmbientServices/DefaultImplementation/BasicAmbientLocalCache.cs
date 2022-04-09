@@ -27,17 +27,18 @@ namespace AmbientServices
 
         public BasicAmbientLocalCache(IAmbientSettingsSet? settings)
         {
-            _callFrequencyToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-EjectFrequency", "The number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "100");
-            _countToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-MaximumItemCount", "The maximum number of both timed and untimed items to allow in the cache before ejecting items.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "1000");
-            _minCacheEntries = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-MinimumItemCount", "The minimum number of unexpired both timed and untimed items to keep in the cache at all times.", s => Int32.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "1");
+            _callFrequencyToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-EjectFrequency", "The number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.", s => int.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "100");
+            _countToEject = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-MaximumItemCount", "The maximum number of both timed and untimed items to allow in the cache before ejecting items.", s => int.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "1000");
+            _minCacheEntries = AmbientSettings.GetSetting<int>(settings, nameof(BasicAmbientLocalCache) + "-MinimumItemCount", "The minimum number of unexpired both timed and untimed items to keep in the cache at all times.", s => int.Parse(s!, System.Globalization.CultureInfo.InvariantCulture), "1");
         }
 
-        struct TimedQueueEntry
+        private struct TimedQueueEntry
         {
             public string Key;
             public DateTime Expiration;
         }
-        class CacheEntry
+
+        private class CacheEntry
         {
             public bool DisposeWhenDiscarding { get; private set; }
             public string Key;
@@ -131,7 +132,8 @@ namespace AmbientServices
             }
             await EjectIfNeeded().ConfigureAwait(false);
         }
-        async ValueTask EjectIfNeeded()
+
+        private async ValueTask EjectIfNeeded()
         {
             int callFrequencyToEject = _callFrequencyToEject.Value;
             int countToEject = _countToEject.Value;

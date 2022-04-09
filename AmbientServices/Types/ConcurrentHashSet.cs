@@ -7,7 +7,7 @@ using System.Security;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AmbientServices.Utility
+namespace AmbientServices
 {
     /// <summary>
     /// A non-blocking version of <see cref="HashSet{T}"/>.
@@ -123,7 +123,7 @@ namespace AmbientServices.Utility
         }
 #pragma warning restore CA1000
 
-        class HashSetComparer : IEqualityComparer<ConcurrentHashSet<T>>
+        private class HashSetComparer : IEqualityComparer<ConcurrentHashSet<T>>
         {
             public bool Equals(ConcurrentHashSet<T>? x, ConcurrentHashSet<T>? y)
             {
@@ -353,7 +353,7 @@ namespace AmbientServices.Utility
         /// <returns>A string representation of this instance.</returns>
         public override string ToString()
         {
-            return "{" + String.Join(",", this.Take(20)) + "}";
+            return "{" + string.Join(",", this.Take(20)) + "}";
         }
     }
 }

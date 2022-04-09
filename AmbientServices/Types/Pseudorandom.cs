@@ -86,7 +86,7 @@ namespace AmbientServices.Utility
             _seed = generateSeed ? (uint)NextGlobalSeed : 0;
         }
         /// <summary>
-        /// Gets the next <see cref="UInt64"/> based on the current seed.  Values will be roughly evenly distributed across all possible <see cref="ulong"/> values.
+        /// Gets the next <see cref="ulong"/> based on the current seed.  Values will be roughly evenly distributed across all possible <see cref="ulong"/> values.
         /// </summary>
         [CLSCompliant(false)]
         public ulong NextUInt64
@@ -106,7 +106,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets the next <see cref="Int64"/> based on the current seed.  Note that this may return a negative number.  Values will be roughly evenly distributed across all possible signed <see cref="long"/> values.
+        /// Gets the next <see cref="long"/> based on the current seed.  Note that this may return a negative number.  Values will be roughly evenly distributed across all possible signed <see cref="long"/> values.
         /// </summary>
         public long NextInt64Signed
         {
@@ -116,7 +116,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets the next positive <see cref="Int64"/> based on the current seed.  Values will be roughly evenly distributed across all non-negative <see cref="long"/> values.
+        /// Gets the next positive <see cref="long"/> based on the current seed.  Values will be roughly evenly distributed across all non-negative <see cref="long"/> values.
         /// </summary>
         public long NextInt64
         {
@@ -126,7 +126,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets the next positive <see cref="Int64"/> based on the current seed.  Values will be roughly evenly distributed across the full range of possible values, between zero and <paramref name="maxValue"/>.
+        /// Gets the next positive <see cref="long"/> based on the current seed.  Values will be roughly evenly distributed across the full range of possible values, between zero and <paramref name="maxValue"/>.
         /// </summary>
         /// <param name="maxValue">The possible maximum value (exclusive).</param>
         /// <returns>A random value between zero (inclusive) and <paramref name="maxValue"/> (exclusive).</returns>
@@ -135,7 +135,7 @@ namespace AmbientServices.Utility
             return (long)((NextUInt64 & 0x7fffffffffffffffUL) % (ulong)maxValue);
         }
         /// <summary>
-        /// Gets a random <see cref="Int64"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
+        /// Gets a random <see cref="long"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
         /// </summary>
         /// <param name="lowerLimit">The lower limit for the number, inclusive.</param>
         /// <param name="upperLimit">The upper limit for the number, exclusive.</param>
@@ -147,7 +147,7 @@ namespace AmbientServices.Utility
             return (difference == 0) ? lowerLimit : (lowerLimit + (long)(NextUInt64 % difference));
         }
         /// <summary>
-        /// Gets the next <see cref="UInt32"/> based on the current seed.  Values will be roughly evenly distributed across all possible <see cref="uint"/> values.
+        /// Gets the next <see cref="uint"/> based on the current seed.  Values will be roughly evenly distributed across all possible <see cref="uint"/> values.
         /// </summary>
         [CLSCompliant(false)]
         public uint NextUInt32
@@ -166,7 +166,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets the next <see cref="Int32"/> based on the current seed.  Note that this may return a negative number.  Values will be roughly evenly distributed across all possible signed <see cref="int"/> values.
+        /// Gets the next <see cref="int"/> based on the current seed.  Note that this may return a negative number.  Values will be roughly evenly distributed across all possible signed <see cref="int"/> values.
         /// </summary>
         public int NextInt32Signed
         {
@@ -176,7 +176,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets the next positive <see cref="Int32"/> based on the current seed.  Values will be roughly evenly distributed across all non-negative <see cref="int"/> values.
+        /// Gets the next positive <see cref="int"/> based on the current seed.  Values will be roughly evenly distributed across all non-negative <see cref="int"/> values.
         /// </summary>
         public int NextInt32
         {
@@ -186,7 +186,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets the next positive <see cref="Int32"/> based on the current seed.  Values will be roughly evenly distributed across the full range of possible values, between zero and <paramref name="maxValue"/>.
+        /// Gets the next positive <see cref="int"/> based on the current seed.  Values will be roughly evenly distributed across the full range of possible values, between zero and <paramref name="maxValue"/>.
         /// </summary>
         /// <param name="maxValue">The possible maximum value (exclusive).</param>
         /// <returns>The selected value.</returns>
@@ -195,7 +195,7 @@ namespace AmbientServices.Utility
             return (int)((NextUInt32 & 0x7fffffff) % maxValue);
         }
         /// <summary>
-        /// Gets a random <see cref="Int32"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
+        /// Gets a random <see cref="int"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
         /// </summary>
         /// <param name="lowerLimit">The lower limit for the number, inclusive.</param>
         /// <param name="upperLimit">The upper limit for the number, exclusive.</param>
@@ -211,7 +211,7 @@ namespace AmbientServices.Utility
 
 
         /// <summary>
-        /// Gets a random <see cref="UInt32"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
+        /// Gets a random <see cref="uint"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
         /// </summary>
         /// <param name="lowerLimit">The lower limit for the number, inclusive.</param>
         /// <param name="upperLimit">The upper limit for the number, exclusive.</param>
@@ -224,7 +224,7 @@ namespace AmbientServices.Utility
             return (difference == 0) ? lowerLimit : (lowerLimit + NextUInt32 % difference);
         }
         /// <summary>
-        /// Gets a random signed <see cref="Int32"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
+        /// Gets a random signed <see cref="int"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
         /// </summary>
         /// <param name="lowerLimit">The lower limit for the number, inclusive.</param>
         /// <param name="upperLimit">The upper limit for the number, exclusive.</param>
@@ -236,7 +236,7 @@ namespace AmbientServices.Utility
             return (difference == 0) ? lowerLimit : (lowerLimit + (int)(NextUInt32 % difference));
         }
         /// <summary>
-        /// Gets a random <see cref="UInt32"/> that is usually small.  All <see cref="uint"/> values are possible, but smaller values will be returned much more frequently.
+        /// Gets a random <see cref="uint"/> that is usually small.  All <see cref="uint"/> values are possible, but smaller values will be returned much more frequently.
         /// </summary>
         [CLSCompliant(false)]
         public uint NextUInt32UsuallySmall
@@ -247,7 +247,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets a random <see cref="Int32"/> that is usually small.  All non-negative <see cref="int"/> values are possible, but smaller values will be returned much more frequently.
+        /// Gets a random <see cref="int"/> that is usually small.  All non-negative <see cref="int"/> values are possible, but smaller values will be returned much more frequently.
         /// </summary>
         public int NextInt32UsuallySmall
         {
@@ -257,7 +257,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets a random signed <see cref="Int32"/> that is usually small.  All <see cref="int"/> values are possible, but values closer to zero will be returned much more frequently.
+        /// Gets a random signed <see cref="int"/> that is usually small.  All <see cref="int"/> values are possible, but values closer to zero will be returned much more frequently.
         /// </summary>
         public int NextInt32SignedUsuallySmall
         {
@@ -267,11 +267,11 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets a random <see cref="UInt32"/> that is usually small.  All <see cref="uint"/> values up to <paramref name="upperLimit"/> are possible, but smaller values will be returned much more frequently.
+        /// Gets a random <see cref="uint"/> that is usually small.  All <see cref="uint"/> values up to <paramref name="upperLimit"/> are possible, but smaller values will be returned much more frequently.
         /// </summary>
         /// <param name="upperLimit">The upper limit (exclusive).</param>
         /// <param name="iterations">The number of iterations (more iterations means more preference for the small numbers).  Defaults to 8.  Values greater than 31 will result in a zero return value.</param>
-        /// <returns>A random <see cref="UInt32"/> that is usually small.</returns>
+        /// <returns>A random <see cref="uint"/> that is usually small.</returns>
         [CLSCompliant(false)]
         public uint NextUInt32RangedUsuallySmall(uint upperLimit, int iterations = 8)
         {
@@ -283,12 +283,12 @@ namespace AmbientServices.Utility
             return baseNumber / divisor;
         }
         /// <summary>
-        /// Gets a random <see cref="Int32"/> that is usually small.  All <see cref="int"/> values between <paramref name="lowerLimit"/> and <paramref name="upperLimit"/> are possible, but values closer to zero will be returned much more frequently.
+        /// Gets a random <see cref="int"/> that is usually small.  All <see cref="int"/> values between <paramref name="lowerLimit"/> and <paramref name="upperLimit"/> are possible, but values closer to zero will be returned much more frequently.
         /// </summary>
         /// <param name="lowerLimit">The lower limit (inclusive).</param>
         /// <param name="upperLimit">The upper limit (exclusive).</param>
         /// <param name="iterations">The number of iterations (more iterations means more preference for the small numbers).  Defaults to 8.  Values greater than 31 will result in a zero return value.</param>
-        /// <returns>A random <see cref="Int32"/> that is usually nearer to zero.</returns>
+        /// <returns>A random <see cref="int"/> that is usually nearer to zero.</returns>
         public int NextInt32SignedRangedUsuallySmall(int lowerLimit, int upperLimit, int iterations = 8)
         {
             if (upperLimit < lowerLimit) throw new ArgumentException("The upper limit must be higher than the lower limit!", nameof(upperLimit));
@@ -314,17 +314,17 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets a random <see cref="Int32"/> that is usually small.  All non-negative <see cref="int"/> values up to <paramref name="upperLimit"/> are possible, but values closer to zero will be returned much more frequently.
+        /// Gets a random <see cref="int"/> that is usually small.  All non-negative <see cref="int"/> values up to <paramref name="upperLimit"/> are possible, but values closer to zero will be returned much more frequently.
         /// </summary>
         /// <param name="upperLimit">The upper limit (exclusive).</param>
         /// <param name="iterations">The number of iterations (more iterations means more preference for the small numbers).  Defaults to 8.  Values greater than 31 will result in a zero return value.</param>
-        /// <returns>A random <see cref="Int32"/> between zero and <paramref name="upperLimit"/> (exclusive), that is usually nearer to zero.</returns>
+        /// <returns>A random <see cref="int"/> between zero and <paramref name="upperLimit"/> (exclusive), that is usually nearer to zero.</returns>
         public int NextInt32RangedUsuallySmall(int upperLimit, int iterations = 8)
         {
             return (int)NextUInt32RangedUsuallySmall((uint)upperLimit, iterations);
         }
         /// <summary>
-        /// Gets a random <see cref="UInt64"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
+        /// Gets a random <see cref="ulong"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
         /// </summary>
         /// <param name="lowerLimit">The lower limit for the number, inclusive.</param>
         /// <param name="upperLimit">The upper limit for the number, exclusive.</param>
@@ -337,7 +337,7 @@ namespace AmbientServices.Utility
             return (difference == 0) ? lowerLimit : (lowerLimit + NextUInt64 % difference);
         }
         /// <summary>
-        /// Gets a random signed <see cref="Int64"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
+        /// Gets a random signed <see cref="long"/> in the specified range.  Values will be roughly evenly distributed across all values between <paramref name="lowerLimit"/> (inclusive) and <paramref name="upperLimit"/> (exclusive).
         /// </summary>
         /// <param name="lowerLimit">The lower limit for the number, inclusive.</param>
         /// <param name="upperLimit">The upper limit for the number, exclusive.</param>
@@ -349,7 +349,7 @@ namespace AmbientServices.Utility
             return (difference == 0) ? lowerLimit : (lowerLimit + (long)(NextUInt64 % difference));
         }
         /// <summary>
-        /// Gets a random <see cref="UInt64"/> that is usually small.  All <see cref="ulong"/> values are possible, but smaller values will be returned much more frequently.
+        /// Gets a random <see cref="ulong"/> that is usually small.  All <see cref="ulong"/> values are possible, but smaller values will be returned much more frequently.
         /// </summary>
         [CLSCompliant(false)]
         public ulong NextUInt64UsuallySmall
@@ -360,7 +360,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets a random <see cref="Int64"/> that is usually small.  All non-negative <see cref="long"/> values are possible, but smaller values will be returned much more frequently.
+        /// Gets a random <see cref="long"/> that is usually small.  All non-negative <see cref="long"/> values are possible, but smaller values will be returned much more frequently.
         /// </summary>
         public long NextInt64UsuallySmall
         {
@@ -370,7 +370,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets a random <see cref="Int64"/> that is usually small.  All <see cref="long"/> values are possible, but values closer to zero will be returned much more frequently.
+        /// Gets a random <see cref="long"/> that is usually small.  All <see cref="long"/> values are possible, but values closer to zero will be returned much more frequently.
         /// </summary>
         public long NextInt64SignedUsuallySmall
         {
@@ -380,11 +380,11 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets a random <see cref="UInt64"/> that is usually small.  All <see cref="ulong"/> values up to <paramref name="upperLimit"/> are possible, but smaller values will be returned much more frequently.
+        /// Gets a random <see cref="ulong"/> that is usually small.  All <see cref="ulong"/> values up to <paramref name="upperLimit"/> are possible, but smaller values will be returned much more frequently.
         /// </summary>
         /// <param name="upperLimit">The upper limit (exclusive).</param>
         /// <param name="iterations">The number of iterations (more iterations means more preference for the small numbers).  Defaults to 20.  Values greater than 63 will result in a zero return value.</param>
-        /// <returns>A random <see cref="UInt64"/> that is usually small.</returns>
+        /// <returns>A random <see cref="ulong"/> that is usually small.</returns>
         [CLSCompliant(false)]
         public ulong NextUInt64RangedUsuallySmall(ulong upperLimit, int iterations = 20)
         {
@@ -396,12 +396,12 @@ namespace AmbientServices.Utility
             return baseNumber / divisor;
         }
         /// <summary>
-        /// Gets a random <see cref="Int64"/> that is usually small.  All <see cref="int"/> values between <paramref name="lowerLimit"/> and <paramref name="upperLimit"/> are possible, but values closer to zero will be returned much more frequently.
+        /// Gets a random <see cref="long"/> that is usually small.  All <see cref="int"/> values between <paramref name="lowerLimit"/> and <paramref name="upperLimit"/> are possible, but values closer to zero will be returned much more frequently.
         /// </summary>
         /// <param name="lowerLimit">The lower limit (inclusive).</param>
         /// <param name="upperLimit">The upper limit (exclusive).</param>
         /// <param name="iterations">The number of iterations (more iterations means more preference for the small numbers).  Defaults to 20.  Values greater than 63 will result in a zero return value.</param>
-        /// <returns>A random <see cref="Int64"/> that is usually nearer to zero.</returns>
+        /// <returns>A random <see cref="long"/> that is usually nearer to zero.</returns>
         public long NextInt64SignedRangedUsuallySmall(long lowerLimit, long upperLimit, int iterations = 20)
         {
             if (upperLimit < lowerLimit) throw new ArgumentException("The upper limit must be higher than the lower limit!", nameof(upperLimit));
@@ -427,11 +427,11 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Gets a random <see cref="Int64"/> that is usually small.  All non-negative <see cref="long"/> values up to <paramref name="upperLimit"/> are possible, but values closer to zero will be returned much more frequently.
+        /// Gets a random <see cref="long"/> that is usually small.  All non-negative <see cref="long"/> values up to <paramref name="upperLimit"/> are possible, but values closer to zero will be returned much more frequently.
         /// </summary>
         /// <param name="upperLimit">The upper limit (exclusive).</param>
         /// <param name="iterations">The number of iterations (more iterations means more preference for the small numbers).  Defaults to 20.  Values greater than 63 will result in a zero return value.</param>
-        /// <returns>A random <see cref="Int64"/> between zero and <paramref name="upperLimit"/> (exclusive), that is usually nearer to zero.</returns>
+        /// <returns>A random <see cref="long"/> between zero and <paramref name="upperLimit"/> (exclusive), that is usually nearer to zero.</returns>
         public long NextInt64RangedUsuallySmall(long upperLimit, int iterations = 20)
         {
             return (long)NextUInt64RangedUsuallySmall((ulong)upperLimit, iterations);
@@ -513,21 +513,22 @@ namespace AmbientServices.Utility
                 if (offset + 7 < endOffset) target[offset + 7] = (byte)((rawData & 0xff00000000000000) >> 56);
             }
         }
-        const int DecimalMaxScalePlusOne = 29;
+
+        private const int DecimalMaxScalePlusOne = 29;
         /// <summary>
-        /// Gets a <see cref="Decimal"/> with a random value.  All possible values should be roughly evenly distributed.
+        /// Gets a <see cref="decimal"/> with a random value.  All possible values should be roughly evenly distributed.
         /// </summary>
-        public Decimal NextDecimal
+        public decimal NextDecimal
         {
             get
             {
-                return new Decimal(NextInt32Signed, NextInt32Signed, NextInt32Signed, NextBoolean, (byte)(NextUInt32 % DecimalMaxScalePlusOne));
+                return new decimal(NextInt32Signed, NextInt32Signed, NextInt32Signed, NextBoolean, (byte)(NextUInt32 % DecimalMaxScalePlusOne));
             }
         }
         /// <summary>
-        /// Gets a <see cref="Double"/> with a random value.  All possible values should be roughly evenly distributed, including special values like <see cref="Double.NaN"/>, <see cref="Double.Epsilon"/>, <see cref="Double.PositiveInfinity"/>, etc.
+        /// Gets a <see cref="double"/> with a random value.  All possible values should be roughly evenly distributed, including special values like <see cref="double.NaN"/>, <see cref="double.Epsilon"/>, <see cref="double.PositiveInfinity"/>, etc.
         /// </summary>
-        public Double NextDouble
+        public double NextDouble
         {
             get
             {

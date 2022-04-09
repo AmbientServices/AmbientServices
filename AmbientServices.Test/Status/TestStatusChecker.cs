@@ -17,7 +17,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (StatusCheckerTest test = new StatusCheckerTest())
+                using (StatusCheckerTest test = new())
                 {
                     StatusResults results = await test.GetStatus();
                     Assert.AreEqual(results, test.LatestResults);
@@ -34,7 +34,7 @@ namespace AmbientServices.Test
         public StatusCheckerTest()
             : base("StatusCheckerTest")
         {
-            StatusResultsBuilder sb = new StatusResultsBuilder(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
+            StatusResultsBuilder sb = new(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
             sb.AddProperty("TestProperty1", Environment.MachineName);
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
             StatusResults results = sb.FinalResults;

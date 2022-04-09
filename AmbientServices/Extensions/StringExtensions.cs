@@ -6,7 +6,7 @@ using System.Text;
 namespace AmbientServices.Utility
 {
     /// <summary>
-    /// A static partial class that extends <see cref="System.String"/>.
+    /// A static partial class that extends <see cref="string"/>.
     /// </summary>
     internal static partial class StringExtensions
     {
@@ -105,13 +105,13 @@ namespace AmbientServices.Utility
                         case 1: // ps: period sequence
                             numberParts = m.Value.Split(NumberSeparatorCharArray);
                             return (numberParts[0].Length == 0 && m.Value[0] == '-')
-                            ? NegativePartTransform("1", numberParts[0].PadLeft(maxDigits, '0')) + "." + String.Join(".", numberParts.Skip(1).Select(s => "4" + s.PadLeft(maxDigits, '0')))
-                            : String.Join(".", numberParts.Select(s => "4" + s.PadLeft(maxDigits, '0')));
+                            ? NegativePartTransform("1", numberParts[0].PadLeft(maxDigits, '0')) + "." + string.Join(".", numberParts.Skip(1).Select(s => "4" + s.PadLeft(maxDigits, '0')))
+                            : string.Join(".", numberParts.Select(s => "4" + s.PadLeft(maxDigits, '0')));
                         case 2: // ds: dash sequence
                             numberParts = m.Value.Split(NumberSeparatorCharArray);
                             return (numberParts[0].Length == 0 && m.Value[0] == '-')
-                            ? NegativePartTransform("1", numberParts[0].PadLeft(maxDigits, '0')) + "-" + String.Join("-", numberParts.Skip(1).Select(s => "4" + s.PadLeft(maxDigits, '0')))
-                            : String.Join("-", numberParts.Select(s => "4" + s.PadLeft(maxDigits, '0')));
+                            ? NegativePartTransform("1", numberParts[0].PadLeft(maxDigits, '0')) + "-" + string.Join("-", numberParts.Skip(1).Select(s => "4" + s.PadLeft(maxDigits, '0')))
+                            : string.Join("-", numberParts.Select(s => "4" + s.PadLeft(maxDigits, '0')));
                         case 3: // nr: negative real
                             decimalPointIndex = m.Value.IndexOfAny(DecimalPointCharArray, 1);
                             System.Diagnostics.Debug.Assert(decimalPointIndex > 0);

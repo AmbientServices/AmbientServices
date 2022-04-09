@@ -19,8 +19,8 @@ namespace AmbientServices.Test
     {
         private static readonly AmbientService<IAmbientServiceProfiler> _ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
 
-        private static AsyncLocal<string> _localContextId = new AsyncLocal<string>();
-        private static AsyncLocal<string> _local = new AsyncLocal<string>(c => System.Diagnostics.Debug.WriteLine($"Thread:{System.Threading.Thread.CurrentThread.ManagedThreadId},Context:{_localContextId.Value ?? Guid.Empty.ToString("N")},Previous:{c.PreviousValue ?? "<null>"},Current:{c.CurrentValue ?? "<null>"},ThreadContextChanged:{c.ThreadContextChanged}"));
+        private static readonly AsyncLocal<string> _localContextId = new();
+        private static readonly AsyncLocal<string> _local = new(c => System.Diagnostics.Debug.WriteLine($"Thread:{System.Threading.Thread.CurrentThread.ManagedThreadId},Context:{_localContextId.Value ?? Guid.Empty.ToString("N")},Previous:{c.PreviousValue ?? "<null>"},Current:{c.CurrentValue ?? "<null>"},ThreadContextChanged:{c.ThreadContextChanged}"));
         [TestMethod]
         public async Task AsyncLocalTest1()
         {
@@ -114,9 +114,9 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ServiceProfilerBasic()
         {
-            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new ScopedLocalServiceOverride<IAmbientServiceProfiler>(new BasicAmbientServiceProfiler()))
+            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
             using (AmbientClock.Pause())
-            using (AmbientServiceProfilerCoordinator coordinator = new AmbientServiceProfilerCoordinator())
+            using (AmbientServiceProfilerCoordinator coordinator = new())
             using (IAmbientServiceProfile processProfile = coordinator.CreateProcessProfiler(nameof(ServiceProfilerBasic)))
             using (IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerBasic), TimeSpan.FromMilliseconds(100), p => Task.CompletedTask))
             using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerBasic)))
@@ -239,9 +239,9 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ServiceProfilerCloseSampleWithRepeat()
         {
-            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new ScopedLocalServiceOverride<IAmbientServiceProfiler>(new BasicAmbientServiceProfiler()))
+            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
             using (AmbientClock.Pause())
-            using (AmbientServiceProfilerCoordinator coordinator = new AmbientServiceProfilerCoordinator())
+            using (AmbientServiceProfilerCoordinator coordinator = new())
             using (IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerCloseSampleWithRepeat), TimeSpan.FromMilliseconds(100), p => Task.CompletedTask))
             {
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100)); // this should trigger the first window and it should have only the default "" entry
@@ -258,8 +258,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ServiceProfilerNull()
         {
-            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new ScopedLocalServiceOverride<IAmbientServiceProfiler>(null))
-            using (AmbientServiceProfilerCoordinator coordinator = new AmbientServiceProfilerCoordinator())
+            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(null))
+            using (AmbientServiceProfilerCoordinator coordinator = new())
             using (IAmbientServiceProfile processProfile = coordinator.CreateProcessProfiler(nameof(ServiceProfilerNull)))
             using (IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerNull), TimeSpan.FromMilliseconds(100), p => Task.CompletedTask))
             using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerNull)))
@@ -271,8 +271,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ServiceProfilerNullOnWindowComplete()
         {
-            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new ScopedLocalServiceOverride<IAmbientServiceProfiler>(new BasicAmbientServiceProfiler()))
-            using (AmbientServiceProfilerCoordinator coordinator = new AmbientServiceProfilerCoordinator())
+            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
+            using (AmbientServiceProfilerCoordinator coordinator = new())
             {
                 Assert.ThrowsException<ArgumentNullException>(
                     () =>
@@ -286,7 +286,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ServiceProfilerNoListener()
         {
-            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new ScopedLocalServiceOverride<IAmbientServiceProfiler>(new BasicAmbientServiceProfiler()))
+            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
             using (AmbientClock.Pause())
             {
                 _ServiceProfiler.Local?.SwitchSystem(nameof(ServiceProfilerNull));
@@ -298,11 +298,11 @@ namespace AmbientServices.Test
             string system1 = "DynamoDB/Table:My-table/Partition:342644/Result:Success";
             string system2 = "S3/Bucket:My-bucket/Prefix:abcdefg/Result:Retry";
             string system3 = "SQL/Database:My-database/Table:User/Result:Failed";
-            BasicAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(AmbientServiceProfilerCoordinatorSettings));
+            BasicAmbientSettingsSet settingsSet = new(nameof(AmbientServiceProfilerCoordinatorSettings));
             settingsSet.ChangeSetting(nameof(AmbientServiceProfilerCoordinator) + "-DefaultSystemGroupTransform", "(?:([^:/]+)(?:(/Database:[^:/]*)|(/Bucket:[^:/]*)|(/Result:[^:/]*)|(?:/[^/]*))*)");
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> o = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
+            using (ScopedLocalServiceOverride<IAmbientSettingsSet> o = new(settingsSet))
             using (AmbientClock.Pause())
-            using (AmbientServiceProfilerCoordinator coordinator = new AmbientServiceProfilerCoordinator())
+            using (AmbientServiceProfilerCoordinator coordinator = new())
             using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerBasic)))
             {
                 _ServiceProfiler.Local?.SwitchSystem(system1);
@@ -349,12 +349,12 @@ namespace AmbientServices.Test
             string system1 = "DynamoDB/Table:My-table/Partition:342644/Result:Success";
             string system2 = "S3/Bucket:My-bucket/Prefix:abcdefg/Result:Retry";
             string system3 = "SQL/Database:My-database/Table:User/Result:Failed";
-            BasicAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(AmbientServiceProfilerCoordinatorSettingsNonCurrent));
+            BasicAmbientSettingsSet settingsSet = new(nameof(AmbientServiceProfilerCoordinatorSettingsNonCurrent));
             settingsSet.ChangeSetting(nameof(AmbientServiceProfilerCoordinator) + "-DefaultSystemGroupTransform", "(?:([^:/]+)(?:(/Database:[^:/]*)|(/Bucket:[^:/]*)|(/Result:[^:/]*)|(?:/[^/]*))*)");
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> o = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
-            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> p = new ScopedLocalServiceOverride<IAmbientServiceProfiler>(new BasicAmbientServiceProfiler()))
+            using (ScopedLocalServiceOverride<IAmbientSettingsSet> o = new(settingsSet))
+            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> p = new(new BasicAmbientServiceProfiler()))
             using (AmbientClock.Pause())
-            using (AmbientServiceProfilerCoordinator coordinator = new AmbientServiceProfilerCoordinator())
+            using (AmbientServiceProfilerCoordinator coordinator = new())
             using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerBasic)))
             {
                 _ServiceProfiler.Local?.SwitchSystem(system1);
@@ -407,8 +407,8 @@ namespace AmbientServices.Test
             string groupTransform = "(?:([^:/]+)(?:(/Database:[^:/]*)|(/Bucket:[^:/]*)|(/Result:[^:/]*)|(?:/[^/]*))*)";
             IAmbientServiceProfile timeWindowProfile = null;
             using (AmbientClock.Pause())
-            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new ScopedLocalServiceOverride<IAmbientServiceProfiler>(new BasicAmbientServiceProfiler()))
-            using (AmbientServiceProfilerCoordinator coordinator = new AmbientServiceProfilerCoordinator())
+            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
+            using (AmbientServiceProfilerCoordinator coordinator = new())
             using (IAmbientServiceProfile processProfile = coordinator.CreateProcessProfiler(nameof(AmbientServiceProfilerCoordinatorOverrideGroupTransform), groupTransform))
             using (IDisposable timeWindowProfiler = coordinator.CreateTimeWindowProfiler(nameof(AmbientServiceProfilerCoordinatorOverrideGroupTransform), TimeSpan.FromMilliseconds(10000), p => { timeWindowProfile = p; return Task.CompletedTask; }, groupTransform))
             using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(AmbientServiceProfilerCoordinatorOverrideGroupTransform), groupTransform))

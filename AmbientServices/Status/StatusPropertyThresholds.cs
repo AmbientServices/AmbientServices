@@ -22,7 +22,7 @@ namespace AmbientServices
     }
     /// <summary>
     /// An immutable class that holds status information about property threshold values at which status ratings should transition.
-    /// Thresholds only apply to <see cref="StatusProperty"/>s whose values are numeric, and those property values must be converted to <see cref="System.Single"/> before they can be compared to the threshold values.
+    /// Thresholds only apply to <see cref="StatusProperty"/>s whose values are numeric, and those property values must be converted to <see cref="float"/> before they can be compared to the threshold values.
     /// The static <see cref="DefaultPropertyThresholds"/> property provides access to the thresholds for all currently-loaded status checkers and auditors.
     /// </summary>
     public class StatusPropertyThresholds
@@ -187,7 +187,7 @@ namespace AmbientServices
                 else
                 {
                     float lowThreshold = _failVsAlertThreshold ?? _alertVsOkayThreshold ?? _okayVsSuperlativeThreshold ?? 0.0f;
-                    float seriousness = LowIsGoodImportance(lowThreshold, Single.MaxValue, value);
+                    float seriousness = LowIsGoodImportance(lowThreshold, float.MaxValue, value);
                     float rating = StatusRating.Fail - seriousness;
                     return new StatusAuditAlert(rating, code, tersePrefix + ">=" + lowThreshold.ToSi(1), detailedPrefix + "at or above the " + nameof(StatusRating.Fail) + " threshold value, " + lowThreshold.ToSi(4));
                 }
@@ -198,27 +198,27 @@ namespace AmbientServices
                 tersePrefix = propertyName + ":" + value.ToSi(1);
                 if (value > _okayVsSuperlativeThreshold)
                 {
-                    float seriousness = HighIsGoodImportance(_okayVsSuperlativeThreshold.Value, Single.MaxValue, value);
+                    float seriousness = HighIsGoodImportance(_okayVsSuperlativeThreshold.Value, float.MaxValue, value);
                     float rating = StatusRating.Superlative - seriousness;
                     return new StatusAuditAlert(rating, code, tersePrefix + ">" + _okayVsSuperlativeThreshold.Value.ToSi(1), detailedPrefix + "in the " + nameof(StatusRating.Superlative) + " range, above " + _okayVsSuperlativeThreshold.Value.ToSi(4));
                 }
                 if (value > _alertVsOkayThreshold)
                 {
-                    float highThreshold = _okayVsSuperlativeThreshold ?? Single.MaxValue;
+                    float highThreshold = _okayVsSuperlativeThreshold ?? float.MaxValue;
                     float seriousness = HighIsGoodImportance(_alertVsOkayThreshold.Value, highThreshold, value);
                     float rating = StatusRating.Okay - seriousness;
-                    return new StatusAuditAlert(rating, code, tersePrefix + "<=" + highThreshold.ToSi(1), detailedPrefix + "in the " + nameof(StatusRating.Okay) + " range, between " + _alertVsOkayThreshold.Value.ToSi(4) + " and " + (_okayVsSuperlativeThreshold ?? Single.MaxValue).ToSi(4));
+                    return new StatusAuditAlert(rating, code, tersePrefix + "<=" + highThreshold.ToSi(1), detailedPrefix + "in the " + nameof(StatusRating.Okay) + " range, between " + _alertVsOkayThreshold.Value.ToSi(4) + " and " + (_okayVsSuperlativeThreshold ?? float.MaxValue).ToSi(4));
                 }
                 else if (value > _failVsAlertThreshold)
                 {
-                    float highThreshold = _alertVsOkayThreshold ?? _okayVsSuperlativeThreshold ?? Single.MaxValue;
+                    float highThreshold = _alertVsOkayThreshold ?? _okayVsSuperlativeThreshold ?? float.MaxValue;
                     float seriousness = HighIsGoodImportance(_failVsAlertThreshold.Value, highThreshold, value);
                     float rating = StatusRating.Alert - seriousness;
-                    return new StatusAuditAlert(rating, code, tersePrefix + "<=" + highThreshold.ToSi(1), detailedPrefix + "in the " + nameof(StatusRating.Alert) + " range, between " + _failVsAlertThreshold.Value.ToSi(4) + " and " + (_alertVsOkayThreshold ?? _okayVsSuperlativeThreshold ?? Single.MaxValue).ToSi(4));
+                    return new StatusAuditAlert(rating, code, tersePrefix + "<=" + highThreshold.ToSi(1), detailedPrefix + "in the " + nameof(StatusRating.Alert) + " range, between " + _failVsAlertThreshold.Value.ToSi(4) + " and " + (_alertVsOkayThreshold ?? _okayVsSuperlativeThreshold ?? float.MaxValue).ToSi(4));
                 }
                 else
                 {
-                    float highThreshold = _failVsAlertThreshold ?? _alertVsOkayThreshold ?? _okayVsSuperlativeThreshold ?? Single.MaxValue;
+                    float highThreshold = _failVsAlertThreshold ?? _alertVsOkayThreshold ?? _okayVsSuperlativeThreshold ?? float.MaxValue;
                     float seriousness = HighIsGoodImportance(0.0f, highThreshold, value);
                     float rating = StatusRating.Fail - seriousness;
                     return new StatusAuditAlert(rating, code, tersePrefix + "<=" + highThreshold.ToSi(1), detailedPrefix + "at or below the " + nameof(StatusRating.Fail) + " threshold value, " + highThreshold.ToSi(4));
@@ -236,7 +236,8 @@ namespace AmbientServices
             return 1.0f - LowIsGoodImportance(low, high, value);
         }
     }
-    class DefaultStatusThresholds : IStatusThresholdsRegistry
+
+    internal class DefaultStatusThresholds : IStatusThresholdsRegistry
     {
         private ConcurrentDictionary<string, StatusPropertyThresholds> _thresholds;
 
@@ -275,12 +276,12 @@ namespace AmbientServices
         }
         /// <summary>
         /// Constructs a default property thresholds attribute instance using the specified parameters.  
-        /// Note that attribute parameters cannot take nullable values, so we use <see cref="Single.NaN"/> instead to indicate that there is no such threshold value.
+        /// Note that attribute parameters cannot take nullable values, so we use <see cref="float.NaN"/> instead to indicate that there is no such threshold value.
         /// </summary>
         /// <param name="propertyPath">The path to the property with a default threshold.</param>
-        /// <param name="failVsAlertThreshold">The first value that is a failure instead of an alert.  <see cref="Single.NaN"/> if there is no such value.</param>
-        /// <param name="okayVsSuperlativeThreshold">The first value that is an alert instead of okay.  <see cref="Single.NaN"/> if there is no such value.</param>
-        /// <param name="alertVsOkayThreshold">The first value that is okay instead of superlative.  <see cref="Single.NaN"/> if there is no such value.</param>
+        /// <param name="failVsAlertThreshold">The first value that is a failure instead of an alert.  <see cref="float.NaN"/> if there is no such value.</param>
+        /// <param name="okayVsSuperlativeThreshold">The first value that is an alert instead of okay.  <see cref="float.NaN"/> if there is no such value.</param>
+        /// <param name="alertVsOkayThreshold">The first value that is okay instead of superlative.  <see cref="float.NaN"/> if there is no such value.</param>
         /// <param name="thresholdNature">A <see cref="StatusThresholdNature"/> indicating whether low values are good or bad for this threshold.  Only used if less than two threshold values are specified.</param>
         public DefaultPropertyThresholdsAttribute(string propertyPath, float failVsAlertThreshold = float.NaN, float alertVsOkayThreshold = float.NaN, float okayVsSuperlativeThreshold = float.NaN, StatusThresholdNature thresholdNature = StatusThresholdNature.HighIsGood)
         {

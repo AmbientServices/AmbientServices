@@ -5,7 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+
+#nullable enable
 
 namespace AmbientServices.Test
 {
@@ -86,6 +89,104 @@ namespace AmbientServices.Test
             Assert.AreEqual(0.4375, InterlockedExtensions.TryOptomisticAddExponentialMovingAverageSample(ref x, halfHalfLife, 1.0));
 
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => InterlockedExtensions.TryOptomisticAddExponentialMovingAverageSample(ref x, -0.0000001, 1.0));
+        }
+        const int ThreadCount = 10;
+        const int LoopCount = 10000;
+        [TestMethod]
+        public void InterlockedExtensionsHammer()
+        {
+            double addDouble = 0;
+            Hammer(nameof(Single), ThreadCount, () =>
+            {
+                for (double i = 0; i < LoopCount; ++i)
+                {
+                    double newDouble = InterlockedExtensions.TryOptomisticAdd(ref addDouble, 1);
+                    if (newDouble < 0 || newDouble > LoopCount * ThreadCount + 1) return $"{newDouble}";
+                }
+                return null;
+            }, TimeSpan.FromMinutes(1));
+            double maxDouble = 0;
+            Hammer(nameof(Double), ThreadCount, () =>
+            {
+                for (double i = 0; i < LoopCount; ++i)
+                {
+                    double newMaxDouble = InterlockedExtensions.TryOptomisticMax(ref maxDouble, i);
+                    if (newMaxDouble < 0 || newMaxDouble > LoopCount) return $"{newMaxDouble}";
+                }
+                return null;
+            }, TimeSpan.FromMinutes(1));
+            double minDouble = LoopCount;
+            Hammer(nameof(Double), ThreadCount, () =>
+            {
+                for (double i = 0; i < LoopCount; ++i)
+                {
+                    double newMinDouble = InterlockedExtensions.TryOptomisticMin(ref minDouble, LoopCount - i);
+                    if (newMinDouble < 0 || newMinDouble > LoopCount) return $"{newMinDouble}";
+                }
+                return null;
+            }, TimeSpan.FromMinutes(1));
+            long maxInt64 = 0;
+            Hammer(nameof(Int64), ThreadCount, () =>
+            {
+                for (long i = 0; i < LoopCount; ++i)
+                {
+                    long newMaxInt64 = InterlockedExtensions.TryOptomisticMax(ref maxInt64, i);
+                    if (newMaxInt64 < 0 || newMaxInt64 > LoopCount) return $"{newMaxInt64}";
+                }
+                return null;
+            }, TimeSpan.FromMinutes(1));
+            long minInt64 = LoopCount;
+            Hammer(nameof(Int64), ThreadCount, () =>
+            {
+                for (long i = 0; i < LoopCount; ++i)
+                {
+                    long newMinInt64 = InterlockedExtensions.TryOptomisticMin(ref minInt64, LoopCount - i);
+                    if (newMinInt64 < 0 || newMinInt64 > LoopCount) return $"{newMinInt64}";
+                }
+                return null;
+            }, TimeSpan.FromMinutes(1));
+        }
+
+        private static void Hammer(string typeName, int threadCount, Func<string?> f, TimeSpan timeout)
+        {
+            ManualResetEvent continueEvent = new ManualResetEvent(false);
+            string?[] results = new string?[threadCount];
+            Thread[] threads = new Thread[threadCount];
+            ManualResetEvent[] startedEvent = new ManualResetEvent[threadCount];
+            for (int t = 0; t < threads.Length; ++t)
+            {
+                int index = t;
+                startedEvent[index] = new ManualResetEvent(false);
+                threads[index] = new Thread(new System.Threading.ThreadStart(() =>
+                {
+                    startedEvent[index].Set();
+                    continueEvent.WaitOne(timeout);
+                    results[index] = f();
+                }));
+                threads[index].Start();
+            }
+            for (int t = 0; t < threads.Length; ++t)
+            {
+                startedEvent[t].WaitOne(timeout);
+            }
+            // set them all running simultaneously
+            continueEvent.Set();
+            // wait for them all to finish
+            for (int t = 0; t < threads.Length; ++t)
+            {
+                threads[t].Join(timeout);
+            }
+            // check the results
+            StringBuilder sb = new();
+            for (int t = 0; t < threads.Length; ++t)
+            {
+                if (!String.IsNullOrEmpty(results[t]))
+                {
+                    if (sb.Length > 0) sb.Append(',');
+                    sb.Append(results[t]);
+                }
+            }
+            if (sb.Length > 0) Assert.Fail(typeName + ": " + sb.ToString());
         }
     }
 }

@@ -15,7 +15,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void StatusPropertyClass()
         {
-            StatusProperty property = new StatusProperty("Property", "Value");
+            StatusProperty property = new("Property", "Value");
             string prop = property.ToString();
             Assert.IsTrue(prop.Contains("Property"));
             Assert.IsTrue(prop.Contains("Value"));

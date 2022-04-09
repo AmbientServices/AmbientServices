@@ -20,7 +20,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void WindowId()
         {
-            DateTime dt = new DateTime(2020, 6, 26, 18, 53, 7, 294);
+            DateTime dt = new(2020, 6, 26, 18, 53, 7, 294);
             Assert.AreEqual("2020-06", WindowScope.WindowId(dt, TimeSpan.FromDays(700)));
             Assert.AreEqual("06-26", WindowScope.WindowId(dt, TimeSpan.FromDays(90)));
             Assert.AreEqual("26_18", WindowScope.WindowId(dt, TimeSpan.FromDays(2)));

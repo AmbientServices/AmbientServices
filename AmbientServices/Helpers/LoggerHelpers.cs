@@ -49,7 +49,7 @@ namespace AmbientServices
             if (!_logFilter.IsBlocked(level, _typeName, category))
             {
                 if (!string.IsNullOrEmpty(category)) category = category + ":";
-                message = String.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, _typeName, category, message);
+                message = string.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, _typeName, category, message);
                 _logger!.Log(message);  // the calling of this method is short-circuited when _logger is null
             }
         }

@@ -40,7 +40,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void TypesFromException()
         {
-            ReflectionTypeLoadException ex = new ReflectionTypeLoadException(new Type[] { typeof(string) }, new Exception[0]);
+            ReflectionTypeLoadException ex = new(new Type[] { typeof(string) }, new Exception[0]);
             Assert.AreEqual(1, AmbientServices.Utility.AssemblyExtensions.TypesFromException(ex).Count());
             ex = new ReflectionTypeLoadException(new Type[] { typeof(string), null }, new Exception[0]);
             Assert.AreEqual(1, AmbientServices.Utility.AssemblyExtensions.TypesFromException(ex).Count());

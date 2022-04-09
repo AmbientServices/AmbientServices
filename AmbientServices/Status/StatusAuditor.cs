@@ -116,7 +116,7 @@ namespace AmbientServices
         public bool Equals(StatusAuditAlert? other)
         {
             if (other is null) return false;
-            return this._rating.Equals(other._rating) && String.Equals(this._auditAlertCode, other._auditAlertCode, StringComparison.OrdinalIgnoreCase);
+            return this._rating.Equals(other._rating) && string.Equals(this._auditAlertCode, other._auditAlertCode, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -348,7 +348,7 @@ namespace AmbientServices
             }
             else // other parts of the code assume that _auditTimer is not null, so we will create one here that we don't hook up to any event handler
             {
-                _auditTimer = new AmbientEventTimer(Int32.MaxValue - 1);
+                _auditTimer = new AmbientEventTimer(int.MaxValue - 1);
             }
             _auditTimer.AutoReset = false;
             // note that the audit timer should remain stopped until we start it after the first audit happens

@@ -42,7 +42,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(_Test.GlobalReference.Service, _Test.Global);
             IAmbientLogger logger = _Logger.Global;
             Assert.IsNotNull(logger);
-            AmbientLogger<TestAmbientService> serviceBrokerLogger = new AmbientLogger<TestAmbientService>(logger);
+            AmbientLogger<TestAmbientService> serviceBrokerLogger = new(logger);
             IAmbientProgressService progressTracker = _ProgressService.Global;
             Assert.IsNotNull(progressTracker);
             IAmbientSettingsSet settings = _SettingsSet.Global;
@@ -109,7 +109,7 @@ namespace AmbientServices.Test
         {
             ILocalOverrideTest oldGlobal = _LocalOverrideTest.Global;
             ILocalOverrideTest oldLocalOverride = _LocalOverrideTest.Override;
-            using (ScopedLocalServiceOverride<ILocalOverrideTest> o = new ScopedLocalServiceOverride<ILocalOverrideTest>(null))
+            using (ScopedLocalServiceOverride<ILocalOverrideTest> o = new(null))
             {
                 Assert.IsNull(_LocalOverrideTest.Local);
                 Assert.AreEqual(oldGlobal, o.OldGlobal);

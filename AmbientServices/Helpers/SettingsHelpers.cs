@@ -191,7 +191,7 @@ namespace AmbientServices
                     string description = setting.Description ?? "<null>";
                     string existingDefaultValueString = existingSetting.DefaultValueString;
                     string defaultValueString = setting.DefaultValueString;
-                    if (!String.Equals(existingDescription, description, StringComparison.Ordinal) || !String.Equals(existingDefaultValueString, defaultValueString, StringComparison.Ordinal))
+                    if (!string.Equals(existingDescription, description, StringComparison.Ordinal) || !string.Equals(existingDefaultValueString, defaultValueString, StringComparison.Ordinal))
                     {
                         throw new ArgumentException($"A setting with the key {setting.Key} has already been registered ({existingDescription} vs {description} or {existingDefaultValueString} vs {defaultValueString})!");
                     } // else we didn't succeed, but it doesn't look like there is a conflict anyway, so we're probably fine
@@ -242,11 +242,12 @@ namespace AmbientServices
         public event EventHandler<IAmbientSettingInfo>? SettingRegistered;
 #pragma warning restore CA1003
     }
+
     /// <summary>
     /// An immutable class that contains a typed setting value and the settings set it came from.
     /// </summary>
     /// <typeparam name="T">The type for the setting.</typeparam>
-    class SettingsSetSettingValue<T>
+    internal class SettingsSetSettingValue<T>
     {
         public T Value { get; private set; }
         public IAmbientSettingsSet SettingsSet { get; private set; }
@@ -297,7 +298,7 @@ namespace AmbientServices
         }
     }
 
-    class SettingInfo<T> : IAmbientSettingInfo 
+    internal class SettingInfo<T> : IAmbientSettingInfo 
     {
         protected static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
 
@@ -435,7 +436,8 @@ namespace AmbientServices
             }
         }
     }
-    class SettingsSetSetting<T> : IAmbientSetting<T>
+
+    internal class SettingsSetSetting<T> : IAmbientSetting<T>
     {
         protected static readonly AmbientService<IAmbientSettingsSet> _AmbientSettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
 
@@ -516,7 +518,8 @@ namespace AmbientServices
                 : (_settingInfo.GlobalValue, DefaultSettingsSet.Instance.SetName);
         }
     }
-    class AmbientSetting<T> : SettingsSetSetting<T>
+
+    internal class AmbientSetting<T> : SettingsSetSetting<T>
     {
         public AmbientSetting(string key, string description, Func<string, T> convert, string defaultValueString = "")
             : base((IAmbientSettingsSet?)null, key, description, convert, defaultValueString)

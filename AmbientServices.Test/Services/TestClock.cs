@@ -19,8 +19,8 @@ namespace AmbientServices.Test
     {
         class AmbientPausedClockTimeChangeListener : IAmbientClockTimeChangedNotificationSink, IDisposable
         {
-            AmbientClock.PausedAmbientClock _pausedClock;
-            Action<IAmbientClock, long, long, DateTime, DateTime> _action;
+            readonly AmbientClock.PausedAmbientClock _pausedClock;
+            readonly Action<IAmbientClock, long, long, DateTime, DateTime> _action;
             public AmbientPausedClockTimeChangeListener(AmbientClock.PausedAmbientClock pausedClock, Action<IAmbientClock, long, long, DateTime, DateTime> action)
             {
                 _pausedClock = pausedClock;
@@ -44,14 +44,14 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PausedClock()
         {
-            AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
+            AmbientClock.PausedAmbientClock clock = new();
             long baselineTicks = clock.Ticks;
             IAmbientClock pausedClock = null;
             long oldTicks = 0;
             long newTicks = 0;
             DateTime oldUtcDateTime = DateTime.MinValue;
             DateTime newUtcDateTime = DateTime.MinValue;
-            using (AmbientPausedClockTimeChangeListener listener = new AmbientPausedClockTimeChangeListener(clock, (c, ot, nt, od, nd) => { pausedClock = c; oldTicks = ot; newTicks = nt; oldUtcDateTime = od; newUtcDateTime = nd; }))
+            using (AmbientPausedClockTimeChangeListener listener = new(clock, (c, ot, nt, od, nd) => { pausedClock = c; oldTicks = ot; newTicks = nt; oldUtcDateTime = od; newUtcDateTime = nd; }))
             {
                 clock.SkipAhead(10000);
                 Assert.IsNotNull(pausedClock);
@@ -199,7 +199,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(Math.Abs(timestamp1 - timestamp2) < Stopwatch.Frequency * 10);    // if this fails, it means that either there is a bug or the two lines above took 10+ seconds to run
             using (AmbientClock.Pause())
             {
-                AmbientStopwatch stopwatch = new AmbientStopwatch(true);
+                AmbientStopwatch stopwatch = new(true);
                 await Task.Delay(100);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
                 Assert.IsTrue(stopwatch.ElapsedTicks == 0);
@@ -219,7 +219,7 @@ namespace AmbientServices.Test
         {
             using (new ScopedLocalServiceOverride<IAmbientClock>(null))
             {
-                AmbientStopwatch stopwatch = new AmbientStopwatch(false);
+                AmbientStopwatch stopwatch = new(false);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
                 Assert.IsTrue(stopwatch.ElapsedTicks == 0);
                 await Task.Delay(100);
@@ -294,7 +294,7 @@ namespace AmbientServices.Test
         {
             using (new ScopedLocalServiceOverride<IAmbientClock>(null))
             {
-                AmbientStopwatch stopwatch = new AmbientStopwatch(false);
+                AmbientStopwatch stopwatch = new(false);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
                 await Task.Delay(100);
                 Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
@@ -322,11 +322,11 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AmbientCancellationTokenSource noTimeoutSource = new AmbientCancellationTokenSource();
-                AmbientCancellationTokenSource timeoutSource1 = new AmbientCancellationTokenSource(100);
-                AmbientCancellationTokenSource timeoutSource2 = new AmbientCancellationTokenSource(TimeSpan.FromMilliseconds(100));
-                AmbientCancellationTokenSource timeoutSource3 = new AmbientCancellationTokenSource();
-                AmbientCancellationTokenSource timeoutSource4 = new AmbientCancellationTokenSource();
+                AmbientCancellationTokenSource noTimeoutSource = new();
+                AmbientCancellationTokenSource timeoutSource1 = new(100);
+                AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(100));
+                AmbientCancellationTokenSource timeoutSource3 = new();
+                AmbientCancellationTokenSource timeoutSource4 = new();
                 timeoutSource3.CancelAfter(100);
                 timeoutSource4.CancelAfter(TimeSpan.FromMilliseconds(100));
                 await AmbientClock.TaskDelay(TimeSpan.FromMilliseconds(500));
@@ -348,7 +348,7 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
 #pragma warning disable CS0618 
-                CancellationTokenSource systemSource = new CancellationTokenSource();
+                CancellationTokenSource systemSource = new();
                 AmbientCancellationTokenSource noTimeoutSource = AmbientClock.CreateCancellationTokenSource();
                 AmbientCancellationTokenSource timeoutSource1 = AmbientClock.CreateCancellationTokenSource(systemSource);
                 AmbientCancellationTokenSource timeoutSource2 = AmbientClock.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100));
@@ -370,7 +370,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AmbientCancellationTokenSource timeoutSource = new AmbientCancellationTokenSource(100);
+                AmbientCancellationTokenSource timeoutSource = new(100);
                 Assert.IsFalse(timeoutSource.IsCancellationRequested);
                 await AmbientClock.TaskDelay(50);
                 Assert.IsFalse(timeoutSource.IsCancellationRequested);
@@ -388,11 +388,11 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task CancellationTokenSourceSystem()
         {
-            AmbientCancellationTokenSource noTimeoutSource = new AmbientCancellationTokenSource();
-            AmbientCancellationTokenSource timeoutSource1 = new AmbientCancellationTokenSource(100);
-            AmbientCancellationTokenSource timeoutSource2 = new AmbientCancellationTokenSource(TimeSpan.FromMilliseconds(100));
-            AmbientCancellationTokenSource timeoutSource3 = new AmbientCancellationTokenSource();
-            AmbientCancellationTokenSource timeoutSource4 = new AmbientCancellationTokenSource();
+            AmbientCancellationTokenSource noTimeoutSource = new();
+            AmbientCancellationTokenSource timeoutSource1 = new(100);
+            AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(100));
+            AmbientCancellationTokenSource timeoutSource3 = new();
+            AmbientCancellationTokenSource timeoutSource4 = new();
             timeoutSource3.CancelAfter(100);
             timeoutSource4.CancelAfter(TimeSpan.FromMilliseconds(100));
             await Task.Delay(TimeSpan.FromMilliseconds(500));
@@ -412,11 +412,11 @@ namespace AmbientServices.Test
         {
             using (IDisposable dispose = AmbientClock.Pause())
             {
-                AmbientCancellationTokenSource noTimeoutSource = new AmbientCancellationTokenSource();
+                AmbientCancellationTokenSource noTimeoutSource = new();
                 GC.Collect();
-                AmbientCancellationTokenSource timeoutSource1 = new AmbientCancellationTokenSource(TimeSpan.FromMilliseconds(103));
+                AmbientCancellationTokenSource timeoutSource1 = new(TimeSpan.FromMilliseconds(103));
                 GC.Collect();
-                AmbientCancellationTokenSource timeoutSource2 = new AmbientCancellationTokenSource(TimeSpan.FromMilliseconds(1151));
+                AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(1151));
                 GC.Collect();
                 await Task.Delay(250);
                 GC.Collect();
@@ -438,7 +438,7 @@ namespace AmbientServices.Test
         public void EventTimerAutoRestartAndEnabled()
         {
             using (AmbientClock.Pause())
-            using (AmbientEventTimer timer = new AmbientEventTimer(1))
+            using (AmbientEventTimer timer = new(1))
             {
                 timer.AutoReset = true;
                 Assert.IsTrue(timer.AutoReset);
@@ -464,7 +464,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EventTimerSystem()
         {
-            StringBuilder errorInfo = new StringBuilder();
+            StringBuilder errorInfo = new();
             // this test is testing against system objects which are timing-dependent to make sure they behave the same way the ambient versions do
             // so they fail occasionally, so we'll retry several times to be sure they're really misbehaving
             for (int attempt = 0; attempt < 5; ++attempt)
@@ -473,7 +473,7 @@ namespace AmbientServices.Test
 
                 bool elapsed = false;
                 bool disposed = false;
-                using (AmbientEventTimer timer = new AmbientEventTimer())
+                using (AmbientEventTimer timer = new())
                 {
                     timer.AutoReset = true;
                     timer.Interval = 10;
@@ -512,7 +512,7 @@ namespace AmbientServices.Test
             {
                 bool elapsed = false;
                 bool disposed = false;
-                using (AmbientEventTimer timer = new AmbientEventTimer())
+                using (AmbientEventTimer timer = new())
                 {
                     timer.Elapsed += (s, e) => { elapsed = true; };
                     timer.Disposed += (s, e) => { disposed = true; };
@@ -535,7 +535,7 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 bool disposed = false;
-                using (AmbientEventTimer timer = new AmbientEventTimer())
+                using (AmbientEventTimer timer = new())
                 {
                     timer.Disposed += (s, e) => { disposed = true; };
                     timer.Interval = 100;
@@ -554,9 +554,9 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (AmbientEventTimer timer = new AmbientEventTimer(TimeSpan.FromMilliseconds(Int32.MaxValue))) { }
+                using (AmbientEventTimer timer = new(TimeSpan.FromMilliseconds(Int32.MaxValue))) { }
             }
-            using (AmbientEventTimer timer = new AmbientEventTimer(TimeSpan.FromMilliseconds(Int32.MaxValue))) { }
+            using (AmbientEventTimer timer = new(TimeSpan.FromMilliseconds(Int32.MaxValue))) { }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -564,10 +564,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EventTimerExplicitClockAutoStartAutoReset()
         {
-            AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
+            AmbientClock.PausedAmbientClock clock = new();
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientEventTimer timer = new AmbientEventTimer(clock, TimeSpan.FromMilliseconds(100)))
+            using (AmbientEventTimer timer = new(clock, TimeSpan.FromMilliseconds(100)))
             {
                 timer.AutoReset = true;
                 timer.Elapsed += (s, e) => { ++elapsed; };
@@ -596,7 +596,7 @@ namespace AmbientServices.Test
             {
                 bool elapsed = false;
                 bool disposed = false;
-                using (AmbientEventTimer timer = new AmbientEventTimer(TimeSpan.FromMilliseconds(100)))
+                using (AmbientEventTimer timer = new(TimeSpan.FromMilliseconds(100)))
                 {
                     Assert.IsFalse(timer.AutoReset);
                     Assert.AreEqual(100.0, timer.Interval);
@@ -618,10 +618,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EventTimerExplicitClock()
         {
-            AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
+            AmbientClock.PausedAmbientClock clock = new();
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientEventTimer timer = new AmbientEventTimer(clock))
+            using (AmbientEventTimer timer = new(clock))
             {
                 timer.AutoReset = true;
                 timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, s); };
@@ -641,10 +641,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EventTimerExplicitClockStartStop()
         {
-            AmbientClock.PausedAmbientClock clock = new AmbientClock.PausedAmbientClock();
+            AmbientClock.PausedAmbientClock clock = new();
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientEventTimer timer = new AmbientEventTimer(clock))
+            using (AmbientEventTimer timer = new(clock))
             {
                 timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, s); };
                 timer.Disposed += (s, e) => { ++disposed; Assert.AreEqual(timer, s); };
@@ -670,9 +670,9 @@ namespace AmbientServices.Test
         {
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientEventTimer timer = new AmbientEventTimer(null))
+            using (AmbientEventTimer timer = new(null))
             {
-                SemaphoreSlim ss = new SemaphoreSlim(0);
+                SemaphoreSlim ss = new(0);
                 Assert.IsTrue(timer.AutoReset);
                 Assert.IsFalse(timer.Enabled);
                 timer.AutoReset = false;
@@ -697,9 +697,9 @@ namespace AmbientServices.Test
         {
             int elapsed = 0;
             int disposed = 0;
-            using (AmbientEventTimer timer = new AmbientEventTimer(null))
+            using (AmbientEventTimer timer = new(null))
             {
-                SemaphoreSlim ss = new SemaphoreSlim(0);
+                SemaphoreSlim ss = new(0);
                 Assert.IsFalse(timer.Enabled);
                 timer.AutoReset = true;
                 timer.Elapsed += (s, e) => { ++elapsed; ss.Release(); };
@@ -726,7 +726,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task EventTimerSystemClockAutoStart()
         {
-            StringBuilder errorInfo = new StringBuilder();
+            StringBuilder errorInfo = new();
             // this test is testing against system objects which are timing-dependent to make sure they behave the same way the ambient versions do
             // so they fail occasionally, so we'll retry several times to be sure they're really misbehaving
             for (int attempt = 0; attempt < 5; ++attempt)
@@ -734,7 +734,7 @@ namespace AmbientServices.Test
                 errorInfo.Clear();
                 int elapsed = 0;
                 int disposed = 0;
-                using (AmbientEventTimer timer = new AmbientEventTimer(null, TimeSpan.FromMilliseconds(1000)))
+                using (AmbientEventTimer timer = new(null, TimeSpan.FromMilliseconds(1000)))
                 {
                     Assert.IsTrue(timer.AutoReset);
                     Assert.IsFalse(timer.Enabled);
@@ -763,7 +763,7 @@ namespace AmbientServices.Test
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback))
+            using (AmbientCallbackTimer timer = new(callback))
             {
                 Assert.AreEqual(0, invocations);
                 timer.Change(100U, 77U);
@@ -795,10 +795,10 @@ namespace AmbientServices.Test
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(100));
                 Assert.AreEqual(5, invocations);
             }
-            object testState = new object();
+            object testState = new();
             invocations = 0;
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 13, 47))
+            using (AmbientCallbackTimer timer = new(callback, testState, 13, 47))
             {
                 Assert.AreEqual(0, invocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(13));
@@ -812,7 +812,7 @@ namespace AmbientServices.Test
             }
             invocations = 0;
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 13U, 47U))
+            using (AmbientCallbackTimer timer = new(callback, testState, 13U, 47U))
             {
                 Assert.AreEqual(0, invocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(13));
@@ -826,7 +826,7 @@ namespace AmbientServices.Test
             }
             invocations = 0;
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 13L, 47L))
+            using (AmbientCallbackTimer timer = new(callback, testState, 13L, 47L))
             {
                 Assert.AreEqual(0, invocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(13));
@@ -840,7 +840,7 @@ namespace AmbientServices.Test
             }
             invocations = 0;
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, TimeSpan.FromMilliseconds(13), TimeSpan.FromMilliseconds(47)))
+            using (AmbientCallbackTimer timer = new(callback, testState, TimeSpan.FromMilliseconds(13), TimeSpan.FromMilliseconds(47)))
             {
                 Assert.AreEqual(0, invocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(13));
@@ -854,7 +854,7 @@ namespace AmbientServices.Test
             }
             invocations = 0;
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 13, Timeout.Infinite))
+            using (AmbientCallbackTimer timer = new(callback, testState, 13, Timeout.Infinite))
             {
                 Assert.AreEqual(0, invocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(13));
@@ -868,7 +868,7 @@ namespace AmbientServices.Test
             }
             invocations = 0;
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, Timeout.Infinite, Timeout.Infinite))
+            using (AmbientCallbackTimer timer = new(callback, testState, Timeout.Infinite, Timeout.Infinite))
             {
                 Assert.AreEqual(0, invocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(13));
@@ -882,7 +882,7 @@ namespace AmbientServices.Test
             }
             invocations = 0;
             using (AmbientClock.Pause())
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, Timeout.Infinite, 47))
+            using (AmbientCallbackTimer timer = new(callback, testState, Timeout.Infinite, 47))
             {
                 Assert.AreEqual(0, invocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(13));
@@ -905,9 +905,9 @@ namespace AmbientServices.Test
             TimerCallback callback = o => { ++invocations; };
             using (AmbientClock.Pause())
             {
-                using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback)) { }
+                using (AmbientCallbackTimer timer = new(callback)) { }
             }
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback)) { }
+            using (AmbientCallbackTimer timer = new(callback)) { }
             Assert.AreEqual(0, invocations);
         }
         /// <summary>
@@ -920,8 +920,8 @@ namespace AmbientServices.Test
             TimerCallback callback = o => { ++invocations; };
             using (AmbientClock.Pause())
             {
-                ManualResetEvent mre = new ManualResetEvent(false);
-                AmbientCallbackTimer timer = new AmbientCallbackTimer(callback);
+                ManualResetEvent mre = new(false);
+                AmbientCallbackTimer timer = new(callback);
                 timer.Dispose();
                 Assert.IsFalse(timer.Dispose(mre));
 
@@ -985,7 +985,7 @@ namespace AmbientServices.Test
                 Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
-                using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback)) 
+                using (AmbientCallbackTimer timer = new(callback)) 
                 {
                     Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
                     Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
@@ -1019,11 +1019,11 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            object testState = new object();
+            object testState = new();
 #if NET5_0
             await
 #endif
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, Timeout.Infinite, 47))
+            using (AmbientCallbackTimer timer = new(callback, testState, Timeout.Infinite, 47))
             {
                 Assert.AreEqual(0, invocations);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(13));
@@ -1045,7 +1045,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback))
+            using (AmbientCallbackTimer timer = new(callback))
             {
                 timer.Change(Timeout.Infinite, 270);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(250));
@@ -1065,7 +1065,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback))
+            using (AmbientCallbackTimer timer = new(callback))
             {
                 timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
                 System.Threading.Thread.Sleep(TimeSpan.FromMilliseconds(250));
@@ -1085,8 +1085,8 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            object testState = new object();
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, Timeout.Infinite, Timeout.Infinite))
+            object testState = new();
+            using (AmbientCallbackTimer timer = new(callback, testState, Timeout.Infinite, Timeout.Infinite))
             {
                 Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
                                                     // if it becomes unreliable, we shall comment out this assert
@@ -1109,7 +1109,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback))
+            using (AmbientCallbackTimer timer = new(callback))
             {
                 timer.Change(330L, (long)Timeout.Infinite);
                 Assert.AreEqual(0, invocations);
@@ -1128,8 +1128,8 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            object testState = new object();
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 370, Timeout.Infinite))
+            object testState = new();
+            using (AmbientCallbackTimer timer = new(callback, testState, 370, Timeout.Infinite))
             {
                 Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
                                                     // if it becomes unreliable, we shall comment out this assert
@@ -1150,7 +1150,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback))
+            using (AmbientCallbackTimer timer = new(callback))
             {
                 Assert.AreEqual(0, invocations);
                 timer.Change(1000U, 770U);
@@ -1171,8 +1171,8 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            object testState = new object();
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 370, 530))
+            object testState = new();
+            using (AmbientCallbackTimer timer = new(callback, testState, 370, 530))
             {
                 Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
                                                     // if it becomes unreliable, we shall comment out this assert
@@ -1193,8 +1193,8 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            object testState = new object();
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 370U, 530U))
+            object testState = new();
+            using (AmbientCallbackTimer timer = new(callback, testState, 370U, 530U))
             {
                 Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
                                                     // if it becomes unreliable, we shall comment out this assert
@@ -1215,8 +1215,8 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            object testState = new object();
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, 370L, 530L))
+            object testState = new();
+            using (AmbientCallbackTimer timer = new(callback, testState, 370L, 530L))
             {
                 Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
                                                     // if it becomes unreliable, we shall comment out this assert
@@ -1237,8 +1237,8 @@ namespace AmbientServices.Test
             Assert.IsTrue(AmbientClock.IsSystemClock);
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            object testState = new object();
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, testState, TimeSpan.FromMilliseconds(370), TimeSpan.FromMilliseconds(530)))
+            object testState = new();
+            using (AmbientCallbackTimer timer = new(callback, testState, TimeSpan.FromMilliseconds(370), TimeSpan.FromMilliseconds(530)))
             {
                 Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
                                                     // if it becomes unreliable, we shall comment out this assert
@@ -1258,8 +1258,8 @@ namespace AmbientServices.Test
         {
             int invocations = 0;
             TimerCallback callback = o => { ++invocations; };
-            ManualResetEvent mre = new ManualResetEvent(false);
-            AmbientCallbackTimer timer = new AmbientCallbackTimer(callback);
+            ManualResetEvent mre = new(false);
+            AmbientCallbackTimer timer = new(callback);
             timer.Dispose();
             Assert.IsFalse(timer.Dispose(mre));
 
@@ -1279,7 +1279,7 @@ namespace AmbientServices.Test
             Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
-            using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback))
+            using (AmbientCallbackTimer timer = new(callback))
             {
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
@@ -1295,13 +1295,13 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StringBuilder errorInfo = new StringBuilder();
+                StringBuilder errorInfo = new();
                 // this test is testing against system objects which are timing-dependent to make sure they behave the same way the ambient versions do
                 // so they fail occasionally, so we'll retry several times to be sure they're really misbehaving
                 for (int attempt = 0; attempt < 5; ++attempt)
                 {
                     errorInfo.Clear();
-                    AutoResetEvent are = new AutoResetEvent(false);
+                    AutoResetEvent are = new(false);
                     int signaledInvocations = 0;
                     int timedOutInvocations = 0;
                     WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
@@ -1335,12 +1335,12 @@ namespace AmbientServices.Test
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                     if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting and 1000ms!");
                     if (2 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 2 after resetting and setting and 1000ms!");
-                    ManualResetEvent mre = new ManualResetEvent(false);
+                    ManualResetEvent mre = new(false);
                     Assert.IsTrue(registered.Unregister(mre));
                     Assert.IsFalse(registered.Unregister(mre));
                     if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
 
-                    AmbientRegisteredWaitHandle wh = new AmbientRegisteredWaitHandle(false, mre, (s, b) => { }, null, 10000, true);
+                    AmbientRegisteredWaitHandle wh = new(false, mre, (s, b) => { }, null, 10000, true);
                     wh.Unregister(mre);
 
                     are = new AutoResetEvent(false);
@@ -1374,9 +1374,89 @@ namespace AmbientServices.Test
                     if (2 != signaledInvocations) errorInfo.AppendLine($"Part 2: signaledInvocations is {signaledInvocations} but should be 2 after 10s,Set,Reset,Set, and 10s!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"Part 2: timedOutInvocations is {timedOutInvocations} but should be 0 after 10s,Set,Reset,Set, and 10s!");
                     Assert.IsTrue(registered.Unregister(null));
-                    if (errorInfo.Length == 0) break;
+
+                    are = new(false);
+                    signaledInvocations = 0;
+                    timedOutInvocations = 0;
+                    callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
+                    registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are, callback, null, (uint)1000, false);
+                    if (0 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 0 when no time has passed!");
+                    if (0 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 0 when no time has passed!");
+                    AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(1000));
+                    if (0 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 0 when 1000ms has passed!");
+                    if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 when 1000ms has passed!");
+                    AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
+                    are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    if (1 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 1 when 1500ms has passed!");
+                    if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 when 1500ms has passed!");
+                    are.Reset();    // now that we've been signaled, we can reset the event
+                    are.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting!");
+                    if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 after resetting and setting!");
+                    AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500)); // this would have been when we got timed out again, but since we got signaled in the middle, the period should have been reset
+                    if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting and 500ms!");
+                    if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 after resetting and setting and 500ms!");
+                    AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
+                    if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting and 1000ms!");
+                    if (2 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 2 after resetting and setting and 1000ms!");
+                    mre = new(false);
+                    Assert.IsTrue(registered.Unregister(mre));
+                    Assert.IsFalse(registered.Unregister(mre));
+                    if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
+
+                    are = new(false);
+                    signaledInvocations = 0;
+                    timedOutInvocations = 0;
+                    callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
+                    registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are, callback, null, TimeSpan.FromSeconds(1), false);
+                    if (0 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 0 when no time has passed!");
+                    if (0 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 0 when no time has passed!");
+                    AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(1000));
+                    if (0 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 0 when 1000ms has passed!");
+                    if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 when 1000ms has passed!");
+                    AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
+                    are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    if (1 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 1 when 1500ms has passed!");
+                    if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 when 1500ms has passed!");
+                    are.Reset();    // now that we've been signaled, we can reset the event
+                    are.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    System.Threading.Thread.Sleep(100);
+                    if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting!");
+                    if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 after resetting and setting!");
+                    AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500)); // this would have been when we got timed out again, but since we got signaled in the middle, the period should have been reset
+                    if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting and 500ms!");
+                    if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 after resetting and setting and 500ms!");
+                    AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
+                    if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting and 1000ms!");
+                    if (2 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 2 after resetting and setting and 1000ms!");
+                    mre = new(false);
+                    Assert.IsTrue(registered.Unregister(mre));
+                    Assert.IsFalse(registered.Unregister(mre));
+                    if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
+
                     // wait a random time to break any kind of resonant failure
                     System.Threading.Thread.Sleep(Utility.Pseudorandom.Next.NextInt32Ranged(1000));
+
+                    if (errorInfo.Length == 0) break;
                 }
                 Assert.IsTrue(errorInfo.Length == 0, errorInfo.ToString());
             }
@@ -1389,13 +1469,13 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StringBuilder errorInfo = new StringBuilder();
+                StringBuilder errorInfo = new();
                 // this test is testing against system objects which are timing-dependent to make sure they behave the same way the ambient versions do
                 // so they fail occasionally, so we'll retry several times to be sure they're really misbehaving
                 for (int attempt = 0; attempt < 5; ++attempt)
                 {
                     errorInfo.Clear();
-                    AutoResetEvent are = new AutoResetEvent(false);
+                    AutoResetEvent are = new(false);
                     int signaledInvocations = 0;
                     int timedOutInvocations = 0;
                     WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
@@ -1429,7 +1509,7 @@ namespace AmbientServices.Test
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                     if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after 1000ms,Set,Reset,Set,1000ms!");
                     if (2 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 2 after 1000ms,Set,Reset,Set,1000ms!");
-                    ManualResetEvent mre = new ManualResetEvent(false);
+                    ManualResetEvent mre = new(false);
                     Assert.IsTrue(registered.Unregister(mre));
                     Assert.IsFalse(registered.Unregister(mre));
                     if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
@@ -1479,7 +1559,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemUnsafeRegisterWaitForSingleObject()
         {
-            AutoResetEvent are = new AutoResetEvent(false);
+            AutoResetEvent are = new(false);
             int signaledInvocations = 0;
             int timedOutInvocations = 0;
             WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
@@ -1600,7 +1680,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AutoResetEvent are = new AutoResetEvent(false);
+                AutoResetEvent are = new(false);
                 int signaledInvocations = 0;
                 int timedOutInvocations = 0;
                 WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };

@@ -54,10 +54,11 @@ namespace AmbientServices
         /// </summary>
         public IReadOnlyList<Type>? RegistrationInterfaces { get { return _registrationInterfaces; } }
     }
+
     /// <summary>
     /// An internal static class that collects default ambient service implementations in every currently and subsequently loaded assembly.
     /// </summary>
-    static class DefaultAmbientServices
+    internal static class DefaultAmbientServices
     {
         private static Assembly _ThisAssembly;
         private static readonly ConcurrentDictionary<Type, Type> _DefaultImplementations;
@@ -75,7 +76,7 @@ namespace AmbientServices
             OnAssemblyLoad(assembly);
         }
 
-        static ConcurrentDictionary<Type, Type> InitializeAlreadyLoadedDefaultAmbientServices()
+        private static ConcurrentDictionary<Type, Type> InitializeAlreadyLoadedDefaultAmbientServices()
         {
             ConcurrentDictionary<Type, Type> dictionary = new();
             foreach (Type type in AllLoadedReferringTypes())

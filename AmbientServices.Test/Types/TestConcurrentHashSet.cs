@@ -15,9 +15,9 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ConcurrentHashSet()
         {
-            ConcurrentHashSet<int> playSet = new ConcurrentHashSet<int>();
-            ConcurrentHashSet<int> smallSet = new ConcurrentHashSet<int>(new int[] { 0, 1 });
-            ConcurrentHashSet<int> bigSet = new ConcurrentHashSet<int>(new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, EqualityComparer<int>.Default);
+            ConcurrentHashSet<int> playSet = new();
+            ConcurrentHashSet<int> smallSet = new(new int[] { 0, 1 });
+            ConcurrentHashSet<int> bigSet = new(new int[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, EqualityComparer<int>.Default);
             ConcurrentHashSet<int> nullSet = null;
             Assert.AreEqual(EqualityComparer<int>.Default, bigSet.Comparer);
             Assert.IsFalse(string.IsNullOrEmpty(smallSet.ToString()));
@@ -75,7 +75,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(smallSet.Contains(0));
             Assert.IsFalse(smallSet.Contains(1));
 
-            ConcurrentHashSet<int> niSet = new ConcurrentHashSet<int>();
+            ConcurrentHashSet<int> niSet = new();
             niSet.Add(0);
             Assert.IsFalse(niSet.IsEmpty);
             niSet.IntersectWith(null);

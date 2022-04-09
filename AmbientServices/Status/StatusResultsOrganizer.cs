@@ -9,7 +9,7 @@ namespace AmbientServices
     /// <summary>
     /// A class used to rate and organize a tree of <see cref="StatusResults"/> such that single results are pushed up to parents, children are sorted by rating, and overall ratings for each node are assigned based on the nature of the system represented by each node.
     /// </summary>
-    class StatusResultsOrganizer
+    internal class StatusResultsOrganizer
     {
         private readonly IStatusThresholdsRegistry? _thresholds;
         private readonly List<StatusPropertyRange> _propertyRanges = new();
@@ -433,7 +433,8 @@ namespace AmbientServices
             return output.ToString();
         }
     }
-    class AggregatedAlert
+
+    internal class AggregatedAlert
     {
         private static string RenderSource(string? source) { return source ?? Status.DefaultSource; }
         private static string RenderTarget(string? target) { return target ?? Status.DefaultTarget; }
@@ -530,11 +531,12 @@ namespace AmbientServices
             get
             {
                 if (Sources.Count == 1) return Sources[0] + " is";
-                return "[" + String.Join(",", Sources) + "] are";
+                return "[" + string.Join(",", Sources) + "] are";
             }
         }
     }
-    class StatusPropertyRange
+
+    internal class StatusPropertyRange
     {
         public string Name { get; private set; }
         public string MinValue { get; private set; }
@@ -562,7 +564,8 @@ namespace AmbientServices
             return Name + "=" + MinValue + ((MinValue == MaxValue) ? "" : ("-" + MaxValue));
         }
     }
-    class DateTimeRange
+
+    internal class DateTimeRange
     {
         public DateTime Earliest { get; private set; }
         public DateTime Latest { get; private set; }
@@ -596,7 +599,8 @@ namespace AmbientServices
             return ToLongTimeString();
         }
     }
-    class TimeSpanRange
+
+    internal class TimeSpanRange
     {
         public TimeSpan Shortest { get; private set; }
         public TimeSpan Longest { get; private set; }

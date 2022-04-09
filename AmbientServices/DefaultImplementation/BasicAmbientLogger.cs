@@ -173,10 +173,11 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
     }
+
     /// <summary>
     /// A class to buffer log messages and write them asynchronously.
     /// </summary>
-    class RotatingFileBuffer : IDisposable
+    internal class RotatingFileBuffer : IDisposable
     {
         private static readonly string _FlushString = Guid.NewGuid().ToString();
         private static readonly string _SwitchFilesPrefix = Guid.NewGuid().ToString() + ":";

@@ -16,22 +16,22 @@ namespace AmbientServices.Test
     [TestClass]
     public class TestCache
     {
-        private static readonly Dictionary<string, string> TestCacheSettingsDictionary = new Dictionary<string, string>() { { nameof(BasicAmbientCache) + "-EjectFrequency", "10" }, { nameof(BasicAmbientCache) + "-MaximumItemCount", "20" }, { nameof(BasicAmbientCache) + "-MinimumItemCount", "1" } };
-        private static readonly Dictionary<string, string> AllowEmptyCacheSettingsDictionary = new Dictionary<string, string>() { { nameof(BasicAmbientCache) + "-EjectFrequency", "40" }, { nameof(BasicAmbientCache) + "-MaximumItemCount", "20" }, { nameof(BasicAmbientCache) + "-MinimumItemCount", "-1" } };
+        private static readonly Dictionary<string, string> TestCacheSettingsDictionary = new() { { nameof(BasicAmbientCache) + "-EjectFrequency", "10" }, { nameof(BasicAmbientCache) + "-MaximumItemCount", "20" }, { nameof(BasicAmbientCache) + "-MinimumItemCount", "1" } };
+        private static readonly Dictionary<string, string> AllowEmptyCacheSettingsDictionary = new() { { nameof(BasicAmbientCache) + "-EjectFrequency", "40" }, { nameof(BasicAmbientCache) + "-MaximumItemCount", "20" }, { nameof(BasicAmbientCache) + "-MinimumItemCount", "-1" } };
         /// <summary>
         /// Performs tests on <see cref="IAmbientCache"/>.
         /// </summary>
         [TestMethod]
         public async Task CacheAmbient()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(TestCacheSettingsDictionary, nameof(CacheAmbient));
+            AmbientSettingsOverride localSettingsSet = new(TestCacheSettingsDictionary, nameof(CacheAmbient));
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 IAmbientCache localOverride = new BasicAmbientCache();
-                using (ScopedLocalServiceOverride<IAmbientCache> localCache = new ScopedLocalServiceOverride<IAmbientCache>(localOverride))
+                using (ScopedLocalServiceOverride<IAmbientCache> localCache = new(localOverride))
                 {
                     TestCache ret;
-                    AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
+                    AmbientCache<TestCache> cache = new();
                     await cache.Store("Test1", this);
                     await cache.Store("Test1", this);
                     ret = await cache.Retrieve<TestCache>("Test1", null);
@@ -72,10 +72,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task CacheNone()
         {
-            using (ScopedLocalServiceOverride<IAmbientCache> localCache = new ScopedLocalServiceOverride<IAmbientCache>(null))
+            using (ScopedLocalServiceOverride<IAmbientCache> localCache = new(null))
             {
                 TestCache ret;
-                AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
+                AmbientCache<TestCache> cache = new();
                 await cache.Store("Test1", this);
                 ret = await cache.Retrieve<TestCache>("Test1");
                 Assert.IsNull(ret);
@@ -95,7 +95,7 @@ namespace AmbientServices.Test
         {
             IAmbientCache localOverride = new BasicAmbientCache();
             using (AmbientClock.Pause())
-            using (ScopedLocalServiceOverride<IAmbientCache> localCache = new ScopedLocalServiceOverride<IAmbientCache>(localOverride))
+            using (ScopedLocalServiceOverride<IAmbientCache> localCache = new(localOverride))
             {
                 string keyName1 = nameof(CacheExpiration) + "1";
                 string keyName2 = nameof(CacheExpiration) + "2";
@@ -105,7 +105,7 @@ namespace AmbientServices.Test
                 string keyName6 = nameof(CacheExpiration) + "6";
                 string keyName7 = nameof(CacheExpiration) + "7";
                 TestCache ret;
-                AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
+                AmbientCache<TestCache> cache = new();
                 await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(50));
                 await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(51));
                 await cache.Store(keyName2, this);
@@ -170,12 +170,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task CacheSkipAndEmptyEject()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(AllowEmptyCacheSettingsDictionary, nameof(CacheAmbient));
+            AmbientSettingsOverride localSettingsSet = new(AllowEmptyCacheSettingsDictionary, nameof(CacheAmbient));
             using (AmbientClock.Pause())
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 IAmbientCache localOverride = new BasicAmbientCache();
-                using (ScopedLocalServiceOverride<IAmbientCache> localCache = new ScopedLocalServiceOverride<IAmbientCache>(localOverride))
+                using (ScopedLocalServiceOverride<IAmbientCache> localCache = new(localOverride))
                 {
                     string keyName1 = nameof(CacheExpiration) + "1";
                     string keyName2 = nameof(CacheExpiration) + "2";
@@ -185,7 +185,7 @@ namespace AmbientServices.Test
                     //string keyName6 = nameof(CacheExpiration) + "6";
                     //string keyName7 = nameof(CacheExpiration) + "7";
                     TestCache ret;
-                    AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
+                    AmbientCache<TestCache> cache = new();
                     await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(100));
                     await cache.Store(keyName2, this, TimeSpan.FromMilliseconds(50));
                     await cache.Store(keyName3, this, TimeSpan.FromMilliseconds(100));
@@ -225,7 +225,7 @@ namespace AmbientServices.Test
         {
             IAmbientCache localOverride = new BasicAmbientCache();
             using (AmbientClock.Pause())
-            using (ScopedLocalServiceOverride<IAmbientCache> localCache = new ScopedLocalServiceOverride<IAmbientCache>(localOverride))
+            using (ScopedLocalServiceOverride<IAmbientCache> localCache = new(localOverride))
             {
                 string keyName1 = nameof(CacheDoubleExpiration) + "1";
                 string keyName2 = nameof(CacheDoubleExpiration) + "2";
@@ -234,7 +234,7 @@ namespace AmbientServices.Test
                 string keyName5 = nameof(CacheDoubleExpiration) + "5";
 //                string keyName6 = nameof(CacheDoubleExpiration) + "6";
                 TestCache ret;
-                AmbientCache<TestCache> cache = new AmbientCache<TestCache>();
+                AmbientCache<TestCache> cache = new();
                 await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(51));
                 await cache.Store(keyName2, this, TimeSpan.FromMilliseconds(50));
                 await cache.Store(keyName3, this, TimeSpan.FromSeconds(50));
@@ -277,13 +277,13 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task CacheSpecifiedImplementation()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(TestCacheSettingsDictionary, nameof(CacheSpecifiedImplementation));
+            AmbientSettingsOverride localSettingsSet = new(TestCacheSettingsDictionary, nameof(CacheSpecifiedImplementation));
             using (AmbientClock.Pause())
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 TestCache ret;
                 IAmbientCache cacheService = new BasicAmbientCache(localSettingsSet);
-                AmbientCache<TestCache> cache = new AmbientCache<TestCache>(cacheService, "prefix");
+                AmbientCache<TestCache> cache = new(cacheService, "prefix");
                 await cache.Store<TestCache>("Test1", this);
                 ret = await cache.Retrieve<TestCache>("Test1", null);
                 Assert.AreEqual(this, ret);
@@ -322,7 +322,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task CacheRefresh()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(TestCacheSettingsDictionary, nameof(CacheRefresh));
+            AmbientSettingsOverride localSettingsSet = new(TestCacheSettingsDictionary, nameof(CacheRefresh));
             using (AmbientClock.Pause())
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
@@ -392,7 +392,7 @@ namespace AmbientServices.Test
         private readonly IAmbientSettingsSet _fallbackSettings;
         private readonly ConcurrentDictionary<string, string> _overrideRawSettings;
         private readonly ConcurrentDictionary<string, object> _overrideTypedSettings;
-        private string _name;
+        private readonly string _name;
 
         public AmbientSettingsOverride(Dictionary<string, string> overrideSettings, string name, IAmbientSettingsSet fallback = null, AmbientService<IAmbientSettingsSet> settings = null)
         {
@@ -473,9 +473,9 @@ namespace AmbientServices.Test
         private readonly IAmbientSetting<int> _countToEject;
         private readonly IAmbientSetting<int> _minCacheEntries;
         private int _expireCount;
-        private ConcurrentQueue<TimedQueueEntry> _timedQueue = new ConcurrentQueue<TimedQueueEntry>();
-        private ConcurrentQueue<string> _untimedQueue = new ConcurrentQueue<string>();
-        private ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>();
+        private ConcurrentQueue<TimedQueueEntry> _timedQueue = new();
+        private ConcurrentQueue<string> _untimedQueue = new();
+        private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
 
         public BasicAmbientCache()
             : this(_Settings.Local)
@@ -562,7 +562,7 @@ namespace AmbientServices.Test
                 if (maxCacheDuration != null) actualExpiration = now.Add(maxCacheDuration.Value);
                 if (expiration != null && expiration.Value.Kind == DateTimeKind.Local) expiration = expiration.Value.ToUniversalTime();
                 if (expiration < actualExpiration) actualExpiration = expiration;
-                CacheEntry entry = new CacheEntry(itemKey, actualExpiration, item);
+                CacheEntry entry = new(itemKey, actualExpiration, item);
                 _cache.AddOrUpdate(itemKey, entry, (k, v) => entry);
                 if (actualExpiration == null)
                 {

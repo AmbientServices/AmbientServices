@@ -428,7 +428,7 @@ namespace AmbientServices
         public static async Task<List<T>> ToListAsync<T>(this IAsyncEnumerable<T> ae, CancellationToken cancel = default)
         {
             if (ae == null) throw new ArgumentNullException(nameof(ae));
-            List<T> ret = new List<T>();
+            List<T> ret = new();
             await foreach (T t in ae)
             {
                 cancel.ThrowIfCancellationRequested();

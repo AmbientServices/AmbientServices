@@ -38,15 +38,15 @@
     /// Values above 2.0 indicate that the system is "Superlative", ie. better than Okay.
     /// For example, a value of 0.5 indicates that the system is alerting and is about half way towards failing but not yet failing;
     /// a value of 1.5 indicates that the system is okay, but halfway towards alerting (for example, a lack of redundancy, or nearing the alert threshold for disk space available).
-    /// When comparing status ratings, keep in mind that <see cref="StatusRating.Pending"/> has the value <see cref="System.Single.NaN"/>, which will not compare to any other value.
-    /// If you need to check for pending statuses, either add <see cref="System.Single.IsNaN(float)"/> logic or use the opposite logic and a not.
+    /// When comparing status ratings, keep in mind that <see cref="StatusRating.Pending"/> has the value <see cref="float.NaN"/>, which will not compare to any other value.
+    /// If you need to check for pending statuses, either add <see cref="float.IsNaN(float)"/> logic or use the opposite logic and a not.
     /// </remarks>
     public static class StatusRating
     {
         /// <summary>
         /// The status check has not been completed yet, even though the status system is running.
-        /// Note that this value is <see cref="System.Single.NaN"/> and therefore will not compare even to itself with the == operator.
-        /// Use <see cref="System.Single.IsNaN(float)"/> to check to see if an assigned rating has this value.
+        /// Note that this value is <see cref="float.NaN"/> and therefore will not compare even to itself with the == operator.
+        /// Use <see cref="float.IsNaN(float)"/> to check to see if an assigned rating has this value.
         /// The reason for this is that this is an explicitly-assigned state, but isn't necessarily better or worse than any other value.
         /// Using any other possible value would result in some use cases not working as intended.
         /// </summary>

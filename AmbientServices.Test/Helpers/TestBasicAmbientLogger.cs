@@ -15,7 +15,7 @@ namespace AmbientServices.Test
     [TestClass]
     public class TestBasicAmbientLogger
     {
-        private static AmbientService<IAmbientLogger> Logger = Ambient.GetService<IAmbientLogger>();
+        private static readonly AmbientService<IAmbientLogger> Logger = Ambient.GetService<IAmbientLogger>();
         [TestMethod]
         public async Task BasicAmbientLoggerBasic()
         {
@@ -23,7 +23,7 @@ namespace AmbientServices.Test
             try
             {
                 using (AmbientClock.Pause())
-                using (BasicAmbientLogger loggerImp = new BasicAmbientLogger(tempPath, ".log", 8 * 60))
+                using (BasicAmbientLogger loggerImp = new(tempPath, ".log", 8 * 60))
                 {
                     // delete any preexisting files
                     await BasicAmbientLogger.TryDeleteAllFiles(loggerImp.FilePrefix);
@@ -56,7 +56,7 @@ namespace AmbientServices.Test
             try
             {
                 using (AmbientClock.Pause())
-                using (BasicAmbientLogger logger = new BasicAmbientLogger(null, null, 8 * 60))
+                using (BasicAmbientLogger logger = new(null, null, 8 * 60))
                 {
                     logFilePrefix = logger.FilePrefix;
                     // delete any preexisting files
@@ -159,7 +159,7 @@ namespace AmbientServices.Test
             string tempPath = Path.GetTempPath() + Guid.NewGuid().ToString("N");
             using (AmbientClock.Pause())
             {
-                using (RotatingFileBuffer buffer = new RotatingFileBuffer(tempPath, "0.log", TimeSpan.Zero))
+                using (RotatingFileBuffer buffer = new(tempPath, "0.log", TimeSpan.Zero))
                 {
                     buffer.Dispose();
                     Assert.ThrowsException<ObjectDisposedException>(() => buffer.BufferLine(""));

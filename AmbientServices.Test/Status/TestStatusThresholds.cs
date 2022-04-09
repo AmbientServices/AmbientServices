@@ -556,7 +556,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void StatusThresholdsExceptions()
         {
-            Assert.ThrowsException<ArgumentException>(() => { StatusPropertyThresholds s = new StatusPropertyThresholds(2.0f, 3.0f, 1.0f); });
+            Assert.ThrowsException<ArgumentException>(() => { StatusPropertyThresholds s = new(2.0f, 3.0f, 1.0f); });
             //StatusThresholds thresholds;
             //StatusAuditAlert alert;
 //            thresholds = new StatusThresholds(1.0f, 2.0f, 3.0f);
@@ -635,12 +635,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public void DefaultStatusThresholdsClass()
         {
-            ConcurrentDictionary<string, StatusPropertyThresholds> thresholds = new ConcurrentDictionary<string, StatusPropertyThresholds>();
-            AmbientServices.StatusPropertyThresholds thresholds1 = new AmbientServices.StatusPropertyThresholds(null, null, 50000);
+            ConcurrentDictionary<string, StatusPropertyThresholds> thresholds = new();
+            AmbientServices.StatusPropertyThresholds thresholds1 = new(null, null, 50000);
             thresholds.TryAdd("KEY1", thresholds1);
-            AmbientServices.StatusPropertyThresholds thresholds2 = new AmbientServices.StatusPropertyThresholds(40, 100, 5000);
+            AmbientServices.StatusPropertyThresholds thresholds2 = new(40, 100, 5000);
             thresholds.TryAdd("KEY2", thresholds2);
-            AmbientServices.StatusPropertyThresholds thresholds3 = new AmbientServices.StatusPropertyThresholds(1000, 0, -1000);
+            AmbientServices.StatusPropertyThresholds thresholds3 = new(1000, 0, -1000);
             thresholds.TryAdd("KEY3", thresholds3);
             IStatusThresholdsRegistry defaultThresholds = new DefaultStatusThresholds(thresholds);
             Assert.AreEqual(thresholds1, defaultThresholds.GetThresholds("key1"));

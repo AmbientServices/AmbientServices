@@ -64,7 +64,8 @@ namespace AmbientServices
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
             SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
         }
-        static void NewSettingRegistered(BasicAmbientSettingsSet settingsSet, object? sender, IAmbientSettingInfo setting)
+
+        private static void NewSettingRegistered(BasicAmbientSettingsSet settingsSet, object? sender, IAmbientSettingInfo setting)
         {
             // is there a value for this setting?
             string? value;
@@ -123,7 +124,7 @@ namespace AmbientServices
                 string? oldValue = null;
                 _rawValues.AddOrUpdate(key, value, (k, v) => { oldValue = v; return value; });
                 // did the value *not* change?  bail out early
-                if (String.Equals(value, oldValue, StringComparison.Ordinal)) return false;
+                if (string.Equals(value, oldValue, StringComparison.Ordinal)) return false;
                 IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
                 _typedValues[key] = (ps != null) ? ps.Convert(this, value) : value;
             }

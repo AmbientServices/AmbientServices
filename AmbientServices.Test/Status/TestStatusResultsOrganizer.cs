@@ -18,12 +18,12 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusAuditAlert commonAlert = new StatusAuditAlert(.7f, "TestCode", "TerseTest", "Detailed Test Message");
-                StatusAuditReport report1 = new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), commonAlert);
-                StatusAuditReport report2 = new StatusAuditReport(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), commonAlert);
-                AggregatedAlert first = new AggregatedAlert("TestSource1", "TestTarget", DateTime.MinValue, report1);
-                AggregatedAlert second = new AggregatedAlert("TestSource2", "TestTarget", DateTime.MinValue, report2);
-                StatusResults secondResults = new StatusResults("TestSource2", "TestTarget", AmbientClock.UtcNow.AddSeconds(-10), 0, ImmutableArray<StatusProperty>.Empty, report2);
+                StatusAuditAlert commonAlert = new(.7f, "TestCode", "TerseTest", "Detailed Test Message");
+                StatusAuditReport report1 = new(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), commonAlert);
+                StatusAuditReport report2 = new(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), commonAlert);
+                AggregatedAlert first = new("TestSource1", "TestTarget", DateTime.MinValue, report1);
+                AggregatedAlert second = new("TestSource2", "TestTarget", DateTime.MinValue, report2);
+                StatusResults secondResults = new("TestSource2", "TestTarget", AmbientClock.UtcNow.AddSeconds(-10), 0, ImmutableArray<StatusProperty>.Empty, report2);
                 first.Aggregate(secondResults);
 
                 report1 = new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10));
@@ -80,12 +80,12 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusAuditAlert commonAlert = new StatusAuditAlert(.7f, "TestCode", "TerseTest", "Detailed Test Message");
-                StatusResults results = new StatusResults("TestSource", "TestTarget", ImmutableArray<StatusResults>.Empty);
-                AggregatedAlert alert = new AggregatedAlert(results);
+                StatusAuditAlert commonAlert = new(.7f, "TestCode", "TerseTest", "Detailed Test Message");
+                StatusResults results = new("TestSource", "TestTarget", ImmutableArray<StatusResults>.Empty);
+                AggregatedAlert alert = new(results);
                 Assert.AreEqual(StatusRating.Okay, alert.RatingSum);
 
-                StatusAuditReport report = new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10));
+                StatusAuditReport report = new(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10));
                 results = new StatusResults("TestSource", "TestTarget", AmbientClock.UtcNow, 0, ImmutableArray<StatusProperty>.Empty, report);
                 alert = new AggregatedAlert(results);
                 Assert.AreEqual(StatusRating.Okay, alert.RatingSum);
@@ -96,9 +96,9 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusAuditAlert commonAlert = new StatusAuditAlert(.7f, "TestCode", "TerseTest", "Detailed Test Message");
-                StatusAuditReport report1 = new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), commonAlert);
-                AggregatedAlert first = new AggregatedAlert("TestSource1", "TestTarget", DateTime.MinValue, report1);
+                StatusAuditAlert commonAlert = new(.7f, "TestCode", "TerseTest", "Detailed Test Message");
+                StatusAuditReport report1 = new(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), commonAlert);
+                AggregatedAlert first = new("TestSource1", "TestTarget", DateTime.MinValue, report1);
                 Assert.IsNotNull(first.PropertyRanges);
                 Assert.AreEqual(first.Report, report1);
             }
@@ -106,8 +106,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void AggregatedAlertNullSourceAndTarget()
         {
-            StatusAuditReport report = new StatusAuditReport(DateTime.MinValue, TimeSpan.FromSeconds(1));
-            AggregatedAlert a = new AggregatedAlert(null, null, DateTime.MinValue, report);
+            StatusAuditReport report = new(DateTime.MinValue, TimeSpan.FromSeconds(1));
+            AggregatedAlert a = new(null, null, DateTime.MinValue, report);
             Assert.AreEqual(Status.DefaultSource, a.Sources[0]);
             Assert.AreEqual(Status.DefaultTarget, a.Target);
         }
@@ -116,14 +116,14 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusAuditAlert alert1 = new StatusAuditAlert(.7f, "TestCode1", "TerseTest", "Detailed Test Message");
-                StatusAuditAlert alert2 = new StatusAuditAlert(.7f, "TestCode2", "TerseTest", "Detailed Test Message");
-                StatusAuditReport report1 = new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), alert1);
-                StatusAuditReport report1NoAlert = new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), null);
-                StatusAuditReport report2 = new StatusAuditReport(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), alert2);
-                StatusAuditReport report2NoAlert = new StatusAuditReport(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), null);
-                AggregatedAlert first = new AggregatedAlert("TestSource1", "TestTarget", DateTime.MinValue, report1);
-                AggregatedAlert second = new AggregatedAlert("TestSource2", "TestTarget", DateTime.MinValue, report2);
+                StatusAuditAlert alert1 = new(.7f, "TestCode1", "TerseTest", "Detailed Test Message");
+                StatusAuditAlert alert2 = new(.7f, "TestCode2", "TerseTest", "Detailed Test Message");
+                StatusAuditReport report1 = new(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), alert1);
+                StatusAuditReport report1NoAlert = new(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), null);
+                StatusAuditReport report2 = new(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), alert2);
+                StatusAuditReport report2NoAlert = new(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), null);
+                AggregatedAlert first = new("TestSource1", "TestTarget", DateTime.MinValue, report1);
+                AggregatedAlert second = new("TestSource2", "TestTarget", DateTime.MinValue, report2);
                 Assert.IsFalse(first.CanBeAggregated("/", report2));
                 Assert.IsFalse(first.CanBeAggregated("/", report2NoAlert));
                 Assert.IsFalse(first.CanBeAggregated("/", null));
@@ -137,13 +137,13 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusAuditAlert alert1 = new StatusAuditAlert(.7f, "TestCode1", "TerseTest", "Detailed Test Message");
-                StatusAuditAlert alert2 = new StatusAuditAlert(.7f, "TestCode2", "TerseTest", "Detailed Test Message");
-                StatusAuditReport report1 = new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), alert1);
-                StatusAuditReport report2 = new StatusAuditReport(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), alert2);
-                AggregatedAlert first = new AggregatedAlert("TestSource1", "TestTarget", DateTime.MinValue, report1);
-                AggregatedAlert second = new AggregatedAlert("TestSource2", "TestTarget", DateTime.MinValue, report2);
-                StatusResults secondResults = new StatusResults("TestSource2", "TestTarget", AmbientClock.UtcNow.AddSeconds(-10), 0, ImmutableArray<StatusProperty>.Empty, report2);
+                StatusAuditAlert alert1 = new(.7f, "TestCode1", "TerseTest", "Detailed Test Message");
+                StatusAuditAlert alert2 = new(.7f, "TestCode2", "TerseTest", "Detailed Test Message");
+                StatusAuditReport report1 = new(AmbientClock.UtcNow, TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(10), alert1);
+                StatusAuditReport report2 = new(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), alert2);
+                AggregatedAlert first = new("TestSource1", "TestTarget", DateTime.MinValue, report1);
+                AggregatedAlert second = new("TestSource2", "TestTarget", DateTime.MinValue, report2);
+                StatusResults secondResults = new("TestSource2", "TestTarget", AmbientClock.UtcNow.AddSeconds(-10), 0, ImmutableArray<StatusProperty>.Empty, report2);
                 Assert.ThrowsException<InvalidOperationException>(() => first.Aggregate(secondResults));
                 Assert.ThrowsException<InvalidOperationException>(() => first.Aggregate("TestSource2", "TestTarget", AmbientClock.UtcNow.AddSeconds(-10), report2));
 
@@ -159,7 +159,7 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 // first test with a single date time
-                DateTimeRange range = new DateTimeRange(AmbientClock.UtcNow);
+                DateTimeRange range = new(AmbientClock.UtcNow);
 
                 string longString = range.ToLongTimeString();
                 string shortString = range.ToShortTimeString();
@@ -183,7 +183,7 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 // first test with a single time span
-                TimeSpanRange range = new TimeSpanRange(TimeSpan.FromSeconds(10));
+                TimeSpanRange range = new(TimeSpan.FromSeconds(10));
 
                 string longString = range.ToLongString();
                 string shortString = range.ToShortString();
@@ -207,7 +207,7 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 // first test with a single property value
-                StatusPropertyRange range = new StatusPropertyRange(new StatusProperty("property", "5"));
+                StatusPropertyRange range = new(new StatusProperty("property", "5"));
 
                 Assert.IsTrue(range.ToString().Contains("5"));
 
@@ -265,15 +265,15 @@ namespace AmbientServices.Test
                 Assert.IsTrue(o.Contains("/Target1:"));
 
                 organizer = new StatusResultsOrganizer();
-                StatusResults source1Root = new StatusResults(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                StatusResults source1Root = new(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                     new StatusResults(null, "/SampleDisk.OperatingSystem", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "1.0") }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target2", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                 });
-                StatusResults source2Root = new StatusResults(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                StatusResults source2Root = new(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                     new StatusResults(null, "/SampleDisk.OperatingSystem", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "2.3") }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.1"), new StatusProperty("Att2", "Val2.1") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target2", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.1"), new StatusProperty("Att2", "Val2.1") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                 });
-                StatusResults overallRoot = new StatusResults(null, "/", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
+                StatusResults overallRoot = new(null, "/", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
                     source1Root,
                     source2Root,
                 });
@@ -292,19 +292,19 @@ namespace AmbientServices.Test
                 string o;
 
                 organizer = new StatusResultsOrganizer();
-                StatusResults source1Root = new StatusResults(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                StatusResults source1Root = new(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                     new StatusResults(null, "/Target1", AmbientClock.UtcNow.AddSeconds(2), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow.AddSeconds(2), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target2", AmbientClock.UtcNow.AddSeconds(3), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part2", AmbientClock.UtcNow.AddSeconds(3), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target3", AmbientClock.UtcNow.AddSeconds(1), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part3", AmbientClock.UtcNow.AddSeconds(1), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                 });
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                StatusResults source2Root = new StatusResults(null, null, AmbientClock.UtcNow.AddSeconds(5), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                StatusResults source2Root = new(null, null, AmbientClock.UtcNow.AddSeconds(5), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                     new StatusResults(null, "/Target1", AmbientClock.UtcNow.AddSeconds(2), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow.AddSeconds(2), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target2", AmbientClock.UtcNow.AddSeconds(3), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part2", AmbientClock.UtcNow.AddSeconds(3), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target3", AmbientClock.UtcNow.AddSeconds(1), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part3", AmbientClock.UtcNow.AddSeconds(1), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                 });
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                StatusResults source3Root = new StatusResults(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                StatusResults source3Root = new(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                     new StatusResults(null, "/Target1", AmbientClock.UtcNow.AddSeconds(1), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow.AddSeconds(1), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target2", AmbientClock.UtcNow.AddSeconds(3), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part2", AmbientClock.UtcNow.AddSeconds(3), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target3", AmbientClock.UtcNow.AddSeconds(2), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part3", AmbientClock.UtcNow.AddSeconds(2), 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
@@ -326,14 +326,14 @@ namespace AmbientServices.Test
                 string o;
 
                 organizer = new StatusResultsOrganizer();
-                StatusResults source1Root = new StatusResults(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
+                StatusResults source1Root = new(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
                     new StatusResults(null, "/Pending", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusAuditReport.Pending) }),
                     new StatusResults(null, "/Pending", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusAuditReport.Pending) }),
                 });
-                StatusResults source2Root = new StatusResults(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                StatusResults source2Root = new(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                     new StatusResults(null, "/Pending", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenIrrelevant, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusAuditReport.Pending) }),
                 });
-                StatusResults overallRoot = new StatusResults(null, "/", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
+                StatusResults overallRoot = new(null, "/", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
                     source1Root,
                     source2Root,
                 });
@@ -352,18 +352,18 @@ namespace AmbientServices.Test
                 string o;
 
                 organizer = new StatusResultsOrganizer();
-                StatusResults source1Root = new StatusResults(null, null, AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "1.0") }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                StatusResults source1Root = new(null, null, AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "1.0") }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                     new StatusResults(null, "/SampleDisk.OperatingSystem", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "2.0"), new StatusProperty("AvailablePercent", "2.1") }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                         new StatusResults(null, "/SampleDisk.Temp", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "2.2") , new StatusProperty("AvailableBytes", "1100000000.0") }, new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(3), AmbientClock.UtcNow.AddSeconds(2), new StatusAuditAlert(StatusRating.Okay - .0001f, "ALERT", "Alert", "AlertDetails"))),
                         new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()),
                     }),
                     new StatusResults(null, "/Target2", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.0"), new StatusProperty("Att2", "Val2.0") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                 });
-                StatusResults source2Root = new StatusResults(null, null, AmbientClock.UtcNow.AddSeconds(1), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                StatusResults source2Root = new(null, null, AmbientClock.UtcNow.AddSeconds(1), 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
                     new StatusResults(null, "/SampleDisk.OperatingSystem", AmbientClock.UtcNow.AddSeconds(1), 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "2.3") }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.1"), new StatusProperty("Att2", "Val2.1") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                     new StatusResults(null, "/Target2", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { new StatusResults(null, "Part1", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("Att1", "Val1.1"), new StatusProperty("Att2", "Val2.1") }, StatusNatureOfSystem.Leaf, Array.Empty<StatusResults>()) }),
                 });
-                StatusResults overallRoot = new StatusResults(null, "/", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
+                StatusResults overallRoot = new(null, "/", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
                     source1Root,
                     source2Root,
                 });

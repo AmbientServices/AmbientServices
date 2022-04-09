@@ -53,8 +53,8 @@ namespace AmbientServices.Test
         public void ProgressIndependence()
         {
             IAmbientProgress progress = AmbientProgressService.GlobalProgress;
-            OtherThreadContext c = new OtherThreadContext();
-            Thread t = new Thread(c.OtherThread);
+            OtherThreadContext c = new();
+            Thread t = new(c.OtherThread);
             t.Start();
             // wait until the other thread executes
             if (!c.Done.Wait(30000)) throw new TimeoutException();
@@ -119,7 +119,7 @@ namespace AmbientServices.Test
             IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
             progress?.Update(0.25f, "main");
-            Thread thread = new Thread(new ParameterizedThreadStart(o =>
+            Thread thread = new(new ParameterizedThreadStart(o =>
                 {
                     // the progress here should be a SEPARATE progress because it's a separate execution thread
                     IAmbientProgress threadProgress = AmbientProgressService.GlobalProgress;
@@ -309,7 +309,7 @@ namespace AmbientServices.Test
             CancellationToken token = progress?.CancellationToken ?? default(CancellationToken);
             Assert.IsNotNull(token);
 
-            using (ScopedLocalServiceOverride<IAmbientProgressService> LocalServiceOverride = new ScopedLocalServiceOverride<IAmbientProgressService>(null))
+            using (ScopedLocalServiceOverride<IAmbientProgressService> LocalServiceOverride = new(null))
             {
                 IAmbientProgress noProgress = AmbientProgressService.Progress;
                 CancellationToken cancel = noProgress?.CancellationToken ?? default(CancellationToken);
@@ -350,7 +350,7 @@ namespace AmbientServices.Test
                     progress?.Update(0.5f);
                     progress?.ThrowIfCancelled();
 
-                    using (CancellationTokenSource ts = new CancellationTokenSource())
+                    using (CancellationTokenSource ts = new())
                     {
                         progress?.ResetCancellation(ts);
                         newTokenSource = progress?.CancellationTokenSource;
@@ -363,7 +363,7 @@ namespace AmbientServices.Test
                         Assert.AreEqual(newTokenSource?.Token, progress?.CancellationToken);
                         Assert.IsTrue(progress?.CancellationToken.IsCancellationRequested ?? false);
                     }
-                    using (AmbientCancellationTokenSource ts = new AmbientCancellationTokenSource(null, null))
+                    using (AmbientCancellationTokenSource ts = new(null, null))
                     {
                         Assert.IsFalse(ts.IsCancellationRequested);
                         Assert.IsFalse(ts.Token.IsCancellationRequested);
@@ -373,7 +373,7 @@ namespace AmbientServices.Test
                         Assert.IsTrue(ts.IsCancellationRequested);
                         Assert.IsTrue(ts.Token.IsCancellationRequested);
                     }
-                    using (AmbientCancellationTokenSource ts = new AmbientCancellationTokenSource(null, TimeSpan.FromMilliseconds(int.MaxValue)))
+                    using (AmbientCancellationTokenSource ts = new(null, TimeSpan.FromMilliseconds(int.MaxValue)))
                     {
                         Assert.IsFalse(ts.IsCancellationRequested);     // theoretically, this could fail if this part of the test takes more than 30 days to execute
                         Assert.IsFalse(ts.Token.IsCancellationRequested);
@@ -384,7 +384,7 @@ namespace AmbientServices.Test
                         Assert.IsTrue(ts.Token.IsCancellationRequested);
                     }
                     AmbientCancellationTokenSource dispose;
-                    using (AmbientCancellationTokenSource ts = new AmbientCancellationTokenSource())
+                    using (AmbientCancellationTokenSource ts = new())
                     {
                         dispose = ts;
                     }
@@ -505,12 +505,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public void Dispose()
         {
-            using (Progress progress = new Progress(new BasicAmbientProgress()))
+            using (Progress progress = new(new BasicAmbientProgress()))
             {
                 progress.Dispose(); // dispose here so we can test double-dispose
                 progress.ResetCancellation();
             }
-            using (Progress progress = new Progress(new BasicAmbientProgress()))
+            using (Progress progress = new(new BasicAmbientProgress()))
             {
                 progress.Dispose(); // dispose here so we can test double-dispose
                 progress.ResetCancellation();
@@ -522,8 +522,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void TopProgressInheritCancellationSource()
         {
-            BasicAmbientProgress ambientProgress = new BasicAmbientProgress();
-            using (Progress progress = new Progress(ambientProgress, null, 0, 0.01f))
+            BasicAmbientProgress ambientProgress = new();
+            using (Progress progress = new(ambientProgress, null, 0, 0.01f))
             {
             }
         }
@@ -533,10 +533,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SubProgressDispose()
         {
-            BasicAmbientProgress ambientProgress = new BasicAmbientProgress();
-            using (Progress progress = new Progress(ambientProgress))
+            BasicAmbientProgress ambientProgress = new();
+            using (Progress progress = new(ambientProgress))
             {
-                using (Progress subprogress = new Progress(ambientProgress, progress, 0.0f, 1.0f))
+                using (Progress subprogress = new(ambientProgress, progress, 0.0f, 1.0f))
                 {
                     subprogress.Dispose(); // dispose here so we can test double-dispose
                 }

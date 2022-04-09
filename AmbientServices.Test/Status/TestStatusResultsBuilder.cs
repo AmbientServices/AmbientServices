@@ -17,7 +17,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusResultsBuilder test = new StatusResultsBuilder(nameof(StatusResultsBuilder));
+                StatusResultsBuilder test = new(nameof(StatusResultsBuilder));
 
                 Assert.IsNull(test.AuditDuration);
                 test.AuditDuration = TimeSpan.FromSeconds(137);
@@ -48,7 +48,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusResultsBuilder test = new StatusResultsBuilder(nameof(StatusResultsBuilderChildren));
+                StatusResultsBuilder test = new(nameof(StatusResultsBuilderChildren));
                 StatusResultsBuilder child = test.AddChild("Child");
                 Assert.AreEqual("Child", child.TargetSystem);
             }
@@ -58,8 +58,8 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusCheckerTest checker = new StatusCheckerTest();
-                StatusResultsBuilder test = new StatusResultsBuilder(checker, new StatusProperty[] { new StatusProperty("Property1", "Value1"), new StatusProperty("Property2", "Value2") });
+                StatusCheckerTest checker = new();
+                StatusResultsBuilder test = new(checker, new StatusProperty[] { new StatusProperty("Property1", "Value1"), new StatusProperty("Property2", "Value2") });
                 StatusProperty property = test.FindProperty("Property1");
                 Assert.AreEqual("Value1", property?.Value);
             }
@@ -134,7 +134,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusResultsBuilder test = new StatusResultsBuilder(nameof(StatusResultsBuilder));
+                StatusResultsBuilder test = new(nameof(StatusResultsBuilder));
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => test.AddException(new ApplicationException(), -1.0f));
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => test.AddFailure("Fail", "Terse", "Details", -0.1f));
                 Assert.ThrowsException<ArgumentOutOfRangeException>(() => test.AddAlert("Alert", "Terse", "Details", -0.001f));

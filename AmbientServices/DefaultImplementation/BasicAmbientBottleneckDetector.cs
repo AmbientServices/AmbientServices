@@ -13,7 +13,7 @@ using System.Runtime.Versioning;
 namespace AmbientServices
 {
     [DefaultAmbientService]
-    class BasicAmbientBottleneckDetector : IAmbientBottleneckDetector
+    internal class BasicAmbientBottleneckDetector : IAmbientBottleneckDetector
     {
         private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new();
 
@@ -117,7 +117,8 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
     }
-    class CallContextAccessNotificationDistributor : IAmbientBottleneckExitNotificationSink
+
+    internal class CallContextAccessNotificationDistributor : IAmbientBottleneckExitNotificationSink
     {
         private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new();
 
@@ -140,7 +141,8 @@ namespace AmbientServices
             }
         }
     }
-    class ScopedBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBottleneckExitNotificationSink
+
+    internal class ScopedBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBottleneckExitNotificationSink
     {
         private readonly CallContextAccessNotificationDistributor? _callContextDistributor;
         private readonly IAmbientBottleneckDetector? _bottleneckDetector;
@@ -482,7 +484,8 @@ namespace AmbientServices
             GC.SuppressFinalize(this);
         }
     }
-    class ThreadSurveyManager : IAmbientBottleneckExitNotificationSink, IDisposable
+
+    internal class ThreadSurveyManager : IAmbientBottleneckExitNotificationSink, IDisposable
     {
         private readonly IAmbientBottleneckDetector? _bottleneckDetector;
         private ThreadLocal<ThreadAccessDistributor>? _threadDistributors;

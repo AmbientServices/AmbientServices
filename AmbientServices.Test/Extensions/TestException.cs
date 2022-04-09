@@ -17,8 +17,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ExceptionFilteredString()
         {
-            Exception inner = new Exception("inner");
-            Exception outer = new Exception("outer", inner);
+            Exception inner = new("inner");
+            Exception outer = new("outer", inner);
             string s = outer.ToFilteredString();
             Assert.IsTrue(s.Contains("[Exception]"));
         }
@@ -28,7 +28,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void NonExceptionFilteredString()
         {
-            WeirdNamed weird = new WeirdNamed();
+            WeirdNamed weird = new();
             Assert.AreEqual("WeirdNamed", weird.TypeName());
             string s = weird.ToFilteredString();
             Assert.IsTrue(s.Contains("[WeirdNamed]"));

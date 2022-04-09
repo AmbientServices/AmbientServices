@@ -15,13 +15,13 @@ namespace AmbientServices.Test
     [TestClass]
     public class TestAmbientTraceLogger
     {
-        private static AmbientService<IAmbientLogger> Logger = Ambient.GetService<IAmbientLogger>();
+        private static readonly AmbientService<IAmbientLogger> Logger = Ambient.GetService<IAmbientLogger>();
         [TestMethod]
         public async Task AmbientTraceLoggerBasic()
         {
             using (AmbientClock.Pause())
             {
-                AmbientTraceLogger loggerImp = new AmbientTraceLogger();
+                AmbientTraceLogger loggerImp = new();
 
                 using (IDisposable over = Logger.ScopedLocalOverride(loggerImp))
                 {
@@ -41,7 +41,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AmbientTraceLogger logger = new AmbientTraceLogger();
+                AmbientTraceLogger logger = new();
                 using (IDisposable over = Logger.ScopedLocalOverride(logger))
                 {
                     // log the first test message (this will cause the file to be created, but only *after* this message gets flushed

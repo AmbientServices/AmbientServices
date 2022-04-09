@@ -68,7 +68,7 @@ namespace AmbientServices.Test.Samples
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
             string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DiskAuditor da = new DiskAuditor(tempDrive, tempPathRelative, false);
+            DiskAuditor da = new(tempDrive, tempPathRelative, false);
         }
         /// <summary>
         /// Performs tests on the DiskAuditor sample code.
@@ -81,7 +81,7 @@ namespace AmbientServices.Test.Samples
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
             string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DriveInfo _driveInfo = new DriveInfo(tempDrive);
+            DriveInfo _driveInfo = new(tempDrive);
             string name = _driveInfo.Name;
             string volumeLabel = _driveInfo.VolumeLabel;
             string driveFormat = _driveInfo.DriveFormat;
@@ -101,12 +101,12 @@ namespace AmbientServices.Test.Samples
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
             string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DriveInfo _driveInfo = new DriveInfo(tempDrive);
-            StringBuilder sb = new StringBuilder();
+            DriveInfo _driveInfo = new(tempDrive);
+            StringBuilder sb = new();
 
             if (!string.IsNullOrEmpty(tempPath))
             {
-                StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+                StatusResultsBuilder readBuilder = new("Read");
                 try
                 {
                     // attempt to read a file (if one exists)
@@ -132,15 +132,15 @@ namespace AmbientServices.Test.Samples
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
             string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DriveInfo _driveInfo = new DriveInfo(tempDrive);
+            DriveInfo _driveInfo = new(tempDrive);
 
-            StatusResultsBuilder writeBuilder = new StatusResultsBuilder("Write");
+            StatusResultsBuilder writeBuilder = new("Write");
             try
             {
                 // attempt to write a temporary file
                 string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
                 AmbientStopwatch s = AmbientStopwatch.StartNew();
-                using (FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
+                using (FileStream fs = new(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
                 {
                     byte[] b = new byte[1];
                     await fs.WriteAsync(b, 0, 1);
@@ -165,8 +165,8 @@ namespace AmbientServices.Test.Samples
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
             string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DiskAuditor da = new DiskAuditor(tempDrive, tempPathRelative, false);
-            StatusResultsBuilder builder = new StatusResultsBuilder("TempDisk");
+            DiskAuditor da = new(tempDrive, tempPathRelative, false);
+            StatusResultsBuilder builder = new("TempDisk");
             await da.Audit(builder);
             StatusAuditAlert alert = builder.WorstAlert;
             Assert.IsNull(alert, alert?.ToString());
@@ -182,8 +182,8 @@ namespace AmbientServices.Test.Samples
             if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
             if (systemPath?[0] == '/') systemDrive = "/";
             string systemPathRelative = systemPath!.Substring(systemDrive.Length);
-            DiskAuditor da = new DiskAuditor(systemDrive, systemPath, false);
-            StatusResultsBuilder builder = new StatusResultsBuilder("TempDisk");
+            DiskAuditor da = new(systemDrive, systemPath, false);
+            StatusResultsBuilder builder = new("TempDisk");
             await da.Audit(builder);
             StatusAuditAlert alert = builder.WorstAlert;
             Assert.IsNull(alert, alert?.ToString());
@@ -199,8 +199,8 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public async Task LocalDiskAuditor()
         {
-            LocalDiskAuditor lda = new LocalDiskAuditor();
-            StatusResultsBuilder builder = new StatusResultsBuilder(lda);
+            LocalDiskAuditor lda = new();
+            StatusResultsBuilder builder = new(lda);
             await lda.Audit(builder);
             StatusAuditAlert alert = builder.WorstAlert;
             Assert.IsNull(alert, alert?.ToString());
@@ -213,9 +213,9 @@ namespace AmbientServices.Test.Samples
         {
             using (AmbientClock.Pause())
             {
-                Status s = new Status(false);
+                Status s = new(false);
                 LocalDiskAuditor lda = null;
-                AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(5000);
+                AmbientCancellationTokenSource cts = new(5000);
                 try
                 {
                     lda = new LocalDiskAuditor();
@@ -238,7 +238,7 @@ namespace AmbientServices.Test.Samples
     {
         private static readonly AmbientService<IAmbientCallStack> _AmbientCallStack = Ambient.GetService<IAmbientCallStack>();
 
-        private static IAmbientCallStack _CallStack = _AmbientCallStack.Global;
+        private static readonly IAmbientCallStack _CallStack = _AmbientCallStack.Global;
         public static void OuterFunc()
         {
             if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));

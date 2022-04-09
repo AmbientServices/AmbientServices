@@ -56,7 +56,7 @@ namespace AmbientServices.Utility
         /// </summary>
         internal static long TimeSpanStopwatchConversionLeastCommonMultiple { get { return _TimeSpanStopwatchConversionLeastCommonMultiple; } }
         /// <summary>
-        /// Converts <see cref="TimeSpan"/> ticks to <see cref="System.Diagnostics.Stopwatch"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="Double"/> multipliation if not.
+        /// Converts <see cref="TimeSpan"/> ticks to <see cref="System.Diagnostics.Stopwatch"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="double"/> multipliation if not.
         /// </summary>
         /// <param name="timeSpanTicks">The number of <see cref="TimeSpan"/> ticks.</param>
         /// <returns>The equivalent number of <see cref="System.Diagnostics.Stopwatch"/> ticks</returns>
@@ -76,7 +76,7 @@ namespace AmbientServices.Utility
             }
         }
         /// <summary>
-        /// Converts <see cref="System.Diagnostics.Stopwatch"/> ticks to <see cref="TimeSpan"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="Double"/> multipliation if not.
+        /// Converts <see cref="System.Diagnostics.Stopwatch"/> ticks to <see cref="TimeSpan"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="double"/> multipliation if not.
         /// </summary>
         /// <param name="timeSpanTicks">The number of <see cref="System.Diagnostics.Stopwatch"/> ticks.</param>
         /// <returns>The equivalent number of <see cref="TimeSpan"/> ticks</returns>

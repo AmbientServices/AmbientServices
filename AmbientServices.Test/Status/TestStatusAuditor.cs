@@ -29,8 +29,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void StatusAuditReportMisc()
         {
-            StatusAuditAlert sa = new StatusAuditAlert(StatusRating.Okay, "Okay", "terse", "detailed");
-            StatusAuditReport sr = new StatusAuditReport(AmbientClock.UtcNow.AddMinutes(1), TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(2), sa);
+            StatusAuditAlert sa = new(StatusRating.Okay, "Okay", "terse", "detailed");
+            StatusAuditReport sr = new(AmbientClock.UtcNow.AddMinutes(1), TimeSpan.FromSeconds(1), AmbientClock.UtcNow.AddMinutes(2), sa);
             Assert.AreNotEqual(StatusAuditReport.Pending, sr);
             Assert.AreNotEqual(StatusAuditReport.Pending.GetHashCode(), sr.GetHashCode());
             Assert.AreNotEqual(sr.GetHashCode(), new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5)).GetHashCode());
@@ -43,7 +43,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (StatusAuditorTest test = new StatusAuditorTest(nameof(StatusAuditorTest)))
+                using (StatusAuditorTest test = new(nameof(StatusAuditorTest)))
                 {
                     StatusResults results = await test.GetStatus();
                     Assert.AreEqual("StatusAuditorTest", test.TargetSystem);
@@ -66,11 +66,11 @@ namespace AmbientServices.Test
             {
                 StatusResults auditorTestResults;
                 StatusResults auditorAuditExceptionTestResults;
-                using (StatusAuditorTest test = new StatusAuditorTest(nameof(StatusAuditorArgumentException)))
+                using (StatusAuditorTest test = new(nameof(StatusAuditorArgumentException)))
                 {
                     auditorTestResults = await test.GetStatus();
                 }
-                using (StatusAuditorAuditExceptionTest test = new StatusAuditorAuditExceptionTest(nameof(StatusAuditorArgumentException) + "2"))
+                using (StatusAuditorAuditExceptionTest test = new(nameof(StatusAuditorArgumentException) + "2"))
                 {
                     auditorAuditExceptionTestResults = await test.GetStatus();
                     Assert.ThrowsException<ArgumentException>(() => test.SetLatestResults(auditorTestResults));
@@ -82,7 +82,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (StatusAuditorAuditExceptionTest test = new StatusAuditorAuditExceptionTest(nameof(StatusAuditorAuditExceptionTest)))
+                using (StatusAuditorAuditExceptionTest test = new(nameof(StatusAuditorAuditExceptionTest)))
                 {
                     Assert.AreEqual("StatusAuditorAuditExceptionTest", test.TargetSystem);
                     // run the initial audit manually and synchronously
@@ -95,7 +95,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (StatusAuditorAuditNeverRunTest test = new StatusAuditorAuditNeverRunTest(nameof(StatusAuditorAuditNeverRunTest)))
+                using (StatusAuditorAuditNeverRunTest test = new(nameof(StatusAuditorAuditNeverRunTest)))
                 {
                     Assert.AreEqual("StatusAuditorAuditNeverRunTest", test.TargetSystem);
                     // run the initial audit manually and synchronously
@@ -109,7 +109,7 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 StatusAuditorAuditNeverRunTest testCopy;
-                using (StatusAuditorAuditNeverRunTest test = new StatusAuditorAuditNeverRunTest(nameof(StatusAuditorAuditNeverRunTest)))
+                using (StatusAuditorAuditNeverRunTest test = new(nameof(StatusAuditorAuditNeverRunTest)))
                 {
                     testCopy = test;
                     Assert.AreEqual("StatusAuditorAuditNeverRunTest", test.TargetSystem);
@@ -123,7 +123,7 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 StatusAuditorAuditNeverRunTest toStop;
-                using (StatusAuditorAuditNeverRunTest test = new StatusAuditorAuditNeverRunTest(nameof(StatusAuditorAuditNeverRunTest)))
+                using (StatusAuditorAuditNeverRunTest test = new(nameof(StatusAuditorAuditNeverRunTest)))
                 {
                     toStop = test;
                 }
@@ -133,14 +133,14 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task StatusAuditorHistory()
         {
-            BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(StatusAuditorHistory));
+            BasicAmbientSettingsSet settings = new(nameof(StatusAuditorHistory));
             settings.ChangeSetting(nameof(StatusChecker) + "-HistoryRetentionMinutes", "5");
             settings.ChangeSetting(nameof(StatusChecker) + "-HistoryRetentionEntries", "10");
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settings))
 
             using (AmbientClock.Pause())
             {
-                using (StatusAuditorTest test = new StatusAuditorTest(nameof(StatusAuditorTest)))
+                using (StatusAuditorTest test = new(nameof(StatusAuditorTest)))
                 {
                     StatusResults results = await test.GetStatus();
                     Assert.AreEqual("StatusAuditorTest", test.TargetSystem);
@@ -191,7 +191,7 @@ namespace AmbientServices.Test
         public StatusAuditorTest(string targetSystem, Status status = null)
             : base(targetSystem, TimeSpan.FromSeconds(10), status)
         {
-            StatusResultsBuilder sb = new StatusResultsBuilder(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
+            StatusResultsBuilder sb = new(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
             sb.AddProperty("TestProperty1", Environment.MachineName);
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
             StatusResults results = sb.FinalResults;
@@ -228,7 +228,7 @@ namespace AmbientServices.Test
         public StatusAuditorAuditExceptionTest(string targetSystem) // note that this parameter prevents this auditor from being used in the default status instance
             : base(targetSystem, TimeSpan.Zero, null)
         {
-            StatusResultsBuilder sb = new StatusResultsBuilder(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
+            StatusResultsBuilder sb = new(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
             sb.AddProperty("TestProperty1", Environment.MachineName);
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
         }
@@ -243,7 +243,7 @@ namespace AmbientServices.Test
         public StatusAuditorAuditNeverRunTest(string targetSystem)
             : base(targetSystem, TimeSpan.MaxValue, null)
         {
-            StatusResultsBuilder sb = new StatusResultsBuilder(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
+            StatusResultsBuilder sb = new(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
             sb.AddProperty("TestProperty1", Environment.MachineName);
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
         }

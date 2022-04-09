@@ -21,14 +21,16 @@ namespace AmbientServices.Utility
             return EnumMax<T>.Max;  
         }
     }
+
     /// <summary>
     /// A static class that holds onto the computed max enum value.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    static class EnumMax<T> where T : System.Enum
+    internal static class EnumMax<T> where T : System.Enum
     {
         private static T _Max = Init();
-        static T Init()
+
+        private static T Init()
         {
             Array a = Enum.GetValues(typeof(T))!;   // I don't think it's possible to have a System.Enum for which Enum.GetValues returns null
             return (a.Length == 0)

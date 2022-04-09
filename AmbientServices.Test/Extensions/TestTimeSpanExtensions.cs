@@ -149,7 +149,7 @@ namespace AmbientServices.Test
         {
             foreach (long millisecondsToSleep in new long[] { 100, 1000, 10000, 100000 })
             {
-                StringBuilder s = new StringBuilder();
+                StringBuilder s = new();
                 s.AppendLine($"millisecondsToSleep = {millisecondsToSleep}");
                 s.AppendLine($"Stopwatch.Frequency = {Stopwatch.Frequency}");
                 s.AppendLine($"TimeSpan.TicksPerSecond = {TimeSpan.TicksPerSecond}");

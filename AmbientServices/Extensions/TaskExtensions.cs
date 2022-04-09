@@ -31,7 +31,8 @@ namespace AmbientServices
         /// <returns>A <see cref="ValueTask"/> that completes when the <see cref="CancellationToken"/> get cancelled.</returns>
         public static async ValueTask AsValueTask(this CancellationToken cancellationToken)
         {
-            await Task.Delay(-1, cancellationToken).ContinueWith(_ => { }, default, TaskContinuationOptions.OnlyOnCanceled, TaskScheduler.Current).ConfigureAwait(false);
+            await cancellationToken.AsTask().ConfigureAwait(false);
+//            await Task.Delay(-1, cancellationToken).ContinueWith(_ => { }, default, TaskContinuationOptions.OnlyOnCanceled, TaskScheduler.Current).ConfigureAwait(false);
         }
 #else
         /// <summary>

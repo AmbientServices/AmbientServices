@@ -16,22 +16,22 @@ namespace AmbientServices.Test
     [TestClass]
     public class TestLocalCache
     {
-        private static readonly Dictionary<string, string> TestLocalCacheSettingsDictionary = new Dictionary<string, string>() { { nameof(BasicAmbientLocalCache) + "-EjectFrequency", "10" }, { nameof(BasicAmbientLocalCache) + "-MaximumItemCount", "20" }, { nameof(BasicAmbientLocalCache) + "-MinimumItemCount", "1" } };
-        private static readonly Dictionary<string, string> AllowEmptyLocalCacheSettingsDictionary = new Dictionary<string, string>() { { nameof(BasicAmbientLocalCache) + "-EjectFrequency", "40" }, { nameof(BasicAmbientLocalCache) + "-MaximumItemCount", "20" }, { nameof(BasicAmbientLocalCache) + "-MinimumItemCount", "-1" } };
+        private static readonly Dictionary<string, string> TestLocalCacheSettingsDictionary = new() { { nameof(BasicAmbientLocalCache) + "-EjectFrequency", "10" }, { nameof(BasicAmbientLocalCache) + "-MaximumItemCount", "20" }, { nameof(BasicAmbientLocalCache) + "-MinimumItemCount", "1" } };
+        private static readonly Dictionary<string, string> AllowEmptyLocalCacheSettingsDictionary = new() { { nameof(BasicAmbientLocalCache) + "-EjectFrequency", "40" }, { nameof(BasicAmbientLocalCache) + "-MaximumItemCount", "20" }, { nameof(BasicAmbientLocalCache) + "-MinimumItemCount", "-1" } };
         /// <summary>
         /// Performs tests on <see cref="IAmbientLocalCache"/>.
         /// </summary>
         [TestMethod]
         public async Task LocalCacheAmbient()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(TestLocalCacheSettingsDictionary, nameof(LocalCacheAmbient));
+            AmbientSettingsOverride localSettingsSet = new(TestLocalCacheSettingsDictionary, nameof(LocalCacheAmbient));
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 IAmbientLocalCache localOverride = new BasicAmbientLocalCache();
-                using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new ScopedLocalServiceOverride<IAmbientLocalCache>(localOverride))
+                using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new(localOverride))
                 {
                     TestLocalCache ret;
-                    AmbientLocalCache<TestLocalCache> cache = new AmbientLocalCache<TestLocalCache>();
+                    AmbientLocalCache<TestLocalCache> cache = new();
                     await cache.Store("Test1", this);
                     await cache.Store("Test1", this);
                     ret = await cache.Retrieve<TestLocalCache>("Test1", null);
@@ -72,23 +72,23 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task LocalCacheDisposable()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(TestLocalCacheSettingsDictionary, nameof(LocalCacheAmbient));
+            AmbientSettingsOverride localSettingsSet = new(TestLocalCacheSettingsDictionary, nameof(LocalCacheAmbient));
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 IAmbientLocalCache localOverride = new BasicAmbientLocalCache();
-                using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new ScopedLocalServiceOverride<IAmbientLocalCache>(localOverride))
+                using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new(localOverride))
                 {
                     DisposableCacheEntry ret;
-                    AmbientLocalCache<TestLocalCache> cache = new AmbientLocalCache<TestLocalCache>();
-                    DisposableCacheEntry dce1 = new DisposableCacheEntry(1);
-                    DisposableCacheEntry dce2 = new DisposableCacheEntry(2);
-                    DisposableCacheEntry dce3 = new DisposableCacheEntry(3);
-                    DisposableCacheEntry dce4 = new DisposableCacheEntry(4);
-                    DisposableCacheEntry dce5 = new DisposableCacheEntry(5);
-                    DisposableCacheEntry dce6 = new DisposableCacheEntry(6);
-                    DisposableCacheEntry dce7 = new DisposableCacheEntry(7);
-                    DisposableCacheEntry dce8 = new DisposableCacheEntry(8);
-                    DisposableCacheEntry dce9 = new DisposableCacheEntry(9);
+                    AmbientLocalCache<TestLocalCache> cache = new();
+                    DisposableCacheEntry dce1 = new(1);
+                    DisposableCacheEntry dce2 = new(2);
+                    DisposableCacheEntry dce3 = new(3);
+                    DisposableCacheEntry dce4 = new(4);
+                    DisposableCacheEntry dce5 = new(5);
+                    DisposableCacheEntry dce6 = new(6);
+                    DisposableCacheEntry dce7 = new(7);
+                    DisposableCacheEntry dce8 = new(8);
+                    DisposableCacheEntry dce9 = new(9);
                     await cache.Store("Test1", dce1, true);
                     await cache.Store("Test1", dce2, true);
                     Assert.IsTrue(dce1.Disposed);
@@ -148,10 +148,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task LocalCacheNone()
         {
-            using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new ScopedLocalServiceOverride<IAmbientLocalCache>(null))
+            using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new(null))
             {
                 TestLocalCache ret;
-                AmbientLocalCache<TestLocalCache> cache = new AmbientLocalCache<TestLocalCache>();
+                AmbientLocalCache<TestLocalCache> cache = new();
                 await cache.Store("Test1", this);
                 ret = await cache.Retrieve<TestLocalCache>("Test1");
                 Assert.IsNull(ret);
@@ -171,7 +171,7 @@ namespace AmbientServices.Test
         {
             IAmbientLocalCache localOverride = new BasicAmbientLocalCache();
             using (AmbientClock.Pause())
-            using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new ScopedLocalServiceOverride<IAmbientLocalCache>(localOverride))
+            using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new(localOverride))
             {
                 string keyName1 = nameof(LocalCacheExpiration) + "1";
                 string keyName2 = nameof(LocalCacheExpiration) + "2";
@@ -181,7 +181,7 @@ namespace AmbientServices.Test
                 string keyName6 = nameof(LocalCacheExpiration) + "6";
                 string keyName7 = nameof(LocalCacheExpiration) + "7";
                 TestLocalCache ret;
-                AmbientLocalCache<TestLocalCache> cache = new AmbientLocalCache<TestLocalCache>();
+                AmbientLocalCache<TestLocalCache> cache = new();
                 await cache.Store(keyName1, this, false, TimeSpan.FromMilliseconds(50));
                 await cache.Store(keyName1, this, false, TimeSpan.FromMilliseconds(51));
                 await cache.Store(keyName2, this, false);
@@ -246,12 +246,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task LocalCacheSkipAndEmptyEject()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(AllowEmptyLocalCacheSettingsDictionary, nameof(LocalCacheAmbient));
+            AmbientSettingsOverride localSettingsSet = new(AllowEmptyLocalCacheSettingsDictionary, nameof(LocalCacheAmbient));
             using (AmbientClock.Pause())
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 IAmbientLocalCache localOverride = new BasicAmbientLocalCache();
-                using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new ScopedLocalServiceOverride<IAmbientLocalCache>(localOverride))
+                using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new(localOverride))
                 {
                     string keyName1 = nameof(LocalCacheExpiration) + "1";
                     string keyName2 = nameof(LocalCacheExpiration) + "2";
@@ -261,7 +261,7 @@ namespace AmbientServices.Test
                     //string keyName6 = nameof(LocalCacheExpiration) + "6";
                     //string keyName7 = nameof(LocalCacheExpiration) + "7";
                     TestLocalCache ret;
-                    AmbientLocalCache<TestLocalCache> cache = new AmbientLocalCache<TestLocalCache>();
+                    AmbientLocalCache<TestLocalCache> cache = new();
                     await cache.Store(keyName1, this, false, TimeSpan.FromMilliseconds(100));
                     await cache.Store(keyName2, this, false, TimeSpan.FromMilliseconds(50));
                     await cache.Store(keyName3, this, false, TimeSpan.FromMilliseconds(100));
@@ -301,7 +301,7 @@ namespace AmbientServices.Test
         {
             IAmbientLocalCache localOverride = new BasicAmbientLocalCache();
             using (AmbientClock.Pause())
-            using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new ScopedLocalServiceOverride<IAmbientLocalCache>(localOverride))
+            using (ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new(localOverride))
             {
                 string keyName1 = nameof(LocalCacheDoubleExpiration) + "1";
                 string keyName2 = nameof(LocalCacheDoubleExpiration) + "2";
@@ -310,7 +310,7 @@ namespace AmbientServices.Test
                 string keyName5 = nameof(LocalCacheDoubleExpiration) + "5";
                 //                string keyName6 = nameof(LocalCacheDoubleExpiration) + "6";
                 TestLocalCache ret;
-                AmbientLocalCache<TestLocalCache> cache = new AmbientLocalCache<TestLocalCache>();
+                AmbientLocalCache<TestLocalCache> cache = new();
                 await cache.Store(keyName1, this, false, TimeSpan.FromMilliseconds(51));
                 await cache.Store(keyName2, this, false, TimeSpan.FromMilliseconds(50));
                 await cache.Store(keyName3, this, false, TimeSpan.FromSeconds(50));
@@ -353,13 +353,13 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task LocalCacheSpecifiedImplementation()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(TestLocalCacheSettingsDictionary, nameof(LocalCacheSpecifiedImplementation));
+            AmbientSettingsOverride localSettingsSet = new(TestLocalCacheSettingsDictionary, nameof(LocalCacheSpecifiedImplementation));
             using (AmbientClock.Pause())
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 TestLocalCache ret;
                 IAmbientLocalCache cacheService = new BasicAmbientLocalCache(localSettingsSet);
-                AmbientLocalCache<TestLocalCache> cache = new AmbientLocalCache<TestLocalCache>(cacheService, "prefix");
+                AmbientLocalCache<TestLocalCache> cache = new(cacheService, "prefix");
                 await cache.Store<TestLocalCache>("Test1", this);
                 ret = await cache.Retrieve<TestLocalCache>("Test1", null);
                 Assert.AreEqual(this, ret);
@@ -398,7 +398,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task LocalCacheRefresh()
         {
-            AmbientSettingsOverride localSettingsSet = new AmbientSettingsOverride(TestLocalCacheSettingsDictionary, nameof(LocalCacheRefresh));
+            AmbientSettingsOverride localSettingsSet = new(TestLocalCacheSettingsDictionary, nameof(LocalCacheRefresh));
             using (AmbientClock.Pause())
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {

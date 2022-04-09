@@ -86,7 +86,8 @@ namespace AmbientServices
             _progress.Value = parent as Progress;
         }
     }
-    class Progress : IAmbientProgress, IDisposable
+
+    internal class Progress : IAmbientProgress, IDisposable
     {
         private readonly BasicAmbientProgress _tracker;
         private readonly IAmbientProgress? _parentProgress;

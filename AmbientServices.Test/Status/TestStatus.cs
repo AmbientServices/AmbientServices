@@ -47,7 +47,7 @@ namespace AmbientServices.Test
                 Assert.IsFalse(String.IsNullOrEmpty(att!.Name));
                 Assert.IsFalse(String.IsNullOrEmpty(att!.Value));
 
-                HashSet<StatusResults> test = new HashSet<StatusResults>();
+                HashSet<StatusResults> test = new();
                 StatusResults c1 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestHeterogenousExplicitRating));
                 Assert.IsNotNull(c1);
                 Assert.IsNotNull(c1!.Report);
@@ -73,7 +73,7 @@ namespace AmbientServices.Test
 
                 Assert.AreEqual(0, overallStatus.Properties.Count());
 
-                HashSet<StatusAuditReport> test3 = new HashSet<StatusAuditReport>();
+                HashSet<StatusAuditReport> test3 = new();
                 Assert.IsTrue(auditResult.Rating >= -1.0f && auditResult.Rating <= 4.0f);
                 Assert.IsFalse(string.IsNullOrEmpty(auditResult.Terse));
                 Assert.IsFalse(string.IsNullOrEmpty(auditResult.Details));
@@ -105,11 +105,11 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                Status status = new Status(false);
+                Status status = new(false);
                 try
                 {
-                    AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource();
-                    TestAuditCancelTokenSourceAndHangOnAudit ahuc = new TestAuditCancelTokenSourceAndHangOnAudit();
+                    AmbientCancellationTokenSource cts = new();
+                    TestAuditCancelTokenSourceAndHangOnAudit ahuc = new();
                     status.AddCheckerOrAuditor(ahuc);
                     await status.Start();
                     // note that in this case, the initial audit should never run because the clock is paused, and that's just fine--manual refreshes can still happen
@@ -130,13 +130,13 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                Status status = new Status(false);
+                Status status = new(false);
                 try
                 {
-                    TestCheckerException ce = new TestCheckerException();
+                    TestCheckerException ce = new();
                     status.AddCheckerOrAuditor(ce);
                     await status.Start();
-                    AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(1);
+                    AmbientCancellationTokenSource cts = new(1);
                     await status.RefreshAsync(cts.Token);
                 }
                 finally
@@ -148,7 +148,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task StatusExceptions()
         {
-            Status s = new Status(false);
+            Status s = new(false);
             await s.Start();
             Assert.ThrowsException<InvalidOperationException>(() => s.Start());
             Assert.ThrowsException<ArgumentNullException>(() => Status.IsTestableStatusCheckerClass(null!));
@@ -158,29 +158,29 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task StatusEmpty()
         {
-            Status s = new Status(false);
+            Status s = new(false);
             await s.Start();
             await s.Stop();
         }
         [TestMethod]
         public async Task StatusStartStop()
         {
-            Status s = new Status(true);
+            Status s = new(true);
             await s.Start();
             await s.Stop();
         }
         [TestMethod]
         public async Task StatusAddRemoveChecker()
         {
-            Status s = new Status(false);
-            using (TestMachineConstantStatus checkerToAdd = new TestMachineConstantStatus())
+            Status s = new(false);
+            using (TestMachineConstantStatus checkerToAdd = new())
             {
                 s.AddCheckerOrAuditor(checkerToAdd);
                 await s.Start();
                 await s.Stop();
                 s.RemoveCheckerOrAuditor(checkerToAdd);
             }
-            using (TestMachineConstantStatus checkerToAdd = new TestMachineConstantStatus())
+            using (TestMachineConstantStatus checkerToAdd = new())
             {
                 s.AddCheckerOrAuditor(checkerToAdd);
                 await s.Start();
@@ -191,8 +191,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task StatusAuditAfterDisposal()
         {
-            Status s = new Status(false);
-            using (TestConstantAuditResults auditorToAdd = new TestConstantAuditResults(null, nameof(StatusAuditAfterDisposal), StatusRating.Okay, nameof(StatusAuditAfterDisposal), "Terse", "Details"))
+            Status s = new(false);
+            using (TestConstantAuditResults auditorToAdd = new(null, nameof(StatusAuditAfterDisposal), StatusRating.Okay, nameof(StatusAuditAfterDisposal), "Terse", "Details"))
             {
                 s.AddCheckerOrAuditor(auditorToAdd);
                 await s.Start();
@@ -210,7 +210,7 @@ namespace AmbientServices.Test
         public TestMachineConstantStatus()
             : base(nameof(TestMachineConstantStatus))
         {
-            StatusResultsBuilder sb = new StatusResultsBuilder(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
+            StatusResultsBuilder sb = new(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
             sb.AddProperty("MachineName", Environment.MachineName);
             sb.AddProperty("StartTime", AmbientClock.UtcNow);
             _results = sb.FinalResults;
@@ -243,7 +243,7 @@ namespace AmbientServices.Test
         public TestNotApplicableStatus()
             : base(nameof(TestNotApplicableStatus))
         {
-            StatusResultsBuilder sb = new StatusResultsBuilder(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
+            StatusResultsBuilder sb = new(this) { NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant };
             _results = sb.FinalResults;
             SetLatestResults(_results);
         }
@@ -315,7 +315,7 @@ namespace AmbientServices.Test
         public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
-            StatusResultsBuilder child = new StatusResultsBuilder("IrrelevantChild");
+            StatusResultsBuilder child = new("IrrelevantChild");
             child.AddException(new ExpectedException(nameof(TestIrrelevantException)));
             statusBuilder.AddChild(child);
             return default(ValueTask);
@@ -354,7 +354,7 @@ namespace AmbientServices.Test
         /// <returns>A <see cref="StatusResultsBuilder"/> containing the status of the disk.</returns>
         public Task<StatusResultsBuilder> GetStatus(CancellationToken cancel = default(CancellationToken))
         {
-            StatusResultsBuilder sb = new StatusResultsBuilder(_targetSystem);
+            StatusResultsBuilder sb = new(_targetSystem);
             sb.NatureOfSystem = StatusNatureOfSystem.Leaf;
             if (_fakeFolderPath != null)
             {
@@ -548,11 +548,11 @@ namespace AmbientServices.Test
     }
     internal class TestHomogeneousWithFailure : StatusAuditor
     {
-        private StatusResults _alwaysSuperlative;
-        private StatusResults _alwaysOkay;
-        private StatusResults _alwaysAlerting;
-        private StatusResults _alwaysFailing;
-        private StatusResults _alwaysCatastrophic;
+        private readonly StatusResults _alwaysSuperlative;
+        private readonly StatusResults _alwaysOkay;
+        private readonly StatusResults _alwaysAlerting;
+        private readonly StatusResults _alwaysFailing;
+        private readonly StatusResults _alwaysCatastrophic;
         public TestHomogeneousWithFailure()
             : base(nameof(TestHomogeneousWithFailure), TimeSpan.FromSeconds(10))
         {
@@ -576,8 +576,8 @@ namespace AmbientServices.Test
     }
     internal class TestHomogeneousWithMultipleFailure : StatusAuditor
     {
-        private StatusResults _alwaysFailing1;
-        private StatusResults _alwaysFailing2;
+        private readonly StatusResults _alwaysFailing1;
+        private readonly StatusResults _alwaysFailing2;
         public TestHomogeneousWithMultipleFailure()
             : base(nameof(TestHomogeneousWithMultipleFailure), TimeSpan.FromSeconds(10))
         {
@@ -595,8 +595,8 @@ namespace AmbientServices.Test
     }
     internal class TestHomogeneousWithMultipleAlert : StatusAuditor
     {
-        private StatusResults _alwaysAlerting1;
-        private StatusResults _alwaysAlerting2;
+        private readonly StatusResults _alwaysAlerting1;
+        private readonly StatusResults _alwaysAlerting2;
         public TestHomogeneousWithMultipleAlert()
             : base(nameof(TestHomogeneousWithMultipleAlert), TimeSpan.FromSeconds(10))
         {
@@ -627,7 +627,7 @@ namespace AmbientServices.Test
             }
             else
             {
-                StatusResultsBuilder child = new StatusResultsBuilder("Level" + level.ToString());
+                StatusResultsBuilder child = new("Level" + level.ToString());
                 Recurse(child, level - 1);
                 statusBuilder.AddChild(child.FinalResults);
             }
@@ -665,7 +665,7 @@ namespace AmbientServices.Test
         {
             for (int source = 0; source < 10; ++source)
             {
-                StatusResultsBuilder childBuilder = new StatusResultsBuilder("Subsystem");
+                StatusResultsBuilder childBuilder = new("Subsystem");
                 childBuilder.NatureOfSystem = StatusNatureOfSystem.Leaf;
                 childBuilder.SourceSystem = "Source " + source.ToString();
                 childBuilder.AddProperty("sourceNumber", source);
@@ -703,7 +703,7 @@ namespace AmbientServices.Test
             else
             {
                 if (level % 2 == 0) statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
-                StatusResultsBuilder child = new StatusResultsBuilder("Level" + level.ToString());
+                StatusResultsBuilder child = new("Level" + level.ToString());
                 child.AddProperty("Level", level);
                 child.AddProperty("SourceNumber", sourceNumber);
                 Recurse(child, level - 1, sourceNumber);
@@ -714,7 +714,7 @@ namespace AmbientServices.Test
         {
             for (int source = 0; source < 10; ++source)
             {
-                StatusResultsBuilder childBuilder = new StatusResultsBuilder(string.Empty);
+                StatusResultsBuilder childBuilder = new(string.Empty);
                 childBuilder.SourceSystem = "Source " + source.ToString();
                 Recurse(childBuilder, 4, source);
                 statusBuilder.AddChild(childBuilder.FinalResults);

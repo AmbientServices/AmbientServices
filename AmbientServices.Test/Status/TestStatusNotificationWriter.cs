@@ -15,7 +15,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void NotificationWriter()
         {
-            StatusNotificationWriter writer = new StatusNotificationWriter();
+            StatusNotificationWriter writer = new();
             string terse;
             string details;
 
@@ -60,8 +60,8 @@ namespace AmbientServices.Test
             Assert.IsTrue(details.Contains("SampleTarget"));
 
             writer = new StatusNotificationWriter();
-            StatusResults r = new StatusResults("Source", "Target", new StatusResults[0]);
-            AggregatedAlert a = new AggregatedAlert(r);
+            StatusResults r = new("Source", "Target", new StatusResults[0]);
+            AggregatedAlert a = new(r);
             a.PropertyRanges.Add(new StatusPropertyRange(new StatusProperty("property", "value1")));
             writer = new StatusNotificationWriter();
             writer.EnterStatusRange(a.AverageRating);
@@ -111,7 +111,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void NotificationWriterWithProperties()
         {
-            StatusNotificationWriter writer = new StatusNotificationWriter();
+            StatusNotificationWriter writer = new();
             string terse;
             string details;
 
@@ -134,8 +134,8 @@ namespace AmbientServices.Test
             details = writer.Details;
 
             writer = new StatusNotificationWriter();
-            StatusResults r = new StatusResults("Source", "Target", new StatusResults[0]);
-            AggregatedAlert a = new AggregatedAlert(r);
+            StatusResults r = new("Source", "Target", new StatusResults[0]);
+            AggregatedAlert a = new(r);
             writer = new StatusNotificationWriter();
             writer.EnterStatusRange(a.AverageRating);
             writer.WriteAggregatedAlert(a);
@@ -158,7 +158,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void NotificationWriterExceptions()
         {
-            StatusNotificationWriter writer = new StatusNotificationWriter();
+            StatusNotificationWriter writer = new();
             Assert.ThrowsException<InvalidOperationException>(() => writer.LeaveStatusRange());
             Assert.ThrowsException<InvalidOperationException>(() => writer.LeaveTarget());
             Assert.ThrowsException<InvalidOperationException>(() => writer.EnterTarget(nameof(NotificationWriterExceptions), StatusRating.Okay));

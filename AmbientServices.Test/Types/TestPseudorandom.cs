@@ -191,7 +191,7 @@ namespace AmbientServices.Test
         public void PseudorandomSerialUsuallySmallDistributionUInt32()
         {
             int[] distribution = new int[ushort.MaxValue + 1];
-            Pseudorandom rand = new Pseudorandom(4387617);
+            Pseudorandom rand = new(4387617);
             int count = 655360;
             for (int loop = 0; loop < count; ++loop)
             {
@@ -208,7 +208,7 @@ namespace AmbientServices.Test
         public void PseudorandomSerialUsuallySmallDistributionUInt64()
         {
             int[] distribution = new int[ushort.MaxValue + 1];
-            Pseudorandom rand = new Pseudorandom(4387617);
+            Pseudorandom rand = new(4387617);
             int count = 655360;
             for (int loop = 0; loop < count; ++loop)
             {
@@ -225,7 +225,7 @@ namespace AmbientServices.Test
         public void PseudorandomSerialUsuallySmallDistributionInt32Default()
         {
             int[] distribution = new int[ushort.MaxValue + 1];
-            Pseudorandom rand = new Pseudorandom(4387617);
+            Pseudorandom rand = new(4387617);
             int count = 655360;
             for (int loop = 0; loop < count; ++loop)
             {
@@ -242,7 +242,7 @@ namespace AmbientServices.Test
         public void PseudorandomSerialUsuallySmallDistributionInt32Ranged()
         {
             int[] distribution = new int[ushort.MaxValue + 1];
-            Pseudorandom rand = new Pseudorandom(4387617);
+            Pseudorandom rand = new(4387617);
             int count = 655360;
             for (int loop = 0; loop < count; ++loop)
             {
@@ -259,7 +259,7 @@ namespace AmbientServices.Test
         public void PseudorandomSerialUsuallySmallDistributionInt64Default()
         {
             int[] distribution = new int[ushort.MaxValue + 1];
-            Pseudorandom rand = new Pseudorandom(4387617);
+            Pseudorandom rand = new(4387617);
             int count = 655360;
             for (int loop = 0; loop < count; ++loop)
             {
@@ -276,7 +276,7 @@ namespace AmbientServices.Test
         public void PseudorandomSerialUsuallySmallDistributionInt64Ranged()
         {
             int[] distribution = new int[ushort.MaxValue + 1];
-            Pseudorandom rand = new Pseudorandom(4387617);
+            Pseudorandom rand = new(4387617);
             int count = 655360;
             for (int loop = 0; loop < count; ++loop)
             {
@@ -292,7 +292,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PseudorandomRanged()
         {
-            Pseudorandom rand = new Pseudorandom(4387617);
+            Pseudorandom rand = new(4387617);
             Assert.ThrowsException<ArgumentException>(() => rand.NextInt32Ranged(10, 9));
             Assert.ThrowsException<ArgumentException>(() => rand.NextInt32SignedRanged(0, -100));
             Assert.ThrowsException<ArgumentException>(() => rand.NextUInt32Ranged(10, 9));
@@ -421,6 +421,9 @@ namespace AmbientServices.Test
             Pseudorandom.Next.NextBytes(bytes);
             Pseudorandom.Next.NextBytes(bytes, 50, 75);
             Pseudorandom.Next.NextBytes(bytes, 10, 50);
+            Pseudorandom.Next.NextBytes(bytes.AsSpan());
+            Pseudorandom.Next.NextBytes(bytes.AsSpan(), 50, 75);
+            Pseudorandom.Next.NextBytes(bytes.AsSpan(), 10, 50);
         }
         [TestMethod]
         public void PseudorandomSeededRand()
@@ -459,21 +462,21 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PseudorandomEquality()
         {
-            Pseudorandom rand = new Pseudorandom(5);
+            Pseudorandom rand = new(5);
             Assert.AreEqual(new Pseudorandom(5).GetHashCode(), rand.GetHashCode());
             Assert.IsFalse(rand.Equals(this));
             Assert.IsFalse(rand.Equals(null));
             Pseudorandom clone = rand!.Clone(); // not sure how the analyzer gets confused here?  maybe it's seeing the Equals(null) above and getting confused about that
             Assert.IsTrue(rand.Equals(clone));
             Assert.IsTrue(rand.Equals((object)clone));
-            Pseudorandom rand2 = new Pseudorandom(6);
+            Pseudorandom rand2 = new(6);
             Assert.IsFalse(rand == rand2);
             Assert.IsTrue(rand != rand2);
         }
         [TestMethod]
         public void PseudorandomSeeds()
         {
-            Pseudorandom rand = new Pseudorandom(true);
+            Pseudorandom rand = new(true);
             int matches = 0;
             for (int attempt = 0; attempt < 10; ++attempt)
             {
@@ -487,9 +490,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PseudorandomExceptions()
         {
-            Pseudorandom rand = new Pseudorandom(false);
+            Pseudorandom rand = new(false);
             Assert.ThrowsException<ArgumentNullException>(() => rand.NextEnum(null!));
             Assert.ThrowsException<ArgumentNullException>(() => rand.NextBytes(null!, 1));
+            Assert.ThrowsException<ArgumentNullException>(() => rand.NextBytes((Span<byte>)null!, 1));
             Assert.ThrowsException<ArgumentException>(() => rand.NextInt32SignedRangedUsuallySmall(10, 5));
             Assert.ThrowsException<ArgumentException>(() => rand.NextInt64SignedRangedUsuallySmall(10, 5));
             Assert.ThrowsException<ArgumentException>(() => rand.NextEnum(typeof(int)));
@@ -540,9 +544,9 @@ namespace AmbientServices.Test
         [TestMethod]
         public void PseudorandomNullReferences()
         {
-            Pseudorandom a = new Pseudorandom(0);
-            Pseudorandom b = new Pseudorandom(0);
-            Pseudorandom c = new Pseudorandom(1);
+            Pseudorandom a = new(0);
+            Pseudorandom b = new(0);
+            Pseudorandom c = new(1);
             Pseudorandom n = null!;
             Assert.IsTrue(a == b);
             Assert.IsFalse(a == c);

@@ -193,7 +193,7 @@ namespace AmbientServices
         /// Adds the specified property.
         /// </summary>
         /// <param name="name">The name for the property.</param>
-        /// <param name="value">The value for the propertiy, for which <see cref="Object.ToString()"/> will be called to convert it into a string.</param>
+        /// <param name="value">The value for the propertiy, for which <see cref="object.ToString()"/> will be called to convert it into a string.</param>
         public void AddProperty<T>(string name, T value) where T : notnull
         {
             _properties.Add(StatusProperty.Create(name, value));
@@ -205,7 +205,7 @@ namespace AmbientServices
         /// <returns>The <see cref="StatusProperty"/> that was found, or null if no status property with that name exists in the list.</returns>
         public StatusProperty? FindProperty(string name)
         {
-            return _properties.Find(a => String.Equals(a.Name, name, StringComparison.Ordinal));
+            return _properties.Find(a => string.Equals(a.Name, name, StringComparison.Ordinal));
         }
         /// <summary>
         /// Adds the specified <see cref="StatusResultsBuilder"/> as a child to the node we're building.

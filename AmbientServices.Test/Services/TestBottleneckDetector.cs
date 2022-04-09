@@ -20,20 +20,20 @@ namespace AmbientServices.Test
     public class TestBottleneckDetector
     {
         private static readonly AmbientService<IAmbientBottleneckDetector> _BottleneckDetector = Ambient.GetService<IAmbientBottleneckDetector>(out _BottleneckDetector);
-        private static readonly AmbientBottleneck _ZeroAutoBottleneck = new AmbientBottleneck("TestBottleneckDetector-ZeroAutoTest1", AmbientBottleneckUtilizationAlgorithm.Zero, true, "Zero Auto Test");
-        private static readonly AmbientBottleneck _LinearAutoBottleneck = new AmbientBottleneck("TestBottleneckDetector-LinearAutoTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "Linear Auto Test");
-        private static readonly AmbientBottleneck _ExponentialAutoBottleneck = new AmbientBottleneck("TestBottleneckDetector-ExponentialAutoTest1", AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach, true, "Exponential Auto Test");
-        private static readonly AmbientBottleneck _ZeroManualBottleneck = new AmbientBottleneck("TestBottleneckDetector-ZeroManualTest1", AmbientBottleneckUtilizationAlgorithm.Zero, false, "Zero Manual Test");
-        private static readonly AmbientBottleneck _LinearManualBottleneck = new AmbientBottleneck("TestBottleneckDetector-LinearManualTest1", AmbientBottleneckUtilizationAlgorithm.Linear, false, "Linear Manual Test");
-        private static readonly AmbientBottleneck _ExponentialManualBottleneck = new AmbientBottleneck("TestBottleneckDetector-ExponentialManualTest1", AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach, false, "Exponential Manual Test");
+        private static readonly AmbientBottleneck _ZeroAutoBottleneck = new("TestBottleneckDetector-ZeroAutoTest1", AmbientBottleneckUtilizationAlgorithm.Zero, true, "Zero Auto Test");
+        private static readonly AmbientBottleneck _LinearAutoBottleneck = new("TestBottleneckDetector-LinearAutoTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "Linear Auto Test");
+        private static readonly AmbientBottleneck _ExponentialAutoBottleneck = new("TestBottleneckDetector-ExponentialAutoTest1", AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach, true, "Exponential Auto Test");
+        private static readonly AmbientBottleneck _ZeroManualBottleneck = new("TestBottleneckDetector-ZeroManualTest1", AmbientBottleneckUtilizationAlgorithm.Zero, false, "Zero Manual Test");
+        private static readonly AmbientBottleneck _LinearManualBottleneck = new("TestBottleneckDetector-LinearManualTest1", AmbientBottleneckUtilizationAlgorithm.Linear, false, "Linear Manual Test");
+        private static readonly AmbientBottleneck _ExponentialManualBottleneck = new("TestBottleneckDetector-ExponentialManualTest1", AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach, false, "Exponential Manual Test");
 
         [TestMethod]
         public void BottleneckDetectorNoop()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(null))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(null))
             using (AmbientClock.Pause())
             {
-                AmbientBottleneck noop = new AmbientBottleneck("BottleneckDetectorNoop", AmbientBottleneckUtilizationAlgorithm.Zero, true, "BottleneckDetectorNoop Test");
+                AmbientBottleneck noop = new("BottleneckDetectorNoop", AmbientBottleneckUtilizationAlgorithm.Zero, true, "BottleneckDetectorNoop Test");
                 using (AmbientBottleneckAccessor access = noop.EnterBottleneck())
                 {
                     // this should be ignored
@@ -43,10 +43,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorNoListeners()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
             using (AmbientClock.Pause())
             {
-                AmbientBottleneck noop = new AmbientBottleneck(nameof(BottleneckDetectorNoListeners), AmbientBottleneckUtilizationAlgorithm.Zero, true, nameof(BottleneckDetectorNoListeners) + " Test");
+                AmbientBottleneck noop = new(nameof(BottleneckDetectorNoListeners), AmbientBottleneckUtilizationAlgorithm.Zero, true, nameof(BottleneckDetectorNoListeners) + " Test");
                 using (AmbientBottleneckAccessor access = noop.EnterBottleneck())
                 {
                     // this should be ignored
@@ -56,8 +56,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorZero()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
-            using (Collector collector = new Collector("Zero"))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
+            using (Collector collector = new("Zero"))
             {
                 using (AmbientBottleneckAccessor access = _ZeroAutoBottleneck.EnterBottleneck())
                 {
@@ -85,43 +85,43 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorExceptions()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
-            using (AmbientBottleneckSurveyorCoordinator surveyorCoordinator = new AmbientBottleneckSurveyorCoordinator())
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
+            using (AmbientBottleneckSurveyorCoordinator surveyorCoordinator = new())
             {
-                using (ProcessBottleneckSurveyor surveyor = new ProcessBottleneckSurveyor(null, _BottleneckDetector.Local, null, null))
+                using (ProcessBottleneckSurveyor surveyor = new(null, _BottleneckDetector.Local, null, null))
                 {
                     Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
                 }
-                using (ThreadSurveyManager threadManager = new ThreadSurveyManager(_BottleneckDetector.Local))
+                using (ThreadSurveyManager threadManager = new(_BottleneckDetector.Local))
                 {
                     using (ThreadBottleneckSurveyor surveyor = threadManager.CreateThreadSurveyor(null, null, null))
                     {
                         Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
                     }
                 }
-                using (ThreadSurveyManager threadManager = new ThreadSurveyManager(null))
+                using (ThreadSurveyManager threadManager = new(null))
                 {
                 }
-                using (ScopedBottleneckSurveyor surveyor = new ScopedBottleneckSurveyor(null, _BottleneckDetector.Local, null, null))
+                using (ScopedBottleneckSurveyor surveyor = new(null, _BottleneckDetector.Local, null, null))
                 {
                     Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
                 }
-                using (TimeWindowSurveyManager timeWindowManager = new TimeWindowSurveyManager(TimeSpan.FromSeconds(1), a => Task.CompletedTask, _BottleneckDetector.Local, null, null))
+                using (TimeWindowSurveyManager timeWindowManager = new(TimeSpan.FromSeconds(1), a => Task.CompletedTask, _BottleneckDetector.Local, null, null))
                 {
                     Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckEntered(null!));
                     Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckExited(null!));
 
-                    TimeWindowBottleneckSurvey surveyor = new TimeWindowBottleneckSurvey(null, null, 0, TimeSpan.FromSeconds(1));
+                    TimeWindowBottleneckSurvey surveyor = new(null, null, 0, TimeSpan.FromSeconds(1));
                     Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckEntered(null!));
                     Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
                 }
 
-                BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new AmbientBottleneck("BottleneckDetectorAccessRecordCombine-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new AmbientBottleneck("BottleneckDetectorAccessRecordCombine-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                BasicAmbientBottleneckDetector bd = new();
+                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new("BottleneckDetectorAccessRecordCombine-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new("BottleneckDetectorAccessRecordCombine-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
                 DateTime start = AmbientClock.UtcNow;
-                AmbientBottleneckAccessor a1 = new AmbientBottleneckAccessor(bd, BottleneckDetectorAccessRecordPropertiesBottleneck1, start);
-                AmbientBottleneckAccessor a2 = new AmbientBottleneckAccessor(bd, BottleneckDetectorAccessRecordPropertiesBottleneck2, start);
+                AmbientBottleneckAccessor a1 = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck1, start);
+                AmbientBottleneckAccessor a2 = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck2, start);
                 Assert.ThrowsException<ArgumentException>(() => a1.Combine(a2));
                 Assert.ThrowsException<ArgumentNullException>(
                     () =>
@@ -135,10 +135,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void TimeWindowSurveyManagerNoDetector()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(null))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(null))
             using (AmbientClock.Pause())
             {
-                using (TimeWindowSurveyManager timeWindowManager = new TimeWindowSurveyManager(TimeSpan.FromSeconds(1), a => Task.CompletedTask, null, null, null))
+                using (TimeWindowSurveyManager timeWindowManager = new(TimeSpan.FromSeconds(1), a => Task.CompletedTask, null, null, null))
                 {
                 }
             }
@@ -148,8 +148,8 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck = new AmbientBottleneck("BottleneckDetectorAccessRecordProperties-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test");
+                BasicAmbientBottleneckDetector bd = new();
+                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck = new("BottleneckDetectorAccessRecordProperties-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test");
                 AmbientBottleneckAccessor a1 = null;
                 try
                 {
@@ -160,7 +160,7 @@ namespace AmbientServices.Test
                     Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0));
                     Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, 0, 0, 0, 0.0));
                     Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0, 0, 0, 0.0));
-                    AmbientBottleneckAccessor r = new AmbientBottleneckAccessor(bd, BottleneckDetectorAccessRecordPropertiesBottleneck, start);
+                    AmbientBottleneckAccessor r = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck, start);
                     Assert.ThrowsException<InvalidOperationException>(() => r.SetUsage(0, 0));
                     Assert.ThrowsException<InvalidOperationException>(() => r.AddUsage(0, 0));
                 }
@@ -179,8 +179,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorDefaultScopeNames()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
-            using (Collector collector = new Collector())
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
+            using (Collector collector = new())
             {
                 using (AmbientBottleneckAccessor access = _ZeroAutoBottleneck.EnterBottleneck())
                 {
@@ -211,8 +211,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorLinear()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
-            using (Collector collector = new Collector("Linear"))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
+            using (Collector collector = new("Linear"))
             {
                 using (AmbientBottleneckAccessor access = _LinearAutoBottleneck.EnterBottleneck())
                 {
@@ -230,8 +230,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorFilter()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
-            using (Collector collector = new Collector(nameof(BottleneckDetectorFilter), ".*(Zero|Linear).*", ".*Linear.*"))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
+            using (Collector collector = new(nameof(BottleneckDetectorFilter), ".*(Zero|Linear).*", ".*Linear.*"))
             {
                 using (AmbientBottleneckAccessor access = _ZeroAutoBottleneck.EnterBottleneck())
                 {
@@ -259,8 +259,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorExponential()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
-            using (Collector collector = new Collector("Exponential"))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
+            using (Collector collector = new("Exponential"))
             {
                 using (AmbientBottleneckAccessor access = _ExponentialAutoBottleneck.EnterBottleneck())
                 {
@@ -278,8 +278,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorCombine()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
-            using (Collector collector = new Collector("Linear"))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
+            using (Collector collector = new("Linear"))
             {
                 using (AmbientBottleneckAccessor access = _LinearAutoBottleneck.EnterBottleneck())
                 {
@@ -304,17 +304,17 @@ namespace AmbientServices.Test
         [TestMethod]
         public void BottleneckDetectorAccessRecordCompare()
         {
-            BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
+            BasicAmbientBottleneckDetector bd = new();
             using (AmbientClock.Pause())
             {
-                using (AmbientBottleneckAccessor a1 = new AmbientBottleneckAccessor(bd, _LinearManualBottleneck, AmbientClock.UtcNow))
+                using (AmbientBottleneckAccessor a1 = new(bd, _LinearManualBottleneck, AmbientClock.UtcNow))
                 {
                     a1.SetUsage(1, 77);
-                    using (AmbientBottleneckAccessor a2 = new AmbientBottleneckAccessor(bd, _LinearManualBottleneck, AmbientClock.UtcNow))
+                    using (AmbientBottleneckAccessor a2 = new(bd, _LinearManualBottleneck, AmbientClock.UtcNow))
                     {
                         a2.SetUsage(1, 77);
                         AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(77));
-                        using (AmbientBottleneckAccessor b1 = new AmbientBottleneckAccessor(bd, _LinearManualBottleneck, AmbientClock.UtcNow))
+                        using (AmbientBottleneckAccessor b1 = new(bd, _LinearManualBottleneck, AmbientClock.UtcNow))
                         {
                             b1.SetUsage(1, 99);
                             AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(22));
@@ -355,12 +355,12 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
+                BasicAmbientBottleneckDetector bd = new();
                 long limitStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(1000).Ticks);
                 long useStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(300).Ticks);
                 TimeSpan limitPeriod = TimeSpan.FromSeconds(7);
                 long limitPeriodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Ticks);
-                AmbientBottleneck bottleneckDetectorAccessRecordPropertiesBottleneck = new AmbientBottleneck("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, limitPeriod);
+                AmbientBottleneck bottleneckDetectorAccessRecordPropertiesBottleneck = new("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, limitPeriod);
                 AmbientBottleneckAccessor a1 = null;
                 try
                 {
@@ -398,9 +398,9 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new AmbientBottleneck("BottleneckDetectorAccessRecordSecondarySortKeyCompare-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, false, "BottleneckDetectorAccessRecordProperties Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new AmbientBottleneck("BottleneckDetectorAccessRecordSecondarySortKeyCompare-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, false, "BottleneckDetectorAccessRecordProperties Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                BasicAmbientBottleneckDetector bd = new();
+                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new("BottleneckDetectorAccessRecordSecondarySortKeyCompare-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, false, "BottleneckDetectorAccessRecordProperties Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new("BottleneckDetectorAccessRecordSecondarySortKeyCompare-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, false, "BottleneckDetectorAccessRecordProperties Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
                 AmbientBottleneckAccessor a1 = null;
                 AmbientBottleneckAccessor a2 = null;
                 try
@@ -430,9 +430,9 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                BasicAmbientBottleneckDetector bd = new BasicAmbientBottleneckDetector();
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new AmbientBottleneck("BottleneckDetectorAccessRecordCombine-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new AmbientBottleneck("BottleneckDetectorAccessRecordCombine-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                BasicAmbientBottleneckDetector bd = new();
+                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new("BottleneckDetectorAccessRecordCombine-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new("BottleneckDetectorAccessRecordCombine-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
                 AmbientBottleneckAccessor a1 = null;
                 AmbientBottleneckAccessor a2 = null;
                 try
@@ -544,8 +544,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void AmbientBottleneckEventCollectorManagerNotifyAndDisposeEmpty()
         {
-            AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckEventCollectorManagerNotifyAndDisposeEmpty) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckEventCollectorManagerNotifyAndDisposeEmpty) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-            using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
+            AmbientBottleneck bottleneck1 = new(nameof(AmbientBottleneckEventCollectorManagerNotifyAndDisposeEmpty) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckEventCollectorManagerNotifyAndDisposeEmpty) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+            using (AmbientBottleneckSurveyorCoordinator manager = new())
             {
                 using (IAmbientBottleneckSurveyor surveyor = manager.CreateCallContextSurveyor(nameof(AmbientBottleneckEventCollectorManagerNotifyAndDisposeEmpty)))
                 {
@@ -554,7 +554,7 @@ namespace AmbientServices.Test
                     }
                 }
             }
-            using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
+            using (AmbientBottleneckSurveyorCoordinator manager = new())
             {
                 using (IAmbientBottleneckSurveyor surveyor = manager.CreateProcessSurveyor(nameof(AmbientBottleneckEventCollectorManagerNotifyAndDisposeEmpty)))
                 {
@@ -567,8 +567,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void AmbientBottleneckCallContextSurveyorNullName()
         {
-            AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckCallContextSurveyorNullName) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckCallContextSurveyorNullName) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-            using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
+            AmbientBottleneck bottleneck1 = new(nameof(AmbientBottleneckCallContextSurveyorNullName) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckCallContextSurveyorNullName) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+            using (AmbientBottleneckSurveyorCoordinator manager = new())
             {
                 using (IAmbientBottleneckSurveyor surveyor = manager.CreateCallContextSurveyor(null, null, null))
                 {
@@ -579,28 +579,28 @@ namespace AmbientServices.Test
         [TestMethod]
         public void AmbientBottleneckSurveyorsEmpty()
         {
-            using (CallContextSurveyManager surveymanager = new CallContextSurveyManager(null))
+            using (CallContextSurveyManager surveymanager = new(null))
             {
             }
-            using (ProcessBottleneckSurveyor surveymanager = new ProcessBottleneckSurveyor(nameof(AmbientBottleneckSurveyorsEmpty), null, null, null))
+            using (ProcessBottleneckSurveyor surveymanager = new(nameof(AmbientBottleneckSurveyorsEmpty), null, null, null))
             {
             }
         }
         [TestMethod]
         public void AmbientBottleneckEventCollectorManagerSettings()
         {
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
             using (AmbientClock.Pause())
             {
-                AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckEventCollectorManagerSettings) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckEventCollectorManagerSettings) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck bottleneck2 = new AmbientBottleneck(nameof(AmbientBottleneckEventCollectorManagerSettings) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckEventCollectorManagerSettings) + " Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck bottleneck3 = new AmbientBottleneck(nameof(AmbientBottleneckEventCollectorManagerSettings) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckEventCollectorManagerSettings) + " Test3", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
-                BasicAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(AmbientBottleneckEventCollectorManagerSettings));
+                AmbientBottleneck bottleneck1 = new(nameof(AmbientBottleneckEventCollectorManagerSettings) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckEventCollectorManagerSettings) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck2 = new(nameof(AmbientBottleneckEventCollectorManagerSettings) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckEventCollectorManagerSettings) + " Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck3 = new(nameof(AmbientBottleneckEventCollectorManagerSettings) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckEventCollectorManagerSettings) + " Test3", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                BasicAmbientSettingsSet settingsSet = new(nameof(AmbientBottleneckEventCollectorManagerSettings));
                 settingsSet.ChangeSetting(nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultAllow", ".*[12]");
                 settingsSet.ChangeSetting(nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultBlock", ".*3");
-                using (ScopedLocalServiceOverride<IAmbientSettingsSet> s = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
+                using (ScopedLocalServiceOverride<IAmbientSettingsSet> s = new(settingsSet))
                 {
-                    using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
+                    using (AmbientBottleneckSurveyorCoordinator manager = new())
                     {
                         using (IAmbientBottleneckSurveyor processAnalyzer = manager.CreateProcessSurveyor(nameof(AmbientBottleneckEventCollectorManagerSettings)))
                         using (IAmbientBottleneckSurveyor threadAnalyzer = manager.CreateThreadSurveyor(nameof(AmbientBottleneckEventCollectorManagerSettings)))
@@ -646,15 +646,15 @@ namespace AmbientServices.Test
         public void AmbientBottleneckDanglingAutomaticBottleneck()
         {
             IAmbientBottleneckSurvey analysis;
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
             using (AmbientClock.Pause())
             {
-                AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingAutomaticBottleneck) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckDanglingAutomaticBottleneck) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck bottleneck2 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingAutomaticBottleneck) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckDanglingAutomaticBottleneck) + " Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck bottleneck3 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingAutomaticBottleneck) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckDanglingAutomaticBottleneck) + " Test3", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
-                using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
+                AmbientBottleneck bottleneck1 = new(nameof(AmbientBottleneckDanglingAutomaticBottleneck) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckDanglingAutomaticBottleneck) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck2 = new(nameof(AmbientBottleneckDanglingAutomaticBottleneck) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckDanglingAutomaticBottleneck) + " Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck3 = new(nameof(AmbientBottleneckDanglingAutomaticBottleneck) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(AmbientBottleneckDanglingAutomaticBottleneck) + " Test3", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                using (AmbientBottleneckSurveyorCoordinator manager = new())
                 {
-                    List<IAmbientBottleneckSurvey> timeWindowResults = new List<IAmbientBottleneckSurvey>();
+                    List<IAmbientBottleneckSurvey> timeWindowResults = new();
                     using (IAmbientBottleneckSurveyor processAnalyzer = manager.CreateProcessSurveyor(nameof(AmbientBottleneckDanglingAutomaticBottleneck)))
                     using (IAmbientBottleneckSurveyor threadAnalyzer = manager.CreateThreadSurveyor(nameof(AmbientBottleneckDanglingAutomaticBottleneck)))
                     using (manager.CreateTimeWindowSurveyor(TimeSpan.FromMilliseconds(100), a => { timeWindowResults.Add(a); return Task.CompletedTask; }))
@@ -691,21 +691,21 @@ namespace AmbientServices.Test
                 }
             }
         }
-        private AmbientLogger<TestBottleneckDetector> Logger = new AmbientLogger<TestBottleneckDetector>();
+        private readonly AmbientLogger<TestBottleneckDetector> Logger = new();
         [TestMethod]
         public void AmbientBottleneckDanglingManualBottleneck()
         {
             IAmbientBottleneckSurvey analysis;
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
             using (AmbientClock.Pause())
             {
-                StringBuilder log = new StringBuilder();
-                AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck bottleneck2 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck bottleneck3 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test3", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
-                using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
+                StringBuilder log = new();
+                AmbientBottleneck bottleneck1 = new(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck2 = new(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck3 = new(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test3", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                using (AmbientBottleneckSurveyorCoordinator manager = new())
                 {
-                    List<IAmbientBottleneckSurvey> timeWindowResults = new List<IAmbientBottleneckSurvey>();
+                    List<IAmbientBottleneckSurvey> timeWindowResults = new();
                     using (IAmbientBottleneckSurveyor processAnalyzer = manager.CreateProcessSurveyor(nameof(AmbientBottleneckDanglingManualBottleneck)))
                     using (IAmbientBottleneckSurveyor threadAnalyzer = manager.CreateThreadSurveyor(nameof(AmbientBottleneckDanglingManualBottleneck)))
                     using (manager.CreateTimeWindowSurveyor(TimeSpan.FromMilliseconds(100), a => 
@@ -754,16 +754,16 @@ namespace AmbientServices.Test
         public void AmbientBottleneckThreadSurveyorNamedThread()
         {
             IAmbientBottleneckSurvey analysis;
-            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector()))
+            using (ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector()))
             using (AmbientClock.Pause())
             {
-                AmbientBottleneck bottleneck1 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck bottleneck2 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
-                AmbientBottleneck bottleneck3 = new AmbientBottleneck(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test3", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
-                using (AmbientBottleneckSurveyorCoordinator manager = new AmbientBottleneckSurveyorCoordinator())
+                AmbientBottleneck bottleneck1 = new(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck1", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck2 = new(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck2", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                AmbientBottleneck bottleneck3 = new(nameof(AmbientBottleneckDanglingManualBottleneck) + "-Bottleneck3", AmbientBottleneckUtilizationAlgorithm.Linear, false, nameof(AmbientBottleneckDanglingManualBottleneck) + " Test3", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
+                using (AmbientBottleneckSurveyorCoordinator manager = new())
                 {
-                    List<IAmbientBottleneckSurvey> timeWindowResults = new List<IAmbientBottleneckSurvey>();
-                    Thread t = new Thread(new ThreadStart(
+                    List<IAmbientBottleneckSurvey> timeWindowResults = new();
+                    Thread t = new(new ThreadStart(
                     () =>
                     {
                         System.Threading.Thread.CurrentThread.Name = nameof(AmbientBottleneckDanglingManualBottleneck);
@@ -810,14 +810,14 @@ namespace AmbientServices.Test
     }
     class Collector : IDisposable
     {
-        private AmbientBottleneckSurveyorCoordinator _collectorManager;
-        private IAmbientBottleneckSurveyor _processAnalyzer;
-        private IAmbientBottleneckSurveyor _threadAnalyzer;
-        private IAmbientBottleneckSurveyor _scopeAnalyzer;
-        private IDisposable _timeWindowAnalyzer;
-        private ConcurrentDictionary<string, IAmbientBottleneckSurvey> _analyses;
-        private IDisposable _clock;
-        private ScopedLocalServiceOverride<IAmbientBottleneckDetector> _override;
+        private readonly AmbientBottleneckSurveyorCoordinator _collectorManager;
+        private readonly IAmbientBottleneckSurveyor _processAnalyzer;
+        private readonly IAmbientBottleneckSurveyor _threadAnalyzer;
+        private readonly IAmbientBottleneckSurveyor _scopeAnalyzer;
+        private readonly IDisposable _timeWindowAnalyzer;
+        private readonly ConcurrentDictionary<string, IAmbientBottleneckSurvey> _analyses;
+        private readonly IDisposable _clock;
+        private readonly ScopedLocalServiceOverride<IAmbientBottleneckDetector> _override;
         private bool _disposedValue;
 
         public Collector(string scopeName = null, string overrideAllowRegex = null, string overrideBlockRegex = null)

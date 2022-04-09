@@ -8,7 +8,7 @@ namespace AmbientServices
     /// <summary>
     /// A class that mananges writing status notificatoins.
     /// </summary>
-    class StatusNotificationWriter
+    internal class StatusNotificationWriter
     {
 #if RAWRATINGS
         private const string DebugRatingFloatFormat = "0.00";

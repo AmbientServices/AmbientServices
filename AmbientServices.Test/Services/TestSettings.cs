@@ -16,7 +16,7 @@ namespace AmbientServices.Test
     {
         private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
 
-        private static object _lock = new object();
+        private static readonly object _lock = new();
 
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -25,8 +25,8 @@ namespace AmbientServices.Test
         public void AmbientSettingInt()
         {
             // use a local override in case we ran another test that left the global or local settings set set to something else on this thread
-            BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(AmbientSettingInt));
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+            BasicAmbientSettingsSet settings = new(nameof(AmbientSettingInt));
+            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settings))
             {
                 AmbientSetting<int> value;
                 value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
@@ -52,7 +52,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void NoAmbientSetting()
         {
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new ScopedLocalServiceOverride<IAmbientSettingsSet>(null))
+            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(null))
             {
                 AmbientSetting<int> value;
                 value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
@@ -61,7 +61,7 @@ namespace AmbientServices.Test
                 Assert.AreEqual(1, value.Value);
                 value = new AmbientSetting<int>("int-setting-4", "", s => Int32.Parse(s), "-1");
                 Assert.AreEqual(-1, value.Value);
-                SettingsSetSetting<int> settingsSetSetting = new SettingsSetSetting<int>(_SettingsSet, nameof(NoAmbientSetting) + "4", "", s => Int32.Parse(s), "4");
+                SettingsSetSetting<int> settingsSetSetting = new(_SettingsSet, nameof(NoAmbientSetting) + "4", "", s => Int32.Parse(s), "4");
                 Assert.AreEqual(4, settingsSetSetting.Value);
             }
         }
@@ -71,7 +71,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsSetWithExtraSettings()
         {
-            Dictionary<string, string> settings = new Dictionary<string, string> { { nameof(SettingsSetWithExtraSettings) + "1", null }, { nameof(SettingsSetWithExtraSettings) + "2", "test" }, };
+            Dictionary<string, string> settings = new() { { nameof(SettingsSetWithExtraSettings) + "1", null }, { nameof(SettingsSetWithExtraSettings) + "2", "test" }, };
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetWithExtraSettings), settings);
         }
         /// <summary>
@@ -80,7 +80,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsSetGetRawValue()
         {
-            Dictionary<string, string> settings = new Dictionary<string, string> { { nameof(SettingsSetGetRawValue), "1" }, };
+            Dictionary<string, string> settings = new() { { nameof(SettingsSetGetRawValue), "1" }, };
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetGetRawValue), settings);
             Assert.AreEqual(null, settingsSet.GetRawValue(nameof(SettingsSetGetRawValue) + "-notfound"));
             Assert.AreEqual("1", settingsSet.GetRawValue(nameof(SettingsSetGetRawValue)));
@@ -91,10 +91,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsSetWithPreregisteredSettings()
         {
-            SettingInfo<string> base1 = new SettingInfo<string>(nameof(SettingsSetWithPreregisteredSettings) + "1", "", null);
-            SettingInfo<int> base2 = new SettingInfo<int>(nameof(SettingsSetWithPreregisteredSettings) + "2", "", s => string.IsNullOrEmpty(s) ? 2 : Int32.Parse(s));
-            SettingInfo<int> base3 = new SettingInfo<int>(nameof(SettingsSetWithPreregisteredSettings) + "3", "", s => Int32.Parse(s), "3");
-            Dictionary<string, string> settings = new Dictionary<string, string> { { nameof(SettingsSetWithPreregisteredSettings) + "1", null }, { nameof(SettingsSetWithPreregisteredSettings) + "2", "2" }, { nameof(SettingsSetWithPreregisteredSettings) + "3", null }, };
+            SettingInfo<string> base1 = new(nameof(SettingsSetWithPreregisteredSettings) + "1", "", null);
+            SettingInfo<int> base2 = new(nameof(SettingsSetWithPreregisteredSettings) + "2", "", s => string.IsNullOrEmpty(s) ? 2 : Int32.Parse(s));
+            SettingInfo<int> base3 = new(nameof(SettingsSetWithPreregisteredSettings) + "3", "", s => Int32.Parse(s), "3");
+            Dictionary<string, string> settings = new() { { nameof(SettingsSetWithPreregisteredSettings) + "1", null }, { nameof(SettingsSetWithPreregisteredSettings) + "2", "2" }, { nameof(SettingsSetWithPreregisteredSettings) + "3", null }, };
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetWithPreregisteredSettings), settings);
         }
         /// <summary>
@@ -107,7 +107,7 @@ namespace AmbientServices.Test
             string testSettingKey = nameof(SettingsSetSettingChangeNotification);
             string initialValue = "initialValue";
             string notificationNewValue = "";
-            SettingsSetSetting<string> testSetting = new SettingsSetSetting<string>(settingsSet, testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
+            SettingsSetSetting<string> testSetting = new(settingsSet, testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
             Assert.AreEqual(initialValue, testSetting.Value);
             string secondValue = "change1";
             Assert.AreEqual(initialValue, notificationNewValue);
@@ -123,7 +123,7 @@ namespace AmbientServices.Test
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingChangeNoNotification));
             string testSettingKey = nameof(SettingsSetSettingChangeNoNotification);
             string initialValue = "initialValue";
-            SettingsSetSetting<string> testSetting = new SettingsSetSetting<string>(settingsSet, testSettingKey, "", s => s, initialValue);
+            SettingsSetSetting<string> testSetting = new(settingsSet, testSettingKey, "", s => s, initialValue);
             Assert.AreEqual(initialValue, testSetting.Value);
             string secondValue = "change1";
             settingsSet.ChangeSetting(testSettingKey, secondValue);
@@ -139,7 +139,7 @@ namespace AmbientServices.Test
             string testSettingKey = nameof(SettingsSetSettingNullConvert);
             string initialValue = "initialValue";
             string secondValue = "change1";
-            SettingsSetSetting<string> testSetting = new SettingsSetSetting<string>(settingsSet, testSettingKey, "", null, initialValue);
+            SettingsSetSetting<string> testSetting = new(settingsSet, testSettingKey, "", null, initialValue);
             Assert.AreEqual(initialValue, testSetting.Value);
             settingsSet.ChangeSetting(testSettingKey, secondValue);
             Assert.AreEqual(secondValue, testSetting.Value);
@@ -170,7 +170,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingMisc()
         {
-            Dictionary<string, string> settings = new Dictionary<string, string>() { { "key", "value" } };
+            Dictionary<string, string> settings = new() { { "key", "value" } };
             IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingMisc), settings);
             Assert.IsTrue(settingsSet!.ToString()!.Contains(nameof(SettingMisc)));
             Assert.AreEqual("SettingMisc", settingsSet.SetName);
@@ -193,8 +193,8 @@ namespace AmbientServices.Test
         {
             bool valueChanged = false;
             string value = null;
-            SettingsSetSetting<string> temporarySetting = new SettingsSetSetting<string>(settingsSet, testSettingKey, "", s => { valueChanged = true; value = s; return s; }, nameof(SettingsGarbageCollection) + "-InitialValue");
-            WeakReference<SettingsSetSetting<string>> wr = new WeakReference<SettingsSetSetting<string>>(temporarySetting);
+            SettingsSetSetting<string> temporarySetting = new(settingsSet, testSettingKey, "", s => { valueChanged = true; value = s; return s; }, nameof(SettingsGarbageCollection) + "-InitialValue");
+            WeakReference<SettingsSetSetting<string>> wr = new(temporarySetting);
             Assert.AreEqual(nameof(SettingsGarbageCollection) + "-InitialValue", value);
             // change the setting to be sure we are actually hooked into the settings set's notification event
             settingsSet.ChangeSetting(testSettingKey, nameof(SettingsGarbageCollection) + "-ValueChanged");
@@ -212,7 +212,7 @@ namespace AmbientServices.Test
             string testSettingKey = nameof(SettingGlobalValueChangeNotification);
             string initialValue = "initialValue";
             string notificationNewValue = "";
-            AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
+            AmbientSetting<string> testSetting = new(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
             Assert.AreEqual(initialValue, testSetting.Value);
             string secondValue = "change1";
             Assert.AreEqual(initialValue, notificationNewValue);
@@ -236,18 +236,18 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingGlobalSettingsSetChangeNotification()
         {
-            AmbientService<IAmbientSettingsSet> pretendGlobalSettings = new AmbientService<IAmbientSettingsSet>();
+            AmbientService<IAmbientSettingsSet> pretendGlobalSettings = new();
 
             string testSettingKey = nameof(SettingGlobalSettingsSetChangeNotification);
             string defaultValue = "defaultValue";
             string overrideValue = "overrideSettingsSetValue";
-            Dictionary<string, string> overrides = new Dictionary<string, string>() { { testSettingKey, overrideValue } };
+            Dictionary<string, string> overrides = new() { { testSettingKey, overrideValue } };
             string notificationNewValue = "";
-            AmbientSetting<string> testSetting = new AmbientSetting<string>(pretendGlobalSettings, testSettingKey, "", s => { notificationNewValue = s; return s; }, defaultValue);
+            AmbientSetting<string> testSetting = new(pretendGlobalSettings, testSettingKey, "", s => { notificationNewValue = s; return s; }, defaultValue);
 
             Assert.AreEqual(defaultValue, testSetting.Value);
 
-            AmbientSettingsOverride pretendGlobalSettingsImplementation = new AmbientSettingsOverride(overrides, nameof(SettingGlobalSettingsSetChangeNotification), null, pretendGlobalSettings);
+            AmbientSettingsOverride pretendGlobalSettingsImplementation = new(overrides, nameof(SettingGlobalSettingsSetChangeNotification), null, pretendGlobalSettings);
             pretendGlobalSettings.Global = pretendGlobalSettingsImplementation;
 
             Assert.AreEqual(overrideValue, testSetting.Value);
@@ -263,12 +263,12 @@ namespace AmbientServices.Test
             }
 
             overrides = new Dictionary<string, string>() { { testSettingKey, overrideValue } };
-            AmbientSettingsOverride pretendGlobalSettingsSet2 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalSettingsSetChangeNotification), null, pretendGlobalSettings);
+            AmbientSettingsOverride pretendGlobalSettingsSet2 = new(overrides, nameof(SettingGlobalSettingsSetChangeNotification), null, pretendGlobalSettings);
             pretendGlobalSettings.Global = pretendGlobalSettingsSet2;
             Assert.AreEqual(overrideValue, testSetting.Value);
 
             overrides[testSettingKey] = null;
-            AmbientSettingsOverride pretendGlobalSettingsSet3 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalSettingsSetChangeNotification), null, pretendGlobalSettings);
+            AmbientSettingsOverride pretendGlobalSettingsSet3 = new(overrides, nameof(SettingGlobalSettingsSetChangeNotification), null, pretendGlobalSettings);
             pretendGlobalSettings.Global = pretendGlobalSettingsSet3;
             Assert.AreEqual(defaultValue, testSetting.Value);
         }
@@ -278,17 +278,17 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingGlobalSettingsSetChangeNoNotification()
         {
-            AmbientService<IAmbientSettingsSet> pretendGlobalService = new AmbientService<IAmbientSettingsSet>();
+            AmbientService<IAmbientSettingsSet> pretendGlobalService = new();
 
             string testSettingKey = nameof(SettingGlobalSettingsSetChangeNoNotification);
             string defaultValue = "defaultValue";
             string overrideValue = "overrideSettingsSetValue";
-            Dictionary<string, string> overrides = new Dictionary<string, string>() { { testSettingKey, overrideValue } };
-            AmbientSetting<string> testSetting = new AmbientSetting<string>(pretendGlobalService, testSettingKey, "", s => s, defaultValue);
+            Dictionary<string, string> overrides = new() { { testSettingKey, overrideValue } };
+            AmbientSetting<string> testSetting = new(pretendGlobalService, testSettingKey, "", s => s, defaultValue);
 
             Assert.AreEqual(defaultValue, testSetting.Value);
 
-            AmbientSettingsOverride pretendGlobalSettingsImplementation = new AmbientSettingsOverride(overrides, nameof(SettingGlobalSettingsSetChangeNoNotification), null, pretendGlobalService);
+            AmbientSettingsOverride pretendGlobalSettingsImplementation = new(overrides, nameof(SettingGlobalSettingsSetChangeNoNotification), null, pretendGlobalService);
             pretendGlobalService.Global = pretendGlobalSettingsImplementation;
 
             Assert.AreEqual(overrideValue, testSetting.Value);
@@ -302,12 +302,12 @@ namespace AmbientServices.Test
             }
 
             overrides = new Dictionary<string, string>() { { testSettingKey, overrideValue } };
-            AmbientSettingsOverride pretendGlobalSettingsSettingsSet2 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalSettingsSetChangeNoNotification), null, pretendGlobalService);
+            AmbientSettingsOverride pretendGlobalSettingsSettingsSet2 = new(overrides, nameof(SettingGlobalSettingsSetChangeNoNotification), null, pretendGlobalService);
             pretendGlobalService.Global = pretendGlobalSettingsSettingsSet2;
             Assert.AreEqual(overrideValue, testSetting.Value);
 
             overrides[testSettingKey] = null;
-            AmbientSettingsOverride pretendGlobalSettingsSettingsSet3 = new AmbientSettingsOverride(overrides, nameof(SettingGlobalSettingsSetChangeNoNotification), null, pretendGlobalService);
+            AmbientSettingsOverride pretendGlobalSettingsSettingsSet3 = new(overrides, nameof(SettingGlobalSettingsSetChangeNoNotification), null, pretendGlobalService);
             pretendGlobalService.Global = pretendGlobalSettingsSettingsSet3;
             Assert.AreEqual(defaultValue, testSetting.Value);
         }
@@ -324,7 +324,7 @@ namespace AmbientServices.Test
                 string testSettingKey = nameof(SettingLocalValueChangeNotification);
                 string initialValue = "initialValue";
                 string notificationNewValue = "";
-                AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
+                AmbientSetting<string> testSetting = new(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
                 Assert.AreEqual(initialValue, testSetting.Value);
                 string secondValue = "change1";
                 Assert.AreEqual(initialValue, notificationNewValue);
@@ -346,7 +346,7 @@ namespace AmbientServices.Test
                 string testSettingKey = nameof(SettingLocalChangeSettingsSet);
                 string initialValue = "initialValue";
                 string notificationNewValue = "";
-                AmbientSetting<string> testSetting = new AmbientSetting<string>(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
+                AmbientSetting<string> testSetting = new(testSettingKey, "", s => { notificationNewValue = s; return s; }, initialValue);
                 Assert.AreEqual(initialValue, testSetting.Value);
                 Assert.AreEqual(initialValue, notificationNewValue);
 
@@ -370,7 +370,7 @@ namespace AmbientServices.Test
         {
             string settingName = nameof(SettingsInfo);
             DateTime start = AmbientClock.UtcNow;
-            AmbientSetting<string> testSetting = new AmbientSetting<string>(settingName, "", s => s, "default value");
+            AmbientSetting<string> testSetting = new(settingName, "", s => s, "default value");
             foreach (IAmbientSettingInfo info in SettingsRegistry.DefaultRegistry.Settings)
             {
                 if (String.Equals(settingName, info.Key))
@@ -416,9 +416,9 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsRegistryTest()
         {
-            SettingsRegistry registry = new SettingsRegistry();
+            SettingsRegistry registry = new();
             registry.SettingRegistered += Registry_SettingRegistered;
-            TestSettingsSetSetting setting1 = new TestSettingsSetSetting();
+            TestSettingsSetSetting setting1 = new();
             registry.Register(setting1);
             registry.SettingRegistered -= Registry_SettingRegistered;
             TempRegister(registry);
@@ -437,7 +437,7 @@ namespace AmbientServices.Test
         public void AmbientSettingsWithSetNameNull()
         {
             string settingName = nameof(AmbientSettingsWithSetNameNull) + "-int-setting";
-            AmbientSetting<int> setting = new AmbientSetting<int>(settingName, "", s => Int32.Parse(s), "1");
+            AmbientSetting<int> setting = new(settingName, "", s => Int32.Parse(s), "1");
             (int, string) valueWithSetName = setting.GetValueWithSetName();
         }
     /// <summary>
@@ -447,7 +447,7 @@ namespace AmbientServices.Test
         public void AmbientSettingsWithSetName()
         {
             string settingName = nameof(AmbientSettingsWithSetName) + "-int-setting";
-            AmbientSetting<int> setting3 = new AmbientSetting<int>(settingName, "", s => Int32.Parse(s), "1");
+            AmbientSetting<int> setting3 = new(settingName, "", s => Int32.Parse(s), "1");
             Assert.AreEqual(1, setting3.Value);
             Assert.IsNotNull(setting3.GetValueWithSetName().Item2);
             IMutableAmbientSettingsSet settingsSet = _SettingsSet.Global as IMutableAmbientSettingsSet;
@@ -458,8 +458,8 @@ namespace AmbientServices.Test
                 Assert.AreEqual(BasicAmbientSettingsSet.DefaultSetName, setting3.GetValueWithSetName().Item2);
             }
             // use a local override in case we ran another test that left the global or local settings set set to something else on this thread
-            BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(AmbientSettingsWithSetName));
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+            BasicAmbientSettingsSet settings = new(nameof(AmbientSettingsWithSetName));
+            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settings))
             {
                 AmbientSetting<int> setting;
                 setting = new AmbientSetting<int>(nameof(AmbientSettingsWithSetName) + "-int-setting-1", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
@@ -502,7 +502,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(1, setting.Value);
             Assert.IsNotNull(setting.GetValueWithSetName().Item2);
 
-            BasicAmbientSettingsSet settings = new BasicAmbientSettingsSet(nameof(SettingsSetSettingsWithSetName));
+            BasicAmbientSettingsSet settings = new(nameof(SettingsSetSettingsWithSetName));
             setting = AmbientSettings.GetSettingsSetSetting(settings, settingName, "", s => Int32.Parse(s), "1");
             Assert.AreEqual(1, setting.Value);
             Assert.IsNotNull(setting.GetValueWithSetName().Item2);
@@ -516,7 +516,7 @@ namespace AmbientServices.Test
         }
         private void TempRegister(SettingsRegistry registry, string key = null, string description = null)
         {
-            TestSettingsSetSetting setting2 = new TestSettingsSetSetting(key ?? "key", "defaultValue", description);
+            TestSettingsSetSetting setting2 = new(key ?? "key", "defaultValue", description);
             registry.Register(setting2);
         }
 

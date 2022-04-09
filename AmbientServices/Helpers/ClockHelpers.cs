@@ -219,7 +219,8 @@ namespace AmbientServices
         {
             return Delay((long)delayTime.TotalMilliseconds, cancel);
         }
-        sealed class ScopedClockPauser : IDisposable
+
+        private sealed class ScopedClockPauser : IDisposable
         {
             private IAmbientClock? _clockToRestore;
 
@@ -508,7 +509,7 @@ namespace AmbientServices
         private int _enabled;
         private EventHolder _eventHolder;
 
-        struct EventHolder
+        private struct EventHolder
         {
             public event System.Timers.ElapsedEventHandler Elapsed;
             public void RaiseElapsed(object sender)
@@ -832,7 +833,7 @@ namespace AmbientServices
         /// Constructs an AmbientCallbackTimer using the ambient clock and the specified period.
         /// </summary>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
-        /// <param name="state">The state <see cref="Object"/> to pass to the callback, or null if no such object is needed.</param>
+        /// <param name="state">The state <see cref="object"/> to pass to the callback, or null if no such object is needed.</param>
         /// <param name="dueTime">The number of milliseconds to delay before calling the callback.  <see cref="Timeout.Infinite"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(TimerCallback callback, object? state, int dueTime, int period)
@@ -843,7 +844,7 @@ namespace AmbientServices
         /// Constructs an AmbientCallbackTimer using the ambient clock and the specified period.
         /// </summary>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
-        /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
+        /// <param name="state">The state <see cref="object"/> to pass to the callback.</param>
         /// <param name="dueTime">The number of milliseconds to delay before calling the callback.  <see cref="Timeout.Infinite"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
         [CLSCompliant(false)]
@@ -855,7 +856,7 @@ namespace AmbientServices
         /// Constructs an AmbientCallbackTimer using the ambient clock and the specified period.
         /// </summary>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
-        /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
+        /// <param name="state">The state <see cref="object"/> to pass to the callback.</param>
         /// <param name="dueTime">The number of milliseconds to delay before calling the callback.  <see cref="Timeout.Infinite"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(TimerCallback callback, object state, long dueTime, long period)
@@ -866,7 +867,7 @@ namespace AmbientServices
         /// Constructs an AmbientCallbackTimer using the ambient clock and the specified period.
         /// </summary>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
-        /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
+        /// <param name="state">The state <see cref="object"/> to pass to the callback.</param>
         /// <param name="dueTime">A <see cref="TimeSpan"/> indicating the number of milliseconds to delay before calling the callback.  <see cref="Timeout.InfiniteTimeSpan"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period)
@@ -878,7 +879,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to invoke the callback.</param>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
-        /// <param name="state">The state <see cref="Object"/> to pass to the callback.</param>
+        /// <param name="state">The state <see cref="object"/> to pass to the callback.</param>
         /// <param name="dueTime">A <see cref="TimeSpan"/> indicating the number of milliseconds to delay before calling the callback.  <see cref="Timeout.InfiniteTimeSpan"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
         public AmbientCallbackTimer(IAmbientClock? clock, TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
@@ -1243,7 +1244,7 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Cancels a registered wait operation issued by the <see cref="System.Threading.ThreadPool.RegisterWaitForSingleObject(System.Threading.WaitHandle,System.Threading.WaitOrTimerCallback,System.Object,System.UInt32,System.Boolean)"/>.
+        /// Cancels a registered wait operation issued by the <see cref="System.Threading.ThreadPool.RegisterWaitForSingleObject(System.Threading.WaitHandle,System.Threading.WaitOrTimerCallback,object,uint,bool)"/>.
         /// method.
         /// </summary>
         /// <param name="waitObject">The <see cref="System.Threading.WaitHandle"/> to be signaled.</param>

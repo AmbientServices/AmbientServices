@@ -79,7 +79,7 @@ namespace AmbientServices
         {
             if (newResults != null)
             {
-                if (!String.Equals(_targetSystem, newResults.TargetSystem, StringComparison.Ordinal)) throw new ArgumentException("The target system for the specified status results and must match the this StatusChecker's target system!", nameof(newResults));
+                if (!string.Equals(_targetSystem, newResults.TargetSystem, StringComparison.Ordinal)) throw new ArgumentException("The target system for the specified status results and must match the this StatusChecker's target system!", nameof(newResults));
                 Status.Logger.Log($"{newResults.TargetSystemDisplayName}: {newResults.Report?.Alert}", "Results");
                 _resultsTracker.SetLatestResults(newResults);
             }
@@ -148,7 +148,7 @@ namespace AmbientServices
     /// <summary>
     /// A class used to track the status results from a configured top-level status checker.
     /// </summary>
-    class StatusResultsTracker
+    internal class StatusResultsTracker
     {
         private StatusResults _statusResults;                           // interlocked
         private ConcurrentQueue<StatusResults> _statusResultsHistory;   // interlocked
@@ -191,8 +191,8 @@ namespace AmbientServices
                 TruncateQueue(_statusResultsHistory);
             }
         }
-        private static IAmbientSetting<int> _StatusResultsRetentionMinutes = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionMinutes", "The maximum number of minutes to keep status results history", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "103860");
-        private static IAmbientSetting<int> _StatusResultsRetentionEntries = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionEntries", "The maximum number of status results history entries to keep", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
+        private static IAmbientSetting<int> _StatusResultsRetentionMinutes = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionMinutes", "The maximum number of minutes to keep status results history", s => int.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "103860");
+        private static IAmbientSetting<int> _StatusResultsRetentionEntries = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionEntries", "The maximum number of status results history entries to keep", s => int.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
         private static void TruncateQueue(ConcurrentQueue<StatusResults> queueToTruncate)
         {
             StatusResults? oldRatingResults;

@@ -174,7 +174,7 @@ namespace AmbientServices.Test
 
         private async Task Async_BasicAsyncWithLock(CancellationToken cancel = default)
         {
-            using (SemaphoreSlim lock2 = new SemaphoreSlim(1))
+            using (SemaphoreSlim lock2 = new(1))
             {
                 await lock2.WaitAsync(1000, cancel);
                 try
@@ -613,6 +613,25 @@ namespace AmbientServices.Test
         /// Performs basic tests on the <see cref="Async"/> class.
         /// </summary>
         [TestMethod]
+        public async Task Async_AsyncEnumeratorExceptions()
+        {
+            int mainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () =>
+            {
+                foreach (int ret in await NullAsyncEnumerable().ToListAsync())
+                {
+                    Assert.AreEqual(mainThreadId, System.Threading.Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+        }
+        private IAsyncEnumerable<int> NullAsyncEnumerable()
+        {
+            return null!;
+        }
+        /// <summary>
+        /// Performs basic tests on the <see cref="Async"/> class.
+        /// </summary>
+        [TestMethod]
         public void Async_InfiniteEnumeratorAsyncToSync()
         {
             foreach (int ret in Async.AsyncEnumerableToEnumerable(() => InfiniteEnumerateAsync(default)))
@@ -630,5 +649,12 @@ namespace AmbientServices.Test
             }
         }
 #endif
+        [TestMethod]
+        public void SynchronousSynchronizationContextExceptions()
+        {
+            SynchronousSynchronizationContext c = SynchronousSynchronizationContext.Default;
+            Assert.ThrowsException<ArgumentNullException>(() => c.Send(null!, null));
+            Assert.ThrowsException<ArgumentNullException>(() => c.Post(null!, null));
+        }
     }
 }

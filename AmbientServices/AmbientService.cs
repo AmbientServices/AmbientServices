@@ -219,7 +219,7 @@ namespace AmbientServices
         #region IDisposable Support
         private bool _disposed; // To detect redundant calls
 
-        void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!_disposed)
             {
@@ -245,7 +245,7 @@ namespace AmbientServices
     /// A generic class used to ensure that only one instance of the default service implementation gets created.
     /// </summary>
     /// <typeparam name="T">The concrete type of the service.</typeparam>
-    class DefaultServiceImplementation<T> where T : class
+    internal class DefaultServiceImplementation<T> where T : class
     {
         private static T _ImplementationSingleton = CreateInstance();
         private static T CreateInstance()

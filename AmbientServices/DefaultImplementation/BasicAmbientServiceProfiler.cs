@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     [DefaultAmbientService]
-    class BasicAmbientServiceProfiler : IAmbientServiceProfiler
+    internal class BasicAmbientServiceProfiler : IAmbientServiceProfiler
     {
         private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new();
         private AsyncLocal<CallContextActiveSystemData> _activeSystem;
@@ -44,10 +44,11 @@ namespace AmbientServices
             return _notificationSinks.Remove(sink);
         }
     }
+
     /// <summary>
     /// A struct that holds information about which system is currently active in a call context.
     /// </summary>
-    struct CallContextActiveSystemData
+    internal struct CallContextActiveSystemData
     {
         private string _group;
         /// <summary>
@@ -84,10 +85,11 @@ namespace AmbientServices
             StartStopwatchTimestamp = startStopwatchTimestamp;
         }
     }
+
     /// <summary>
     /// A class that tracks service profile statistics across multiple call contexts in a process or a single time window.
     /// </summary>
-    class ProcessOrSingleTimeWindowServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
+    internal class ProcessOrSingleTimeWindowServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
     {
         private readonly IAmbientServiceProfiler _profiler;
         private readonly string _scopeName;
@@ -205,7 +207,8 @@ namespace AmbientServices
             _activeGroupByCallContext.Clear();
         }
     }
-    class ScopeOnSystemSwitchedDistributor : IAmbientServiceProfilerNotificationSink
+
+    internal class ScopeOnSystemSwitchedDistributor : IAmbientServiceProfilerNotificationSink
     {
         private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new();
         /// <summary>
@@ -237,10 +240,11 @@ namespace AmbientServices
             return _notificationSinks.Remove(sink);
         }
     }
+
     /// <summary>
     /// A class that tracks service profile statistics for a specific call context.
     /// </summary>
-    class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
+    internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
     {
         private readonly ScopeOnSystemSwitchedDistributor _distributor;
         private readonly Regex? _systemGroupTransform;
@@ -261,7 +265,7 @@ namespace AmbientServices
                 foreach (AmbientServiceProfilerAccumulator accumulator in _stopwatchTicksUsedByGroup.Select(kvp => new AmbientServiceProfilerAccumulator(kvp.Key, kvp.Value.Item1, kvp.Value.Item2)))
                 {
                     // is this accumulator the same as the current one?
-                    if (String.Equals(accumulator.Group, _currentGroup, StringComparison.Ordinal))
+                    if (string.Equals(accumulator.Group, _currentGroup, StringComparison.Ordinal))
                     {
                         skipCurrent = true;
                         yield return new AmbientServiceProfilerAccumulator(accumulator.Group, accumulator.TotalStopwatchTicksUsed + currentTicks, accumulator.ExecutionCount + 1);
@@ -359,7 +363,7 @@ namespace AmbientServices
     /// <summary>
     /// A class that tracks service profile statistics for a moving time window.
     /// </summary>
-    class TimeWindowServiceProfiler : IDisposable
+    internal class TimeWindowServiceProfiler : IDisposable
     {
         private readonly string _scopeNamePrefix;
         private readonly AmbientEventTimer _timeWindowRotator;

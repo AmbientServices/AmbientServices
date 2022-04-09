@@ -8,7 +8,7 @@ using System.Text;
 namespace AmbientServices
 {
     [DefaultAmbientService]
-    class BasicAmbientStatistics : IAmbientStatistics
+    internal class BasicAmbientStatistics : IAmbientStatistics
     {
         private readonly ProcessExecutionTimeStatistic _executionTime;
         private readonly ConcurrentDictionary<string, IAmbientStatisticReader> _statistics = new();
@@ -59,7 +59,8 @@ namespace AmbientServices
             return _statistics.TryRemove(id, out _);
         }
     }
-    class Statistic : IAmbientStatistic
+
+    internal class Statistic : IAmbientStatistic
     {
         private readonly Action _removeRegistration;
         private readonly bool _timeBased;
@@ -130,7 +131,7 @@ namespace AmbientServices
         }
     }
 
-    class ProcessExecutionTimeStatistic : IAmbientStatisticReader
+    internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
     {
         private readonly long _startTime;
 
