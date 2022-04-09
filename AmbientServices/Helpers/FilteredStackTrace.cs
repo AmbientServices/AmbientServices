@@ -211,7 +211,7 @@ namespace AmbientServices
         /// <returns>Whether or not <paramref name="namespaceToFilter"/> was already in the list.</returns>
         public static bool AddNamespaceToFilter(string namespaceToFilter)
         {
-            return _NamespacesToFilterAfterFirst.TryAdd(namespaceToFilter);
+            return _NamespacesToFilter.TryAdd(namespaceToFilter);
         }
         /// <summary>
         /// Adds the specified namespace as one that indicates that matching stack frames after the first one should be removed from the stack during filtered stack trace generation.
@@ -319,7 +319,7 @@ namespace AmbientServices
             {
                 if (qualifiedMethodName.StartsWith(namespaceToErase, StringComparison.Ordinal))
                 {
-                    qualifiedMethodName = qualifiedMethodName.Substring(namespaceToErase.Length + 1);
+                    qualifiedMethodName = qualifiedMethodName.Substring(namespaceToErase.Length);
                 }
             }
             return qualifiedMethodName.TrimStart('.');

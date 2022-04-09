@@ -19,7 +19,6 @@ namespace Ignore
         {
             FilteredStackTrace.AddNamespacesToErase("Ignore.IgnoreNamespace.");
             FilteredStackTrace.AddNamespaceToFilterAfterFirst("Ignore.");
-            Assert.IsTrue(FilteredStackTrace.ShouldFilterMethod("Ignore.IgnoreNamespace.TestEraseAndFilter"));
             Assert.AreEqual("TestEraseAndFilter", FilteredStackTrace.EraseNamespace("Ignore.IgnoreNamespace.TestEraseAndFilter"));
             FilteredStackTrace trace = new(new AmbientServices.Test.ExpectedException("This is a test"), 0, true);
             Assert.IsTrue(string.IsNullOrEmpty(trace.ToString().Trim()));
@@ -61,6 +60,8 @@ namespace AmbientServices.Test
                 await Task.CompletedTask;
             });
             Ignore.IgnoreNamespace.TestEraseAndFilter();
+            FilteredStackTrace.AddNamespaceToFilter("NonExistentNamespace.Subspace");
+            Assert.IsTrue(FilteredStackTrace.ShouldFilterMethod("NonExistentNamespace.Subspace.TestNamespaceFilter"));
 
             Assert.AreEqual(String.Empty, FilteredStackTrace.EraseSourcePath(null!));
             Assert.AreEqual(String.Empty, FilteredStackTrace.EraseNamespace(null!));
