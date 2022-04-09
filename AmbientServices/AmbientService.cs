@@ -276,8 +276,7 @@ namespace AmbientServices
         {
             _service = DefaultImplementation();
         }
-        // this is only internal instead of private in order to diagnose issues in test cases
-        internal static T? DefaultImplementation()
+        private static T? DefaultImplementation()
         {
             Type? impType = DefaultAmbientServices.TryFind(typeof(T));
             if (impType == null) return null;       // there is no default implementation (yet)
@@ -286,13 +285,12 @@ namespace AmbientServices
             T implementation = (T)mi.Invoke(null, Array.Empty<object>())!;  // DefaultServiceImplementation<T> returns a non-null T
             return implementation;
         }
-        // this is only internal instead of private in order to diagnose issues in test cases
-        internal T? LateAssignedDefaultServiceImplementation()
+        private T? LateAssignedDefaultServiceImplementation()
         {
             T? newDefaultImplementation = DefaultImplementation();
             // still no default implementation registered?  try again later
             if (newDefaultImplementation == null) return null;
-            // we should almost always get a null back here, but it's theoretically possible if two attempts to retrieve the implementation happen at the same time, but even in this case, the only way we would get back instances of different types would be if the default ambient service changed, which shouldn't be possible given the current implementation
+            // we should almost always get a null back here below, but it's theoretically possible if two attempts to retrieve the implementation happen at the same time, but even in this case, the only way we would get back instances of different types would be if the default ambient service changed, which shouldn't be possible given the current implementation
             // as a result, the non-null case below is unlikely to get covered by tests
             return (System.Threading.Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) is not T oldDefaultImplementation)
                 ? newDefaultImplementation

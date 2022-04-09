@@ -21,24 +21,25 @@ namespace AmbientServices.Utility
         [DebuggerNonUserCode]
         public static Type[] GetLoadableTypes(this System.Reflection.Assembly assembly)
         {
+            if (assembly == null) throw new ArgumentNullException(nameof(assembly));
             Type[] types;
             //int loop = 0;
             //do
             //{
-                try
-                {
-                    if (assembly == null) throw new ArgumentNullException(nameof(assembly));
-                    types = assembly.GetTypes();
-                }
-                catch (ReflectionTypeLoadException ex)
-                {
-                    // can't figure out how to force this exception for the moment, but this code is from several popular posts on the internet
-                    types = TypesFromException(ex);
-                }
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                // can't figure out how to force this exception for the moment, but this code is from several popular posts on the internet
+                types = TypesFromException(ex);
+            }
             //    if ((types?.Length ?? 0) > 0) break;
             //    System.Threading.Thread.Sleep(100);
             //} while (loop++ < 5);
-            return types ?? Array.Empty<Type>();
+            if (types != null) return types;
+            return Array.Empty<Type>();
         }
         /// <summary>
         /// Gets the loadable types from the <see cref="ReflectionTypeLoadException"/>.

@@ -1,4 +1,5 @@
 ﻿using AmbientServices;
+using AmbientServices.Utility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
@@ -241,14 +242,20 @@ namespace AmbientServices.Test.Samples
         private static readonly IAmbientCallStack _CallStack = _AmbientCallStack.Global;
         public static void OuterFunc()
         {
+//            BasicAmbientCallStack test = new();   // note that this didn't seem to have any effect on the occasional issue below
             if (_CallStack != null) Debug.WriteLine(String.Join(Environment.NewLine, _CallStack.Entries));
             // somehow _CallStack is null here occasionally--how is this possible?!  Fail with more information in order to narrow it down
             if (_CallStack == null)
             {
-                Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local}");
-                Assert.Fail($"{GlobalServiceReference<IAmbientCallStack>.DefaultImplementation()}");
-                Assert.Fail($"{_AmbientCallStack.GlobalReference.LateAssignedDefaultServiceImplementation()}");
-                Assert.Fail($"{DefaultAmbientServices.TryFind(typeof(IAmbientCallStack))?.Name},{new StackTrace()}");
+                // this showed that when _CallStack is null, everything was null
+                //                Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{GlobalServiceReference<IAmbientCallStack>.DefaultImplementation()},{_AmbientCallStack.GlobalReference.LateAssignedDefaultServiceImplementation()},{DefaultAmbientServices.TryFind(typeof(IAmbientCallStack))?.Name},{new StackTrace()}");
+                // this shows that AssemblyExtensions.GetLoadableTypes sometimes fails to return any types, at least on the samples assembly
+                // and that in AssemblyExtensions.GetLoadableTypes, the line before:
+                // types = assembly.GetTypes();
+                // runs, but lines after that do not, not do any catch blocks or finally blocks, and yet the function returns an empty array somehow
+                // add the following to help diagnose the issue: bool testSamples = (assembly.GetName().Name == "AmbientServices.Samples");
+                //Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{DefaultAmbientServices.TestSamplesLoaded},{DefaultAmbientServices.TestSamplesDependent},{DefaultAmbientServices.TestSamplesTypes},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoaded},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedLoading},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedLoaded},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedException},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedOtherException},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedFinally},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedTypes},{new StackTrace()}");
+                Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{typeof(BasicAmbientCallStack).Assembly.GetLoadableTypes().Length},{new StackTrace()}");
             }
             Assert.IsFalse(String.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));
             Assert.IsFalse(String.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("InnerFunc"));

@@ -11,6 +11,21 @@ using System.Threading.Tasks;
 
 #nullable enable
 
+namespace Ignore
+{
+    class IgnoreNamespace
+    {
+        public static void TestEraseAndFilter()
+        {
+            FilteredStackTrace.AddNamespacesToErase("Ignore.IgnoreNamespace.");
+            FilteredStackTrace.AddNamespaceToFilterAfterFirst("Ignore.");
+            Assert.IsTrue(FilteredStackTrace.ShouldFilterMethod("Ignore.IgnoreNamespace.TestEraseAndFilter"));
+            Assert.AreEqual("TestEraseAndFilter", FilteredStackTrace.EraseNamespace("Ignore.IgnoreNamespace.TestEraseAndFilter"));
+            FilteredStackTrace trace = new(new AmbientServices.Test.ExpectedException("This is a test"), 0, true);
+            Assert.IsTrue(string.IsNullOrEmpty(trace.ToString().Trim()));
+        }
+    }
+}
 namespace AmbientServices.Test
 {
     [TestClass]
@@ -36,6 +51,20 @@ namespace AmbientServices.Test
             Assert.IsFalse(string.IsNullOrEmpty(trace.ToString()));
             trace = new FilteredStackTrace(new ExpectedException("This is a test"), 0, true);
             Assert.IsTrue(string.IsNullOrEmpty(trace.ToString().Trim()));
+            Async.Synchronize(async () => 
+            {
+                string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(1, 1)?.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                FilteredStackTrace.AddSourcePathToErase(projectPath ?? "Z:\\");
+                FilteredStackTrace.AddNamespaceToFilter("Async.Synchronize");
+                trace = new FilteredStackTrace(new ExpectedException("This is a test"), 0, true);
+                Assert.IsTrue(string.IsNullOrEmpty(trace.ToString().Trim()));
+                await Task.CompletedTask;
+            });
+            Ignore.IgnoreNamespace.TestEraseAndFilter();
+
+            Assert.AreEqual(String.Empty, FilteredStackTrace.EraseSourcePath(null!));
+            Assert.AreEqual(String.Empty, FilteredStackTrace.EraseNamespace(null!));
+
 
             trace = new FilteredStackTrace();
             Subfunction(trace.FrameCount);
@@ -56,8 +85,8 @@ namespace AmbientServices.Test
             filtered = AmbientServices.FilteredStackTrace.FilterFrames(new StackFrame[1] { new FilteredStackTrace().GetFrames().FirstOrDefault()! });
             Assert.AreEqual(1, filtered.Count());
 
-            Assert.AreEqual("", AmbientServices.FilteredStackTrace.FilterFilename(null!));
-            Assert.AreEqual("", AmbientServices.FilteredStackTrace.FilterFilename(""));
+            Assert.AreEqual("", AmbientServices.FilteredStackTrace.EraseSourcePath(null!));
+            Assert.AreEqual("", AmbientServices.FilteredStackTrace.EraseSourcePath(""));
         }
         private void Subfunction(int parentStackFrames)
         {
@@ -77,7 +106,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void FilteredStackTrace_Misc()
         {
-            FilteredStackTrace.SuppressCallingSourcePath(1);
+            FilteredStackTrace.EraseCallingSourcePath(1);
             FilteredStackTrace fst = new(true);
             Assert.IsTrue(fst.Equals(fst));
             Assert.IsFalse(fst.Equals(null));
@@ -96,7 +125,7 @@ namespace AmbientServices.Test
 
         private static void InnerFunc([CallerFilePath] string filepath = "")
         {
-            Assert.AreEqual(System.IO.Path.GetFileName(filepath), System.IO.Path.GetFileName(FilteredStackTrace.FilterFilename(filepath)));
+            Assert.AreEqual(System.IO.Path.GetFileName(filepath), System.IO.Path.GetFileName(FilteredStackTrace.EraseSourcePath(filepath)));
         }
     }
 }

@@ -15,8 +15,6 @@ namespace AmbientServices
     /// </summary>
     public class FilteredStackTrace : StackTrace
     {
-        private static readonly Regex NamespaceFilter = new(@"([^. ]*\.)*", RegexOptions.Compiled);
-
         private readonly Lazy<StackFrame[]> _filteredFrames;
 
         private Lazy<StackFrame[]> FilterFrames()
@@ -153,71 +151,6 @@ namespace AmbientServices
             return _filteredFrames.Value;
         }
         /// <summary>
-        /// Filters the specified enumeration of <see cref="StackFrame"/>s, removing all System and Microsoft
-        /// stack frames except the first one.
-        /// </summary>
-        /// <param name="frames">The <see cref="StackFrame"/>s to filter.</param>
-        /// <returns>A filtered enumeration of <see cref="StackFrame"/>s.</returns>
-        public static IEnumerable<StackFrame> FilterFrames(IEnumerable<StackFrame?> frames)
-        {
-            if (frames != null)
-            {
-                bool first = true;
-                foreach (StackFrame? frame in frames)
-                {
-                    if (frame == null) continue;
-                    string fullMethodName = frame!.GetMethod()!.DeclaringType!.FullName!;  // I don't think the method of a stack frame or its declaring type or its name can be null
-                    if (
-                        !fullMethodName.StartsWith("AmbientServices.Async.", StringComparison.Ordinal) && (
-                            first || (
-                                    !fullMethodName.StartsWith("Microsoft.", StringComparison.Ordinal)
-                                    && !fullMethodName.StartsWith("System.", StringComparison.Ordinal)
-                                    && !fullMethodName.StartsWith("Amazon.", StringComparison.Ordinal)
-                            )
-                        )
-                    )
-                    {
-                        yield return frame;
-                    }
-                    first = false;
-                }
-            }
-        }
-        internal static string FilterFilename(string filename)
-        {
-            if (filename == null) return string.Empty;
-            foreach (string sourcePathToSuppress in SourcePathsToErase)
-            {
-                if (filename.StartsWith(sourcePathToSuppress, StringComparison.Ordinal))
-                {
-                    filename = filename.Substring(sourcePathToSuppress.Length + 1);
-                }
-            }
-            return filename.TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
-        }
-
-        private static readonly ConcurrentHashSet<string> SourcePathsToErase = InitializeSourcePathsToWrase();
-        private static ConcurrentHashSet<string> InitializeSourcePathsToWrase()
-        {
-            ConcurrentHashSet<string> dict = new();
-            string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(1, 1);
-            if (projectPath != null && !string.IsNullOrEmpty(projectPath) && (projectPath.Contains(System.IO.Path.DirectorySeparatorChar, StringComparison.Ordinal) || projectPath.Contains(System.IO.Path.AltDirectorySeparatorChar, StringComparison.Ordinal)))
-            {
-                // suppress the folder for the project folder so we get the project folder name in the output
-                dict.Add(projectPath);
-            }
-            return dict;
-        }
-        /// <summary>
-        /// Suppresses the calling code's source path folders from stack traces.
-        /// </summary>
-        /// <param name="subfolders">The number of subfolders the calling code's source module is in, with zero meaning the calling source module is in the root of the project.</param>
-        public static void SuppressCallingSourcePath(int subfolders = 0)
-        {
-            string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(subfolders, 1)?.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
-            if (projectPath != null && !string.IsNullOrEmpty(projectPath)) SourcePathsToErase.Add(projectPath);
-        }
-        /// <summary>
         /// Checks to see if the specified object is equal to this one.
         /// </summary>
         /// <param name="obj">The object to test.</param>
@@ -243,6 +176,196 @@ namespace AmbientServices
         {
             return ToString(_filteredFrames.Value);
         }
+
+        private static readonly ConcurrentHashSet<string> _SourcePathsToErase = InitializeSourcePathsToErase();
+        private static readonly ConcurrentHashSet<string> _NamespacesToErase = InitializeNamespacesToErase();
+        private static readonly ConcurrentHashSet<string> _NamespacesToFilter = InitializeNamespacesToFilter();
+        private static readonly ConcurrentHashSet<string> _NamespacesToFilterAfterFirst = InitializeNamespacesToFilterAfterFirst();
+
+        /// <summary>
+        /// Adds the specified source path as one that should be erased during filtered stack trace generation.
+        /// Defaults include the source path for the code that initializes this code.
+        /// </summary>
+        /// <param name="sourcePathToErase">The source path to erase.</param>
+        /// <returns>Whether or not <paramref name="sourcePathToErase"/> was already in the list.</returns>
+        public static bool AddSourcePathToErase(string sourcePathToErase)
+        {
+            return _SourcePathsToErase.TryAdd(sourcePathToErase);
+        }
+        /// <summary>
+        /// Adds the specified namespace as one that should be erased during filtered stack trace generation.
+        /// Defaults include AmbientServices.
+        /// </summary>
+        /// <param name="namespaceToErase">The namespace to erase.</param>
+        /// <returns>Whether or not <paramref name="namespaceToErase"/> was already in the list.</returns>
+        public static bool AddNamespacesToErase(string namespaceToErase)
+        {
+            return _NamespacesToErase.TryAdd(namespaceToErase);
+        }
+        /// <summary>
+        /// Adds the specified namespace as one that indicates that the corresponding stack frame should be removed from the stack alogether during filtered stack trace generation.
+        /// This is usually used to remove wrapper methods that are irrelevant to diagnosing problems.
+        /// Defaults include AmbientServices.Async.
+        /// </summary>
+        /// <param name="namespaceToFilter">The namespace whose methods should be filtered out during filtered stack trace generation.</param>
+        /// <returns>Whether or not <paramref name="namespaceToFilter"/> was already in the list.</returns>
+        public static bool AddNamespaceToFilter(string namespaceToFilter)
+        {
+            return _NamespacesToFilterAfterFirst.TryAdd(namespaceToFilter);
+        }
+        /// <summary>
+        /// Adds the specified namespace as one that indicates that matching stack frames after the first one should be removed from the stack during filtered stack trace generation.
+        /// This is usually used for third-party namespaces where you want to see that there was a transition into their code, but are not interested in the innards.
+        /// Default values include Microsoft., System., and Amazon.
+        /// </summary>
+        /// <param name="namespaceToFilterAfterFirst">The namespace whose methods should be reduced to a single entry during filtered stack trace generation.</param>
+        /// <returns>Whether or not <paramref name="namespaceToFilterAfterFirst"/> was already in the list.</returns>
+        public static bool AddNamespaceToFilterAfterFirst(string namespaceToFilterAfterFirst)
+        {
+            return _NamespacesToFilterAfterFirst.TryAdd(namespaceToFilterAfterFirst);
+        }
+
+        /// <summary>
+        /// Filters the specified enumeration of <see cref="StackFrame"/>s, removing all System and Microsoft
+        /// stack frames except the first one.
+        /// </summary>
+        /// <param name="frames">The <see cref="StackFrame"/>s to filter.</param>
+        /// <returns>A filtered enumeration of <see cref="StackFrame"/>s.</returns>
+        public static IEnumerable<StackFrame> FilterFrames(IEnumerable<StackFrame?> frames)
+        {
+            if (frames != null)
+            {
+                bool first = true;
+                foreach (StackFrame? frame in frames)
+                {
+                    if (frame == null) continue;
+                    string fullMethodName = frame!.GetMethod()!.DeclaringType!.FullName!;  // I don't think the method of a stack frame or its declaring type or its name can be null
+                    if (
+                        !ShouldFilterMethod(fullMethodName) && (
+                            first || !ShouldFilterMethodAfterFirst(fullMethodName)
+                        )
+                    )
+                    {
+                        yield return frame;
+                    }
+                    first = false;
+                }
+            }
+        }
+        /// <summary>
+        /// Gets whether or not the stack frame for the specified method should always be removed from the stack trace.
+        /// </summary>
+        /// <param name="methodName">The namespace-qualified name of the method.</param>
+        /// <returns>true iff the stack frame should be filtered.</returns>
+        public static bool ShouldFilterMethod(string methodName)
+        {
+            if (methodName != null)
+            {
+                foreach (string namespaceToFilter in _NamespacesToFilter)
+                {
+                    if (methodName.StartsWith(namespaceToFilter, StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        /// <summary>
+        /// Gets whether or not the stack frame for the specified method should be removed from the stack trace if it is not the first stack frame in a cluster of stack frames from the same namespace.
+        /// </summary>
+        /// <param name="methodName">The namespace-qualified name of the method.</param>
+        /// <returns>true iff the stack frame should be filtered if it not the first stack frame in a cluster of stack frames from the same namespace.</returns>
+        public static bool ShouldFilterMethodAfterFirst(string methodName)
+        {
+            if (methodName != null)
+            {
+                foreach (string namespaceToFilter in _NamespacesToFilterAfterFirst)
+                {
+                    if (methodName.StartsWith(namespaceToFilter, StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        /// <summary>
+        /// Erases any configured source paths from the specified filename.
+        /// </summary>
+        /// <param name="filename">The fully-qualified filename to filter.</param>
+        /// <returns>The filtered filename, which may be just a partial path.</returns>
+        public static string EraseSourcePath(string filename)
+        {
+            if (filename == null) return string.Empty;
+            foreach (string sourcePathToErase in _SourcePathsToErase)
+            {
+                if (filename.StartsWith(sourcePathToErase, StringComparison.Ordinal))
+                {
+                    filename = filename.Substring(sourcePathToErase.Length + 1);
+                }
+            }
+            return filename.TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+        }
+        /// <summary>
+        /// Erases any configured namespaces from the specified namespace-qualified method name.
+        /// </summary>
+        /// <param name="qualifiedMethodName">The namespace-qualified method name to filter.</param>
+        /// <returns>The filtered method name, which may have leading namespaces removed.</returns>
+        public static string EraseNamespace(string qualifiedMethodName)
+        {
+            if (qualifiedMethodName == null) return string.Empty;
+            foreach (string namespaceToErase in _NamespacesToErase)
+            {
+                if (qualifiedMethodName.StartsWith(namespaceToErase, StringComparison.Ordinal))
+                {
+                    qualifiedMethodName = qualifiedMethodName.Substring(namespaceToErase.Length + 1);
+                }
+            }
+            return qualifiedMethodName.TrimStart('.');
+        }
+
+        private static ConcurrentHashSet<string> InitializeSourcePathsToErase()
+        {
+            ConcurrentHashSet<string> dict = new();
+            string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(1, 1);
+            if (projectPath != null && !string.IsNullOrEmpty(projectPath) && (projectPath.Contains(System.IO.Path.DirectorySeparatorChar, StringComparison.Ordinal) || projectPath.Contains(System.IO.Path.AltDirectorySeparatorChar, StringComparison.Ordinal)))
+            {
+                // suppress the folder for the project folder so we get the project folder name in the output
+                dict.Add(projectPath);
+            }
+            return dict;
+        }
+        private static ConcurrentHashSet<string> InitializeNamespacesToErase()
+        {
+            ConcurrentHashSet<string> dict = new();
+            dict.Add("AmbientServices.");
+            return dict;
+        }
+        private static ConcurrentHashSet<string> InitializeNamespacesToFilterAfterFirst()
+        {
+            ConcurrentHashSet<string> dict = new();
+            dict.Add("System.");
+            dict.Add("Microsoft.");
+            dict.Add("Amazon.");
+            return dict;
+        }
+        private static ConcurrentHashSet<string> InitializeNamespacesToFilter()
+        {
+            ConcurrentHashSet<string> dict = new();
+            dict.Add("AmbientServices.Async.");
+            return dict;
+        }
+
+        /// <summary>
+        /// Erases the calling code's source file path folders from stack traces.
+        /// </summary>
+        /// <param name="subfolders">The number of subfolders the calling code's source module is in, with zero meaning the calling source module is in the root of the project.</param>
+        public static void EraseCallingSourcePath(int subfolders = 0)
+        {
+            string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(subfolders, 1)?.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            if (projectPath != null && !string.IsNullOrEmpty(projectPath)) _SourcePathsToErase.Add(projectPath);
+        }
         /// <summary>
         /// Builds a readable representation of the stack trace.
         /// </summary>
@@ -262,7 +385,7 @@ namespace AmbientServices
                     foreach (StackFrame frame in FilterFrames(frames))
                     {
                         if (frame == null) continue;
-                        string line = Invariant($" at {NamespaceFilter.Replace(frame.GetMethod()?.DeclaringType?.Name ?? "<unknwown>", "")}.{frame.GetMethod()?.Name ?? "<unknwown>"} in {FilterFilename(frame.GetFileName() ?? "<unknown>")}:{frame.GetFileLineNumber()}.{frame.GetFileColumnNumber()}");
+                        string line = Invariant($" at {EraseNamespace(frame.GetMethod()?.DeclaringType?.Name ?? "<unknown>")}.{frame.GetMethod()?.Name ?? "<unknown>"} in {EraseSourcePath(frame.GetFileName() ?? "<unknown>")}:{frame.GetFileLineNumber()}.{frame.GetFileColumnNumber()}");
                         output.AppendLine(line);
                     }
                 }

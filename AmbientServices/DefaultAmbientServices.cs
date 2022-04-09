@@ -134,10 +134,10 @@ namespace AmbientServices
         /// <param name="assembly">The <see cref="Assembly"/> whose default implementations are to be found and registered.</param>
         internal static void OnAssemblyLoad(Assembly assembly)
         {
-            // does this assembly reference THIS assembly?
+            // does the being-loaded assembly reference THIS assembly?
             if (assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
             {
-                // check every type in this assembly to see if the type indicates a default service implementation
+                // check every type in the being-loaded assembly to see if the type indicates a default service implementation
                 foreach (Type type in assembly.GetLoadableTypes())
                 {
                     AddDefaultImplementation(_DefaultImplementations, type);
