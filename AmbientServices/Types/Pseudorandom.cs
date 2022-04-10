@@ -3,7 +3,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 
-namespace AmbientServices.Utility
+namespace AmbientServices
 {
     /// <summary>
     /// A class containing a random seed from which pseudorandom data of various types can be generated.  

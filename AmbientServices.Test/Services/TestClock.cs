@@ -530,7 +530,7 @@ namespace AmbientServices.Test
 
                 if (errorInfo.Length == 0) break;
                 // wait a random time to break any kind of resonant failure
-                System.Threading.Thread.Sleep(Utility.Pseudorandom.Next.NextInt32Ranged(1000));
+                System.Threading.Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
             }
         }
         /// <summary>
@@ -782,7 +782,7 @@ namespace AmbientServices.Test
                 Assert.AreEqual(1, disposed);
                 if (errorInfo.Length == 0) break;
                 // wait a random time to break any kind of resonant failure
-                System.Threading.Thread.Sleep(Utility.Pseudorandom.Next.NextInt32Ranged(1000));
+                System.Threading.Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
             }
         }
         /// <summary>
@@ -985,7 +985,7 @@ namespace AmbientServices.Test
                     }
                     if (errorInfo.Length == 0) break;
                     // wait a random time to break any kind of resonant failure
-                    System.Threading.Thread.Sleep(Utility.Pseudorandom.Next.NextInt32Ranged(1000));
+                    System.Threading.Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
                 }
             }
         }
@@ -1485,7 +1485,7 @@ namespace AmbientServices.Test
                     if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
 
                     // wait a random time to break any kind of resonant failure
-                    System.Threading.Thread.Sleep(Utility.Pseudorandom.Next.NextInt32Ranged(1000));
+                    System.Threading.Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
 
                     if (errorInfo.Length == 0) break;
                 }
@@ -1579,7 +1579,7 @@ namespace AmbientServices.Test
                     Assert.IsTrue(registered.Unregister(null));
                     if (errorInfo.Length == 0) break;
                     // wait a random time to break any kind of resonant failure
-                    System.Threading.Thread.Sleep(Utility.Pseudorandom.Next.NextInt32Ranged(1000));
+                    System.Threading.Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
                 }
                 Assert.IsTrue(errorInfo.Length == 0, errorInfo.ToString());
             }
