@@ -388,21 +388,52 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task CancellationTokenSourceSystem()
         {
-            AmbientCancellationTokenSource noTimeoutSource = new();
-            AmbientCancellationTokenSource timeoutSource1 = new(100);
-            AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(100));
-            AmbientCancellationTokenSource timeoutSource3 = new();
-            AmbientCancellationTokenSource timeoutSource4 = new();
-            timeoutSource3.CancelAfter(100);
-            timeoutSource4.CancelAfter(TimeSpan.FromMilliseconds(100));
-            await Task.Delay(TimeSpan.FromMilliseconds(500));
-            Assert.IsFalse(noTimeoutSource.IsCancellationRequested);
-            Assert.IsTrue(timeoutSource1.IsCancellationRequested);
-            Assert.IsTrue(timeoutSource2.IsCancellationRequested);
-            Assert.IsTrue(timeoutSource3.IsCancellationRequested);
-            Assert.IsTrue(timeoutSource4.IsCancellationRequested);
-            noTimeoutSource.Cancel();
-            Assert.IsTrue(noTimeoutSource.IsCancellationRequested);
+            int firstFailure = -1;
+             for (int attempt = 0; attempt < 10; ++attempt)
+            {
+                firstFailure = -1;
+                AmbientCancellationTokenSource noTimeoutSource = new();
+                AmbientCancellationTokenSource timeoutSource1 = new(100);
+                AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(100));
+                AmbientCancellationTokenSource timeoutSource3 = new();
+                AmbientCancellationTokenSource timeoutSource4 = new();
+                timeoutSource3.CancelAfter(100);
+                timeoutSource4.CancelAfter(TimeSpan.FromMilliseconds(100));
+                await Task.Delay(TimeSpan.FromMilliseconds(500));
+                 if (noTimeoutSource.IsCancellationRequested)
+                {
+                    firstFailure = 1;
+                    continue;
+                }
+                 if (!timeoutSource1.IsCancellationRequested)
+                {
+                    firstFailure = 2;
+                    continue;
+                }
+                 if (!timeoutSource2.IsCancellationRequested)
+                {
+                    firstFailure = 3;
+                    continue;
+                }
+                 if (!timeoutSource3.IsCancellationRequested)
+                {
+                    firstFailure = 4;
+                    continue;
+                }
+                 if (!timeoutSource4.IsCancellationRequested)
+                {
+                    firstFailure = 5;
+                    continue;
+                }
+                noTimeoutSource.Cancel();
+                 if (!noTimeoutSource.IsCancellationRequested)
+                {
+                    firstFailure = 6;
+                    continue;
+                }
+                break;
+            }
+            Assert.AreEqual(-1, firstFailure);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
