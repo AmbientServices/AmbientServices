@@ -371,7 +371,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="a">The cancelable asynchronous action to run.</param>
         [DebuggerStepThrough]
-        public static ValueTask Run(Func<ValueTask> a)
+        public static ValueTask RunValue(Func<ValueTask> a)
         {
             if (System.Threading.SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
             {
@@ -389,10 +389,10 @@ namespace AmbientServices
         /// </summary>
         /// <typeparam name="T">The type being enumerated.</typeparam>
         /// <param name="funcAsyncEnumerable">A delegate that returns an <see cref="IAsyncEnumerable{T}"/></param>
-        /// <param name="cancel">A <see cref="System.Threading.CancellationToken"/> which the caller can use to notify the executor to cancel the operation before it finishes.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> which the caller can use to notify the executor to cancel the operation before it finishes.</param>
         /// <returns>The <see cref="IEnumerable{T}"/>.</returns>
         [DebuggerStepThrough]
-        public static IEnumerable<T> AsyncEnumerableToEnumerable<T>(Func<IAsyncEnumerable<T>> funcAsyncEnumerable, System.Threading.CancellationToken cancel = default)
+        public static IEnumerable<T> AsyncEnumerableToEnumerable<T>(Func<IAsyncEnumerable<T>> funcAsyncEnumerable, CancellationToken cancel = default)
         {
             if (funcAsyncEnumerable == null) throw new ArgumentNullException(nameof(funcAsyncEnumerable));
             IAsyncEnumerator<T> asyncEnum = funcAsyncEnumerable().GetAsyncEnumerator(cancel);
@@ -408,6 +408,58 @@ namespace AmbientServices
             {
                 SynchronizeValue(() => asyncEnum.DisposeAsync());
             }
+        }
+        /// <summary>
+        /// Iterates through the specified async enumerable using the ambient synchronicity and a synchronous delegate.
+        /// </summary>
+        /// <typeparam name="T">The type being enumerated.</typeparam>
+        /// <param name="asyncEnumerable">The <see cref="IAsyncEnumerable{T}"/> to enumerate.</param>
+        /// <param name="action">The action to perform on each enumerated item.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to interrupt the enumeration.</param>
+        /// <returns>A <see cref="ValueTask"/> for the iteration.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="asyncEnumerable"/> or <paramref name="action"/> are null.</exception>
+        [DebuggerStepThrough]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2007:Consider calling ConfigureAwait on the awaited task", Justification = "The ConfigureAwait stuff is handled in Run")]
+        public static async ValueTask AwaitForEach<T>(IAsyncEnumerable<T> asyncEnumerable, Action<T> action, CancellationToken cancel = default)
+        {
+            if (asyncEnumerable == null) throw new ArgumentNullException(nameof(asyncEnumerable));
+            if (action == null) throw new ArgumentNullException(nameof(action));
+            IAsyncEnumerator<T> e = asyncEnumerable.GetAsyncEnumerator(cancel);
+            try
+            {
+                while (await Async.Run(() => e.MoveNextAsync()))
+                {
+                    cancel.ThrowIfCancellationRequested();
+                    action(e.Current);
+                }
+            }
+            finally { if (e != null) await Async.RunValue(() => e.DisposeAsync()); }
+        }
+        /// <summary>
+        /// Iterates through the specified async enumerable using the ambient synchronicity and an asynchronous delegate.
+        /// </summary>
+        /// <typeparam name="T">The type being enumerated.</typeparam>
+        /// <param name="asyncEnumerable">The <see cref="IAsyncEnumerable{T}"/> to enumerate.</param>
+        /// <param name="action">The action to perform on each enumerated item.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to interrupt the enumeration.</param>
+        /// <returns>A <see cref="ValueTask"/> for the iteration.</returns>
+        /// <exception cref="ArgumentNullException">If <paramref name="asyncEnumerable"/> or <paramref name="action"/> are null.</exception>
+        [DebuggerStepThrough]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2007:Consider calling ConfigureAwait on the awaited task", Justification = "The ConfigureAwait stuff is handled in Run")]
+        public static async ValueTask AwaitForEach<T>(IAsyncEnumerable<T> asyncEnumerable, Func<T, CancellationToken, ValueTask> func, CancellationToken cancel = default)
+        {
+            if (asyncEnumerable == null) throw new ArgumentNullException(nameof(asyncEnumerable));
+            if (func == null) throw new ArgumentNullException(nameof(func));
+            IAsyncEnumerator<T> e = asyncEnumerable.GetAsyncEnumerator(cancel);
+            try
+            {
+                while (await Async.Run(() => e.MoveNextAsync()))
+                {
+                    cancel.ThrowIfCancellationRequested();
+                    await Async.RunValue(() => func(e.Current, cancel));
+                }
+            }
+            finally { if (e != null) await Async.RunValue(() => e.DisposeAsync()); }
         }
 #endif
     }
@@ -435,6 +487,39 @@ namespace AmbientServices
                 ret.Add(t);
             }
             return ret;
+        }
+        /// <summary>
+        /// Asynchronously converts an <see cref="IAsyncEnumerable{T}"/> into an array.
+        /// Note that since it returns a array, this function does NOT work with inifinite (or even very large) enumerations.
+        /// </summary>
+        /// <typeparam name="T">The type within the list.</typeparam>
+        /// <param name="ae">The <see cref="IAsyncEnumerable{T}"/>.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
+        /// <returns>An array containing all the items in the async enumerator.</returns>
+        public static async Task<T[]> ToArrayAsync<T>(this IAsyncEnumerable<T> ae, CancellationToken cancel = default)
+        {
+            if (ae == null) throw new ArgumentNullException(nameof(ae));
+            List<T> ret = new();
+            await foreach (T t in ae)
+            {
+                cancel.ThrowIfCancellationRequested();
+                ret.Add(t);
+            }
+            return ret.ToArray();
+        }
+        /// <summary>
+        /// Asynchronously converts an <see cref="IAsyncEnumerable{T}"/> into an <see cref="IEnumerable{T}"/>.
+        /// Note that since it returns a array, this function does NOT work with inifinite (or even very large) enumerations.
+        /// </summary>
+        /// <typeparam name="T">The type within the list.</typeparam>
+        /// <param name="ae">The <see cref="IAsyncEnumerable{T}"/>.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
+        /// <returns>An enumeration of all the items in the async enumerator.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2007:Consider calling ConfigureAwait on the awaited task", Justification = "The ConfigureAwait stuff is handled in Run")]
+        public static async Task<IEnumerable<T>> ToEnumerableAsync<T>(this IAsyncEnumerable<T> ae, CancellationToken cancel = default)
+        {
+            // there may be a more efficient way to do this, but I haven't been able to find it
+            return await Async.Run(() => ToListAsync<T>(ae, cancel));
         }
     }
 #endif

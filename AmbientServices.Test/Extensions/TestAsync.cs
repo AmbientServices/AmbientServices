@@ -533,7 +533,7 @@ namespace AmbientServices.Test
             }
             for (int count = 0; count < 3; ++count)
             {
-                await Async.Run(() => default(ValueTask));
+                await Async.RunValue(() => default(ValueTask));
                 threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
                 if (Async.UsingSynchronousExecution)
                 {
@@ -583,27 +583,110 @@ namespace AmbientServices.Test
         /// Performs basic tests on the <see cref="Async"/> class.
         /// </summary>
         [TestMethod]
-        public async Task Async_AsyncEnumerator()
+        public void Sync_AsyncEnumerator()
         {
             int mainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
             int threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            await foreach (int ret in EnumerateAsync(10, default))
+            Async.Synchronize(async () =>
+            {
+                await foreach (int ret in EnumerateAsync(10, default))
+                {
+                    Assert.AreEqual(mainThreadId, System.Threading.Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.SynchronizeValue(() => Async.AwaitForEach(EnumerateAsync(10, default), t =>
             {
                 Assert.AreEqual(mainThreadId, System.Threading.Thread.CurrentThread.ManagedThreadId);
-            }
-            foreach (int ret in await EnumerateAsync(10, default).ToListAsync())
+            }, default));
+            Async.SynchronizeValue(() => Async.AwaitForEach(EnumerateAsync(10, default), (t, c) =>
             {
                 Assert.AreEqual(mainThreadId, System.Threading.Thread.CurrentThread.ManagedThreadId);
-            }
+                return default;
+            }, default));
+            Async.Synchronize(async () =>
+            {
+                foreach (int ret in await EnumerateAsync(10, default).ToListAsync())
+                {
+                    Assert.AreEqual(mainThreadId, System.Threading.Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.Synchronize(async () =>
+            {
+                foreach (int ret in await EnumerateAsync(10, default).ToArrayAsync())
+                {
+                    Assert.AreEqual(mainThreadId, System.Threading.Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.Synchronize(async () =>
+            {
+                foreach (int ret in await EnumerateAsync(10, default).ToEnumerableAsync())
+                {
+                    Assert.AreEqual(mainThreadId, System.Threading.Thread.CurrentThread.ManagedThreadId);
+                }
+            });
             foreach (int ret in Async.AsyncEnumerableToEnumerable(() => EnumerateAsync(10, default)))
             {
                 Assert.AreEqual(mainThreadId, System.Threading.Thread.CurrentThread.ManagedThreadId);
             }
         }
+        /// <summary>
+        /// Performs basic tests on the <see cref="Async"/> class.
+        /// </summary>
+        [TestMethod]
+        public async Task Async_AsyncEnumerator()
+        {
+            int mainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            int threadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            int limit = 10;
+            int max = 0;
+            await foreach (int ret in EnumerateAsync(10, default))
+            {
+                max = Math.Max(max, ret);
+            }
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
+            await Async.RunValue(() => Async.AwaitForEach(EnumerateAsync(limit, default), ret =>
+            {
+                max = Math.Max(max, ret);
+            }, default));
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
+            await Async.RunValue(() => Async.AwaitForEach(EnumerateAsync(limit, default), (ret, c) =>
+            {
+                max = Math.Max(max, ret);
+                return default;
+            }, default));
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
+            foreach (int ret in await EnumerateAsync(limit, default).ToListAsync())
+            {
+                max = Math.Max(max, ret);
+            }
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
+            foreach (int ret in await EnumerateAsync(limit, default).ToArrayAsync())
+            {
+                max = Math.Max(max, ret);
+            }
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
+            foreach (int ret in await EnumerateAsync(limit, default).ToEnumerableAsync())
+            {
+                max = Math.Max(max, ret);
+            }
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
+            foreach (int ret in Async.AsyncEnumerableToEnumerable(() => EnumerateAsync(limit, default)))
+            {
+                max = Math.Max(max, ret);
+            }
+            Assert.AreEqual(limit - 1, max);
+        }
         private async IAsyncEnumerable<int> EnumerateAsync(int limit, [EnumeratorCancellation] CancellationToken cancel = default)
         {
             for (int ret = 0; ret < limit; ++ret)
             {
+                cancel.ThrowIfCancellationRequested();
                 await Async.Run(() => Task.Delay(10));
                 yield return ret;
             }
