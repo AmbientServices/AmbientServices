@@ -440,7 +440,7 @@ namespace AmbientServices
         /// </summary>
         /// <typeparam name="T">The type being enumerated.</typeparam>
         /// <param name="asyncEnumerable">The <see cref="IAsyncEnumerable{T}"/> to enumerate.</param>
-        /// <param name="action">The action to perform on each enumerated item.</param>
+        /// <param name="func">The async action to perform on each enumerated item.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to interrupt the enumeration.</param>
         /// <returns>A <see cref="ValueTask"/> for the iteration.</returns>
         /// <exception cref="ArgumentNullException">If <paramref name="asyncEnumerable"/> or <paramref name="action"/> are null.</exception>
