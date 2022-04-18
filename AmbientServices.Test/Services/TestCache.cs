@@ -28,42 +28,40 @@ namespace AmbientServices.Test
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 IAmbientCache localOverride = new BasicAmbientCache();
-                using (ScopedLocalServiceOverride<IAmbientCache> localCache = new(localOverride))
-                {
-                    TestCache ret;
-                    AmbientCache<TestCache> cache = new();
-                    await cache.Store("Test1", this);
-                    await cache.Store("Test1", this);
-                    ret = await cache.Retrieve<TestCache>("Test1", null);
-                    Assert.AreEqual(this, ret);
-                    await cache.Remove<TestCache>("Test1");
-                    ret = await cache.Retrieve<TestCache>("Test1", null);
-                    Assert.IsNull(ret);
-                    await cache.Store("Test2", this, null, DateTime.MinValue);
-                    ret = await cache.Retrieve<TestCache>("Test2", null);
-                    Assert.AreEqual(this, ret);
-                    await Eject(cache, 2);
-                    ret = await cache.Retrieve<TestCache>("Test2", null);
-                    Assert.IsNull(ret);
-                    await cache.Store("Test3", this, TimeSpan.FromMinutes(-1));
-                    ret = await cache.Retrieve<TestCache>("Test3", null);
-                    Assert.IsNull(ret);
-                    await cache.Store("Test4", this, TimeSpan.FromMinutes(10), DateTime.UtcNow.AddMinutes(11));
-                    ret = await cache.Retrieve<TestCache>("Test4", null);
-                    Assert.AreEqual(this, ret);
-                    await cache.Store("Test5", this, TimeSpan.FromMinutes(10), DateTime.Now.AddMinutes(11));
-                    ret = await cache.Retrieve<TestCache>("Test5", null);
-                    Assert.AreEqual(this, ret);
-                    await cache.Store("Test6", this, TimeSpan.FromMinutes(60), DateTime.UtcNow.AddMinutes(10));
-                    ret = await cache.Retrieve<TestCache>("Test6", null);
-                    Assert.AreEqual(this, ret);
-                    ret = await cache.Retrieve<TestCache>("Test6", TimeSpan.FromMinutes(10));
-                    Assert.AreEqual(this, ret);
-                    await Eject(cache, 50);
-                    await cache.Clear();
-                    ret = await cache.Retrieve<TestCache>("Test6", null);
-                    Assert.IsNull(ret);
-                }
+                using ScopedLocalServiceOverride<IAmbientCache> localCache = new(localOverride);
+                TestCache ret;
+                AmbientCache<TestCache> cache = new();
+                await cache.Store("Test1", this);
+                await cache.Store("Test1", this);
+                ret = await cache.Retrieve<TestCache>("Test1", null);
+                Assert.AreEqual(this, ret);
+                await cache.Remove<TestCache>("Test1");
+                ret = await cache.Retrieve<TestCache>("Test1", null);
+                Assert.IsNull(ret);
+                await cache.Store("Test2", this, null, DateTime.MinValue);
+                ret = await cache.Retrieve<TestCache>("Test2", null);
+                Assert.AreEqual(this, ret);
+                await Eject(cache, 2);
+                ret = await cache.Retrieve<TestCache>("Test2", null);
+                Assert.IsNull(ret);
+                await cache.Store("Test3", this, TimeSpan.FromMinutes(-1));
+                ret = await cache.Retrieve<TestCache>("Test3", null);
+                Assert.IsNull(ret);
+                await cache.Store("Test4", this, TimeSpan.FromMinutes(10), DateTime.UtcNow.AddMinutes(11));
+                ret = await cache.Retrieve<TestCache>("Test4", null);
+                Assert.AreEqual(this, ret);
+                await cache.Store("Test5", this, TimeSpan.FromMinutes(10), DateTime.Now.AddMinutes(11));
+                ret = await cache.Retrieve<TestCache>("Test5", null);
+                Assert.AreEqual(this, ret);
+                await cache.Store("Test6", this, TimeSpan.FromMinutes(60), DateTime.UtcNow.AddMinutes(10));
+                ret = await cache.Retrieve<TestCache>("Test6", null);
+                Assert.AreEqual(this, ret);
+                ret = await cache.Retrieve<TestCache>("Test6", TimeSpan.FromMinutes(10));
+                Assert.AreEqual(this, ret);
+                await Eject(cache, 50);
+                await cache.Clear();
+                ret = await cache.Retrieve<TestCache>("Test6", null);
+                Assert.IsNull(ret);
             }
         }
         /// <summary>
@@ -72,20 +70,18 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task CacheNone()
         {
-            using (ScopedLocalServiceOverride<IAmbientCache> localCache = new(null))
-            {
-                TestCache ret;
-                AmbientCache<TestCache> cache = new();
-                await cache.Store("Test1", this);
-                ret = await cache.Retrieve<TestCache>("Test1");
-                Assert.IsNull(ret);
-                await cache.Remove<TestCache>("Test1");
-                ret = await cache.Retrieve<TestCache>("Test1", null);
-                Assert.IsNull(ret);
-                await cache.Clear();
-                ret = await cache.Retrieve<TestCache>("Test1", null);
-                Assert.IsNull(ret);
-            }
+            using ScopedLocalServiceOverride<IAmbientCache> localCache = new(null);
+            TestCache ret;
+            AmbientCache<TestCache> cache = new();
+            await cache.Store("Test1", this);
+            ret = await cache.Retrieve<TestCache>("Test1");
+            Assert.IsNull(ret);
+            await cache.Remove<TestCache>("Test1");
+            ret = await cache.Retrieve<TestCache>("Test1", null);
+            Assert.IsNull(ret);
+            await cache.Clear();
+            ret = await cache.Retrieve<TestCache>("Test1", null);
+            Assert.IsNull(ret);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientCache"/>.
@@ -175,46 +171,44 @@ namespace AmbientServices.Test
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
             {
                 IAmbientCache localOverride = new BasicAmbientCache();
-                using (ScopedLocalServiceOverride<IAmbientCache> localCache = new(localOverride))
-                {
-                    string keyName1 = nameof(CacheExpiration) + "1";
-                    string keyName2 = nameof(CacheExpiration) + "2";
-                    string keyName3 = nameof(CacheExpiration) + "3";
-                    //string keyName4 = nameof(CacheExpiration) + "4";
-                    //string keyName5 = nameof(CacheExpiration) + "5";
-                    //string keyName6 = nameof(CacheExpiration) + "6";
-                    //string keyName7 = nameof(CacheExpiration) + "7";
-                    TestCache ret;
-                    AmbientCache<TestCache> cache = new();
-                    await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(100));
-                    await cache.Store(keyName2, this, TimeSpan.FromMilliseconds(50));
-                    await cache.Store(keyName3, this, TimeSpan.FromMilliseconds(100));
-                    ret = await cache.Retrieve<TestCache>(keyName1);
-                    Assert.IsNotNull(ret);
-                    ret = await cache.Retrieve<TestCache>(keyName2, TimeSpan.FromMilliseconds(100));
-                    Assert.IsNotNull(ret);
-                    ret = await cache.Retrieve<TestCache>(keyName3);
-                    Assert.IsNotNull(ret);
-                    AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
-                    await Eject(cache, 1);  // this should eject 1 because it's the LRU timed, and the first timed entry for 2 because that's expired, but 2 should remain with a refreshed entry
-                    ret = await cache.Retrieve<TestCache>(keyName1);
-                    Assert.IsNull(ret);
-                    ret = await cache.Retrieve<TestCache>(keyName2, TimeSpan.FromMilliseconds(100));
-                    Assert.IsNotNull(ret);
-                    ret = await cache.Retrieve<TestCache>(keyName3);
-                    Assert.IsNotNull(ret);
-                    await Eject(cache, 1);  // this should skip 2 because it's bee refershed again and eject 3 because it's the LRU timed
-                    ret = await cache.Retrieve<TestCache>(keyName1);
-                    Assert.IsNull(ret);
-                    ret = await cache.Retrieve<TestCache>(keyName2);
-                    Assert.IsNotNull(ret);
-                    ret = await cache.Retrieve<TestCache>(keyName3);
-                    Assert.IsNull(ret);
+                using ScopedLocalServiceOverride<IAmbientCache> localCache = new(localOverride);
+                string keyName1 = nameof(CacheExpiration) + "1";
+                string keyName2 = nameof(CacheExpiration) + "2";
+                string keyName3 = nameof(CacheExpiration) + "3";
+                //string keyName4 = nameof(CacheExpiration) + "4";
+                //string keyName5 = nameof(CacheExpiration) + "5";
+                //string keyName6 = nameof(CacheExpiration) + "6";
+                //string keyName7 = nameof(CacheExpiration) + "7";
+                TestCache ret;
+                AmbientCache<TestCache> cache = new();
+                await cache.Store(keyName1, this, TimeSpan.FromMilliseconds(100));
+                await cache.Store(keyName2, this, TimeSpan.FromMilliseconds(50));
+                await cache.Store(keyName3, this, TimeSpan.FromMilliseconds(100));
+                ret = await cache.Retrieve<TestCache>(keyName1);
+                Assert.IsNotNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName2, TimeSpan.FromMilliseconds(100));
+                Assert.IsNotNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName3);
+                Assert.IsNotNull(ret);
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
+                await Eject(cache, 1);  // this should eject 1 because it's the LRU timed, and the first timed entry for 2 because that's expired, but 2 should remain with a refreshed entry
+                ret = await cache.Retrieve<TestCache>(keyName1);
+                Assert.IsNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName2, TimeSpan.FromMilliseconds(100));
+                Assert.IsNotNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName3);
+                Assert.IsNotNull(ret);
+                await Eject(cache, 1);  // this should skip 2 because it's bee refershed again and eject 3 because it's the LRU timed
+                ret = await cache.Retrieve<TestCache>(keyName1);
+                Assert.IsNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName2);
+                Assert.IsNotNull(ret);
+                ret = await cache.Retrieve<TestCache>(keyName3);
+                Assert.IsNull(ret);
 
-                    // change key2 to be untimed
-                    await cache.Store(keyName2, this);
-                    await Eject(cache, 1);  // this should skip over the timed entry for 2 but then eject it because it is untimed
-                }
+                // change key2 to be untimed
+                await cache.Store(keyName2, this);
+                await Eject(cache, 1);  // this should skip over the timed entry for 2 but then eject it because it is untimed
             }
         }
         /// <summary>
@@ -353,13 +347,7 @@ namespace AmbientServices.Test
             }
         }
         private static readonly AmbientService<IAmbientSettingsSet> _Settings = Ambient.GetService<IAmbientSettingsSet>();
-        private int CountsToEject 
-        {
-            get 
-            {
-                return AmbientSettings.GetSetting<int>(_Settings.Local, nameof(BasicAmbientCache) + "-EjectFrequency", "The number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100").Value;
-            }
-        }
+        private int CountsToEject => AmbientSettings.GetSetting<int>(_Settings.Local, nameof(BasicAmbientCache) + "-EjectFrequency", "The number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.", s => Int32.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100").Value;
         private async Task Eject(IAmbientCache cache, int count)
         {
             int countsToEject = CountsToEject;
@@ -522,7 +510,7 @@ namespace AmbientServices.Test
             }
 #endif
         }
-        public async ValueTask<T?> Retrieve<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public async ValueTask<T?> Retrieve<T>(string key, TimeSpan? refresh = null, CancellationToken cancel = default) where T : class
         {
             CacheEntry? entry;
             if (_cache.TryGetValue(key, out entry))
@@ -552,7 +540,7 @@ namespace AmbientServices.Test
             return null;
         }
 
-        public async ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default(CancellationToken)) where T : class
+        public async ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default) where T : class
         {
             // does this entry *not* expire in the past?
             if (!(maxCacheDuration < TimeSpan.FromTicks(0)))
@@ -580,7 +568,7 @@ namespace AmbientServices.Test
             int callFrequencyToEject = _callFrequencyToEject.Value;
             int countToEject = _countToEject.Value;
             // time to eject?
-            while ((System.Threading.Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
+            while ((Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
             {
                 await EjectOneTimed().ConfigureAwait(false);
                 await EjectOneUntimed().ConfigureAwait(false);
@@ -665,7 +653,7 @@ namespace AmbientServices.Test
             }
         }
 
-        public async ValueTask Remove<T>(string itemKey, CancellationToken cancel = default(CancellationToken))
+        public async ValueTask Remove<T>(string itemKey, CancellationToken cancel = default)
         {
             CacheEntry? disposeEntry;
             if (_cache.TryRemove(itemKey, out disposeEntry))
@@ -675,7 +663,7 @@ namespace AmbientServices.Test
             }
         }
 
-        private async ValueTask EjectEntry(CacheEntry entry, CancellationToken cancel = default(CancellationToken))
+        private async ValueTask EjectEntry(CacheEntry entry, CancellationToken cancel = default)
         {
             CacheEntry? disposeEntry;
             // race to remove the item from the cache--did we win the race?
@@ -685,7 +673,7 @@ namespace AmbientServices.Test
             }
         }
 
-        public async ValueTask Clear(CancellationToken cancel = default(CancellationToken))
+        public async ValueTask Clear(CancellationToken cancel = default)
         {
             _untimedQueue = new ConcurrentQueue<string>();
             _timedQueue = new ConcurrentQueue<TimedQueueEntry>();

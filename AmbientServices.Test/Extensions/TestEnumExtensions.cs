@@ -38,7 +38,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EnumMaxEnumValue()
         {
-            Assert.AreEqual(default(TestEmptyEnum), EnumExtensions.MaxEnumValue<TestEmptyEnum>());
+            Assert.AreEqual(default, EnumExtensions.MaxEnumValue<TestEmptyEnum>());
             Assert.AreEqual(TestOneValueEnum.ValueOne, EnumExtensions.MaxEnumValue<TestOneValueEnum>());
             Assert.AreEqual(TestTwoValueEnum.ValueTwo, EnumExtensions.MaxEnumValue<TestTwoValueEnum>());
             Assert.AreEqual(TestOverrideEnum.ValueTwo, EnumExtensions.MaxEnumValue<TestOverrideEnum>());

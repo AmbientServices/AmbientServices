@@ -52,7 +52,7 @@ namespace AmbientServices
         /// Gets the interface types indicating which services are implemented by the class the attribute is applied to.  
         /// If null, all interfaces that are directly implemented by the class should be used.
         /// </summary>
-        public IReadOnlyList<Type>? RegistrationInterfaces { get { return _registrationInterfaces; } }
+        public IReadOnlyList<Type>? RegistrationInterfaces => _registrationInterfaces;
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ namespace AmbientServices
             Type? impType;
             if (_DefaultImplementations.TryGetValue(iface, out impType))
             {
-                System.Diagnostics.Debug.Assert(iface.IsAssignableFrom(impType));
+                Debug.Assert(iface.IsAssignableFrom(impType));
                 return impType;
             }
             return null;

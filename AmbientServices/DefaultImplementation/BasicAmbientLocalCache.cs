@@ -138,7 +138,7 @@ namespace AmbientServices
             int callFrequencyToEject = _callFrequencyToEject.Value;
             int countToEject = _countToEject.Value;
             // time to eject?
-            while ((System.Threading.Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
+            while ((Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
             {
                 await EjectOneTimed().ConfigureAwait(false);
                 await EjectOneUntimed().ConfigureAwait(false);

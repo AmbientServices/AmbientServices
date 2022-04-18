@@ -14,24 +14,12 @@ namespace AmbientServices
         /// <summary>
         /// Gets the <see cref="IAmbientProgress"/> from the current local (or global) ambient progress service.
         /// </summary>
-        public static IAmbientProgress? Progress
-        {
-            get
-            {
-                return _Progress.Local?.Progress;
-            }
-        }
+        public static IAmbientProgress? Progress => _Progress.Local?.Progress;
         /// <summary>
         /// Gets the <see cref="IAmbientProgress"/> from the global ambient progress service.
         /// </summary>
         [ExcludeFromCoverage]   // this can't be fully tested without possibly affecting other tests and their coverage because this is a *global* item, so changing it during a test obviously has non-local effects
-        public static IAmbientProgress? GlobalProgress
-        {
-            get
-            {
-                return _Progress.Global?.Progress;
-            }
-        }
+        public static IAmbientProgress? GlobalProgress => _Progress.Global?.Progress;
     }
 
 
@@ -93,13 +81,13 @@ namespace AmbientServices
         private void ScheduleCancellation(TimeSpan timeout)
         {
             _ambientTimer = new AmbientEventTimer(timeout);
-            System.Timers.ElapsedEventHandler? handler = null;
-            handler = (source, e) =>
+            void handler(object source, System.Timers.ElapsedEventArgs e)
             {
                 _ambientTimer.Elapsed -= handler;
                 _tokenSource?.Cancel();
                 _ambientTimer.Dispose();
-            };
+            }
+
             _ambientTimer.Elapsed += handler;   // note that the handler will keep the timer and the token source alive until the event is raised, but the event is only raised once anyway, and there is no need to unsubscribe because the owner of the event is disposed when the event is triggered anyway
             _ambientTimer.Enabled = true;
         }
@@ -107,11 +95,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the <see cref="CancellationToken"/> associated with the source.
         /// </summary>
-        public CancellationToken Token { get { return _tokenSource?.Token ?? _AlreadyCancelled; } }
+        public CancellationToken Token => _tokenSource?.Token ?? _AlreadyCancelled;
         /// <summary>
         /// Gets whether or not a cancellation has been requested.
         /// </summary>
-        public bool IsCancellationRequested { get { return _tokenSource?.IsCancellationRequested ?? true; } }
+        public bool IsCancellationRequested => _tokenSource?.IsCancellationRequested ?? true;
         /// <summary>
         /// Marks the associated token as canceled.
         /// </summary>

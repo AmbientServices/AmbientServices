@@ -18,7 +18,7 @@ namespace AmbientServices.Test
         {
             Assert.AreNotEqual(StatusAuditAlert.Empty, StatusAuditAlert.None);
             Assert.AreNotEqual(StatusAuditAlert.Empty.GetHashCode(), StatusAuditAlert.None.GetHashCode());
-            Assert.IsFalse(StatusAuditAlert.Empty.Equals((StatusAuditAlert)null));
+            Assert.IsFalse(StatusAuditAlert.Empty.Equals(null));
             Assert.IsFalse(StatusAuditAlert.Empty!.Equals("test")); // the analyzer obviously gets confused when you test whether something is equal to null, even if you assert that it returns false
             Assert.AreNotEqual(StatusAuditAlert.Empty.ToString(), StatusAuditAlert.None.ToString());
             StatusAuditAlert sa = StatusAuditAlert.Empty;
@@ -34,7 +34,7 @@ namespace AmbientServices.Test
             Assert.AreNotEqual(StatusAuditReport.Pending, sr);
             Assert.AreNotEqual(StatusAuditReport.Pending.GetHashCode(), sr.GetHashCode());
             Assert.AreNotEqual(sr.GetHashCode(), new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5)).GetHashCode());
-            Assert.IsFalse(StatusAuditReport.Pending.Equals((StatusAuditReport)null));
+            Assert.IsFalse(StatusAuditReport.Pending.Equals(null));
             Assert.IsFalse(StatusAuditReport.Pending!.Equals("test"));  // this is a false positive in the analyzer's null detector
             Assert.AreNotEqual(StatusAuditReport.Pending.ToString(), sr.ToString());
         }
@@ -43,20 +43,18 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (StatusAuditorTest test = new(nameof(StatusAuditorTest)))
-                {
-                    StatusResults results = await test.GetStatus();
-                    Assert.AreEqual("StatusAuditorTest", test.TargetSystem);
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));   // each of these skips should trigger another audit, with rotating values
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-                }
+                using StatusAuditorTest test = new(nameof(StatusAuditorTest));
+                StatusResults results = await test.GetStatus();
+                Assert.AreEqual("StatusAuditorTest", test.TargetSystem);
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));   // each of these skips should trigger another audit, with rotating values
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
             }
         }
         [TestMethod]
@@ -82,12 +80,10 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (StatusAuditorAuditExceptionTest test = new(nameof(StatusAuditorAuditExceptionTest)))
-                {
-                    Assert.AreEqual("StatusAuditorAuditExceptionTest", test.TargetSystem);
-                    // run the initial audit manually and synchronously
-                    test.InitialAuditTimer_Elapsed(null, null);
-                }
+                using StatusAuditorAuditExceptionTest test = new(nameof(StatusAuditorAuditExceptionTest));
+                Assert.AreEqual("StatusAuditorAuditExceptionTest", test.TargetSystem);
+                // run the initial audit manually and synchronously
+                test.InitialAuditTimer_Elapsed(null, null);
             }
         }
         [TestMethod]
@@ -95,12 +91,10 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (StatusAuditorAuditNeverRunTest test = new(nameof(StatusAuditorAuditNeverRunTest)))
-                {
-                    Assert.AreEqual("StatusAuditorAuditNeverRunTest", test.TargetSystem);
-                    // run the initial audit manually and synchronously
-                    test.InitialAuditTimer_Elapsed(null, null);
-                }
+                using StatusAuditorAuditNeverRunTest test = new(nameof(StatusAuditorAuditNeverRunTest));
+                Assert.AreEqual("StatusAuditorAuditNeverRunTest", test.TargetSystem);
+                // run the initial audit manually and synchronously
+                test.InitialAuditTimer_Elapsed(null, null);
             }
         }
         [TestMethod]
@@ -140,47 +134,45 @@ namespace AmbientServices.Test
 
             using (AmbientClock.Pause())
             {
-                using (StatusAuditorTest test = new(nameof(StatusAuditorTest)))
-                {
-                    StatusResults results = await test.GetStatus();
-                    Assert.AreEqual("StatusAuditorTest", test.TargetSystem);
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // since we're rotating the status rating, the frequency will vary because of that
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // this one starts kicking out history items due to count (this was determined by simply trying it out, but that part doesn't matter for this test)
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // this one should start kicking history items out due to time
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                    AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                    Assert.IsTrue(test.History.Count() <= 10);
-                    Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
-                }
+                using StatusAuditorTest test = new(nameof(StatusAuditorTest));
+                StatusResults results = await test.GetStatus();
+                Assert.AreEqual("StatusAuditorTest", test.TargetSystem);
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // since we're rotating the status rating, the frequency will vary because of that
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // this one starts kicking out history items due to count (this was determined by simply trying it out, but that part doesn't matter for this test)
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // this one should start kicking history items out due to time
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
+                AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
+                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
             }
         }
     }
@@ -198,8 +190,8 @@ namespace AmbientServices.Test
             SetLatestResults(results);
             SetLatestResults(results);  // set the results twice so the first results (which are the same as the second) end up in the history
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
             StatusRatingRange currentAuditRating = (StatusRatingRange)(_auditNumber++ % (int)EnumExtensions.MaxEnumValue<StatusRatingRange>());
@@ -220,7 +212,7 @@ namespace AmbientServices.Test
             {
                 statusBuilder.AddOkay("SuperCode", "Superlative", "The system is superlative", StatusRating.Superlative - rating);
             }
-            return default(ValueTask);
+            return default;
         }
     }
     internal class StatusAuditorAuditExceptionTest : StatusAuditor
@@ -232,8 +224,8 @@ namespace AmbientServices.Test
             sb.AddProperty("TestProperty1", Environment.MachineName);
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             throw new ExpectedException("This exception is expected!");
         }
@@ -247,10 +239,10 @@ namespace AmbientServices.Test
             sb.AddProperty("TestProperty1", Environment.MachineName);
             sb.AddProperty("TestProperty2", AmbientClock.UtcNow);
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
-            return default(ValueTask);
+            return default;
         }
     }
 }

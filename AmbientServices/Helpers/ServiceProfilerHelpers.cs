@@ -36,7 +36,7 @@ namespace AmbientServices
             _defaultSystemGroupTransformSetting = AmbientSettings.GetSettingsSetSetting<Regex?>(settingsSet, nameof(AmbientServiceProfilerCoordinator) + "-DefaultSystemGroupTransform", 
                 @"A `Regex` string used to transform the system identifier to a group identifier.
 The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.", 
-                s => string.IsNullOrEmpty(s) ? (Regex?)null : new Regex(s, RegexOptions.Compiled));
+                s => string.IsNullOrEmpty(s) ? null : new Regex(s, RegexOptions.Compiled));
             _scopeDistributor = new AsyncLocal<ScopeOnSystemSwitchedDistributor>();
             _eventBroadcaster = _AmbientServiceProfiler.Local;
             _eventBroadcaster?.RegisterSystemSwitchedNotificationSink(this);
@@ -172,19 +172,19 @@ The regular expression will attempt to match the system identifier, with the val
         /// <summary>
         /// Gets the group the accumulator is for.
         /// </summary>
-        public string Group { get { return _group; } }
+        public string Group => _group;
         /// <summary>
         /// Gest the number of times systems in this group were executed.
         /// </summary>
-        public long ExecutionCount { get { return _executionCount; } }
+        public long ExecutionCount => _executionCount;
         /// <summary>
         /// Gets the total number of stopwatch ticks used by this system group.
         /// </summary>
-        public long TotalStopwatchTicksUsed { get { return _totalStopwatchTicksUsed; } }
+        public long TotalStopwatchTicksUsed => _totalStopwatchTicksUsed;
         /// <summary>
         /// Gets the amount of time used by this system group.
         /// </summary>
-        public TimeSpan TimeUsed { get { return new TimeSpan(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_totalStopwatchTicksUsed)); } }
+        public TimeSpan TimeUsed => new TimeSpan(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_totalStopwatchTicksUsed));
 
         /// <summary>
         /// Constructs a AmbientServiceProfileAccumulator for the specified system.

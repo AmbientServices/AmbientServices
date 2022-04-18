@@ -174,27 +174,25 @@ namespace AmbientServices.Test
             settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Error.ToString());
             settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-TypeFilter", "AllowedLoggerType");
             settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryFilter", "AllowedCategory");
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> o = new(settingsSet))
-            {
-                AmbientLogger<AllowedLoggerType> logger = new();
-                logger.Log(new ApplicationException());
+            using ScopedLocalServiceOverride<IAmbientSettingsSet> o = new(settingsSet);
+            AmbientLogger<AllowedLoggerType> logger = new();
+            logger.Log(new ApplicationException());
 
-                AmbientLogger<TestLogger> testlogger = new();
-                testlogger.Log(new ApplicationException());
-                testlogger.Log(new ApplicationException(), "category", AmbientLogLevel.Information);
-                testlogger.Log("test message");
-                testlogger.Log(() => "test message");
-                testlogger.Log("test message", "category", AmbientLogLevel.Information);
-                testlogger.Log("test message", "AllowedCategory", AmbientLogLevel.Information);
-                testlogger.Log("Exception during test", new ApplicationException());
-                testlogger.Log(() => "Exception during test", new ApplicationException());
-                testlogger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
-                testlogger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
-                testlogger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
-                testlogger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
+            AmbientLogger<TestLogger> testlogger = new();
+            testlogger.Log(new ApplicationException());
+            testlogger.Log(new ApplicationException(), "category", AmbientLogLevel.Information);
+            testlogger.Log("test message");
+            testlogger.Log(() => "test message");
+            testlogger.Log("test message", "category", AmbientLogLevel.Information);
+            testlogger.Log("test message", "AllowedCategory", AmbientLogLevel.Information);
+            testlogger.Log("Exception during test", new ApplicationException());
+            testlogger.Log(() => "Exception during test", new ApplicationException());
+            testlogger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
+            testlogger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
+            testlogger.Log("Exception during test", new ApplicationException(), "category", AmbientLogLevel.Information);
+            testlogger.Log("Exception during test", new ApplicationException(), "AllowedCategory", AmbientLogLevel.Information);
 
-                if (_Logger.Local != null) await _Logger.Local.Flush();
-            }
+            if (_Logger.Local != null) await _Logger.Local.Flush();
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientLogger"/>.

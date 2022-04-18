@@ -180,13 +180,7 @@ namespace AmbientServices
 
         public string ScopeName => _scopeName;
 
-        public AmbientBottleneckAccessor? MostUtilizedBottleneck
-        {
-            get
-            {
-                return _bottleneckAccesses.Values.Max();
-            }
-        }
+        public AmbientBottleneckAccessor? MostUtilizedBottleneck => _bottleneckAccesses.Values.Max();
 
         public IEnumerable<AmbientBottleneckAccessor> GetMostUtilizedBottlenecks(int count)
         {
@@ -255,14 +249,14 @@ namespace AmbientServices
         {
             TimeWindowBottleneckSurvey initialSurvey = new(allow, block, AmbientClock.Ticks, windowSize);
             _currentWindowSurvey = initialSurvey;
-            System.Timers.ElapsedEventHandler rotateTimeWindow = (s, e) =>
+            void rotateTimeWindow(object s, System.Timers.ElapsedEventArgs e)
             {
                 TimeWindowBottleneckSurvey survey = new(allow, block, AmbientClock.Ticks, windowSize);
-                TimeWindowBottleneckSurvey oldAnalyzer = System.Threading.Interlocked.Exchange(ref _currentWindowSurvey, survey);
+                TimeWindowBottleneckSurvey oldAnalyzer = Interlocked.Exchange(ref _currentWindowSurvey, survey);
                 // copy all the accesses still in progress
                 survey.SwitchAnalyzer(oldAnalyzer);
                 onWindowComplete(oldAnalyzer);
-            };
+            }
             AmbientEventTimer timer = new();
             timer.AutoReset = true;
             timer.Elapsed += rotateTimeWindow;
@@ -340,13 +334,7 @@ namespace AmbientServices
 
         public string ScopeName => _scopeName;
 
-        public AmbientBottleneckAccessor? MostUtilizedBottleneck
-        {
-            get
-            {
-                return _metrics.Values.Max();
-            }
-        }
+        public AmbientBottleneckAccessor? MostUtilizedBottleneck => _metrics.Values.Max();
 
         public IEnumerable<AmbientBottleneckAccessor> GetMostUtilizedBottlenecks(int count)
         {
@@ -415,7 +403,7 @@ namespace AmbientServices
 
         public ProcessBottleneckSurveyor(string? processScopeName, IAmbientBottleneckDetector? bottleneckDetector, Regex? allow, Regex? block)
         {
-            System.Diagnostics.Process process = System.Diagnostics.Process.GetCurrentProcess();
+            System.Diagnostics.Process process = Process.GetCurrentProcess();
             _scopeName = (string.IsNullOrEmpty(processScopeName) ? FormattableString.Invariant($"Process {process.ProcessName} ({process.Id})") : processScopeName)!;
             _allow = allow;
             _block = block;
@@ -429,13 +417,7 @@ namespace AmbientServices
 
         public string ScopeName => _scopeName;
 
-        public AmbientBottleneckAccessor? MostUtilizedBottleneck
-        {
-            get
-            {
-                return _metrics.Values.Max();
-            }
-        }
+        public AmbientBottleneckAccessor? MostUtilizedBottleneck => _metrics.Values.Max();
 
         public IEnumerable<AmbientBottleneckAccessor> GetMostUtilizedBottlenecks(int count)
         {
@@ -590,7 +572,7 @@ namespace AmbientServices
 
         public ThreadBottleneckSurveyor(string? scopeName, ThreadAccessDistributor threadDistributor, Regex? allow, Regex? block)
         {
-            _scopeName = (string.IsNullOrEmpty(scopeName) ? (string.IsNullOrEmpty(System.Threading.Thread.CurrentThread.Name) ? $"Thread {Environment.CurrentManagedThreadId}" : System.Threading.Thread.CurrentThread.Name) : scopeName)!;
+            _scopeName = (string.IsNullOrEmpty(scopeName) ? (string.IsNullOrEmpty(Thread.CurrentThread.Name) ? $"Thread {Environment.CurrentManagedThreadId}" : Thread.CurrentThread.Name) : scopeName)!;
             _allow = allow;
             _block = block;
             _metrics = new Dictionary<string, AmbientBottleneckAccessor>();
@@ -600,13 +582,7 @@ namespace AmbientServices
 
         public string ScopeName => _scopeName;
 
-        public AmbientBottleneckAccessor? MostUtilizedBottleneck
-        {
-            get
-            {
-                return _metrics.Values.Max();
-            }
-        }
+        public AmbientBottleneckAccessor? MostUtilizedBottleneck => _metrics.Values.Max();
 
         public IEnumerable<AmbientBottleneckAccessor> GetMostUtilizedBottlenecks(int count)
         {

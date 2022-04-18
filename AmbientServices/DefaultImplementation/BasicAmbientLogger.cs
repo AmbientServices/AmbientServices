@@ -51,7 +51,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the file prefix.
         /// </summary>
-        public string FilePrefix { get { return _filePrefix; } }
+        public string FilePrefix => _filePrefix;
         /// <summary>
         /// Buffers the specified message to be asynchronously logged.
         /// </summary>
@@ -71,7 +71,7 @@ namespace AmbientServices
                 // someone beat us to it?
                 if (newPeriodNumber == oldValue) break;
                 // try to put in our value--did we win the race?
-                if (oldValue == System.Threading.Interlocked.CompareExchange(ref _periodNumber, newPeriodNumber, oldValue))
+                if (oldValue == Interlocked.CompareExchange(ref _periodNumber, newPeriodNumber, oldValue))
                 {
                     // we won the race to update the period number
                     _fileBuffers.BufferFileRotation(PeriodString(newPeriodNumber) + _fileExtension);
@@ -129,7 +129,7 @@ namespace AmbientServices
                 if (cancel.IsCancellationRequested) break;
                 try
                 {
-                    System.IO.File.Delete(file);
+                    File.Delete(file);
                 }
 #pragma warning disable CA1031  // we REALLY want to catch everything here--delete can throw a lot of different exceptions and we don't want ANY of them to make it through--this is a "do your best" function
                 catch { }   // ignore all errors and just skip files we can't delete

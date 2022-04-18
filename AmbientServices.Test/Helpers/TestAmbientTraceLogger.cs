@@ -23,16 +23,14 @@ namespace AmbientServices.Test
             {
                 AmbientTraceLogger loggerImp = new();
 
-                using (IDisposable over = Logger.ScopedLocalOverride(loggerImp))
-                {
-                    IAmbientLogger logger = Logger.Local;
-                    // log the first test message (this will cause the file to be created, but only *after* this message gets flushed
-                    logger?.Log("test1");
-                    if (logger != null) await logger.Flush();
-                    // log the second test message (since the clock is stopped, this will *never* create another file)
-                    logger?.Log("test2");
-                    if (logger != null) await logger.Flush();
-                }
+                using IDisposable over = Logger.ScopedLocalOverride(loggerImp);
+                IAmbientLogger logger = Logger.Local;
+                // log the first test message (this will cause the file to be created, but only *after* this message gets flushed
+                logger?.Log("test1");
+                if (logger != null) await logger.Flush();
+                // log the second test message (since the clock is stopped, this will *never* create another file)
+                logger?.Log("test2");
+                if (logger != null) await logger.Flush();
             }
         }
 

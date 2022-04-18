@@ -32,11 +32,11 @@ namespace AmbientServices
         /// <summary>
         /// Get the detailed notificaton (so far).
         /// </summary>
-        public string Details { get { return _details.ToString(); } }
+        public string Details => _details.ToString();
         /// <summary>
         /// Get the terse notification (so far).
         /// </summary>
-        public string Terse { get { return _terse.ToString(); } }
+        public string Terse => _terse.ToString();
 
         /// <summary>
         /// Constructs a status notification writer with the specified notification time.

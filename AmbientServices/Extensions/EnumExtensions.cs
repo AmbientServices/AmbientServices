@@ -37,6 +37,6 @@ namespace AmbientServices.Utility
                 ? default!                          // apparently the compiler isn't smart enough to know that even though System.Enum is a class, any derived types are value types
                 : a.Cast<T>().Max()!;
         }
-        public static T Max {  get { return _Max; } }
+        public static T Max => _Max;
     }
 }

@@ -34,9 +34,9 @@ namespace AmbientServices.Test
                 Assert.IsTrue(overallStatus.Children.Count() > 0);
                 Assert.IsFalse(string.IsNullOrEmpty(overallStatus.ToString()));
 
-                StatusResults sampleDisk = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == "SampleDisk" && c.Children.Any()) as StatusResults;
+                StatusResults sampleDisk = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == "SampleDisk" && c.Children.Any());
                 Assert.IsNotNull(sampleDisk);
-                StatusResults disk = sampleDisk!.Children.FirstOrDefault() as StatusResults;
+                StatusResults disk = sampleDisk!.Children.FirstOrDefault();
                 Assert.IsNotNull(disk);
                 Assert.IsTrue(disk!.Properties.Count() > 0); // the properties in the node itself are the constant properties, ie. the path for a disk test
                 Assert.IsFalse(string.IsNullOrEmpty(sampleDisk!.ToString()));
@@ -192,15 +192,13 @@ namespace AmbientServices.Test
         public async Task StatusAuditAfterDisposal()
         {
             Status s = new(false);
-            using (TestConstantAuditResults auditorToAdd = new(null, nameof(StatusAuditAfterDisposal), StatusRating.Okay, nameof(StatusAuditAfterDisposal), "Terse", "Details"))
-            {
-                s.AddCheckerOrAuditor(auditorToAdd);
-                await s.Start();
-                await s.Stop();
-                s.RemoveCheckerOrAuditor(auditorToAdd);
-                // run the initial audit manually and synchronously
-                auditorToAdd.InitialAuditTimer_Elapsed(null, null);
-            }
+            using TestConstantAuditResults auditorToAdd = new(null, nameof(StatusAuditAfterDisposal), StatusRating.Okay, nameof(StatusAuditAfterDisposal), "Terse", "Details");
+            s.AddCheckerOrAuditor(auditorToAdd);
+            await s.Start();
+            await s.Stop();
+            s.RemoveCheckerOrAuditor(auditorToAdd);
+            // run the initial audit manually and synchronously
+            auditorToAdd.InitialAuditTimer_Elapsed(null, null);
         }
     }
     internal class TestMachineConstantStatus : StatusChecker
@@ -216,8 +214,8 @@ namespace AmbientServices.Test
             _results = sb.FinalResults;
             SetLatestResults(_results);
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
             return TaskExtensions.ValueTaskFromResult(_results);
         }
@@ -231,8 +229,8 @@ namespace AmbientServices.Test
         {
             SetLatestResults(_results);
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
             return TaskExtensions.ValueTaskFromResult(_results);
         }
@@ -247,8 +245,8 @@ namespace AmbientServices.Test
             _results = sb.FinalResults;
             SetLatestResults(_results);
         }
-        protected internal override bool Applicable { get { return false; } }
-        public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => false;
+        public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
             return TaskExtensions.ValueTaskFromResult(_results);
         }
@@ -259,14 +257,14 @@ namespace AmbientServices.Test
             : base(nameof(TestAuditableStatusNoChildren), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
             statusBuilder.AddProperty("nc1", "a");
             statusBuilder.AddProperty("nc2", "b");
             statusBuilder.AddProperty("nc2", AmbientClock.UtcNow.AddMinutes(-3));
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestConstantAuditResults : StatusAuditor
@@ -286,8 +284,8 @@ namespace AmbientServices.Test
             _terse = terse;
             _details = details;
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
             if (_rating <= StatusRating.Fail)
@@ -302,7 +300,7 @@ namespace AmbientServices.Test
             {
                 statusBuilder.AddOkay(_auditCode, _terse, _details, StatusRating.Okay - _rating);
             }
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestIrrelevantException : StatusAuditor
@@ -311,14 +309,14 @@ namespace AmbientServices.Test
             : base(nameof(TestIrrelevantException), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
             StatusResultsBuilder child = new("IrrelevantChild");
             child.AddException(new ExpectedException(nameof(TestIrrelevantException)));
             statusBuilder.AddChild(child);
-            return default(ValueTask);
+            return default;
         }
     }
     /// <summary>
@@ -352,7 +350,7 @@ namespace AmbientServices.Test
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to cancel the operation before it completes.</param>
         /// <returns>A <see cref="StatusResultsBuilder"/> containing the status of the disk.</returns>
-        public Task<StatusResultsBuilder> GetStatus(CancellationToken cancel = default(CancellationToken))
+        public Task<StatusResultsBuilder> GetStatus(CancellationToken cancel = default)
         {
             StatusResultsBuilder sb = new(_targetSystem);
             sb.NatureOfSystem = StatusNatureOfSystem.Leaf;
@@ -394,16 +392,13 @@ namespace AmbientServices.Test
         /// <summary>
         /// Gets whether or not this status node is applicable and should be included in the list of statuses for this machine.
         /// </summary>
-        protected internal override bool Applicable
-        {
-            get { return true; }
-        }
+        protected internal override bool Applicable => true;
         /// <summary>
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
         /// </summary>
         /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> that may be used to fill in audit information.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             foreach (SampleVolumeAuditor da in _diskAuditors)
             {
@@ -431,8 +426,8 @@ namespace AmbientServices.Test
         {
         }
 
-        protected internal override bool Applicable { get { return true; } }
-        public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
             foreach (SampleVolumeAuditor da in _diskAuditors)
@@ -460,8 +455,8 @@ namespace AmbientServices.Test
             : base(nameof(TestHeterogenousExplicitRating), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
             foreach (SampleVolumeAuditor da in _diskAuditors)
@@ -488,15 +483,15 @@ namespace AmbientServices.Test
             : base(nameof(TestHeterogenousOnlyExplicit), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
             statusBuilder.AddProperty("wc1", "a");
             statusBuilder.AddProperty("wc2", "b");
             statusBuilder.AddProperty("wc2", AmbientClock.UtcNow.AddMinutes(-10));
             statusBuilder.AddException(new ApplicationException("This is a test"));
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestSuperlativeExplicit : StatusAuditor
@@ -505,12 +500,12 @@ namespace AmbientServices.Test
             : base(nameof(TestSuperlativeExplicit), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
             statusBuilder.AddSuperlative("test-superlative", "superlative terse", "superlative details");
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestHeterogenousNoExplicit : StatusAuditor
@@ -519,11 +514,11 @@ namespace AmbientServices.Test
             : base(nameof(TestHeterogenousNoExplicit), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestHomogeneousExplicitFailure : StatusAuditor
@@ -537,13 +532,13 @@ namespace AmbientServices.Test
             : base(nameof(TestHomogeneousExplicitFailure), TimeSpan.FromSeconds(10))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
             statusBuilder.AddProperty("ChildCount", _diskAuditors.Count());
             statusBuilder.AddFailure("TestFailCode", "TEST-FAIL!", "This is the detailed fail message", 0.0f);
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestHomogeneousWithFailure : StatusAuditor
@@ -562,8 +557,8 @@ namespace AmbientServices.Test
             _alwaysFailing = StatusResultsBuilder.CreateRawStatusResults("Child3AlwaysFailing", StatusRating.Fail, "TestFailCode", "test-fail", "This status node always fails!");
             _alwaysCatastrophic = StatusResultsBuilder.CreateRawStatusResults("Child3AlwaysCatastrophic", StatusRating.Catastrophic, "TestCatastrophicCode", "test-catastrophic", "This status node always catastrophic!");
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
             statusBuilder.AddChild(_alwaysSuperlative);
@@ -571,7 +566,7 @@ namespace AmbientServices.Test
             statusBuilder.AddChild(_alwaysAlerting);
             statusBuilder.AddChild(_alwaysFailing);
             statusBuilder.AddChild(_alwaysCatastrophic);
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestHomogeneousWithMultipleFailure : StatusAuditor
@@ -584,13 +579,13 @@ namespace AmbientServices.Test
             _alwaysFailing1 = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysFailing1", StatusRating.Fail, "TestFailCode", "test-fail", "This status node always fails!");
             _alwaysFailing2 = StatusResultsBuilder.CreateRawStatusResults("Child2AlwaysFailing2", StatusRating.Fail, "TestFailCode", "test-fail", "This status node always fails!");
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
             statusBuilder.AddChild(_alwaysFailing1);
             statusBuilder.AddChild(_alwaysFailing2);
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestHomogeneousWithMultipleAlert : StatusAuditor
@@ -603,13 +598,13 @@ namespace AmbientServices.Test
             _alwaysAlerting1 = StatusResultsBuilder.CreateRawStatusResults("Child1AlwaysAlerting1", StatusRating.Alert, "TestAlertCode", "test-alert1", "This status node always alerts!");
             _alwaysAlerting2 = StatusResultsBuilder.CreateRawStatusResults("Child2AlwaysAlerting2", StatusRating.Alert, "TestAlertCode", "test-alert2", "This status node always alerts!");
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
             statusBuilder.AddChild(_alwaysAlerting1);
             statusBuilder.AddChild(_alwaysAlerting2);
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestDeepFailure : StatusAuditor
@@ -618,7 +613,7 @@ namespace AmbientServices.Test
             : base(nameof(TestDeepFailure), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
+        protected internal override bool Applicable => true;
         private void Recurse(StatusResultsBuilder statusBuilder, int level)
         {
             if (level == 0)
@@ -632,10 +627,10 @@ namespace AmbientServices.Test
                 statusBuilder.AddChild(child.FinalResults);
             }
         }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             Recurse(statusBuilder, 4);
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestMultipleSource : StatusAuditor
@@ -644,7 +639,7 @@ namespace AmbientServices.Test
             : base(nameof(TestMultipleSource), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
+        protected internal override bool Applicable => true;
         private void AddSource(StatusResultsBuilder statusBuilder, int sourceNumber)
         {
             if (sourceNumber < 3)
@@ -661,7 +656,7 @@ namespace AmbientServices.Test
             }
             statusBuilder.SourceSystem = "Source " + sourceNumber.ToString();
         }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             for (int source = 0; source < 10; ++source)
             {
@@ -672,7 +667,7 @@ namespace AmbientServices.Test
                 AddSource(childBuilder, source);
                 statusBuilder.AddChild(childBuilder.FinalResults);
             }
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestDeepMultipleSource : StatusAuditor
@@ -681,7 +676,7 @@ namespace AmbientServices.Test
             : base(nameof(TestDeepMultipleSource), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
+        protected internal override bool Applicable => true;
         private void Recurse(StatusResultsBuilder statusBuilder, int level, int sourceNumber)
         {
             if (level == 0)
@@ -710,7 +705,7 @@ namespace AmbientServices.Test
                 statusBuilder.AddChild(child.FinalResults);
             }
         }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             for (int source = 0; source < 10; ++source)
             {
@@ -719,7 +714,7 @@ namespace AmbientServices.Test
                 Recurse(childBuilder, 4, source);
                 statusBuilder.AddChild(childBuilder.FinalResults);
             }
-            return default(ValueTask);
+            return default;
         }
     }
     internal class TestAuditException : StatusAuditor
@@ -728,8 +723,8 @@ namespace AmbientServices.Test
             : base(nameof(TestAuditException), TimeSpan.FromSeconds(3))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             throw new ExpectedException(nameof(TestAuditException));
         }
@@ -741,7 +736,7 @@ namespace AmbientServices.Test
             : base(nameof(TestAuditException))
         {
         }
-        protected internal override bool Applicable { get { return true; } }
+        protected internal override bool Applicable => true;
         public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
             throw new ExpectedException(nameof(TestAuditException));
@@ -756,14 +751,14 @@ namespace AmbientServices.Test
             : base(nameof(TestAuditCancelTokenSourceAndHangOnAudit), TimeSpan.FromHours(3))
         {
         }
-        public AmbientCancellationTokenSource TokenSource { get { return _cts; } set { System.Threading.Interlocked.Exchange(ref _cts, value); } }
-        public int AuditCount { get { return _auditCount; } }
+        public AmbientCancellationTokenSource TokenSource { get { return _cts; } set { Interlocked.Exchange(ref _cts, value); } }
+        public int AuditCount => _auditCount;
 
-        protected internal override bool Applicable { get { return true; } }
-        public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        protected internal override bool Applicable => true;
+        public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             _cts?.Cancel();
-            int auditNumber = System.Threading.Interlocked.Increment(ref _auditCount);
+            int auditNumber = Interlocked.Increment(ref _auditCount);
             if (auditNumber <= 1) await Task.Delay(TimeSpan.FromHours(4));
         }
     }

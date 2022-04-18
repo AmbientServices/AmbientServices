@@ -79,7 +79,7 @@ namespace AmbientServices.Test
             count = 655360;
             for (int loop = 0; loop < count; ++loop)
             {
-                ++distribution[(int)(rand.NextInt32 & 0xffff)];
+                ++distribution[rand.NextInt32 & 0xffff];
             }
             // compute the standard deviation
             standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
@@ -165,7 +165,7 @@ namespace AmbientServices.Test
 
         private static double StandardDeviation(IEnumerable<int> values, int count, double mean)
         {
-            return Math.Sqrt(values.Select(x => ((double)x - mean) * ((double)x - mean)).Sum() / count);
+            return Math.Sqrt(values.Select(x => (x - mean) * (x - mean)).Sum() / count);
         }
         private static double AverageFrequencyDecreaseFactor(IReadOnlyList<int> values, int chunkSize = 64)
         {

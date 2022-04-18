@@ -23,7 +23,7 @@ namespace AmbientServices
         /// Gets the base instance that contains the overall status and is initialized with all checkers and auditors with public empty constructors.  
         /// Note that even the default instance must be started by calling <see cref="Start"/> before checks and audits will occur, and that does not happen automatically.
         /// </summary>
-        public static Status DefaultInstance { get { return _DefaultInstance; } }
+        public static Status DefaultInstance => _DefaultInstance;
 
         private readonly bool _loadAllCheckers;
         private ConcurrentHashSet<StatusChecker> _checkers = new();
@@ -45,7 +45,7 @@ namespace AmbientServices
         /// <summary>
         /// Checks to see whether or not we're started shutting down the status system.
         /// </summary>
-        internal bool ShuttingDown { get { return _shuttingDown != 0; } }
+        internal bool ShuttingDown => _shuttingDown != 0;
 
         /// <summary>
         /// Starts the status system by searching the system for checkers and auditors (unless the constructor parameter says not to), constructing them, and adding them to the system, just as if <see cref="AddCheckerOrAuditor(StatusChecker)"/> had been called for each one.
@@ -56,7 +56,7 @@ namespace AmbientServices
         public ValueTask Start(CancellationToken cancel = default)
         {
             Logger.Log("Starting", "StartStop");
-            if (System.Threading.Interlocked.Exchange(ref _started, 1) != 0) throw new InvalidOperationException("The Status system has already been started!");
+            if (Interlocked.Exchange(ref _started, 1) != 0) throw new InvalidOperationException("The Status system has already been started!");
             if (_loadAllCheckers)
             {
                 // add checkers and auditors from all assemblies subsequently loaded
@@ -79,7 +79,7 @@ namespace AmbientServices
         {
             Logger.Log("Stopping", "StartStop");
             // make sure everyone can tell we're shutting down
-            System.Threading.Interlocked.Exchange(ref _shuttingDown, 1);
+            Interlocked.Exchange(ref _shuttingDown, 1);
             // stop the timers on each node
             foreach (StatusChecker checker in _checkers)
             {
@@ -98,8 +98,8 @@ namespace AmbientServices
             Logger.Log("Stopped", "StartStop");
             // now that we're done, reset everything back to where we were before we started
             _checkers.Clear();
-            System.Threading.Interlocked.Exchange(ref _started, 0);
-            System.Threading.Interlocked.Exchange(ref _shuttingDown, 0);
+            Interlocked.Exchange(ref _started, 0);
+            Interlocked.Exchange(ref _shuttingDown, 0);
         }
 
         private void CurrentDomain_AssemblyLoad(object? sender, AssemblyLoadEventArgs args)
@@ -114,7 +114,7 @@ namespace AmbientServices
         private void AddCheckersAndAuditors(Assembly assembly)
         {
             // does the loaded assembly refer to this one?  if it doesn't, there can't possibly be any of the classes we're looking for
-            if (assembly.DoesAssemblyReferToAssembly(System.Reflection.Assembly.GetExecutingAssembly()))
+            if (assembly.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly()))
             {
                 // loop through all the types looking for types that are not abstract, inherit from StatusNode (directly or indirectly) and have a public empty constructor
                 foreach (Type type in assembly.GetLoadableTypes())

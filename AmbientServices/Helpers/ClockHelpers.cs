@@ -24,35 +24,35 @@ namespace AmbientServices
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static bool IsSystemClock { get { return _Clock.Local == null; } }
+        public static bool IsSystemClock => _Clock.Local == null;
         /// <summary>
         /// Gets the number of virtual ticks elapsed.  Ticks must be measured in units of <see cref="Stopwatch.Frequency"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static long Ticks { get { return _Clock.Local?.Ticks ?? Stopwatch.GetTimestamp(); } }
+        public static long Ticks => _Clock.Local?.Ticks ?? Stopwatch.GetTimestamp();
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> indicating the amount of virtual time that has elapsed.  Often more convenient than <see cref="Ticks"/>, but based entirely on its value.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static TimeSpan Elapsed { get { return TimeSpan.FromTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp())); } }
+        public static TimeSpan Elapsed => TimeSpan.FromTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp()));
         /// <summary>
         /// Gets the current virtual UTC <see cref="DateTime"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static DateTime UtcNow { get { return _Clock.Local?.UtcDateTime ?? DateTime.UtcNow; } }
+        public static DateTime UtcNow => _Clock.Local?.UtcDateTime ?? DateTime.UtcNow;
         /// <summary>
         /// Gets the current virtual local <see cref="DateTime"/>.
         /// </summary>
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static DateTime Now { get { return _Clock.Local?.UtcDateTime.ToLocalTime() ?? DateTime.Now; } }
+        public static DateTime Now => _Clock.Local?.UtcDateTime.ToLocalTime() ?? DateTime.Now;
         /// <summary>
         /// Creates an <see cref="AmbientCancellationTokenSource"/> that cancels after the specified timeout.
         /// </summary>
@@ -125,7 +125,7 @@ namespace AmbientServices
         {
             if (_Clock.Override is PausedAmbientClock controllable)
             {
-                controllable.SkipAhead((long)millisecondsToSleep * Stopwatch.Frequency / 1000);
+                controllable.SkipAhead(millisecondsToSleep * Stopwatch.Frequency / 1000);
             }
             else
             {
@@ -173,7 +173,7 @@ namespace AmbientServices
         /// <param name="millisecondsToDelay">The number of milliseconds to delay.</param>
         public static ValueTask TaskDelay(int millisecondsToDelay)
         {
-            return Delay((long)millisecondsToDelay);
+            return Delay(millisecondsToDelay);
         }
         /// <summary>
         /// Asynchronously delays for a specified amount of time.
@@ -206,7 +206,7 @@ namespace AmbientServices
         /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to cancel the delay.</param>
         public static ValueTask TaskDelay(int millisecondsToDelay, CancellationToken cancel)
         {
-            return Delay((long)millisecondsToDelay, cancel);
+            return Delay(millisecondsToDelay, cancel);
         }
         /// <summary>
         /// Asynchronously delays for a specified amount of time.
@@ -267,7 +267,7 @@ namespace AmbientServices
             {
                 _baseStopwatchTicks = Stopwatch.GetTimestamp();
                 // make sure that subsequent operations don't get a timestamp earlier than this
-                System.Threading.Thread.MemoryBarrier();
+                Thread.MemoryBarrier();
             }
             /// <summary>
             /// Gets the number of ticks elapsed.  (In units of <see cref="Stopwatch.Frequency"/>).
@@ -275,14 +275,14 @@ namespace AmbientServices
             /// <remarks>
             /// This property is thread-safe.
             /// </remarks>
-            public long Ticks { get { return _baseStopwatchTicks + _elapsedStopwatchTicks; } }
+            public long Ticks => _baseStopwatchTicks + _elapsedStopwatchTicks;
             /// <summary>
             /// Gets the current UTC <see cref="DateTime"/>.
             /// </summary>
             /// <remarks>
             /// This property is thread-safe.
             /// </remarks>
-            public DateTime UtcDateTime { get { return UtcDateTimeFromStopwatchTicks(_baseStopwatchTicks + _elapsedStopwatchTicks); } }
+            public DateTime UtcDateTime => UtcDateTimeFromStopwatchTicks(_baseStopwatchTicks + _elapsedStopwatchTicks);
 
             private static DateTime UtcDateTimeFromStopwatchTicks(long stopwatchTicks)
             {
@@ -318,7 +318,7 @@ namespace AmbientServices
             /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called directly or indirectly from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> implementation.</remarks>
             public void SkipAhead(long ticks)
             {
-                long newTicks = _baseStopwatchTicks + System.Threading.Interlocked.Add(ref _elapsedStopwatchTicks, ticks);
+                long newTicks = _baseStopwatchTicks + Interlocked.Add(ref _elapsedStopwatchTicks, ticks);
                 long oldTicks = newTicks - ticks;
                 // notify any subscribers
                 foreach (IAmbientClockTimeChangedNotificationSink notificationSink in _notificationSinks)
@@ -609,7 +609,7 @@ namespace AmbientServices
         public void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
         {
             // there should be a clock if we get here
-            System.Diagnostics.Debug.Assert(_clock != null && !((System.Timers.Timer)this).Enabled);
+            Debug.Assert(_clock != null && !((System.Timers.Timer)this).Enabled);
             // is the timer enabled?
             if (_enabled != 0)
             {
@@ -624,7 +624,7 @@ namespace AmbientServices
                     // should we reset for another period?
                     if (autoReset && periodStopwatchTicks != 0)
                     {
-                        nextRaiseStopwatchTicks = System.Threading.Interlocked.Add(ref _nextRaiseStopwatchTicks, periodStopwatchTicks);
+                        nextRaiseStopwatchTicks = Interlocked.Add(ref _nextRaiseStopwatchTicks, periodStopwatchTicks);
                         // loop around again to check to see if we need to be raised again
                     }
                     else
@@ -647,7 +647,7 @@ namespace AmbientServices
             {
                 if (_clock != null)
                 {
-                    System.Threading.Interlocked.Exchange(ref _autoReset, value ? 1 : 0);
+                    Interlocked.Exchange(ref _autoReset, value ? 1 : 0);
                 }
                 else
                 {
@@ -665,7 +665,7 @@ namespace AmbientServices
             {
                 if (_clock != null)
                 {
-                    int oldValue = System.Threading.Interlocked.Exchange(ref _enabled, value ? 1 : 0);
+                    int oldValue = Interlocked.Exchange(ref _enabled, value ? 1 : 0);
                     // are we enabling and it was NOT enabled before?  set up the next raise
                     if (value && oldValue == 0) SetupNextRaise();
                 }
@@ -688,7 +688,7 @@ namespace AmbientServices
             {
                 if (_clock != null)
                 {
-                    System.Threading.Interlocked.Exchange(ref _periodStopwatchTicks, (long)(value / 1000.0 * Stopwatch.Frequency));
+                    Interlocked.Exchange(ref _periodStopwatchTicks, (long)(value / 1000.0 * Stopwatch.Frequency));
                     // are we enabled?
                     if (_enabled != 0) SetupNextRaise();
                 }
@@ -700,9 +700,9 @@ namespace AmbientServices
         }
         private void SetupNextRaise()
         {
-            System.Diagnostics.Debug.Assert(_clock != null);
+            Debug.Assert(_clock != null);
             long now = _clock!.Ticks;   // this function is only called where _clock is not null
-            System.Threading.Interlocked.Exchange(ref _nextRaiseStopwatchTicks, now + _periodStopwatchTicks);
+            Interlocked.Exchange(ref _nextRaiseStopwatchTicks, now + _periodStopwatchTicks);
         }
 
         /// <summary>
@@ -712,7 +712,7 @@ namespace AmbientServices
         {
             if (_clock != null)
             {
-                System.Threading.Interlocked.Exchange(ref _enabled, 1);
+                Interlocked.Exchange(ref _enabled, 1);
                 SetupNextRaise();
             }
             else
@@ -728,7 +728,7 @@ namespace AmbientServices
         {
             if (_clock != null)
             {
-                System.Threading.Interlocked.Exchange(ref _enabled, 0);
+                Interlocked.Exchange(ref _enabled, 0);
             }
             else
             {
@@ -801,13 +801,7 @@ namespace AmbientServices
         /// Gets the number of <see cref="AmbientCallbackTimer"/>s and <see cref="System.Threading.Timer"/> that are currently active.
         /// Does not double-count <see cref="AmbientCallbackTimer"/> that pass through to a <see cref="System.Threading.Timer"/>.
         /// </summary>
-        public static long ActiveCount
-        {
-            get
-            {
-                return _TimerCount + System.Threading.Timer.ActiveCount;
-            }
-        }
+        public static long ActiveCount => _TimerCount + Timer.ActiveCount;
 #endif
 
         private readonly TimerCallback _callback;
@@ -888,7 +882,7 @@ namespace AmbientServices
             if (period != Timeout.InfiniteTimeSpan && period.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(period), "The period parameter must not be negative unless it is Infinite!");
 
             _callback = callback ?? throw new ArgumentNullException(nameof(callback));
-            _state = Object.ReferenceEquals(state, _UseTimerInstanceForStateIndicator) ? this : state;
+            _state = ReferenceEquals(state, _UseTimerInstanceForStateIndicator) ? this : state;
             _clock = clock;
             // is there a clock?
             if (clock != null)
@@ -930,7 +924,7 @@ namespace AmbientServices
                     // should we reset for another period?
                     if (autoReset && periodStopwatchTicks != Timeout.Infinite)
                     {
-                        nextRaiseStopwatchTicks = System.Threading.Interlocked.Add(ref _nextRaiseStopwatchTicks, periodStopwatchTicks);
+                        nextRaiseStopwatchTicks = Interlocked.Add(ref _nextRaiseStopwatchTicks, periodStopwatchTicks);
                         // we might loop around again and invoke the callback again depending on how much the time changed
                     }
                     else // we're no longer active, as the period indicates that we shouldn't invoke the callback again
@@ -946,17 +940,17 @@ namespace AmbientServices
         private void Disable()
         {
             // this currently only gets called when there is a clock and not a timer
-            System.Diagnostics.Debug.Assert(_clock != null && _timer == null);
+            Debug.Assert(_clock != null && _timer == null);
             // race to disable us--did we win the race?
-            if (1 == System.Threading.Interlocked.Exchange(ref _enabled, 0))
+            if (1 == Interlocked.Exchange(ref _enabled, 0))
             {
                 _clock!.DeregisterTimeChangedNotificationSink(this);
-                System.Threading.Interlocked.Decrement(ref _TimerCount);
+                Interlocked.Decrement(ref _TimerCount);
             }
         }
         private void Enable(TimeSpan dueTime, TimeSpan period)
         {
-            System.Threading.Interlocked.Increment(ref _TimerCount);
+            Interlocked.Increment(ref _TimerCount);
             long nowStopwatchTicks = _clock!.Ticks; // this is only called where _clock is not null
             IAmbientClock tempClock = _clock;
             _clock.RegisterTimeChangedNotificationSink(this);
@@ -1017,7 +1011,7 @@ namespace AmbientServices
                 _autoReset = (period == Timeout.InfiniteTimeSpan) ? 0 : 1;
                 // race to enable us--did we win the race?
                 int newEnabled = (dueTime == Timeout.InfiniteTimeSpan) ? 0 : 1;
-                if (newEnabled != 0 && System.Threading.Interlocked.Exchange(ref _enabled, newEnabled) == 0)
+                if (newEnabled != 0 && Interlocked.Exchange(ref _enabled, newEnabled) == 0)
                 {
                     Enable(dueTime, period);
                 }
@@ -1099,7 +1093,7 @@ namespace AmbientServices
                 {
                     _timer!.Dispose();  // if _clock is null, _timer cannot be
                 }
-                System.Threading.Interlocked.Decrement(ref _TimerCount);
+                Interlocked.Decrement(ref _TimerCount);
                 _disposed = true;
             }
             GC.SuppressFinalize(this);
@@ -1180,7 +1174,7 @@ namespace AmbientServices
 #endif
         private void OnWaitHandleSignaled(object? state, bool timedOut)
         {
-            System.Diagnostics.Debug.Assert(_clock != null);
+            Debug.Assert(_clock != null);
             // only execute once?
             if (_executeOnlyOnce)
             {
@@ -1190,11 +1184,11 @@ namespace AmbientServices
             // no period (ie. this is the only callback)?
             if (_periodStopwatchTicks == Timeout.Infinite)
             {   // cancel all further timed callbacks
-                System.Threading.Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, Timeout.Infinite);
+                Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, Timeout.Infinite);
             }
             else
             {   // schedule the next callback
-                System.Threading.Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, _clock!.Ticks + _periodStopwatchTicks);  // this function should only be called when _clock is not null
+                Interlocked.Exchange(ref _nextCallbackTimeStopwatchTicks, _clock!.Ticks + _periodStopwatchTicks);  // this function should only be called when _clock is not null
             }
             // the wait handle was signaled--we should always call the callback in this case
             _callback(_state, false);
@@ -1211,14 +1205,14 @@ namespace AmbientServices
         public void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
         {// when there is an ambient clock, events are raised ONLY when the clock changes, and we get notified here every time that happens
             // there should be a clock if we get here
-            System.Diagnostics.Debug.Assert(_clock != null);
+            Debug.Assert(_clock != null);
             // loop until we process all the scheduled callbacks
             while (_nextCallbackTimeStopwatchTicks != Timeout.Infinite && _nextCallbackTimeStopwatchTicks > oldTicks && _nextCallbackTimeStopwatchTicks <= newTicks)
             {
                 // should we reset for another period?
                 if (_periodStopwatchTicks != Timeout.Infinite)
                 {
-                    System.Threading.Interlocked.Add(ref _nextCallbackTimeStopwatchTicks, _periodStopwatchTicks);
+                    Interlocked.Add(ref _nextCallbackTimeStopwatchTicks, _periodStopwatchTicks);
                     // we may loop around again in case the event should have been raised more than once
                 }
                 else

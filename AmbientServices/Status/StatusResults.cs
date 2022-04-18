@@ -53,17 +53,11 @@ namespace AmbientServices
         /// <summary>
         /// The name of the status node property.  If the name begins with an underscore, the value contains sensitive information that should not be shared publicly, such as a user or machine name, or a network address.
         /// </summary>
-        public string Name
-        {
-            get { return _name; }
-        }
+        public string Name => _name;
         /// <summary>
         /// The value of the status node property.
         /// </summary>
-        public string Value
-        {
-            get { return _value; }
-        }
+        public string Value => _value;
 
         /// <summary>
         /// Constructs a <see cref="StatusProperty"/> with the specified name and value.
@@ -222,12 +216,12 @@ namespace AmbientServices
         /// When specified, all parent and ancestor source system identifiers are overridden and ignored.
         /// For summarization purposes, source system names for the same system should match exactly no matter what path the status data flowed through.
         /// </summary>
-        public string? SourceSystem { get { return _sourceSystem; } }
+        public string? SourceSystem => _sourceSystem;
         /// <summary>
         /// A string indicating which system performed the audit.
         /// "Localhost" when <see cref="SourceSystem"/> is null.
         /// </summary>
-        public string SourceSystemDisplayName { get { return SourceDisplayName(_sourceSystem); } }
+        public string SourceSystemDisplayName => SourceDisplayName(_sourceSystem);
         /// <summary>
         /// A string indicating which backend system, subsystem, or feature the results were gathered about.  
         /// If the string does not begin with a slash, the target system is a non-shared subsystem of the target system that is identified by the parent node (and possibly ancestor nodes).
@@ -239,43 +233,37 @@ namespace AmbientServices
         /// For example, the local disk system should be identified with something like "LocalDisk" (no leading slash) because it's a subsystem that is different from other local disk systems.
         /// A shared database system should be identified with something like "/Database" (with a leading slash) because it's not unique to the local system.
         /// </remarks>
-        public string TargetSystem { get { return _targetSystem; } }
+        public string TargetSystem => _targetSystem;
         /// <summary>
         /// A string indicating which backend system, subsystem, or feature the results were gathered about.  
         /// If <see cref="TargetSystem"/> is "/", this will be "Overall".
         /// If <see cref="TargetSystem"/> is null or empty, this will be "Unknown Target".
         /// </summary>
-        public string TargetSystemDisplayName { get { return TargetDisplayName(_targetSystem); } }
+        public string TargetSystemDisplayName => TargetDisplayName(_targetSystem);
         /// <summary>
         /// A <see cref="DateTime"/> indicating when the information was gathered (which may or may not be periodically audited and updated).
         /// </summary>
-        public DateTime Time { get { return _time; } }
+        public DateTime Time => _time;
         /// <summary>
         /// The relative detail level of the properties of this node.  
         /// Usually zero, indicating that these properties are at the same level of detail as the parent node's properties; 
         /// or one, indicating that the properties here provide just slightly more detail than the parent node's properties.
         /// May be used to filter properties at deeper level status nodes, but may be overridden by status ratings (any nodes with poor status ratings will have properties included anyway).
         /// </summary>
-        public int RelativeDetailLevel { get { return _relativeDetailLevel; } }
+        public int RelativeDetailLevel => _relativeDetailLevel;
         /// <summary>
         /// An enumeration of <see cref="StatusProperty"/> key-value pairs containing detailed information about the system.
         /// </summary>
-        public IEnumerable<StatusProperty> Properties { get { return _properties; } }
+        public IEnumerable<StatusProperty> Properties => _properties;
         /// <summary>
         /// A <see cref="StatusNatureOfSystem"/> indicating the nature of the system represented by these results for the purposes of audit result aggregation and inferring failure tolerance.
         /// </summary>
-        public StatusNatureOfSystem NatureOfSystem
-        {
-            get { return _natureOfSystem; }
-        }
+        public StatusNatureOfSystem NatureOfSystem => _natureOfSystem;
         /// <summary>
         /// An enumeration of <see cref="StatusResults"/> from child nodes which may or may not be aggregatable, depending on if they are auditable.
         /// StatusResults may have either children or a report, but never both.
         /// </summary>
-        public IEnumerable<StatusResults> Children
-        {
-            get { return _children; }
-        }
+        public IEnumerable<StatusResults> Children => _children;
         /// <summary>
         /// An optional <see cref="StatusAuditReport"/> that might contain results of an audit.
         /// Overrides any information that might be in child nodes.
@@ -283,10 +271,7 @@ namespace AmbientServices
         /// Set to the special <see cref="StatusAuditReport.Pending"/> value if the first audit is still pending, 
         /// StatusResults may have either children or a report, but never both.
         /// </summary>
-        public StatusAuditReport? Report
-        {
-            get { return _report; }
-        }
+        public StatusAuditReport? Report => _report;
 
         private static string SourceDisplayName(string? source) { return source ?? "Localhost"; }
         private static string TargetDisplayName(string? target) { return (target == "/") ? "Overall" : (string.IsNullOrEmpty(target) ? "Unknown Target" : target!); }   // string.IsNullOrEmpty ensures response is not null

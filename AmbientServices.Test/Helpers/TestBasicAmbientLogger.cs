@@ -28,19 +28,17 @@ namespace AmbientServices.Test
                     // delete any preexisting files
                     await BasicAmbientLogger.TryDeleteAllFiles(loggerImp.FilePrefix);
 
-                    using (IDisposable over = Logger.ScopedLocalOverride(loggerImp))
-                    {
-                        IAmbientLogger logger = Logger.Local;
-                        // log the first test message (this will cause the file to be created, but only *after* this message gets flushed
-                        logger?.Log("test1");
-                        Assert.AreEqual(0, TempFileCount(tempPath));
-                        if (logger != null) await logger.Flush();
-                        Assert.AreEqual(1, TempFileCount(tempPath));
-                        // log the second test message (since the clock is stopped, this will *never* create another file)
-                        logger?.Log("test2");
-                        if (logger != null) await logger.Flush();
-                        Assert.AreEqual(1, TempFileCount(tempPath));
-                    }
+                    using IDisposable over = Logger.ScopedLocalOverride(loggerImp);
+                    IAmbientLogger logger = Logger.Local;
+                    // log the first test message (this will cause the file to be created, but only *after* this message gets flushed
+                    logger?.Log("test1");
+                    Assert.AreEqual(0, TempFileCount(tempPath));
+                    if (logger != null) await logger.Flush();
+                    Assert.AreEqual(1, TempFileCount(tempPath));
+                    // log the second test message (since the clock is stopped, this will *never* create another file)
+                    logger?.Log("test2");
+                    if (logger != null) await logger.Flush();
+                    Assert.AreEqual(1, TempFileCount(tempPath));
                 }
             }
             finally
@@ -159,19 +157,17 @@ namespace AmbientServices.Test
             string tempPath = Path.GetTempPath() + Guid.NewGuid().ToString("N");
             using (AmbientClock.Pause())
             {
-                using (RotatingFileBuffer buffer = new(tempPath, "0.log", TimeSpan.Zero))
+                using RotatingFileBuffer buffer = new(tempPath, "0.log", TimeSpan.Zero);
+                buffer.Dispose();
+                Assert.ThrowsException<ObjectDisposedException>(() => buffer.BufferLine(""));
+                Assert.ThrowsException<ObjectDisposedException>(() => buffer.BufferFileRotation("1.log"));
+                try
                 {
-                    buffer.Dispose();
-                    Assert.ThrowsException<ObjectDisposedException>(() => buffer.BufferLine(""));
-                    Assert.ThrowsException<ObjectDisposedException>(() => buffer.BufferFileRotation("1.log"));
-                    try
-                    {
-                        await buffer.Flush();
-                        Assert.Fail("ObjectDisposedException expected!");
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                    }
+                    await buffer.Flush();
+                    Assert.Fail("ObjectDisposedException expected!");
+                }
+                catch (ObjectDisposedException)
+                {
                 }
             }
         }

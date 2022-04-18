@@ -195,7 +195,7 @@ namespace AmbientServices
                     if (traceData.Length > 0)
                     {
                         // trace out this string
-                        System.Diagnostics.Trace.Write(traceData.ToString());
+                        Trace.Write(traceData.ToString());
                     }
                     else
                     {
@@ -208,7 +208,7 @@ namespace AmbientServices
 #pragma warning restore CA1031 // Do not catch general exception types
                 {
                     // trace out this string
-                    System.Diagnostics.Trace.Write(ex.ToString());
+                    Trace.Write(ex.ToString());
                 }
             }
         }

@@ -90,28 +90,28 @@ namespace AmbientServices
         private double _limitUsed;                  // interlocked, zero until set by Dispose, SetUsage or AddUsage
         private double _utilization;                // interlocked, zero until set by Dispose, SetUsage or AddUsage
 
-        internal long AccessBeginStopwatchTimestamp { get { return _accessBeginStopwatchTimestamp; } }
-        internal long AccessEndStopwatchTimestamp { get { return _accessEndStopwatchTimestamp; } }
+        internal long AccessBeginStopwatchTimestamp => _accessBeginStopwatchTimestamp;
+        internal long AccessEndStopwatchTimestamp => _accessEndStopwatchTimestamp;
         /// <summary>
         /// Gets the <see cref="AmbientBottleneck"/> for the bottleneck.
         /// </summary>
-        public AmbientBottleneck Bottleneck { get { return _bottleneck; } }
+        public AmbientBottleneck Bottleneck => _bottleneck;
         /// <summary>
         /// Gets the beginning of the time range for the access.
         /// </summary>
-        public DateTime AccessBegin { get { return new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp)); } }
+        public DateTime AccessBegin => new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp));
         /// <summary>
         /// Gets the end of the time range for the access, if the access is finished.
         /// </summary>
-        public DateTime? AccessEnd { get { return (_accessEndStopwatchTimestamp >= long.MaxValue) ? (DateTime?)null : new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessEndStopwatchTimestamp)); } }
+        public DateTime? AccessEnd => (_accessEndStopwatchTimestamp >= long.MaxValue) ? null : new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessEndStopwatchTimestamp));
         /// <summary>
         /// Gets the number of times the bottleneck was accessed.  This is only statistical and is not used to compute <see cref="Utilization"/> or rank bottlenecks.
         /// </summary>
-        public long AccessCount { get { return _accessCount; } }
+        public long AccessCount => _accessCount;
         /// <summary>
         /// Gets the amount of the limit which was used.  Note that this is in units of <see cref="System.Diagnostics.Stopwatch"/> ticks.
         /// </summary>
-        public double LimitUsed { get { return _limitUsed; } }
+        public double LimitUsed => _limitUsed;
         /// <summary>
         /// Gets the utilization factor, usually between 0.0 and 1.0, where 1.0 indicates that the limit was just reached, and numbers larger than 1.0 indicate contention beyond what was possible to satisfy (similar to the average queue disk length in windows)
         /// </summary>
@@ -119,11 +119,11 @@ namespace AmbientServices
         /// This computed value is used to sort the seriousness of the usage, with larger values indicating more of a problem, ie. being closer to a system overload.
         /// The value is only updated when constructed, when <see cref="SetUsage"/> or <see cref="AddUsage"/> is called, or when disposed at the end of the access.
         /// </remarks>
-        public double Utilization { get { return _utilization; } }
+        public double Utilization => _utilization;
         /// <summary>
         /// Gets number of stopwatch ticks between the beginning and end of the access.
         /// </summary>
-        public long AccessDurationStopwatchTicks { get { return ((_accessEndStopwatchTimestamp >= long.MaxValue) ? AmbientClock.Ticks : _accessEndStopwatchTimestamp) - _accessBeginStopwatchTimestamp; } }
+        public long AccessDurationStopwatchTicks => ((_accessEndStopwatchTimestamp >= long.MaxValue) ? AmbientClock.Ticks : _accessEndStopwatchTimestamp) - _accessBeginStopwatchTimestamp;
 
         /// <summary>
         /// Constructs a single-access AmbientBottleneckAccessRecord for the specified bottleneck with access starting at the specified timestamp.

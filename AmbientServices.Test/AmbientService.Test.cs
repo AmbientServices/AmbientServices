@@ -57,7 +57,7 @@ namespace AmbientServices.Test
             int changed = 0;
             ITest updatedTest = test;
             Assert.IsNotNull(updatedTest);
-            EventHandler<EventArgs> globalChanged = (o, e) => { updatedTest = _Test.Global; ++changed; };
+            void globalChanged(object o, EventArgs e) { updatedTest = _Test.Global; ++changed; }
             _Test.GlobalChanged += globalChanged;
 
             _Test.Global = null;
@@ -109,19 +109,17 @@ namespace AmbientServices.Test
         {
             ILocalOverrideTest oldGlobal = _LocalOverrideTest.Global;
             ILocalOverrideTest oldLocalOverride = _LocalOverrideTest.Override;
-            using (ScopedLocalServiceOverride<ILocalOverrideTest> o = new(null))
-            {
-                Assert.IsNull(_LocalOverrideTest.Local);
-                Assert.AreEqual(oldGlobal, o.OldGlobal);
-                Assert.AreEqual(oldLocalOverride, o.OldOverride);
-            }
+            using ScopedLocalServiceOverride<ILocalOverrideTest> o = new(null);
+            Assert.IsNull(_LocalOverrideTest.Local);
+            Assert.AreEqual(oldGlobal, o.OldGlobal);
+            Assert.AreEqual(oldLocalOverride, o.OldOverride);
         }
         [TestMethod]
         public void TwoInterfacesOneInstance()
         {
             ITest1 test1 = _Test1.Global;
             ITest2 test2 = _Test2.Global;
-            Assert.IsTrue(Object.ReferenceEquals(test1, test2));
+            Assert.IsTrue(ReferenceEquals(test1, test2));
         }
         [TestMethod]
         public void Override()

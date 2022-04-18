@@ -207,7 +207,7 @@ class DownloadAndUnzip
         _package = new MemoryStream();
     }
 
-    public async ValueTask MainOperation(CancellationToken cancel = default(CancellationToken))
+    public async ValueTask MainOperation(CancellationToken cancel = default)
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
         using (progress?.TrackPart(0.01f, 0.75f, "Download "))
@@ -223,53 +223,45 @@ class DownloadAndUnzip
     public async ValueTask Download()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
-        CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
+        CancellationToken cancel = progress?.CancellationToken ?? default;
         HttpClient client = new HttpClient();
-        using (HttpResponseMessage response = await client.GetAsync(_downlaodUrl))
+        using HttpResponseMessage response = await client.GetAsync(_downlaodUrl);
+        long totalBytesRead = 0;
+        int bytesRead;
+        byte[] buffer = new byte[8192];
+        long contentLength = response.Content.Headers.ContentLength ?? 1000000;
+        using Stream downloadReader = await response.Content.ReadAsStreamAsync();
+        while ((bytesRead = await downloadReader.ReadAsync(buffer, 0, buffer.Length, cancel)) != 0)
         {
-            long totalBytesRead = 0;
-            int bytesRead;
-            byte[] buffer = new byte[8192];
-            long contentLength = response.Content.Headers.ContentLength ?? 1000000;
-            using (Stream downloadReader = await response.Content.ReadAsStreamAsync())
-            {
-                while ((bytesRead = await downloadReader.ReadAsync(buffer, 0, buffer.Length, cancel)) != 0)
-                {
-                    await _package.WriteAsync(buffer, 0, bytesRead, cancel);
-                    totalBytesRead += bytesRead;
-                    progress?.Update(totalBytesRead * 1.0f / contentLength);
-                }
-            }
+            await _package.WriteAsync(buffer, 0, bytesRead, cancel);
+            totalBytesRead += bytesRead;
+            progress?.Update(totalBytesRead * 1.0f / contentLength);
         }
     }
 #else
     public async ValueTask Download()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
-        CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
-        HttpWebRequest request = HttpWebRequest.CreateHttp(_downlaodUrl);
-        using (WebResponse response = request.GetResponse())
+        CancellationToken cancel = progress?.CancellationToken ?? default;
+        HttpWebRequest request = WebRequest.CreateHttp(_downlaodUrl);
+        using WebResponse response = request.GetResponse();
+        long totalBytesRead = 0;
+        int bytesRead;
+        long totalBytes = response.ContentLength;
+        byte[] buffer = new byte[8192];
+        using Stream downloadReader = response.GetResponseStream();
+        while ((bytesRead = await downloadReader.ReadAsync(buffer, 0, buffer.Length, cancel)) != 0)
         {
-            long totalBytesRead = 0;
-            int bytesRead;
-            long totalBytes = response.ContentLength;
-            byte[] buffer = new byte[8192];
-            using (Stream downloadReader = response.GetResponseStream())
-            {
-                while ((bytesRead = await downloadReader.ReadAsync(buffer, 0, buffer.Length, cancel)) != 0)
-                {
-                    await _package.WriteAsync(buffer, 0, bytesRead, cancel);
-                    totalBytesRead += bytesRead;
-                    progress?.Update(totalBytesRead * 1.0f / totalBytes);
-                }
-            }
+            await _package.WriteAsync(buffer, 0, bytesRead, cancel);
+            totalBytesRead += bytesRead;
+            progress?.Update(totalBytesRead * 1.0f / totalBytes);
         }
     }
 #endif
     public ValueTask Unzip()
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
-        CancellationToken cancel = progress?.CancellationToken ?? default(CancellationToken);
+        CancellationToken cancel = progress?.CancellationToken ?? default;
 
         ZipArchive archive = new ZipArchive(_package);
         int entries = archive.Entries.Count;
@@ -280,7 +272,7 @@ class DownloadAndUnzip
             progress?.Update(entry * 1.0f / entries, archiveEntry.FullName);
             archiveEntry.ExtractToFile(Path.Combine(_targetFolder, archiveEntry.FullName));
         }
-        return default(ValueTask);
+        return default;
     }
 }
 ```
@@ -429,7 +421,7 @@ class BufferPool
             _bufferBytes = bufferBytes;
             _bag = new ConcurrentBag<byte[]>();
         }
-        public int BufferBytes { get { return _bufferBytes; } }
+        public int BufferBytes => _bufferBytes;
         public byte[] GetBuffer(int bytes)
         {
             if (bytes < _bufferBytes)
@@ -538,7 +530,7 @@ class BasicAmbientCallStack : IAmbientCallStack
         return new CallStackEntry(stack);
     }
 
-    public IEnumerable<string> Entries { get { return GetStack(); } }
+    public IEnumerable<string> Entries => GetStack();
 
     class CallStackEntry : IDisposable
     {
@@ -732,27 +724,27 @@ public class RequestType
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the number of pending requests.
     /// </summary>
-    public IAmbientStatistic? PendingRequests { get { return _pendingRequests; } }
+    public IAmbientStatistic? PendingRequests => _pendingRequests;
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of requests.
     /// </summary>
-    public IAmbientStatistic? TotalRequests { get { return _totalRequests; } }
+    public IAmbientStatistic? TotalRequests => _totalRequests;
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total processing time.
     /// </summary>
-    public IAmbientStatistic? TotalProcessingTime { get { return _totalProcessingTime; } }
+    public IAmbientStatistic? TotalProcessingTime => _totalProcessingTime;
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of retries.
     /// </summary>
-    public IAmbientStatistic? Retries { get { return _retries; } }
+    public IAmbientStatistic? Retries => _retries;
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of failures.
     /// </summary>
-    public IAmbientStatistic? Failures { get { return _failures; } }
+    public IAmbientStatistic? Failures => _failures;
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of timeouts.
     /// </summary>
-    public IAmbientStatistic? Timeouts { get { return _timeouts; } }
+    public IAmbientStatistic? Timeouts => _timeouts;
 }
 /// <summary>
 /// A request tracking object.
@@ -908,7 +900,7 @@ class SqlAccessor
     /// <returns>A <see cref="SqlCommand"/> for this connection.</returns>
     public SqlCommand CreateCommand() { return _connection.CreateCommand(); }
 
-    private async Task<T> ExecuteAsync<T>(SqlCommand command, Func<CancellationToken, Task<T>> f, string? table = null, CancellationToken cancel = default(CancellationToken))
+    private async Task<T> ExecuteAsync<T>(SqlCommand command, Func<CancellationToken, Task<T>> f, string? table = null, CancellationToken cancel = default)
     {
         string systemId = _systemIdPrefix + (string.IsNullOrEmpty(table) ? "" : $"/Table:{table}");
         T ret;
@@ -931,19 +923,19 @@ class SqlAccessor
         return ret;
     }
 
-    public async ValueTask<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    public async ValueTask<int> ExecuteNonQueryAsync(SqlCommand command, CancellationToken cancel = default, string? table = null)
     {
         return await ExecuteAsync<int>(command, command.ExecuteNonQueryAsync, table, cancel);
     }
-    public async ValueTask<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    public async ValueTask<SqlDataReader> ExecuteReaderAsync(SqlCommand command, CancellationToken cancel = default, string? table = null)
     {
         return await ExecuteAsync<SqlDataReader>(command, command.ExecuteReaderAsync, table, cancel);
     }
-    public async ValueTask<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    public async ValueTask<object> ExecuteScalarAsync(SqlCommand command, CancellationToken cancel = default, string? table = null)
     {
         return await ExecuteAsync<object>(command, command.ExecuteScalarAsync, table, cancel);
     }
-    public async ValueTask<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default(CancellationToken), string? table = null)
+    public async ValueTask<XmlReader> ExecuteXmlReaderAsync(SqlCommand command, CancellationToken cancel = default, string? table = null)
     {
         return await ExecuteAsync<XmlReader>(command, command.ExecuteXmlReaderAsync, table, cancel);
     }
@@ -973,20 +965,14 @@ class ProfileReporter
         {
             serviceProfile.Add(record.Group, record.TotalStopwatchTicksUsed);
         }
-        System.Threading.Interlocked.Exchange(ref _mostRecentWindowServiceProfile, serviceProfile);
+        Interlocked.Exchange(ref _mostRecentWindowServiceProfile, serviceProfile);
         return Task.CompletedTask;
     }
 
     /// <summary>
     /// Gets a dictionary containing the service profile for the most recent time window.
     /// </summary>
-    public Dictionary<string, long>? RecentProfile
-    {
-        get
-        {
-            return _mostRecentWindowServiceProfile;
-        }
-    }
+    public Dictionary<string, long>? RecentProfile => _mostRecentWindowServiceProfile;
 }
 ```
 
@@ -1135,20 +1121,14 @@ class BottleneckReporter
         {
             mostRecentWindowTopBottlenecks.Add(record.Bottleneck.Id, record.Utilization);
         }
-        System.Threading.Interlocked.Exchange(ref _mostRecentWindowTopBottlenecks, mostRecentWindowTopBottlenecks);
+        Interlocked.Exchange(ref _mostRecentWindowTopBottlenecks, mostRecentWindowTopBottlenecks);
         return Task.CompletedTask;
     }
 
     /// <summary>
     /// Gets a dictionary containing the top 10 bottlenecks with their overall utilization for the most recent time window.
     /// </summary>
-    public Dictionary<string, double>? RecentBottleneckSummary
-    {
-        get
-        {
-            return _mostRecentWindowTopBottlenecks;
-        }
-    }
+    public Dictionary<string, double>? RecentBottleneckSummary => _mostRecentWindowTopBottlenecks;
 }
 ```
 
@@ -1318,14 +1298,12 @@ class DiskAuditor
                     AmbientStopwatch s = AmbientStopwatch.StartNew();
                     try
                     {
-                        using (FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096))
-                        {
-                            byte[] b = new byte[1];
-                            await fs.WriteAsync(b, 0, 1);
-                            await fs.FlushAsync();
-                            writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
-                            writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
-                        }
+                        using FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096);
+                        byte[] b = new byte[1];
+                        await fs.WriteAsync(b, 0, 1);
+                        await fs.FlushAsync();
+                        writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                        writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
                     }
                     catch (Exception e)
                     {
@@ -1370,7 +1348,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
     /// </summary>
     public LocalDiskAuditor() : base ("/LocalDisk", TimeSpan.FromMinutes(15))
     {
-        string tempPath = System.IO.Path.GetTempPath()!;
+        string tempPath = Path.GetTempPath()!;
         string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
         if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
         if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /

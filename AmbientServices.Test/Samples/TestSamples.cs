@@ -35,7 +35,7 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public void DiskInformation()
         {
-            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempPath = Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
@@ -52,7 +52,7 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public void GetTempPathRoot()
         {
-            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempPath = Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
@@ -64,7 +64,7 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public void DiskAuditorTempSetup()
         {
-            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempPath = Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
@@ -77,7 +77,7 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public void TempDiskAuditorEmulateMetadata()
         {
-            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempPath = Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
@@ -97,7 +97,7 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public void TempDiskAuditorEmulateEnumerate()
         {
-            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempPath = Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
@@ -128,7 +128,7 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public async Task TempDiskAuditorEmulateWrite()
         {
-            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempPath = Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
@@ -141,14 +141,12 @@ namespace AmbientServices.Test.Samples
                 // attempt to write a temporary file
                 string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
                 AmbientStopwatch s = AmbientStopwatch.StartNew();
-                using (FileStream fs = new(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose))
-                {
-                    byte[] b = new byte[1];
-                    await fs.WriteAsync(b, 0, 1);
-                    await fs.FlushAsync();
-                    writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
-                    writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
-                }
+                using FileStream fs = new(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
+                byte[] b = new byte[1];
+                await fs.WriteAsync(b, 0, 1);
+                await fs.FlushAsync();
+                writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+                writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
             }
             catch (Exception e)
             {
@@ -161,7 +159,7 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public async Task DiskAuditorTempReadWrite()
         {
-            string tempPath = System.IO.Path.GetTempPath()!;
+            string tempPath = Path.GetTempPath()!;
             string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
             if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
             if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /

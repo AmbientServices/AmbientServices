@@ -103,10 +103,7 @@ namespace AmbientServices
         /// Defaults to null, but should almost always be set to a non-empty string.
         /// Null should only be used to indicate that this node is not related to any specific target system, which would probably only happen if <see cref="NatureOfSystem"/> this, parent, and child nodes is such that some kind of special grouping is needed to make the overall status rating computation work correctly and the target system identifier for child nodes makes more sense without any identifier at this level.
         /// </remarks>
-        public string? TargetSystem
-        {
-            get { return _targetSystem; }
-        }
+        public string? TargetSystem => _targetSystem;
         /// <summary>
         /// Gets or sets the audit start time for this node.  Defaults to the time the constuctor was called.
         /// </summary>
@@ -154,17 +151,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the worst rated <see cref="StatusAuditAlert"/> that has been reported so far.
         /// </summary>
-        public StatusAuditAlert? WorstAlert
-        {
-            get { return _worstAlert; }
-        }
+        public StatusAuditAlert? WorstAlert => _worstAlert;
         /// <summary>
         /// Gets the elapsed time since the audit start time.
         /// </summary>
-        public TimeSpan Elapsed
-        {
-            get { return AmbientClock.UtcNow - _auditStartTime; }
-        }
+        public TimeSpan Elapsed => AmbientClock.UtcNow - _auditStartTime;
 
         /// <summary>
         /// Gets the final <see cref="StatusResults"/> generated from the results builder.

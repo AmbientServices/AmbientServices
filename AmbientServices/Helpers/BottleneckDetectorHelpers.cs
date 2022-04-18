@@ -136,10 +136,10 @@ namespace AmbientServices
         {
             _defaultAllowSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultAllow",
                 @"A `Regex` string used to match bottleneck identifiers that should be tracked.  By default, all bottlenecks are allowed.",
-                s => string.IsNullOrEmpty(s) ? (Regex?)null : new Regex(s, RegexOptions.Compiled));
+                s => string.IsNullOrEmpty(s) ? null : new Regex(s, RegexOptions.Compiled));
             _defaultBlockSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, nameof(AmbientBottleneckSurveyorCoordinator) + "-DefaultBlock",
                 @"A `Regex` string used to match bottleneck identifiers that should NOT be tracked.  By default, no bottlenecks are blocked.",
-                s => string.IsNullOrEmpty(s) ? (Regex?)null : new Regex(s, RegexOptions.Compiled));
+                s => string.IsNullOrEmpty(s) ? null : new Regex(s, RegexOptions.Compiled));
             _bottleneckDetector = _AmbientBottleneckDetector.Local;
             _callContextSurveyor = new CallContextSurveyManager(_bottleneckDetector);
             _threadSurveyor = new ThreadSurveyManager(_bottleneckDetector);

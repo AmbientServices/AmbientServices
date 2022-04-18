@@ -15,7 +15,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets an enumeration of <see cref="IAmbientSettingInfo"/> with descriptions and the last time used for all ambient settings.
         /// </summary>
-        public static IEnumerable<IAmbientSettingInfo> AmbientSettingsInfo { get { return SettingsRegistry.DefaultRegistry.Settings; } }
+        public static IEnumerable<IAmbientSettingInfo> AmbientSettingsInfo => SettingsRegistry.DefaultRegistry.Settings;
         /// <summary>
         /// Construct a setting instance.  
         /// If a non-null settings set is specified, the setting will be attached to that, otherwise the ambient settings set will be used.
@@ -28,7 +28,7 @@ namespace AmbientServices
         /// <param name="defaultValueString">The default string value for the setting.  This will be converted for the current value if the setting is not set.  Defaults to empty string.</param>
         public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsSet? settingsSet, string key, string description, Func<string, T> convert, string defaultValueString = "")
         {
-            return (settingsSet == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, convert, defaultValueString) : (IAmbientSetting<T>)GetSettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
+            return (settingsSet == null) ? GetAmbientSetting<T>(key, description, convert, defaultValueString) : GetSettingsSetSetting<T>(settingsSet, key, description, convert, defaultValueString);
         }
         /// <summary>
         /// Construct a setting instance.  
@@ -42,7 +42,7 @@ namespace AmbientServices
         /// <param name="convert">A delegate that takes a string and returns the type.</param>
         public static IAmbientSetting<T> GetSetting<T>(IAmbientSettingsSet? settingsSet, string key, string description, T defaultValue, Func<string, T> convert)
         {
-            return (settingsSet == null) ? (IAmbientSetting<T>)GetAmbientSetting<T>(key, description, defaultValue, convert) : (IAmbientSetting<T>)GetSettingsSetSetting<T>(settingsSet, key, description, defaultValue, convert);
+            return (settingsSet == null) ? GetAmbientSetting<T>(key, description, defaultValue, convert) : GetSettingsSetSetting<T>(settingsSet, key, description, defaultValue, convert);
         }
         /// <summary>
         /// Construct a setting instance that uses a specific settings set and caches the setting with the specified key, converting it from a string using the specified delegate.
@@ -153,7 +153,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the default registry.
         /// </summary>
-        public static SettingsRegistry DefaultRegistry { get { return _DefaultRegistry; } }
+        public static SettingsRegistry DefaultRegistry => _DefaultRegistry;
 
 
         private ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new();
@@ -269,7 +269,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the singleton instance of <see cref="DefaultSettingsSet"/>.
         /// </summary>
-        public static DefaultSettingsSet Instance { get { return _Instance; } }
+        public static DefaultSettingsSet Instance => _Instance;
 
         private DefaultSettingsSet()
         {
@@ -343,15 +343,15 @@ namespace AmbientServices
         /// <summary>
         /// Gets the setting key.
         /// </summary>
-        public string Key { get { return _key; } }
+        public string Key => _key;
         /// <summary>
         /// Gets a description of the setting.
         /// </summary>
-        public string Description { get { return _description; } }
+        public string Description => _description;
         /// <summary>
         /// Gets the last time the setting's value was retrieved.
         /// </summary>
-        public DateTime LastUsed { get { return new DateTime(_lastUsedTicks); } }
+        public DateTime LastUsed => new DateTime(_lastUsedTicks);
         /// <summary>
         /// Gets the default value for the setting.
         /// </summary>
@@ -527,7 +527,7 @@ namespace AmbientServices
         }
 
         public AmbientSetting(string key, string description, T defaultValue, Func<string, T> convert)
-            : base((IAmbientSettingsSet?)null, key, description, defaultValue, convert)
+            : base(null, key, description, defaultValue, convert)
         {
         }
 

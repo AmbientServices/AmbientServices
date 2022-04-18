@@ -25,16 +25,16 @@ namespace AmbientServices
         /// <summary>
         /// Gets a multithreaded context to use for spawning tasks to the multithreaded context from within a synchronous context.
         /// </summary>
-        public static System.Threading.SynchronizationContext MultithreadedContext { get { return sMultithreadedContext; } }
+        public static System.Threading.SynchronizationContext MultithreadedContext => sMultithreadedContext;
         /// <summary>
         /// Gets the single threaded context to use for spawning tasks to be run on the current thread.
         /// </summary>
-        public static System.Threading.SynchronizationContext SinglethreadedContext { get { return SynchronousSynchronizationContext.Default; } }
+        public static System.Threading.SynchronizationContext SinglethreadedContext => SynchronousSynchronizationContext.Default;
 
         /// <summary>
         /// Gets whether or not the current context is using synchronous execution.
         /// </summary>
-        public static bool UsingSynchronousExecution { get { return System.Threading.SynchronizationContext.Current == SynchronousSynchronizationContext.Default; } }
+        public static bool UsingSynchronousExecution => SynchronizationContext.Current == SynchronousSynchronizationContext.Default;
 
         private static void RunIfNeeded(Task task)
         {
@@ -82,10 +82,10 @@ namespace AmbientServices
 
         private static void RunInTemporaryContextWithExceptionConversion(SynchronizationContext newContext, Action a)
         {
-            System.Threading.SynchronizationContext? oldContext = System.Threading.SynchronizationContext.Current;
+            System.Threading.SynchronizationContext? oldContext = SynchronizationContext.Current;
             try
             {
-                System.Threading.SynchronizationContext.SetSynchronizationContext(newContext);
+                SynchronizationContext.SetSynchronizationContext(newContext);
                 a();
             }
             catch (AggregateException ex)
@@ -95,15 +95,15 @@ namespace AmbientServices
             }
             finally
             {
-                System.Threading.SynchronizationContext.SetSynchronizationContext(oldContext);
+                SynchronizationContext.SetSynchronizationContext(oldContext);
             }
         }
         private static T RunInTemporaryContextWithExceptionConversion<T>(SynchronizationContext newContext, Func<T> a)
         {
-            System.Threading.SynchronizationContext? oldContext = System.Threading.SynchronizationContext.Current;
+            System.Threading.SynchronizationContext? oldContext = SynchronizationContext.Current;
             try
             {
-                System.Threading.SynchronizationContext.SetSynchronizationContext(newContext);
+                SynchronizationContext.SetSynchronizationContext(newContext);
                 return a();
             }
             catch (AggregateException ex)
@@ -113,7 +113,7 @@ namespace AmbientServices
             }
             finally
             {
-                System.Threading.SynchronizationContext.SetSynchronizationContext(oldContext);
+                SynchronizationContext.SetSynchronizationContext(oldContext);
             }
         }
 
@@ -127,11 +127,9 @@ namespace AmbientServices
         {
             RunInTemporaryContextWithExceptionConversion(SynchronousSynchronizationContext.Default, () =>
             {
-                using (Task task = a())
-                {
-                    RunIfNeeded(task);
-                    task.WaitAndUnwrapException(true);
-                }
+                using Task task = a();
+                RunIfNeeded(task);
+                task.WaitAndUnwrapException(true);
             });
         }
         /// <summary>
@@ -141,7 +139,7 @@ namespace AmbientServices
         [DebuggerStepThrough]
         public static Task Run(Func<Task> a)
         {
-            if (System.Threading.SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
+            if (SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
             {
                 return ForceSync(a);
             }
@@ -196,11 +194,9 @@ namespace AmbientServices
         {
             return RunInTemporaryContextWithExceptionConversion(SynchronousSynchronizationContext.Default, () =>
             {
-                using (Task<T> task = a())
-                {
-                    RunIfNeeded(task);
-                    return task.WaitAndUnwrapException(true);
-                }
+                using Task<T> task = a();
+                RunIfNeeded(task);
+                return task.WaitAndUnwrapException(true);
             });
         }
         /// <summary>
@@ -210,7 +206,7 @@ namespace AmbientServices
         [DebuggerStepThrough]
         public static Task<T> Run<T>(Func<Task<T>> a)
         {
-            if (System.Threading.SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
+            if (SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
             {
                 return ForceSync(a);
             }
@@ -229,12 +225,10 @@ namespace AmbientServices
         {
             return RunInTemporaryContextWithExceptionConversion(SynchronousSynchronizationContext.Default, () =>
             {
-                using (Task<T> task = a()) // the task should be created here by the delegate and should be started using the ambient synchronization context, which is now the sync one
-                {
-                    RunIfNeeded(task);
-                    T result = task.WaitAndUnwrapException(true);
-                    return Task.FromResult(result);
-                }
+                using Task<T> task = a(); // the task should be created here by the delegate and should be started using the ambient synchronization context, which is now the sync one
+                RunIfNeeded(task);
+                T result = task.WaitAndUnwrapException(true);
+                return Task.FromResult(result);
             });
         }
         /// <summary>
@@ -308,7 +302,7 @@ namespace AmbientServices
         [DebuggerStepThrough]
         public static ValueTask<T> Run<T>(Func<ValueTask<T>> a)
         {
-            if (System.Threading.SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
+            if (SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
             {
                 return ForceSync(a);
             }
@@ -373,7 +367,7 @@ namespace AmbientServices
         [DebuggerStepThrough]
         public static ValueTask RunValue(Func<ValueTask> a)
         {
-            if (System.Threading.SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
+            if (SynchronizationContext.Current == SynchronousSynchronizationContext.Default)
             {
                 return ForceSync(a);
             }
@@ -427,13 +421,13 @@ namespace AmbientServices
             IAsyncEnumerator<T> e = asyncEnumerable.GetAsyncEnumerator(cancel);
             try
             {
-                while (await Async.Run(() => e.MoveNextAsync()))
+                while (await Run(() => e.MoveNextAsync()))
                 {
                     cancel.ThrowIfCancellationRequested();
                     action(e.Current);
                 }
             }
-            finally { if (e != null) await Async.RunValue(() => e.DisposeAsync()); }
+            finally { if (e != null) await RunValue(() => e.DisposeAsync()); }
         }
         /// <summary>
         /// Iterates through the specified async enumerable using the ambient synchronicity and an asynchronous delegate.
@@ -443,7 +437,7 @@ namespace AmbientServices
         /// <param name="func">The async action to perform on each enumerated item.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> that may be used to interrupt the enumeration.</param>
         /// <returns>A <see cref="ValueTask"/> for the iteration.</returns>
-        /// <exception cref="ArgumentNullException">If <paramref name="asyncEnumerable"/> or <paramref name="action"/> are null.</exception>
+        /// <exception cref="ArgumentNullException">If <paramref name="asyncEnumerable"/> or <paramref name="func"/> are null.</exception>
         [DebuggerStepThrough]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2007:Consider calling ConfigureAwait on the awaited task", Justification = "The ConfigureAwait stuff is handled in Run")]
         public static async ValueTask AwaitForEach<T>(IAsyncEnumerable<T> asyncEnumerable, Func<T, CancellationToken, ValueTask> func, CancellationToken cancel = default)
@@ -453,13 +447,13 @@ namespace AmbientServices
             IAsyncEnumerator<T> e = asyncEnumerable.GetAsyncEnumerator(cancel);
             try
             {
-                while (await Async.Run(() => e.MoveNextAsync()))
+                while (await Run(() => e.MoveNextAsync()))
                 {
                     cancel.ThrowIfCancellationRequested();
-                    await Async.RunValue(() => func(e.Current, cancel));
+                    await RunValue(() => func(e.Current, cancel));
                 }
             }
-            finally { if (e != null) await Async.RunValue(() => e.DisposeAsync()); }
+            finally { if (e != null) await RunValue(() => e.DisposeAsync()); }
         }
 #endif
     }
@@ -532,7 +526,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the default instance for this singleton class.
         /// </summary>
-        public static new SynchronousTaskScheduler Default { get { return _Default; } }
+        public static new SynchronousTaskScheduler Default => _Default;
 
         private SynchronousTaskScheduler()
         {
@@ -553,7 +547,7 @@ namespace AmbientServices
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage] //  (no way to call externally, and I can't find a way to call it indirectly).
         protected override void QueueTask(Task task)
         {
-            base.TryExecuteTask(task);
+            TryExecuteTask(task);
         }
         /// <summary>
         /// Attempts to execute the specified task inline, which just runs the task.
@@ -564,12 +558,12 @@ namespace AmbientServices
         [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage] //  (no way to call externally, and I can't find a way to call it indirectly).
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
         {
-            return base.TryExecuteTask(task);
+            return TryExecuteTask(task);
         }
         /// <summary>
         /// Gets the maximum number of tasks that can be concurrently running under this scheduler, which is one.
         /// </summary>
-        public override int MaximumConcurrencyLevel { get { return 1; } }
+        public override int MaximumConcurrencyLevel => 1;
     }
 
     /// <summary>
@@ -581,11 +575,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the instance for this singleton class.
         /// </summary>
-        public static SynchronousSynchronizationContext Default { get { return _Default; } }
+        public static SynchronousSynchronizationContext Default => _Default;
 
         private SynchronousSynchronizationContext()
         {
-            base.SetWaitNotificationRequired();
+            SetWaitNotificationRequired();
         }
 
         /// <summary>

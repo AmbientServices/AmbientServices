@@ -146,27 +146,15 @@ namespace AmbientServices
         {
             _cancelSource.Token.ThrowIfCancellationRequested();
         }
-        public CancellationToken CancellationToken
-        {
-            get { return _cancelSource.Token; }
-        }
-        public AmbientCancellationTokenSource CancellationTokenSource
-        {
-            get { return _cancelSource; }
-        }
-        public float PortionComplete
-        {
-            get => _portionComplete;
-        }
-        public string ItemCurrentlyBeingProcessed
-        {
-            get => _currentItem;
-        }
+        public CancellationToken CancellationToken => _cancelSource.Token;
+        public AmbientCancellationTokenSource CancellationTokenSource => _cancelSource;
+        public float PortionComplete => _portionComplete;
+        public string ItemCurrentlyBeingProcessed => _currentItem;
         public void Update(float portionComplete, string? itemCurrentlyBeingProcessed = null)
         {
             if (portionComplete < 0.0 || portionComplete > 1.0) throw new ArgumentOutOfRangeException(nameof(portionComplete), "The portion complete must be between 0.0 and 1.0, inclusive!");
-            System.Threading.Interlocked.Exchange(ref _portionComplete, portionComplete);
-            if (itemCurrentlyBeingProcessed != null) System.Threading.Interlocked.Exchange(ref _currentItem, itemCurrentlyBeingProcessed);
+            Interlocked.Exchange(ref _portionComplete, portionComplete);
+            if (itemCurrentlyBeingProcessed != null) Interlocked.Exchange(ref _currentItem, itemCurrentlyBeingProcessed);
             _parentProgress?.Update(_startPortion + _portionPart * portionComplete, _prefix + itemCurrentlyBeingProcessed);
         }
         public IDisposable TrackPart(float startPortion, float portionPart, string? prefix = null, bool inheritCancellationTokenSource = false)
@@ -187,7 +175,7 @@ namespace AmbientServices
                 _cancelSource.Dispose();   // note that this will cancel any associated tokens!
             }
         }
-        internal bool Disposed { get { return _disposed; } }
-        internal IAmbientProgress? Parent { get { return _parentProgress; } }
+        internal bool Disposed => _disposed;
+        internal IAmbientProgress? Parent => _parentProgress;
     }
 }

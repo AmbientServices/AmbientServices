@@ -80,20 +80,20 @@ namespace AmbientServices.Test
 
             IEnumerable<StackFrame> filtered;
             
-            filtered = AmbientServices.FilteredStackTrace.FilterFrames(Array.Empty<StackFrame>());
+            filtered = FilteredStackTrace.FilterFrames(Array.Empty<StackFrame>());
             Assert.AreEqual(0, filtered.Count());
 
-            filtered = AmbientServices.FilteredStackTrace.FilterFrames(new StackFrame[1] { new FilteredStackTrace().GetFrames().FirstOrDefault()! });
+            filtered = FilteredStackTrace.FilterFrames(new StackFrame[1] { new FilteredStackTrace().GetFrames().FirstOrDefault()! });
             Assert.AreEqual(1, filtered.Count());
 
-            Assert.AreEqual("", AmbientServices.FilteredStackTrace.EraseSourcePath(null!));
-            Assert.AreEqual("", AmbientServices.FilteredStackTrace.EraseSourcePath(""));
+            Assert.AreEqual("", FilteredStackTrace.EraseSourcePath(null!));
+            Assert.AreEqual("", FilteredStackTrace.EraseSourcePath(""));
         }
         private void Subfunction(int parentStackFrames)
         {
             Assert.AreEqual(parentStackFrames + 1, new FilteredStackTrace().FrameCount);
 
-            IEnumerable<StackFrame> filtered = AmbientServices.FilteredStackTrace.FilterFrames(new FilteredStackTrace().GetFrames().Where(f => f != null)!);  // we filter null frames at runtime
+            IEnumerable<StackFrame> filtered = FilteredStackTrace.FilterFrames(new FilteredStackTrace().GetFrames().Where(f => f != null)!);  // we filter null frames at runtime
             Assert.IsTrue(filtered.Count() > 1);
         }
         [TestMethod]

@@ -130,7 +130,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the number of frames in the stack trace.
         /// </summary>
-        public override int FrameCount { get { return _filteredFrames.Value.Length; } }
+        public override int FrameCount => _filteredFrames.Value.Length;
         /// <summary>
         /// Gets the specified stack frame.
         /// </summary>
@@ -305,7 +305,7 @@ namespace AmbientServices
                     filename = filename.Substring(sourcePathToErase.Length + 1);
                 }
             }
-            return filename.TrimStart(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            return filename.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
         /// <summary>
         /// Erases any configured namespaces from the specified namespace-qualified method name.
@@ -329,7 +329,7 @@ namespace AmbientServices
         {
             ConcurrentHashSet<string> dict = new();
             string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(1, 1);
-            if (projectPath != null && !string.IsNullOrEmpty(projectPath) && (projectPath.Contains(System.IO.Path.DirectorySeparatorChar, StringComparison.Ordinal) || projectPath.Contains(System.IO.Path.AltDirectorySeparatorChar, StringComparison.Ordinal)))
+            if (projectPath != null && !string.IsNullOrEmpty(projectPath) && (projectPath.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal) || projectPath.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal)))
             {
                 // suppress the folder for the project folder so we get the project folder name in the output
                 dict.Add(projectPath);
@@ -363,7 +363,7 @@ namespace AmbientServices
         /// <param name="subfolders">The number of subfolders the calling code's source module is in, with zero meaning the calling source module is in the root of the project.</param>
         public static void EraseCallingSourcePath(int subfolders = 0)
         {
-            string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(subfolders, 1)?.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(subfolders, 1)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             if (projectPath != null && !string.IsNullOrEmpty(projectPath)) _SourcePathsToErase.Add(projectPath);
         }
         /// <summary>

@@ -24,24 +24,12 @@ namespace AmbientServices
         /// Gets a thread-safe non-repeating seed to initialize a <see cref="Pseudorandom"/>, attempting to avoid using the same seed as much as possible.
         /// Uses timing information including the high frequency performance counter from <see cref="System.Diagnostics.Stopwatch"/> to get increase the randomness of the seed.
         /// </summary>
-        private static ulong NextGlobalSeed
-        {
-            get
-            {
-                return (ulong)((_startTickCount + _stopwatch.ElapsedTicks) ^ System.Threading.Interlocked.Increment(ref _rotator));   // note that, yes, the stopwatch ticks are in different units than the environment ticks they're being added to, but we don't care about that here
-            }
-        }
+        private static ulong NextGlobalSeed => (ulong)((_startTickCount + _stopwatch.ElapsedTicks) ^ System.Threading.Interlocked.Increment(ref _rotator));   // note that, yes, the stopwatch ticks are in different units than the environment ticks they're being added to, but we don't care about that here
         /// <summary>
         /// Gets a new <see cref="Pseudorandom"/> using a thread-safe seed generator.
         /// Because <see cref="Pseudorandom"/> is a value type, even getting a single random number through this property is efficient.
         /// </summary>
-        public static Pseudorandom Next
-        {
-            get
-            {
-                return new Pseudorandom((int)NextGlobalSeed);
-            }
-        }
+        public static Pseudorandom Next => new Pseudorandom((int)NextGlobalSeed);
 
         private ulong _seed;
 
@@ -108,23 +96,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the next <see cref="long"/> based on the current seed.  Note that this may return a negative number.  Values will be roughly evenly distributed across all possible signed <see cref="long"/> values.
         /// </summary>
-        public long NextInt64Signed
-        {
-            get
-            {
-                return (long)NextUInt64 * NextSignMultiplier;
-            }
-        }
+        public long NextInt64Signed => (long)NextUInt64 * NextSignMultiplier;
         /// <summary>
         /// Gets the next positive <see cref="long"/> based on the current seed.  Values will be roughly evenly distributed across all non-negative <see cref="long"/> values.
         /// </summary>
-        public long NextInt64
-        {
-            get
-            {
-                return (long)(NextUInt64 & 0x7fffffffffffffff);
-            }
-        }
+        public long NextInt64 => (long)(NextUInt64 & 0x7fffffffffffffff);
         /// <summary>
         /// Gets the next positive <see cref="long"/> based on the current seed.  Values will be roughly evenly distributed across the full range of possible values, between zero and <paramref name="maxValue"/>.
         /// </summary>
@@ -168,23 +144,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the next <see cref="int"/> based on the current seed.  Note that this may return a negative number.  Values will be roughly evenly distributed across all possible signed <see cref="int"/> values.
         /// </summary>
-        public int NextInt32Signed
-        {
-            get
-            {
-                return (int)NextUInt32 * NextSignMultiplier;
-            }
-        }
+        public int NextInt32Signed => (int)NextUInt32 * NextSignMultiplier;
         /// <summary>
         /// Gets the next positive <see cref="int"/> based on the current seed.  Values will be roughly evenly distributed across all non-negative <see cref="int"/> values.
         /// </summary>
-        public int NextInt32
-        {
-            get
-            {
-                return (int)(NextUInt32 & 0x7fffffff);
-            }
-        }
+        public int NextInt32 => (int)(NextUInt32 & 0x7fffffff);
         /// <summary>
         /// Gets the next positive <see cref="int"/> based on the current seed.  Values will be roughly evenly distributed across the full range of possible values, between zero and <paramref name="maxValue"/>.
         /// </summary>
@@ -239,33 +203,15 @@ namespace AmbientServices
         /// Gets a random <see cref="uint"/> that is usually small.  All <see cref="uint"/> values are possible, but smaller values will be returned much more frequently.
         /// </summary>
         [CLSCompliant(false)]
-        public uint NextUInt32UsuallySmall
-        {
-            get
-            {
-                return NextUInt32RangedUsuallySmall(uint.MaxValue);
-            }
-        }
+        public uint NextUInt32UsuallySmall => NextUInt32RangedUsuallySmall(uint.MaxValue);
         /// <summary>
         /// Gets a random <see cref="int"/> that is usually small.  All non-negative <see cref="int"/> values are possible, but smaller values will be returned much more frequently.
         /// </summary>
-        public int NextInt32UsuallySmall
-        {
-            get
-            {
-                return NextInt32RangedUsuallySmall(int.MaxValue);
-            }
-        }
+        public int NextInt32UsuallySmall => NextInt32RangedUsuallySmall(int.MaxValue);
         /// <summary>
         /// Gets a random signed <see cref="int"/> that is usually small.  All <see cref="int"/> values are possible, but values closer to zero will be returned much more frequently.
         /// </summary>
-        public int NextInt32SignedUsuallySmall
-        {
-            get
-            {
-                return NextInt32SignedRangedUsuallySmall(int.MinValue, int.MaxValue, 8);
-            }
-        }
+        public int NextInt32SignedUsuallySmall => NextInt32SignedRangedUsuallySmall(int.MinValue, int.MaxValue, 8);
         /// <summary>
         /// Gets a random <see cref="uint"/> that is usually small.  All <see cref="uint"/> values up to <paramref name="upperLimit"/> are possible, but smaller values will be returned much more frequently.
         /// </summary>
@@ -279,7 +225,7 @@ namespace AmbientServices
             uint maxDivisor = (1U << iterations);
             uint divisor = (iterations > 31) ? int.MaxValue : (1U + (baseAdjuster % maxDivisor));
             ushort downShift = (ushort)(baseAdjuster % (iterations));
-            uint baseNumber = NextUInt32Ranged(0, (uint)(upperLimit >> downShift));
+            uint baseNumber = NextUInt32Ranged(0, upperLimit >> downShift);
             return baseNumber / divisor;
         }
         /// <summary>
@@ -352,33 +298,15 @@ namespace AmbientServices
         /// Gets a random <see cref="ulong"/> that is usually small.  All <see cref="ulong"/> values are possible, but smaller values will be returned much more frequently.
         /// </summary>
         [CLSCompliant(false)]
-        public ulong NextUInt64UsuallySmall
-        {
-            get
-            {
-                return NextUInt64RangedUsuallySmall(ulong.MaxValue);
-            }
-        }
+        public ulong NextUInt64UsuallySmall => NextUInt64RangedUsuallySmall(ulong.MaxValue);
         /// <summary>
         /// Gets a random <see cref="long"/> that is usually small.  All non-negative <see cref="long"/> values are possible, but smaller values will be returned much more frequently.
         /// </summary>
-        public long NextInt64UsuallySmall
-        {
-            get
-            {
-                return NextInt64RangedUsuallySmall(long.MaxValue);
-            }
-        }
+        public long NextInt64UsuallySmall => NextInt64RangedUsuallySmall(long.MaxValue);
         /// <summary>
         /// Gets a random <see cref="long"/> that is usually small.  All <see cref="long"/> values are possible, but values closer to zero will be returned much more frequently.
         /// </summary>
-        public long NextInt64SignedUsuallySmall
-        {
-            get 
-            { 
-                return NextInt64SignedRangedUsuallySmall(long.MinValue, long.MaxValue); 
-            }
-        }
+        public long NextInt64SignedUsuallySmall => NextInt64SignedRangedUsuallySmall(long.MinValue, long.MaxValue);
         /// <summary>
         /// Gets a random <see cref="ulong"/> that is usually small.  All <see cref="ulong"/> values up to <paramref name="upperLimit"/> are possible, but smaller values will be returned much more frequently.
         /// </summary>
@@ -392,7 +320,7 @@ namespace AmbientServices
             uint maxDivisor = (1U << iterations);
             ulong divisor = (iterations > 63) ? long.MaxValue : (1U + (baseAdjuster % maxDivisor));
             ushort downShift = (ushort)(baseAdjuster % (uint)iterations);
-            ulong baseNumber = NextUInt64Ranged(0, (ulong)(upperLimit >> downShift));
+            ulong baseNumber = NextUInt64Ranged(0, upperLimit >> downShift);
             return baseNumber / divisor;
         }
         /// <summary>
@@ -441,17 +369,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets a random sign multiplier.  Values returned should be 1 roughly 50% of the time and -1 roughly 50% of the time.
         /// </summary>
-        public int NextSignMultiplier
-        {
-            get { return (2 * (int)NextUInt32Ranged(0, 2)) - 1; }
-        }
+        public int NextSignMultiplier => (2 * (int)NextUInt32Ranged(0, 2)) - 1;
         /// <summary>
         /// Gets a random boolean, either true or false, with a roughly even distribution between those values.
         /// </summary>
-        public bool NextBoolean
-        {
-            get { return NextUInt32Ranged(0, 2) == 0; }
-        }
+        public bool NextBoolean => NextUInt32Ranged(0, 2) == 0;
         /// <summary>
         /// Returns an array of the specified length populated with random values.
         /// </summary>
@@ -518,23 +440,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets a <see cref="decimal"/> with a random value.  All possible values should be roughly evenly distributed.
         /// </summary>
-        public decimal NextDecimal
-        {
-            get
-            {
-                return new decimal(NextInt32Signed, NextInt32Signed, NextInt32Signed, NextBoolean, (byte)(NextUInt32 % DecimalMaxScalePlusOne));
-            }
-        }
+        public decimal NextDecimal => new decimal(NextInt32Signed, NextInt32Signed, NextInt32Signed, NextBoolean, (byte)(NextUInt32 % DecimalMaxScalePlusOne));
         /// <summary>
         /// Gets a <see cref="double"/> with a random value.  All possible values should be roughly evenly distributed, including special values like <see cref="double.NaN"/>, <see cref="double.Epsilon"/>, <see cref="double.PositiveInfinity"/>, etc.
         /// </summary>
-        public double NextDouble
-        {
-            get
-            {
-                return BitConverter.Int64BitsToDouble(NextInt64Signed);
-            }
-        }
+        public double NextDouble => BitConverter.Int64BitsToDouble(NextInt64Signed);
         /// <summary>
         /// Gets a <see cref="Guid"/> with a random value.  All possible values should be roughly evenly distributed.  
         /// Note that these "GUID"s should *not* be used publicly where GUIDs are expected to have certain characteristics to prevent collisions.
@@ -644,7 +554,7 @@ namespace AmbientServices
         /// <returns>true if the Pseudorandoms are the same, otherwise false.</returns>
         public static bool operator ==(Pseudorandom? a, Pseudorandom? b)
         {
-            if (Object.ReferenceEquals(a, b)) return true;
+            if (ReferenceEquals(a, b)) return true;
             if (a is null || b is null) return false;
             return a._seed == b._seed;
         }
@@ -656,7 +566,7 @@ namespace AmbientServices
         /// <returns>true if the Pseudorandoms are logically not equal, otherwise false.</returns>
         public static bool operator !=(Pseudorandom? a, Pseudorandom? b)
         {
-            if (Object.ReferenceEquals(a, b)) return false;
+            if (ReferenceEquals(a, b)) return false;
             if (a is null || b is null) return true;
             return a._seed != b._seed;
         }

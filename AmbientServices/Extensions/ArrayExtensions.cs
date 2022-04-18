@@ -87,7 +87,7 @@ namespace AmbientServices.Utility
                 bool eq = (elementType.IsArray)
                         // I could be wrong, but I'm pretty sure if elementType.IsArray is true, GetElementType() cannot return null
                     ? ValueEquals(elementType.GetElementType()!, (Array?)array1.GetValue(cursor), (Array?)array2.GetValue(cursor))
-                    : Object.Equals(array1.GetValue(cursor), array2.GetValue(cursor));
+                    : Equals(array1.GetValue(cursor), array2.GetValue(cursor));
                 if (!eq) return false;
             }
             // they are equal!

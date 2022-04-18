@@ -12,7 +12,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void TimeSpanRenderAndParse()
         {
-            Assert.AreEqual((TimeSpan?)null, "".TryParseTimeSpan());
+            Assert.AreEqual(null, "".TryParseTimeSpan());
             foreach (TimeSpan ts in new TimeSpan[] {    // NOTE: These numbers were carefully chosen to avoid rounding issues and avoid issues with the short string using only two significant digits
                     TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(-1),
                     TimeSpan.FromMilliseconds(1.3), TimeSpan.FromMilliseconds(-1.3),
@@ -157,7 +157,7 @@ namespace AmbientServices.Test
                 s.AppendLine($"TimeSpanExtensions.TimeSpanToStopwatchDivisor = {TimeSpanExtensions.TimeSpanToStopwatchDivisor}");
                 s.AppendLine($"TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks = {TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks}");
                 s.AppendLine($"TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks) = {TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks)}");
-                Assert.AreEqual(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks), (long)millisecondsToSleep * Stopwatch.Frequency / 1000, s.ToString());
+                Assert.AreEqual(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks), millisecondsToSleep * Stopwatch.Frequency / 1000, s.ToString());
             }
         }
         [TestMethod]

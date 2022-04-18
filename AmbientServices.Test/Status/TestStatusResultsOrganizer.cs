@@ -391,18 +391,15 @@ namespace AmbientServices.Test
         /// <summary>
         /// Gets whether or not this status node is applicable and should be included in the list of statuses for this machine.
         /// </summary>
-        protected internal override bool Applicable
-        {
-            get { return false; }
-        }
+        protected internal override bool Applicable => false;
         /// <summary>
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
         /// </summary>
         /// <param name="statusBuilder">A <see cref="StatusResultsBuilder"/> that may be used to fill in audit information.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default(CancellationToken))
+        public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
-            return default(ValueTask);
+            return default;
         }
     }
 }

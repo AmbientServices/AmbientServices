@@ -17,11 +17,11 @@ namespace AmbientServices
         /// <summary>
         /// An empty <see cref="StatusAuditAlert"/> in case they need to be compared.
         /// </summary>
-        public static StatusAuditAlert Empty {  get { return _Empty; } }
+        public static StatusAuditAlert Empty => _Empty;
         /// <summary>
         /// A <see cref="StatusAuditAlert"/> for when no alert was reported.
         /// </summary>
-        public static StatusAuditAlert None { get { return _None; } }
+        public static StatusAuditAlert None => _None;
 
         private readonly float _rating;
         private readonly string _auditAlertCode;
@@ -34,35 +34,23 @@ namespace AmbientServices
         /// Some examples might be, Timeout, Configuration, BadRequest, AccessDenied, ProgramError, NotFound, or MirrorBroken.
         /// This string should never contain any sensitive details.
         /// </summary>
-        public string AuditAlertCode
-        {
-            get { return _auditAlertCode; }
-        }
+        public string AuditAlertCode => _auditAlertCode;
         /// <summary>
         /// A status rating indicating the overall state of the system represented by the report.
         /// </summary>
-        public float Rating
-        {
-            get { return _rating; }
-        }
+        public float Rating => _rating;
         /// <summary>
         /// Gets a short message indicating that there is a suboptimal status (one that would be appropriate for SMS or a mobile alert dialog).  
         /// The message must not contain any line breaks or markup so that it can be sent in a text message.
         /// This message must not contain any sensitive details.
         /// </summary>
-        public string Terse
-        {
-            get { return _terse; }
-        }
+        public string Terse => _terse;
         /// <summary>
         /// Gets a detailed message indicating the cause of a suboptimal status (one that would be appropriate for email, web, or mobile display).  
         /// The message should use the same format as documentation details.
         /// If authorization was not granted, and the error might contain sensitive details, the message may have been replaced by an error identifier which will need to be looked up in the error logs by an authorized user.
         /// </summary>
-        public string Details
-        {
-            get { return _details; }
-        }
+        public string Details => _details;
 
         /// <summary>
         /// Constructs an empty <see cref="StatusAuditAlert"/>.
@@ -170,32 +158,20 @@ namespace AmbientServices
         /// <summary>
         /// Gets the time when the audit of the target system started.
         /// </summary>
-        public DateTime AuditStartTime
-        {
-            get { return _auditStartTime; }
-        }
+        public DateTime AuditStartTime => _auditStartTime;
         /// <summary>
         /// Gets the time when the audit occurred.
         /// </summary>
-        public TimeSpan AuditDuration
-        {
-            get { return _auditDuration; }
-        }
+        public TimeSpan AuditDuration => _auditDuration;
         /// <summary>
         /// Gets the time when the system should be reaudited (if any).
         /// </summary>
-        public DateTime? NextAuditTime
-        {
-            get { return _nextAuditTime; }
-        }
+        public DateTime? NextAuditTime => _nextAuditTime;
         /// <summary>
         /// Gets the <see cref="StatusAuditAlert"/> for this audit, if any.
         /// No <see cref="StatusAuditAlert"/> implies that there were no issues, which should default to <see cref="StatusRating.Okay"/>.
         /// </summary>
-        public StatusAuditAlert? Alert
-        {
-            get { return _alert; }
-        }
+        public StatusAuditAlert? Alert => _alert;
 
         /// <summary>
         /// Constructs the "Pending" <see cref="StatusAuditReport"/>.
@@ -271,7 +247,7 @@ namespace AmbientServices
         public bool Equals(StatusAuditReport? other)
         {
             if (other is null) return false;
-            return Object.Equals(this._alert, other._alert);
+            return Equals(this._alert, other._alert);
         }
 
         /// <summary>
@@ -413,7 +389,7 @@ namespace AmbientServices
                     // call the derived object to get the status
                     await Audit(builder, cancel).ConfigureAwait(false);
                     // schedule the next audit
-                    builder.NextAuditTime = ScheduleNextAudit(builder.WorstAlert == null ? (float?)null : builder.WorstAlert.Rating, builder.Elapsed);
+                    builder.NextAuditTime = ScheduleNextAudit(builder.WorstAlert == null ? null : builder.WorstAlert.Rating, builder.Elapsed);
                 }
 #pragma warning disable CA1031  // we really DO want to catch ALL exceptions here--this is a status test, and the exception will be reported through the status system.  if we rethrew it, it would crash the program
                 catch (Exception ex)

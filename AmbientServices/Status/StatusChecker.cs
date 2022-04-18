@@ -38,23 +38,17 @@ namespace AmbientServices
         /// <summary>
         /// Gets the name of the target system.
         /// </summary>
-        public string TargetSystem
-        {
-            get { return _targetSystem; }
-        }
+        public string TargetSystem => _targetSystem;
         /// <summary>
         /// Gets the latest status results.
         /// </summary>
-        public StatusResults LatestResults { get { return _resultsTracker.LatestResults; } }
+        public StatusResults LatestResults => _resultsTracker.LatestResults;
         /// <summary>
         /// Gets an enumeration of previous <see cref="StatusResults"/>s.  
         /// Empty if no such test results are available or applicable.
         /// Note that the history here is limited to a set time span and a set number of entries (see settings).
         /// </summary>
-        public virtual IEnumerable<StatusResults> History
-        {
-            get { return _resultsTracker.History; }
-        }
+        public virtual IEnumerable<StatusResults> History => _resultsTracker.History;
 
         /// <summary>
         /// Starts stopping any asynchronous activity.
@@ -162,16 +156,13 @@ namespace AmbientServices
         /// <summary>
         /// Gets the latest status results.
         /// </summary>
-        public StatusResults LatestResults { get { return _statusResults; } }
+        public StatusResults LatestResults => _statusResults;
         /// <summary>
         /// Gets an enumeration of previous <see cref="StatusResults"/>s.  
         /// Null or empty if no such test results are available or applicable.
         /// Note that previous ratings are limited to a set time span and a set number of entries (see settings).
         /// </summary>
-        public IEnumerable<StatusResults> History
-        {
-            get { return _statusResultsHistory; }
-        }
+        public IEnumerable<StatusResults> History => _statusResultsHistory;
 
         /// <summary>
         /// Adds the specified results as the latest results, moving the previous results to the history.

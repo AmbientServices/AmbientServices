@@ -32,7 +32,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets a <see cref="IStatusThresholdsRegistry"/> containing the default status thresholds (those assigned via <see cref="DefaultPropertyThresholdsAttribute"/>s).
         /// </summary>
-        public static IStatusThresholdsRegistry DefaultPropertyThresholds { get { return _thresholdsAccessor; } }
+        public static IStatusThresholdsRegistry DefaultPropertyThresholds => _thresholdsAccessor;
 
         private static ConcurrentDictionary<string, StatusPropertyThresholds> InitializeThresholds()
         {
@@ -120,19 +120,19 @@ namespace AmbientServices
         /// <summary>
         /// Gets a <see cref="StatusThresholdNature"/> indicating whether low values are good or not.  
         /// </summary>
-        public StatusThresholdNature Nature { get { return _nature; } }
+        public StatusThresholdNature Nature => _nature;
         /// <summary>
         /// Gets the threshold value which divides failures from alerts.  When the measured value is exactly equal to this value, we report a failure.
         /// </summary>
-        public float? FailVsAlertThreshold { get { return _failVsAlertThreshold; } }
+        public float? FailVsAlertThreshold => _failVsAlertThreshold;
         /// <summary>
         /// Gets the threshold value which divides alerts from okay.  When the measured value is exactly equal to this value, we alert.
         /// </summary>
-        public float? AlertVsOkayThreshold { get { return _alertVsOkayThreshold; } }
+        public float? AlertVsOkayThreshold => _alertVsOkayThreshold;
         /// <summary>
         /// Gets the threshold value which divides okays from superlatives.  When the measured value is exactly equal to this value this counts as an okay.
         /// </summary>
-        public float? OkayVsSuperlativeThreshold { get { return _okayVsSuperlativeThreshold; } }
+        public float? OkayVsSuperlativeThreshold => _okayVsSuperlativeThreshold;
 
         /// <summary>
         /// Rates the value based on the thresholds and gets a <see cref="StatusAuditAlert"/> indicating the status of the value relative to the thresholds.
@@ -286,38 +286,38 @@ namespace AmbientServices
         public DefaultPropertyThresholdsAttribute(string propertyPath, float failVsAlertThreshold = float.NaN, float alertVsOkayThreshold = float.NaN, float okayVsSuperlativeThreshold = float.NaN, StatusThresholdNature thresholdNature = StatusThresholdNature.HighIsGood)
         {
             _propertyPath = propertyPath;
-            _thresholds = new StatusPropertyThresholds(float.IsNaN(failVsAlertThreshold) ? null : (float?)failVsAlertThreshold, float.IsNaN(alertVsOkayThreshold) ? null : (float?)alertVsOkayThreshold, float.IsNaN(okayVsSuperlativeThreshold) ? null : (float?)okayVsSuperlativeThreshold, thresholdNature);
+            _thresholds = new StatusPropertyThresholds(float.IsNaN(failVsAlertThreshold) ? null : failVsAlertThreshold, float.IsNaN(alertVsOkayThreshold) ? null : alertVsOkayThreshold, float.IsNaN(okayVsSuperlativeThreshold) ? null : okayVsSuperlativeThreshold, thresholdNature);
             _deferToType = null;
         }
         /// <summary>
         /// Gets the name of the property the thresholds apply to.
         /// </summary>
-        public string PropertyPath { get { return _propertyPath; } }
+        public string PropertyPath => _propertyPath;
         /// <summary>
         /// Gets the <see cref="StatusPropertyThresholds"/> for the corresponding property.
         /// May be null if deferred to another type but that type has no attribute thresholds.
         /// </summary>
-        public StatusPropertyThresholds? Thresholds { get { return _thresholds; } }
+        public StatusPropertyThresholds? Thresholds => _thresholds;
         /// <summary>
         /// A type to defer to for default property thresholds.  Thresholds attached to that type will be added with the property path prefixed.
         /// </summary>
-        public Type? DeferToType { get { return _deferToType; } }
+        public Type? DeferToType => _deferToType;
         /// <summary>
         /// Gets the status rating threshold that distinguishes failures from alerts.
         /// </summary>
-        public float FailVsAlertThreshold { get { return _thresholds?.FailVsAlertThreshold ?? float.NaN; } }
+        public float FailVsAlertThreshold => _thresholds?.FailVsAlertThreshold ?? float.NaN;
         /// <summary>
         /// Gets the status rating threshold that distinguishes alerts from okay.
         /// </summary>
-        public float AlertVsOkayThreshold { get { return _thresholds?.AlertVsOkayThreshold ?? float.NaN; } }
+        public float AlertVsOkayThreshold => _thresholds?.AlertVsOkayThreshold ?? float.NaN;
         /// <summary>
         /// Gets the status rating threshold that distinguishes okay from superlative.
         /// </summary>
-        public float OkayVsSuperlativeThreshold { get { return _thresholds?.OkayVsSuperlativeThreshold ?? float.NaN; } }
+        public float OkayVsSuperlativeThreshold => _thresholds?.OkayVsSuperlativeThreshold ?? float.NaN;
         /// <summary>
         /// Gets the status rating threshold that distinguishes okay from superlative.
         /// </summary>
-        public StatusThresholdNature ThresholdNature { get { return _thresholds?.Nature ?? StatusThresholdNature.HighIsGood; } }
+        public StatusThresholdNature ThresholdNature => _thresholds?.Nature ?? StatusThresholdNature.HighIsGood;
     }
     /// <summary>
     /// An interface that abstracts the querying of thresholds used to rate system statuses.

@@ -59,18 +59,15 @@ namespace AmbientServices
         /// <summary>
         /// Gets the item comparer used for this set.
         /// </summary>
-        public IEqualityComparer<T> Comparer
-        {
-            get { return _comparer; }
-        }
+        public IEqualityComparer<T> Comparer => _comparer;
         /// <summary>
         /// Gets the number of items currently in this set.
         /// </summary>
-        public int Count { get { return _dict.Count; } }
+        public int Count => _dict.Count;
         /// <summary>
         /// Gets whether or not the set is empty.
         /// </summary>
-        public bool IsEmpty { get { return _dict.IsEmpty; } }
+        public bool IsEmpty => _dict.IsEmpty;
         /// <summary>
         /// Adds the specified item to the set if it is not already there.
         /// </summary>
@@ -325,14 +322,11 @@ namespace AmbientServices
             {
                 Add(item);
             }
-        }        
+        }
         /// <summary>
         /// Gets whether or not this set is readonly.
         /// </summary>
-        public bool IsReadOnly
-        {
-            get { return false; }
-        }
+        public bool IsReadOnly => false;
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
         {

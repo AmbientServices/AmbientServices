@@ -60,10 +60,8 @@ namespace AmbientServices.Test
                     Assert.AreNotEqual(timeBasedCounter, replacedCounter);
                 }
 
-                using (IAmbientStatistic unreplacedCounter = AmbientStatistics.GetOrAddStatistic(true, "time-based-2", "time-based-2 test", false))
-                {
-                    Assert.AreNotEqual(unreplacedCounter, replacedCounter);
-                }
+                using IAmbientStatistic unreplacedCounter = AmbientStatistics.GetOrAddStatistic(true, "time-based-2", "time-based-2 test", false);
+                Assert.AreNotEqual(unreplacedCounter, replacedCounter);
             }
 
             long endTime = AmbientStatistics.Statistics["ExecutionTime"].SampleValue;

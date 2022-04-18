@@ -17,7 +17,7 @@ namespace AmbientServices.Test
         /// <summary>
         /// Gets the name of the test where this exception was expected.
         /// </summary>
-        public string TestName { get { return _testName; } }
+        public string TestName => _testName;
 
         /// <summary>
         /// Constructs an expected test exception.

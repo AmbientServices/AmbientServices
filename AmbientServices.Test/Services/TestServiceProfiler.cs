@@ -20,7 +20,7 @@ namespace AmbientServices.Test
         private static readonly AmbientService<IAmbientServiceProfiler> _ServiceProfiler = Ambient.GetService<IAmbientServiceProfiler>();
 
         private static readonly AsyncLocal<string> _localContextId = new();
-        private static readonly AsyncLocal<string> _local = new(c => System.Diagnostics.Debug.WriteLine($"Thread:{System.Threading.Thread.CurrentThread.ManagedThreadId},Context:{_localContextId.Value ?? Guid.Empty.ToString("N")},Previous:{c.PreviousValue ?? "<null>"},Current:{c.CurrentValue ?? "<null>"},ThreadContextChanged:{c.ThreadContextChanged}"));
+        private static readonly AsyncLocal<string> _local = new(c => System.Diagnostics.Debug.WriteLine($"Thread:{Thread.CurrentThread.ManagedThreadId},Context:{_localContextId.Value ?? Guid.Empty.ToString("N")},Previous:{c.PreviousValue ?? "<null>"},Current:{c.CurrentValue ?? "<null>"},ThreadContextChanged:{c.ThreadContextChanged}"));
         [TestMethod]
         public async Task AsyncLocalTest1()
         {
@@ -66,7 +66,7 @@ namespace AmbientServices.Test
 
         private void DumpState(int major, int minor)
         {
-            System.Diagnostics.Debug.WriteLine($"Thread:{System.Threading.Thread.CurrentThread.ManagedThreadId},AsyncLocalTest{major}.{minor}: " + _local.Value ?? "<null>");
+            System.Diagnostics.Debug.WriteLine($"Thread:{Thread.CurrentThread.ManagedThreadId},AsyncLocalTest{major}.{minor}: " + _local.Value ?? "<null>");
         }
         /*
     Thread:13,AsyncLocalTest1.0: 
@@ -271,17 +271,13 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ServiceProfilerNullOnWindowComplete()
         {
-            using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
-            using (AmbientServiceProfilerCoordinator coordinator = new())
-            {
-                Assert.ThrowsException<ArgumentNullException>(
-                    () =>
-                    {
-                        using (IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerNull), TimeSpan.FromMilliseconds(100), null!))
-                        {
-                        }
-                    });
-            }
+            using ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler());
+            using AmbientServiceProfilerCoordinator coordinator = new();
+            Assert.ThrowsException<ArgumentNullException>(
+                () =>
+                {
+                    using IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerNull), TimeSpan.FromMilliseconds(100), null!);
+                });
         }
         [TestMethod]
         public void ServiceProfilerNoListener()

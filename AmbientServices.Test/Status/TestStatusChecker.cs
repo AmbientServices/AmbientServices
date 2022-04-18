@@ -17,15 +17,13 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                using (StatusCheckerTest test = new())
-                {
-                    StatusResults results = await test.GetStatus();
-                    Assert.AreEqual(results, test.LatestResults);
-                    Assert.AreEqual(results, test.History.LastOrDefault());   // the most recent history results should be the last one (history is a FIFO queue)
-                    Assert.AreEqual("StatusCheckerTest", test.TargetSystem);
-                    await test.BeginStop();
-                    await test.FinishStop();
-                }
+                using StatusCheckerTest test = new();
+                StatusResults results = await test.GetStatus();
+                Assert.AreEqual(results, test.LatestResults);
+                Assert.AreEqual(results, test.History.LastOrDefault());   // the most recent history results should be the last one (history is a FIFO queue)
+                Assert.AreEqual("StatusCheckerTest", test.TargetSystem);
+                await test.BeginStop();
+                await test.FinishStop();
             }
         }
     }
@@ -41,6 +39,6 @@ namespace AmbientServices.Test
             SetLatestResults(results);
             SetLatestResults(results);  // set the results twice so the first results (which are the same as the second) end up in the history
         }
-        protected internal override bool Applicable { get { return true; } }
+        protected internal override bool Applicable => true;
     }
 }

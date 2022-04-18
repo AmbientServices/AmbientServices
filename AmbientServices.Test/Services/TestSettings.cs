@@ -26,25 +26,23 @@ namespace AmbientServices.Test
         {
             // use a local override in case we ran another test that left the global or local settings set set to something else on this thread
             BasicAmbientSettingsSet settings = new(nameof(AmbientSettingInt));
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settings))
-            {
-                AmbientSetting<int> value;
-                value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
-                Assert.AreEqual(0, value.Value);
-                value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
-                Assert.AreEqual(1, value.Value);
-                value = new AmbientSetting<int>("int-setting-3", "", s => Int32.Parse(s), "1");
-                Assert.AreEqual(1, value.Value);
+            using ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settings);
+            AmbientSetting<int> value;
+            value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
+            Assert.AreEqual(0, value.Value);
+            value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
+            Assert.AreEqual(1, value.Value);
+            value = new AmbientSetting<int>("int-setting-3", "", s => Int32.Parse(s), "1");
+            Assert.AreEqual(1, value.Value);
 
-                // test changing the setting without an event listener
-                settings.ChangeSetting("int-setting-3", "5");
-                // test changing the setting to the same value without an event listener
-                settings.ChangeSetting("int-setting-3", "5");
-                // test changing the setting to null so we fall through to the global settings set
-                settings.ChangeSetting("int-setting-3", null);
-                int settingValue = value.Value;
-                Assert.AreEqual(1, value.Value);
-            }
+            // test changing the setting without an event listener
+            settings.ChangeSetting("int-setting-3", "5");
+            // test changing the setting to the same value without an event listener
+            settings.ChangeSetting("int-setting-3", "5");
+            // test changing the setting to null so we fall through to the global settings set
+            settings.ChangeSetting("int-setting-3", null);
+            int settingValue = value.Value;
+            Assert.AreEqual(1, value.Value);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -52,18 +50,16 @@ namespace AmbientServices.Test
         [TestMethod]
         public void NoAmbientSetting()
         {
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(null))
-            {
-                AmbientSetting<int> value;
-                value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
-                Assert.AreEqual(0, value.Value);
-                value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
-                Assert.AreEqual(1, value.Value);
-                value = new AmbientSetting<int>("int-setting-4", "", s => Int32.Parse(s), "-1");
-                Assert.AreEqual(-1, value.Value);
-                SettingsSetSetting<int> settingsSetSetting = new(_SettingsSet, nameof(NoAmbientSetting) + "4", "", s => Int32.Parse(s), "4");
-                Assert.AreEqual(4, settingsSetSetting.Value);
-            }
+            using ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(null);
+            AmbientSetting<int> value;
+            value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
+            Assert.AreEqual(0, value.Value);
+            value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
+            Assert.AreEqual(1, value.Value);
+            value = new AmbientSetting<int>("int-setting-4", "", s => Int32.Parse(s), "-1");
+            Assert.AreEqual(-1, value.Value);
+            SettingsSetSetting<int> settingsSetSetting = new(_SettingsSet, nameof(NoAmbientSetting) + "4", "", s => Int32.Parse(s), "4");
+            Assert.AreEqual(4, settingsSetSetting.Value);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -459,27 +455,25 @@ namespace AmbientServices.Test
             }
             // use a local override in case we ran another test that left the global or local settings set set to something else on this thread
             BasicAmbientSettingsSet settings = new(nameof(AmbientSettingsWithSetName));
-            using (ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settings))
-            {
-                AmbientSetting<int> setting;
-                setting = new AmbientSetting<int>(nameof(AmbientSettingsWithSetName) + "-int-setting-1", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
-                Assert.AreEqual(0, setting.Value);
-                Assert.IsNotNull(setting.GetValueWithSetName().Item2);
-                setting = new AmbientSetting<int>(nameof(AmbientSettingsWithSetName) + "-int-setting-2", "", s => Int32.Parse(s), "1");
-                settings.ChangeSetting(nameof(AmbientSettingsWithSetName) + "-int-setting-2", "1");
-                Assert.AreEqual(1, setting.Value);
-                Assert.AreEqual(nameof(AmbientSettingsWithSetName), setting.GetValueWithSetName().Item2);
-                setting = new AmbientSetting<int>(settingName, "", s => Int32.Parse(s), "1");
-                settings.ChangeSetting(settingName, "3");
-                Assert.AreEqual(3, setting3.Value);
-                Assert.AreEqual(nameof(AmbientSettingsWithSetName), setting3.GetValueWithSetName().Item2);
+            using ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settings);
+            AmbientSetting<int> setting;
+            setting = new AmbientSetting<int>(nameof(AmbientSettingsWithSetName) + "-int-setting-1", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
+            Assert.AreEqual(0, setting.Value);
+            Assert.IsNotNull(setting.GetValueWithSetName().Item2);
+            setting = new AmbientSetting<int>(nameof(AmbientSettingsWithSetName) + "-int-setting-2", "", s => Int32.Parse(s), "1");
+            settings.ChangeSetting(nameof(AmbientSettingsWithSetName) + "-int-setting-2", "1");
+            Assert.AreEqual(1, setting.Value);
+            Assert.AreEqual(nameof(AmbientSettingsWithSetName), setting.GetValueWithSetName().Item2);
+            setting = new AmbientSetting<int>(settingName, "", s => Int32.Parse(s), "1");
+            settings.ChangeSetting(settingName, "3");
+            Assert.AreEqual(3, setting3.Value);
+            Assert.AreEqual(nameof(AmbientSettingsWithSetName), setting3.GetValueWithSetName().Item2);
 
-                // test changing the setting to null so we fall through to the global settings set
-                settings.ChangeSetting(settingName, null);
-                int settingValue = setting.Value;
-                Assert.AreEqual(1, setting.Value);
-                Assert.IsNotNull(setting3.GetValueWithSetName().Item2);
-            }
+            // test changing the setting to null so we fall through to the global settings set
+            settings.ChangeSetting(settingName, null);
+            int settingValue = setting.Value;
+            Assert.AreEqual(1, setting.Value);
+            Assert.IsNotNull(setting3.GetValueWithSetName().Item2);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -529,7 +523,7 @@ namespace AmbientServices.Test
                 this.Description = description;
             }
 
-            public object DefaultValue { get { return DefaultValueString; } }
+            public object DefaultValue => DefaultValueString;
 
             public string Key { get; private set; }
 

@@ -54,11 +54,11 @@ namespace AmbientServices
         /// <summary>
         /// The currently-active system or system group identifier.
         /// </summary>
-        public string Group { get { return string.IsNullOrEmpty(_group) ? "" : _group; } }
+        public string Group => string.IsNullOrEmpty(_group) ? "" : _group;
         /// <summary>
         /// The currently-active system or system group identifier (null if this struct is default).
         /// </summary>
-        internal string RawGroup { get { return _group; } }
+        internal string RawGroup => _group;
         /// <summary>
         /// The stopwatch timestamp when this system or group became active.
         /// Based on <see cref="AmbientClock.Ticks"/>.
@@ -403,7 +403,7 @@ namespace AmbientServices
             string windowName = WindowScope.WindowId(AmbientClock.UtcNow, windowPeriod);
             string newAccumulatorScopeName = _scopeNamePrefix + windowName + "(" + WindowScope.WindowSize(windowPeriod) + ")"; ;
             ProcessOrSingleTimeWindowServiceProfiler newAccumulator = new(metrics, newAccumulatorScopeName, systemGroupTransform);
-            ProcessOrSingleTimeWindowServiceProfiler? oldAccumulator = System.Threading.Interlocked.Exchange(ref _timeWindowCallContextCollector, newAccumulator);
+            ProcessOrSingleTimeWindowServiceProfiler? oldAccumulator = Interlocked.Exchange(ref _timeWindowCallContextCollector, newAccumulator);
             if (oldAccumulator != null)
             {
                 // close out the old accumulator

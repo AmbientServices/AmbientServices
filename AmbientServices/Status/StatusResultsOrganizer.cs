@@ -46,7 +46,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets an enumeration of <see cref="StatusPropertyRange"/>s indicating the range of the various properties for this node and all descendant nodes.
         /// </summary>
-        public IEnumerable<StatusPropertyRange> PropertyRanges { get { return _propertyRanges; } }
+        public IEnumerable<StatusPropertyRange> PropertyRanges => _propertyRanges;
         /// <summary>
         /// Gets the <see cref="StatusPropertyRange"/> for the property that has the worst rating according to the applied thresholds.
         /// </summary>
@@ -58,15 +58,15 @@ namespace AmbientServices
         /// <summary>
         /// Gets the rating used for sorting, which is the overall rating if there is one, or <see cref="StatusRating.Okay"/> if there is not.
         /// </summary>
-        internal float SortRating { get { return OverallRating ?? StatusRating.Okay; } }
+        internal float SortRating => OverallRating ?? StatusRating.Okay;
         /// <summary>
         /// Gets the number of direct children to this node.
         /// </summary>
-        public int ChildrenCount { get { return _children.Count; } }
+        public int ChildrenCount => _children.Count;
         /// <summary>
         /// Gets an enumeration of <see cref="StatusResultsOrganizer"/>s for the child nodes.
         /// </summary>
-        public IEnumerable<StatusResultsOrganizer> Children { get { return _children; } }
+        public IEnumerable<StatusResultsOrganizer> Children => _children;
 
         private StatusResultsOrganizer(StatusResults results, string? source, string localTarget)
         {
@@ -451,7 +451,7 @@ namespace AmbientServices
         public TimeSpanRange AuditDurationRange { get; private set; }
         public DateTime? NextAuditTime { get; private set; }
 
-        public float AverageRating { get { return RatingSum / Sources.Count; } }
+        public float AverageRating => RatingSum / Sources.Count;
 
         public AggregatedAlert(StatusResults initialResults)
         {

@@ -150,7 +150,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the default log filter.
         /// </summary>
-        public static AmbientLogFilter Default {  get { return _Default; } }
+        public static AmbientLogFilter Default => _Default;
 
         private readonly string _name;
         private readonly IAmbientSetting<AmbientLogLevel> _logLevelSetting;
@@ -172,8 +172,8 @@ namespace AmbientServices
             _categoryAllowSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", "A regular expression indicating which categories should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all categories.", null, s => new Regex(s, RegexOptions.Compiled));
             _categoryBlockSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", "A regular expression indicating which categories should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no categories.", null, s => new Regex(s, RegexOptions.Compiled));
         }
-        internal string Name { get { return _name; } }
-        internal AmbientLogLevel LogLevel { get { return _logLevelSetting.Value; } }
+        internal string Name => _name;
+        internal AmbientLogLevel LogLevel => _logLevelSetting.Value;
 
         internal bool IsTypeBlocked(string typeName)
         {

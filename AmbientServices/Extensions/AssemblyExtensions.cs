@@ -71,7 +71,7 @@ namespace AmbientServices.Utility
         public static string? GetCallingCodeSourceFolder(int subfolders = 0, int skipFrames = 0)
         {
             string? foldername = Path.GetDirectoryName(new System.Diagnostics.StackFrame(skipFrames + 1, true).GetFileName());
-            while (foldername != null && subfolders-- > 0 && (foldername.Contains(System.IO.Path.DirectorySeparatorChar, StringComparison.Ordinal) || foldername.Contains(System.IO.Path.AltDirectorySeparatorChar, StringComparison.Ordinal))) foldername = Path.GetDirectoryName(foldername);
+            while (foldername != null && subfolders-- > 0 && (foldername.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal) || foldername.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal))) foldername = Path.GetDirectoryName(foldername);
             return foldername;
         }
     }

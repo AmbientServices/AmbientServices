@@ -54,25 +54,19 @@ namespace AmbientServices
         /// <summary>
         /// Gets the <see cref="AmbientService{T}"/> for the service indicated by the type.
         /// </summary>
-        internal static AmbientService<T> Instance
-        {
-            get
-            {
-                return _Instance;
-            }
-        }
+        internal static AmbientService<T> Instance => _Instance;
         /// <summary>
         /// The singleton call-context-local service reference (non-singleton reference can be used for unit testing).
         /// </summary>
-        private AsyncLocal<LocalServiceReference<T>?> _localReference = new();
+        private readonly AsyncLocal<LocalServiceReference<T>?> _localReference = new();
         /// <summary>
         /// The global service reference.
         /// </summary>
-        private GlobalServiceReference<T> _globalReference = new();
+        private readonly GlobalServiceReference<T> _globalReference = new();
 
 
         // this is only internal instead of private so that we can diagnose issues in test cases
-        internal GlobalServiceReference<T> GlobalReference { get { return _globalReference; } }
+        internal GlobalServiceReference<T> GlobalReference => _globalReference;
 
         /// <summary>
         /// Gets the <see cref="LocalServiceReference{T}"/> for the service indicated by the type.
@@ -94,9 +88,7 @@ namespace AmbientServices
         /// </summary>
         /// <param name="newLocalServiceImplementation">The new local service implementation to use until the returned object is disposed.</param>
         /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the local service implementation to what it was before this call.</returns>
-#pragma warning disable CA1822  // I realize this can be static, but the whole point of this is to make it *easier* to call, and the static name (or the constructor name) is likely much longer than the instance name
-        internal IDisposable ScopedLocalOverride(T newLocalServiceImplementation)
-#pragma warning restore CA1822        
+        public IDisposable ScopedLocalOverride(T newLocalServiceImplementation)
         {
             return new ScopedLocalServiceOverride<T>(newLocalServiceImplementation);
         }
@@ -194,8 +186,8 @@ namespace AmbientServices
     {
         private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
 
-        private T? _oldGlobalService;
-        private T? _oldLocalServiceOverride;
+        private readonly T? _oldGlobalService;
+        private readonly T? _oldLocalServiceOverride;
 
         /// <summary>
         /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
@@ -210,11 +202,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the old local override in case it is needed by the overriding implementation.
         /// </summary>
-        public T? OldOverride { get { return _oldLocalServiceOverride; } }
+        public T? OldOverride => _oldLocalServiceOverride;
         /// <summary>
         /// Gets the old global implementation in case it is needed by the overriding implementation.
         /// </summary>
-        public T? OldGlobal { get { return _oldGlobalService; } }
+        public T? OldGlobal => _oldGlobalService;
 
         #region IDisposable Support
         private bool _disposed; // To detect redundant calls
@@ -247,7 +239,7 @@ namespace AmbientServices
     /// <typeparam name="T">The concrete type of the service.</typeparam>
     internal class DefaultServiceImplementation<T> where T : class
     {
-        private static T _ImplementationSingleton = CreateInstance();
+        private static readonly T _ImplementationSingleton = CreateInstance();
         private static T CreateInstance()
         {
             ConstructorInfo? ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
@@ -292,7 +284,7 @@ namespace AmbientServices
             if (newDefaultImplementation == null) return null;
             // we should almost always get a null back here below, but it's theoretically possible if two attempts to retrieve the implementation happen at the same time, but even in this case, the only way we would get back instances of different types would be if the default ambient service changed, which shouldn't be possible given the current implementation
             // as a result, the non-null case below is unlikely to get covered by tests
-            return (System.Threading.Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) is not T oldDefaultImplementation)
+            return (Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) is not T oldDefaultImplementation)
                 ? newDefaultImplementation
                 : oldDefaultImplementation;
         }
@@ -311,7 +303,7 @@ namespace AmbientServices
             }
             set
             {
-                T? oldImplementation = System.Threading.Interlocked.Exchange(ref _service, value ?? SuppressedService) as T;
+                T? oldImplementation = Interlocked.Exchange(ref _service, value ?? SuppressedService) as T;
                 ServiceChanged?.Invoke(typeof(LocalServiceReference<T>), EventArgs.Empty);
             }
         }

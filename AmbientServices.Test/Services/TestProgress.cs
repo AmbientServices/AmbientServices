@@ -306,14 +306,12 @@ namespace AmbientServices.Test
         {
             IAmbientProgress progress = AmbientProgressService.GlobalProgress;
             progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-            CancellationToken token = progress?.CancellationToken ?? default(CancellationToken);
+            CancellationToken token = progress?.CancellationToken ?? default;
             Assert.IsNotNull(token);
 
-            using (ScopedLocalServiceOverride<IAmbientProgressService> LocalServiceOverride = new(null))
-            {
-                IAmbientProgress noProgress = AmbientProgressService.Progress;
-                CancellationToken cancel = noProgress?.CancellationToken ?? default(CancellationToken);
-            }
+            using ScopedLocalServiceOverride<IAmbientProgressService> LocalServiceOverride = new(null);
+            IAmbientProgress noProgress = AmbientProgressService.Progress;
+            CancellationToken cancel = noProgress?.CancellationToken ?? default;
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -326,73 +324,71 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 progress?.ResetCancellation(TimeSpan.FromMilliseconds(102));
-                using (AmbientCancellationTokenSource tokenSource = progress?.CancellationTokenSource)
-                {
-                    Assert.IsNotNull(tokenSource);
-                    Assert.IsFalse(tokenSource?.IsCancellationRequested ?? true);
-                    Assert.AreEqual(tokenSource?.Token, progress?.CancellationToken);
-                    AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(111));
-                    Assert.IsTrue(tokenSource?.IsCancellationRequested ?? false);
-                    Assert.AreEqual(tokenSource?.Token, progress?.CancellationToken);
-                    Assert.IsTrue(progress?.CancellationToken.IsCancellationRequested ?? false);
+                using AmbientCancellationTokenSource tokenSource = progress?.CancellationTokenSource;
+                Assert.IsNotNull(tokenSource);
+                Assert.IsFalse(tokenSource?.IsCancellationRequested ?? true);
+                Assert.AreEqual(tokenSource?.Token, progress?.CancellationToken);
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(111));
+                Assert.IsTrue(tokenSource?.IsCancellationRequested ?? false);
+                Assert.AreEqual(tokenSource?.Token, progress?.CancellationToken);
+                Assert.IsTrue(progress?.CancellationToken.IsCancellationRequested ?? false);
 
-                    progress?.ResetCancellation();
-                    AmbientCancellationTokenSource newTokenSource = progress?.CancellationTokenSource;
+                progress?.ResetCancellation();
+                AmbientCancellationTokenSource newTokenSource = progress?.CancellationTokenSource;
+                Assert.IsNotNull(newTokenSource);
+                Assert.IsFalse(newTokenSource?.IsCancellationRequested ?? true);
+                Assert.AreEqual(newTokenSource?.Token, progress?.CancellationToken);
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+                Assert.IsFalse(newTokenSource?.IsCancellationRequested ?? true);
+                Assert.IsTrue(newTokenSource?.Token.CanBeCanceled ?? false);
+                Assert.AreEqual(newTokenSource?.Token, progress?.CancellationToken);
+                Assert.IsFalse(progress?.CancellationToken.IsCancellationRequested ?? true);
+
+                progress?.Update(0.5f);
+                progress?.ThrowIfCancelled();
+
+                using (CancellationTokenSource ts = new())
+                {
+                    progress?.ResetCancellation(ts);
+                    newTokenSource = progress?.CancellationTokenSource;
                     Assert.IsNotNull(newTokenSource);
                     Assert.IsFalse(newTokenSource?.IsCancellationRequested ?? true);
                     Assert.AreEqual(newTokenSource?.Token, progress?.CancellationToken);
-                    AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
-                    Assert.IsFalse(newTokenSource?.IsCancellationRequested ?? true);
                     Assert.IsTrue(newTokenSource?.Token.CanBeCanceled ?? false);
+                    ts.Cancel();
+                    Assert.IsTrue(newTokenSource?.IsCancellationRequested ?? false);
                     Assert.AreEqual(newTokenSource?.Token, progress?.CancellationToken);
-                    Assert.IsFalse(progress?.CancellationToken.IsCancellationRequested ?? true);
-
-                    progress?.Update(0.5f);
-                    progress?.ThrowIfCancelled();
-
-                    using (CancellationTokenSource ts = new())
-                    {
-                        progress?.ResetCancellation(ts);
-                        newTokenSource = progress?.CancellationTokenSource;
-                        Assert.IsNotNull(newTokenSource);
-                        Assert.IsFalse(newTokenSource?.IsCancellationRequested ?? true);
-                        Assert.AreEqual(newTokenSource?.Token, progress?.CancellationToken);
-                        Assert.IsTrue(newTokenSource?.Token.CanBeCanceled ?? false);
-                        ts.Cancel();
-                        Assert.IsTrue(newTokenSource?.IsCancellationRequested ?? false);
-                        Assert.AreEqual(newTokenSource?.Token, progress?.CancellationToken);
-                        Assert.IsTrue(progress?.CancellationToken.IsCancellationRequested ?? false);
-                    }
-                    using (AmbientCancellationTokenSource ts = new(null, null))
-                    {
-                        Assert.IsFalse(ts.IsCancellationRequested);
-                        Assert.IsFalse(ts.Token.IsCancellationRequested);
-
-                        ts.Dispose();
-
-                        Assert.IsTrue(ts.IsCancellationRequested);
-                        Assert.IsTrue(ts.Token.IsCancellationRequested);
-                    }
-                    using (AmbientCancellationTokenSource ts = new(null, TimeSpan.FromMilliseconds(int.MaxValue)))
-                    {
-                        Assert.IsFalse(ts.IsCancellationRequested);     // theoretically, this could fail if this part of the test takes more than 30 days to execute
-                        Assert.IsFalse(ts.Token.IsCancellationRequested);
-
-                        ts.Dispose();
-
-                        Assert.IsTrue(ts.IsCancellationRequested);
-                        Assert.IsTrue(ts.Token.IsCancellationRequested);
-                    }
-                    AmbientCancellationTokenSource dispose;
-                    using (AmbientCancellationTokenSource ts = new())
-                    {
-                        dispose = ts;
-                    }
-                    dispose.CancelAfter(1);
-                    System.Threading.Thread.Sleep(500);
-                    AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(500));
-                    dispose.Cancel(false);
+                    Assert.IsTrue(progress?.CancellationToken.IsCancellationRequested ?? false);
                 }
+                using (AmbientCancellationTokenSource ts = new(null, null))
+                {
+                    Assert.IsFalse(ts.IsCancellationRequested);
+                    Assert.IsFalse(ts.Token.IsCancellationRequested);
+
+                    ts.Dispose();
+
+                    Assert.IsTrue(ts.IsCancellationRequested);
+                    Assert.IsTrue(ts.Token.IsCancellationRequested);
+                }
+                using (AmbientCancellationTokenSource ts = new(null, TimeSpan.FromMilliseconds(int.MaxValue)))
+                {
+                    Assert.IsFalse(ts.IsCancellationRequested);     // theoretically, this could fail if this part of the test takes more than 30 days to execute
+                    Assert.IsFalse(ts.Token.IsCancellationRequested);
+
+                    ts.Dispose();
+
+                    Assert.IsTrue(ts.IsCancellationRequested);
+                    Assert.IsTrue(ts.Token.IsCancellationRequested);
+                }
+                AmbientCancellationTokenSource dispose;
+                using (AmbientCancellationTokenSource ts = new())
+                {
+                    dispose = ts;
+                }
+                dispose.CancelAfter(1);
+                Thread.Sleep(500);
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(500));
+                dispose.Cancel(false);
             }
         }
         /// <summary>
@@ -490,12 +486,12 @@ namespace AmbientServices.Test
                 Assert.Fail("Progress: " + progress.ItemCurrentlyBeingProcessed + "(" + progress.PortionComplete + ")"); 
             }
             Assert.AreEqual("Progress", progress?.GetType().Name);
-            CancellationToken token = progress?.CancellationToken ?? default(CancellationToken);
+            CancellationToken token = progress?.CancellationToken ?? default;
             Assert.IsFalse(token.IsCancellationRequested);
             IDisposable subProgress1 = progress?.TrackPart(0.05f, 0.11f);
             using (AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.07f))
             {
-                token = AmbientProgressService.GlobalProgress?.CancellationToken ?? default(CancellationToken);
+                token = AmbientProgressService.GlobalProgress?.CancellationToken ?? default;
                 Assert.IsFalse(token.IsCancellationRequested);
             }
         }
@@ -523,9 +519,7 @@ namespace AmbientServices.Test
         public void TopProgressInheritCancellationSource()
         {
             BasicAmbientProgress ambientProgress = new();
-            using (Progress progress = new(ambientProgress, null, 0, 0.01f))
-            {
-            }
+            using Progress progress = new(ambientProgress, null, 0, 0.01f);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -534,13 +528,9 @@ namespace AmbientServices.Test
         public void SubProgressDispose()
         {
             BasicAmbientProgress ambientProgress = new();
-            using (Progress progress = new(ambientProgress))
-            {
-                using (Progress subprogress = new(ambientProgress, progress, 0.0f, 1.0f))
-                {
-                    subprogress.Dispose(); // dispose here so we can test double-dispose
-                }
-            }
+            using Progress progress = new(ambientProgress);
+            using Progress subprogress = new(ambientProgress, progress, 0.0f, 1.0f);
+            subprogress.Dispose(); // dispose here so we can test double-dispose
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgressService"/>.

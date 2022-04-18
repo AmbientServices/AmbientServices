@@ -24,16 +24,16 @@ namespace AmbientServices.Utility
         static TimeSpanExtensions()
 #pragma warning restore CA1810
         {
-            ulong timeSpanTicksPerSecond = (ulong)TimeSpan.TicksPerSecond;
-            ulong stopwatchTicksPerSecond = (ulong)System.Diagnostics.Stopwatch.Frequency;
+            ulong timeSpanTicksPerSecond = TimeSpan.TicksPerSecond;
+            ulong stopwatchTicksPerSecond = (ulong)Stopwatch.Frequency;
             // adjust the multipliers and divisors to reduce the range of values that will cause overflow during conversion by removing all common divisors
             ulong gcd = GCD(timeSpanTicksPerSecond, stopwatchTicksPerSecond);
             TimeSpanToStopwatchMultiplier = (long)(stopwatchTicksPerSecond / gcd);
             TimeSpanToStopwatchDivisor = (long)(timeSpanTicksPerSecond / gcd);
-            TimeSpanToStopwatchRatio = (double)TimeSpanToStopwatchMultiplier / (double)TimeSpanToStopwatchDivisor;
+            TimeSpanToStopwatchRatio = TimeSpanToStopwatchMultiplier / (double)TimeSpanToStopwatchDivisor;
             StopwatchToTimeSpanMultiplier = (long)(timeSpanTicksPerSecond / gcd);
             StopwatchToTimeSpanDivisor = (long)(stopwatchTicksPerSecond / gcd);
-            StopwatchToTimeSpanRatio = (double)StopwatchToTimeSpanMultiplier / (double)StopwatchToTimeSpanDivisor;
+            StopwatchToTimeSpanRatio = StopwatchToTimeSpanMultiplier / (double)StopwatchToTimeSpanDivisor;
             BaselineStopwatchTimestamp = Stopwatch.GetTimestamp();     // note that it doesn't matter if AmbientClock is in use--these are *relative* numbers, so the conversion should work either way
 #if DEBUG   // delay this a little bit just in case it makes a difference
             System.Threading.Thread.Sleep(73);
@@ -54,7 +54,7 @@ namespace AmbientServices.Utility
         /// <summary>
         /// Gets the smallest number of ticks than can be successfully roundtripped between stopwatch ticks and timespan ticks without any loss of accuracy.
         /// </summary>
-        internal static long TimeSpanStopwatchConversionLeastCommonMultiple { get { return _TimeSpanStopwatchConversionLeastCommonMultiple; } }
+        internal static long TimeSpanStopwatchConversionLeastCommonMultiple => _TimeSpanStopwatchConversionLeastCommonMultiple;
         /// <summary>
         /// Converts <see cref="TimeSpan"/> ticks to <see cref="System.Diagnostics.Stopwatch"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="double"/> multipliation if not.
         /// </summary>
