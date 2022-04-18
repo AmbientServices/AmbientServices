@@ -518,9 +518,9 @@ namespace AmbientServices.Test
         {
             public TestSettingsSetSetting(string key = "", string defaultValueString = null, string description = null)
             {
-                this.Key = key;
-                this.DefaultValueString = defaultValueString;
-                this.Description = description;
+                Key = key;
+                DefaultValueString = defaultValueString;
+                Description = description;
             }
 
             public object DefaultValue => DefaultValueString;

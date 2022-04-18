@@ -9,7 +9,7 @@ namespace AmbientServices.Test.DelayedLoad
     [DefaultAmbientService]
     public class DefaultLateAssignmentTest : ILateAssignmentTest
     {
-        static public void Load()
+        public static void Load()
         {
         }
     }

@@ -104,7 +104,7 @@ namespace AmbientServices
         public bool Equals(StatusAuditAlert? other)
         {
             if (other is null) return false;
-            return this._rating.Equals(other._rating) && string.Equals(this._auditAlertCode, other._auditAlertCode, StringComparison.OrdinalIgnoreCase);
+            return _rating.Equals(other._rating) && string.Equals(_auditAlertCode, other._auditAlertCode, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -247,7 +247,7 @@ namespace AmbientServices
         public bool Equals(StatusAuditReport? other)
         {
             if (other is null) return false;
-            return Equals(this._alert, other._alert);
+            return Equals(_alert, other._alert);
         }
 
         /// <summary>
@@ -304,7 +304,7 @@ namespace AmbientServices
         /// An initial audit will be scheduled to begin ten milliseconds after the start of construction, using an <see cref="AmbientEventTimer"/> so that the caller can control the timing of the initial audit in testing scenarios.
         /// </param>
         /// <param name="status">The <see cref="Status"/> this auditor belongs to, or null if this should be a standalone auditor owned by the caller.</param>
-        protected internal StatusAuditor(string targetSystem, TimeSpan baselineAuditFrequency, Status? status)
+        internal protected StatusAuditor(string targetSystem, TimeSpan baselineAuditFrequency, Status? status)
             : base(targetSystem)
         {
             _status = status;
@@ -342,7 +342,7 @@ namespace AmbientServices
         /// If audits start to timeout, audits will happen less frequently even if they are failing so that the status tests don't contribute to system congestion.
         /// <see cref="TimeSpan.Zero"/> and negative time spans are treated as if they were <see cref="TimeSpan.MaxValue"/>.
         /// </param>
-        protected internal StatusAuditor(string targetSystem, TimeSpan baselineAuditFrequency)
+        internal protected StatusAuditor(string targetSystem, TimeSpan baselineAuditFrequency)
             : this(targetSystem, baselineAuditFrequency, Status.DefaultInstance)
         {
         }
@@ -371,7 +371,7 @@ namespace AmbientServices
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-        sealed public override async ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
+        public async override sealed ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
             return await InternalAuditAsync(true, cancel).ConfigureAwait(false);
         }
@@ -389,7 +389,7 @@ namespace AmbientServices
                     // call the derived object to get the status
                     await Audit(builder, cancel).ConfigureAwait(false);
                     // schedule the next audit
-                    builder.NextAuditTime = ScheduleNextAudit(builder.WorstAlert == null ? null : builder.WorstAlert.Rating, builder.Elapsed);
+                    builder.NextAuditTime = ScheduleNextAudit(builder.WorstAlert?.Rating, builder.Elapsed);
                 }
 #pragma warning disable CA1031  // we really DO want to catch ALL exceptions here--this is a status test, and the exception will be reported through the status system.  if we rethrew it, it would crash the program
                 catch (Exception ex)
@@ -481,7 +481,7 @@ namespace AmbientServices
         /// Starts stopping any asynchronous activity (such as periodic audits).
         /// Due to race conditions, occasionally one more audit may occur after this function returns.
         /// </summary>
-        protected internal sealed override ValueTask BeginStop()
+        internal protected override sealed ValueTask BeginStop()
         {
             _initialAuditTimer.Close();  // just in case--we must have shut down pretty quickly to get here without this timer already being closed
             _auditTimer.Stop();
@@ -491,7 +491,7 @@ namespace AmbientServices
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
-        protected internal sealed override ValueTask FinishStop()
+        internal protected override sealed ValueTask FinishStop()
         {
             return default;
         }

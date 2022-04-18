@@ -72,14 +72,18 @@ namespace AmbientServices.Test
                 StatusResults results;
                 StatusResultsBuilder test;
 
-                test = new StatusResultsBuilder(nameof(StatusResultsBuilderFinalResults));
-                test.AuditDuration = null;
+                test = new StatusResultsBuilder(nameof(StatusResultsBuilderFinalResults))
+                {
+                    AuditDuration = null
+                };
                 test.AddAlert("Alert", "Terse", "Details", 0.5f);
                 results = test.FinalResults;
                 Assert.AreEqual(StatusRating.Alert - 0.5f, results.Report?.Alert?.Rating);
 
-                test = new StatusResultsBuilder(nameof(StatusResultsBuilderFinalResults));
-                test.AuditDuration = TimeSpan.FromMilliseconds(100);
+                test = new StatusResultsBuilder(nameof(StatusResultsBuilderFinalResults))
+                {
+                    AuditDuration = TimeSpan.FromMilliseconds(100)
+                };
                 test.AddOkay("Okay", "Terse", "Details", 0.5f);
                 results = test.FinalResults;
                 Assert.AreEqual(StatusRating.Okay - 0.5f, results.Report?.Alert?.Rating);

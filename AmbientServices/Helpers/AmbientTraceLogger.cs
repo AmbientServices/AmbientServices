@@ -56,11 +56,11 @@ namespace AmbientServices
 #endif
     public static class TraceBuffer
     {
-        static private readonly string _FlushString = Guid.NewGuid().ToString();
-        static private readonly ConcurrentQueue<string> _Queue = new();
-        static private readonly SemaphoreSlim _Semaphore = new(0, short.MaxValue);
-        static private readonly Thread _FlusherThread = FlusherThread();
-        static private readonly SemaphoreSlim _FlusherSemaphore = new(0, short.MaxValue);
+        private static readonly string _FlushString = Guid.NewGuid().ToString();
+        private static readonly ConcurrentQueue<string> _Queue = new();
+        private static readonly SemaphoreSlim _Semaphore = new(0, short.MaxValue);
+        private static readonly Thread _FlusherThread = FlusherThread();
+        private static readonly SemaphoreSlim _FlusherSemaphore = new(0, short.MaxValue);
 
         private static Thread FlusherThread()
         {

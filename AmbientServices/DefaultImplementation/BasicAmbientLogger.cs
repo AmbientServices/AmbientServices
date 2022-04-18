@@ -202,8 +202,9 @@ namespace AmbientServices
             _startingSuffix = startingSuffix;
             if (autoFlushFrequency > TimeSpan.Zero)
             {
-                _timer = new AmbientEventTimer(autoFlushFrequency);
-                _timer.AutoReset = true;
+                _timer = new AmbientEventTimer(autoFlushFrequency) {
+                    AutoReset = true
+                };
                 _timer.Elapsed += Timer_Elapsed;
                 _timer.Enabled = true;
             }

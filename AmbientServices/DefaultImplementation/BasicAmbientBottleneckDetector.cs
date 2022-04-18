@@ -193,7 +193,7 @@ namespace AmbientServices
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
-            bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
+            bool allowed = !blocked && (_allow?.IsMatch(bottleneckId) ?? true);
             if (allowed)
             {
                 AmbientBottleneckAccessor? metric;
@@ -369,7 +369,7 @@ namespace AmbientServices
             // is this bottleneck being surveyed?
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
-            bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
+            bool allowed = !blocked && (_allow?.IsMatch(bottleneckId) ?? true);
             if (allowed)
             {
                 _metrics.AddOrUpdate(bottleneckId, bottleneckAccessor, (s, m) => m.Combine(bottleneckAccessor));
@@ -382,7 +382,7 @@ namespace AmbientServices
             // is this bottleneck being surveyed?
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
-            bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
+            bool allowed = !blocked && (_allow?.IsMatch(bottleneckId) ?? true);
             if (allowed)
             {
                 _metrics.AddOrUpdate(bottleneckId, bottleneckAccessor, (s, m) => m.Combine(bottleneckAccessor));
@@ -430,7 +430,7 @@ namespace AmbientServices
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
-            bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
+            bool allowed = !blocked && (_allow?.IsMatch(bottleneckId) ?? true);
             if (allowed)
             {
                 _metrics.AddOrUpdate(bottleneckId, bottleneckAccessor, (s, m) => m.Combine(bottleneckAccessor));
@@ -540,7 +540,7 @@ namespace AmbientServices
     }
     internal class ThreadAccessDistributor : IAmbientBottleneckExitNotificationSink
     {
-        private ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new();
+        private readonly ConcurrentHashSet<IAmbientBottleneckExitNotificationSink> _notificationSinks = new();
 
         public ThreadAccessDistributor()
         {
@@ -595,7 +595,7 @@ namespace AmbientServices
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
-            bool allowed = blocked ? false : _allow?.IsMatch(bottleneckId) ?? true;
+            bool allowed = !blocked && (_allow?.IsMatch(bottleneckId) ?? true);
             if (allowed)
             {
                 AmbientBottleneckAccessor? metric;

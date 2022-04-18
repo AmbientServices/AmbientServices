@@ -258,21 +258,21 @@ namespace AmbientServices
         }
         internal AmbientBottleneckAccessor Combine(AmbientBottleneckAccessor that)
         {
-            if (this._bottleneck != that._bottleneck) throw new ArgumentException("The bottlenecks must be the same in order to combine!", nameof(that));
+            if (_bottleneck != that._bottleneck) throw new ArgumentException("The bottlenecks must be the same in order to combine!", nameof(that));
             return Combine(that._accessBeginStopwatchTimestamp, that._accessEndStopwatchTimestamp, that._accessCount, that._limitUsed);
         }
         internal AmbientBottleneckAccessor Combine(long accessBeginTicks, long accessEndTicks, long accessCount, double limitUsed)
         {
-            long beginTicks = Math.Min(this._accessBeginStopwatchTimestamp, accessBeginTicks);
-            long endTicks = Math.Max(this._accessEndStopwatchTimestamp, accessEndTicks);
-            long sumAccessCount = this._accessCount + accessCount;
-            double sumLimitUsed = this._limitUsed + limitUsed;
+            long beginTicks = Math.Min(_accessBeginStopwatchTimestamp, accessBeginTicks);
+            long endTicks = Math.Max(_accessEndStopwatchTimestamp, accessEndTicks);
+            long sumAccessCount = _accessCount + accessCount;
+            double sumLimitUsed = _limitUsed + limitUsed;
             // if the access hasn't finished, compute everthing as if it finished right now
             long totalStopwatchTicks = (endTicks >= long.MaxValue) ? (AmbientClock.Ticks - beginTicks) : (endTicks - beginTicks);
             if (totalStopwatchTicks == 0) totalStopwatchTicks = 1;    // make sure total ticks is not zero to avoid a divide by zero exception (note that we allow negative values--they shouldn't be possible for time, but we have a test case that at least makes sure they don't crash)
             double limitProportionUsed = // if the usage is equal to the limit and the range is equal to the period, 1.0 should be the result
                 ComputeUtilization(_bottleneck.UtilizationAlgorithm, totalStopwatchTicks, sumLimitUsed, _bottleneck.Limit, _bottleneck.LimitPeriod);
-            return new AmbientBottleneckAccessor(this._owner, this._bottleneck, beginTicks)
+            return new AmbientBottleneckAccessor(_owner, _bottleneck, beginTicks)
             {
                 _accessEndStopwatchTimestamp = endTicks,
                 _accessCount = accessCount,
@@ -289,9 +289,9 @@ namespace AmbientServices
         public int CompareTo(AmbientBottleneckAccessor? other)
         {
             if (other is null) return 1;
-            int diff = this._utilization.CompareTo(other._utilization);
+            int diff = _utilization.CompareTo(other._utilization);
             if (diff != 0) return diff;
-            diff = this._limitUsed.CompareTo(other._limitUsed);
+            diff = _limitUsed.CompareTo(other._limitUsed);
             if (diff != 0) return diff;
             return AccessCount.CompareTo(other.AccessCount);
         }
@@ -304,7 +304,7 @@ namespace AmbientServices
         {
             if (ReferenceEquals(this, obj)) return true;
             if (obj is not AmbientBottleneckAccessor that) return false;
-            return this._bottleneck.Equals(that._bottleneck) && this._accessBeginStopwatchTimestamp.Equals(that._accessBeginStopwatchTimestamp) && this._accessEndStopwatchTimestamp.Equals(that._accessEndStopwatchTimestamp);
+            return _bottleneck.Equals(that._bottleneck) && _accessBeginStopwatchTimestamp.Equals(that._accessBeginStopwatchTimestamp) && _accessEndStopwatchTimestamp.Equals(that._accessEndStopwatchTimestamp);
         }
         /// <summary>
         /// Gets a 32-bit hash code for the value of this object.

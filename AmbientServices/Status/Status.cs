@@ -17,8 +17,8 @@ namespace AmbientServices
         internal const string DefaultSource = "LOCALHOST";
         internal const string DefaultTarget = "Unknown Target";
 
-        private readonly static Status _DefaultInstance = new(true);
-        internal readonly static AmbientLogger<Status> Logger = new();
+        private static readonly Status _DefaultInstance = new(true);
+        internal static readonly AmbientLogger<Status> Logger = new();
         /// <summary>
         /// Gets the base instance that contains the overall status and is initialized with all checkers and auditors with public empty constructors.  
         /// Note that even the default instance must be started by calling <see cref="Start"/> before checks and audits will occur, and that does not happen automatically.
@@ -26,7 +26,7 @@ namespace AmbientServices
         public static Status DefaultInstance => _DefaultInstance;
 
         private readonly bool _loadAllCheckers;
-        private ConcurrentHashSet<StatusChecker> _checkers = new();
+        private readonly ConcurrentHashSet<StatusChecker> _checkers = new();
         private int _shuttingDown;          // interlocked
         private int _started;               // interlocked
 
@@ -283,7 +283,7 @@ namespace AmbientServices
     /// A class attribute used mostly for testing that causes a <see cref="StatusChecker"/> or <see cref="StatusAuditor"/> class to be ignored by the status system unless explicitly added.
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    sealed public class StatusIgnoreCheckerAttribute : Attribute 
+    public sealed class StatusIgnoreCheckerAttribute : Attribute 
     {
         /// <summary>
         /// Constructs the IgnoreCheckerAttribute.

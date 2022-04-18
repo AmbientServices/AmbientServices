@@ -29,7 +29,7 @@ namespace AmbientServices
         /// Defaults to null, but should almost always be set to a non-empty string.
         /// Null should only be used to indicate that this node is not related to any specific target system, which would probably only happen if <see cref="StatusResults.NatureOfSystem"/> this, parent, and child nodes is such that some kind of special grouping is needed to make the overall status rating computation work correctly and the target system identifier for child nodes makes more sense without any identifier at this level.
         /// </remarks>
-        protected internal StatusChecker(string targetSystem)
+        internal protected StatusChecker(string targetSystem)
         {
             _targetSystem = targetSystem;
             _resultsTracker = new StatusResultsTracker(StatusResults.GetPendingResults(null, targetSystem));
@@ -53,14 +53,14 @@ namespace AmbientServices
         /// <summary>
         /// Starts stopping any asynchronous activity.
         /// </summary>
-        protected internal virtual ValueTask BeginStop()
+        internal protected virtual ValueTask BeginStop()
         {
             return default;
         }
         /// <summary>
         /// Finishes stopping any asynchronous activity;
         /// </summary>
-        protected internal virtual ValueTask FinishStop()
+        internal protected virtual ValueTask FinishStop()
         {
             return default;
         }
@@ -69,7 +69,7 @@ namespace AmbientServices
         /// Sets the latest results.
         /// </summary>
         /// <param name="newResults">The new <see cref="StatusResults"/>.  Note that null results will not be stored.</param>
-        protected internal void SetLatestResults(StatusResults newResults)
+        internal protected void SetLatestResults(StatusResults newResults)
         {
             if (newResults != null)
             {
@@ -82,7 +82,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets whether or not this status node is applicable and should be included in the list of statuses for this machine.
         /// </summary>
-        protected internal abstract bool Applicable { get; }
+        internal protected abstract bool Applicable { get; }
         /// <summary>
         /// Computes the current status, returning a <see cref="StatusResults"/> containing information about the status.
         /// </summary>
@@ -144,13 +144,12 @@ namespace AmbientServices
     /// </summary>
     internal class StatusResultsTracker
     {
+        private readonly ConcurrentQueue<StatusResults> _statusResultsHistory = new();
         private StatusResults _statusResults;                           // interlocked
-        private ConcurrentQueue<StatusResults> _statusResultsHistory;   // interlocked
 
         public StatusResultsTracker(StatusResults pendingStatusResults)
         {
             _statusResults = pendingStatusResults;
-            _statusResultsHistory = new ConcurrentQueue<StatusResults>();
         }
 
         /// <summary>
@@ -182,8 +181,8 @@ namespace AmbientServices
                 TruncateQueue(_statusResultsHistory);
             }
         }
-        private static IAmbientSetting<int> _StatusResultsRetentionMinutes = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionMinutes", "The maximum number of minutes to keep status results history", s => int.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "103860");
-        private static IAmbientSetting<int> _StatusResultsRetentionEntries = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionEntries", "The maximum number of status results history entries to keep", s => int.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
+        private static readonly IAmbientSetting<int> _StatusResultsRetentionMinutes = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionMinutes", "The maximum number of minutes to keep status results history", s => int.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "103860");
+        private static readonly IAmbientSetting<int> _StatusResultsRetentionEntries = AmbientSettings.GetAmbientSetting<int>(nameof(StatusChecker) + "-HistoryRetentionEntries", "The maximum number of status results history entries to keep", s => int.Parse(s, System.Globalization.CultureInfo.InvariantCulture), "100");
         private static void TruncateQueue(ConcurrentQueue<StatusResults> queueToTruncate)
         {
             StatusResults? oldRatingResults;

@@ -254,8 +254,8 @@ namespace AmbientServices
 
         public SettingsSetSettingValue(T value, IAmbientSettingsSet settingsSet)
         {
-            this.Value = value;
-            this.SettingsSet = settingsSet;
+            Value = value;
+            SettingsSet = settingsSet;
         }
     }
     /// <summary>

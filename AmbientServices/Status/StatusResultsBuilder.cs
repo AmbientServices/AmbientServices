@@ -49,8 +49,8 @@ namespace AmbientServices
             _auditStartTime = results.Time;
             _relativeDetailLevel = results.RelativeDetailLevel;
             _natureOfSystem = results.NatureOfSystem;
-            _worstAlert = (results.Report == null) ? null : results.Report.Alert;
-            _nextAuditTime = (results.Report == null) ? null : results.Report.NextAuditTime;
+            _worstAlert = results.Report?.Alert;
+            _nextAuditTime = results.Report?.NextAuditTime;
             _properties = new List<StatusProperty>(results.Properties);
             _children = new List<StatusResultsBuilder>(results.Children.Select(c => new StatusResultsBuilder(c)));
         }

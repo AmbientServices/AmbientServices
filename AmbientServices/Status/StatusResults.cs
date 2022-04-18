@@ -77,7 +77,7 @@ namespace AmbientServices
         /// <returns>A string representation of this object.</returns>
         public override string ToString()
         {
-            return this._name + "=" + this._value;
+            return _name + "=" + _value;
         }
     }
     /// <summary>

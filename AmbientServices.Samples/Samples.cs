@@ -408,9 +408,9 @@ public interface IAmbientCallStack
 [DefaultAmbientService]
 class BasicAmbientCallStack : IAmbientCallStack
 {
-    static private AsyncLocal<ImmutableStack<string>> Stack = new AsyncLocal<ImmutableStack<string>>();
+    private static AsyncLocal<ImmutableStack<string>> Stack = new AsyncLocal<ImmutableStack<string>>();
 
-    static private ImmutableStack<string> GetStack()
+    private static ImmutableStack<string> GetStack()
     {
         ImmutableStack<string>? stack = Stack.Value;
         if (stack == null)
