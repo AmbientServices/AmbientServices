@@ -81,7 +81,7 @@ namespace AmbientServices
         private void ScheduleCancellation(TimeSpan timeout)
         {
             _ambientTimer = new AmbientEventTimer(timeout);
-            void handler(object source, System.Timers.ElapsedEventArgs e)
+            void handler(object? source, System.Timers.ElapsedEventArgs e)
             {
                 _ambientTimer.Elapsed -= handler;
                 _tokenSource?.Cancel();

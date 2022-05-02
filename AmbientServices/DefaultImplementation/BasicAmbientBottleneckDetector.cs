@@ -249,7 +249,7 @@ namespace AmbientServices
         {
             TimeWindowBottleneckSurvey initialSurvey = new(allow, block, AmbientClock.Ticks, windowSize);
             _currentWindowSurvey = initialSurvey;
-            void rotateTimeWindow(object s, System.Timers.ElapsedEventArgs e)
+            void rotateTimeWindow(object? s, System.Timers.ElapsedEventArgs e)
             {
                 TimeWindowBottleneckSurvey survey = new(allow, block, AmbientClock.Ticks, windowSize);
                 TimeWindowBottleneckSurvey oldAnalyzer = Interlocked.Exchange(ref _currentWindowSurvey, survey);
