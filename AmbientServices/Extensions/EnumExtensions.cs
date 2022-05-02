@@ -28,7 +28,7 @@ namespace AmbientServices.Utility
     /// <typeparam name="T"></typeparam>
     internal static class EnumMax<T> where T : System.Enum
     {
-        private readonly static T _Max = Init();
+        private static readonly T _Max = Init();
 
         private static T Init()
         {

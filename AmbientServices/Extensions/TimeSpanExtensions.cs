@@ -142,38 +142,16 @@ namespace AmbientServices.Utility
             string unitType = span.TrimStart(Numeric);
             // handle "M" specially because it's months as opposed to minutes
             if (unitType == "m") unitType = "MINUTES";
-            switch (unitType.ToUpperInvariant())
-            {
-                case "Y":
-                case "YEAR":
-                case "YEARS":
-                    return TimeSpan.FromDays(365.25 * units);
-                case "M":
-                case "MONTH":
-                case "MONTHS":
-                    return TimeSpan.FromDays(30.4375 * units);
-                case "D":
-                case "DAY":
-                case "DAYS":
-                    return TimeSpan.FromDays(units);
-                case "H":
-                case "HOUR":
-                case "HOURS":
-                    return TimeSpan.FromHours(units);
-                case "MINUTE":
-                case "MINUTES":
-                    return TimeSpan.FromMinutes(units);
-                case "S":
-                case "SECOND":
-                case "SECONDS":
-                    return TimeSpan.FromSeconds(units);
-                case "MS":
-                case "MILLISECOND":
-                case "MILLISECONDS":
-                    return TimeSpan.FromMilliseconds(units);
-                default:
-                    return TimeSpan.FromTicks((long)units);
-            }
+            return unitType.ToUpperInvariant() switch {
+                "Y" or "YEAR" or "YEARS" => TimeSpan.FromDays(365.25 * units),
+                "M" or "MONTH" or "MONTHS" => TimeSpan.FromDays(30.4375 * units),
+                "D" or "DAY" or "DAYS" => TimeSpan.FromDays(units),
+                "H" or "HOUR" or "HOURS" => TimeSpan.FromHours(units),
+                "MINUTE" or "MINUTES" => TimeSpan.FromMinutes(units),
+                "S" or "SECOND" or "SECONDS" => TimeSpan.FromSeconds(units),
+                "MS" or "MILLISECOND" or "MILLISECONDS" => TimeSpan.FromMilliseconds(units),
+                _ => TimeSpan.FromTicks((long)units),
+            };
         }
         private static bool MatchUnits(double total, int count)
         {
@@ -202,7 +180,7 @@ namespace AmbientServices.Utility
                 return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + firstDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
             }
             // else nothing past the decimal
-            if (intPart != 1) postfix = postfix + "s";
+            if (intPart != 1) postfix += "s";
             return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
         }
         /// <summary>
