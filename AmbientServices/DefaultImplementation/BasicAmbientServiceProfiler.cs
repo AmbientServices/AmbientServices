@@ -15,7 +15,7 @@ namespace AmbientServices
     internal class BasicAmbientServiceProfiler : IAmbientServiceProfiler
     {
         private readonly ConcurrentHashSet<IAmbientServiceProfilerNotificationSink> _notificationSinks = new();
-        private AsyncLocal<CallContextActiveSystemData> _activeSystem;
+        private readonly AsyncLocal<CallContextActiveSystemData> _activeSystem;
 
         public BasicAmbientServiceProfiler()
         {
@@ -50,7 +50,7 @@ namespace AmbientServices
     /// </summary>
     internal struct CallContextActiveSystemData
     {
-        private string _group;
+        private readonly string _group;
         /// <summary>
         /// The currently-active system or system group identifier.
         /// </summary>

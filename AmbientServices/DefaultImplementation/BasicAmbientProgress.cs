@@ -94,8 +94,8 @@ namespace AmbientServices
         private readonly string _prefix;
         private AmbientCancellationTokenSource _cancelSource;       // Note that this should never be null
         private bool _inheritedCancelSource;                        // if we inherited the cancel source, there is no need to dispose of it, as the parent progress is the owner
-        private float _startPortion;
-        private float _portionPart;
+        private readonly float _startPortion;
+        private readonly float _portionPart;
         private float _portionComplete;
         private string _currentItem;
         private bool _disposed;

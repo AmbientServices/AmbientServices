@@ -16,9 +16,9 @@ namespace AmbientServices
         private readonly IAmbientSetting<int> _countToEject;
         private readonly IAmbientSetting<int> _minCacheEntries;
         private int _expireCount;
-        private ConcurrentQueue<TimedQueueEntry> _timedQueue = new();
-        private ConcurrentQueue<string> _untimedQueue = new();
-        private ConcurrentDictionary<string, CacheEntry> _cache = new();
+        private ConcurrentQueue<TimedQueueEntry> _timedQueue = new();   // interlocked (make readonly when we no longer support frameworks without Clear())
+        private ConcurrentQueue<string> _untimedQueue = new();          // interlocked (make readonly when we no longer support frameworks without Clear())
+        private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
 
         public BasicAmbientLocalCache()
             : this(_Settings.Local)
@@ -245,8 +245,8 @@ namespace AmbientServices
 
         public async ValueTask Clear(CancellationToken cancel = default)
         {
-            _untimedQueue = new ConcurrentQueue<string>();
-            _timedQueue = new ConcurrentQueue<TimedQueueEntry>();
+            Interlocked.Exchange(ref _untimedQueue, new ConcurrentQueue<string>());
+            Interlocked.Exchange(ref _timedQueue, new ConcurrentQueue<TimedQueueEntry>());
             while (!_cache.IsEmpty)
             {
                 foreach (CacheEntry entry in _cache.Values)

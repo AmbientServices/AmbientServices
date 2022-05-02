@@ -19,8 +19,8 @@ namespace AmbientServices
 
         private readonly string _name;
         private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object?, IAmbientSettingInfo> _weakSettingRegistered;
-        private ConcurrentDictionary<string, string> _rawValues;
-        private ConcurrentDictionary<string, object> _typedValues;
+        private readonly ConcurrentDictionary<string, string> _rawValues;
+        private readonly ConcurrentDictionary<string, object> _typedValues;
 
         /// <summary>
         /// Constructs the default ambient settings set.

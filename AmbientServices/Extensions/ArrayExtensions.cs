@@ -34,9 +34,7 @@ namespace AmbientServices.Utility
             // loop through each element and compare
             for (int offset = 0; offset < array.Length; ++offset)
             {
-#pragma warning disable CA1508      // this is an analyzer false positive--remove this when the analyzer gets fixed--see https://stackoverflow.com/questions/66502241/how-to-properly-fix-this-code-to-support-nullable-references-without-warnings/66502477#66502477
                 int elemhashcode = array[offset]?.GetHashCode() ?? 0;   // Note here that even though TYPE is not TYPE?, it is nullable because we haven't added a notnull generic type contraint (where TYPE: notnull)
-#pragma warning restore CA1508
                 code ^= (elemhashcode >> (32 - (offset % 32)) ^ (elemhashcode << (offset % 32)) ^ 0x1A7FCA3B);
             }
             return code;
