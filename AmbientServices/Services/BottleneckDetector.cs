@@ -198,7 +198,7 @@ namespace AmbientServices
             if (limit == null || Math.Abs(limit.Value) < 1) limit = 1.0;
             double limitPeriodStopwatchTicks = (limitPeriod == null) ? 1.0 : TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Value.Ticks);
             if (totalStopwatchTicks < 1) totalStopwatchTicks = 1;
-            var result = limitType switch {
+            double result = limitType switch {
                 AmbientBottleneckUtilizationAlgorithm.Linear => (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodStopwatchTicks),
                 AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach => 1.0 - 1.0 / (2.0 * limitUsed / totalStopwatchTicks + 1.0),
                 _ => 0.0,
@@ -256,7 +256,6 @@ namespace AmbientServices
         {
             long beginTicks = Math.Min(_accessBeginStopwatchTimestamp, accessBeginTicks);
             long endTicks = Math.Max(_accessEndStopwatchTimestamp, accessEndTicks);
-            long sumAccessCount = _accessCount + accessCount;
             double sumLimitUsed = _limitUsed + limitUsed;
             // if the access hasn't finished, compute everthing as if it finished right now
             long totalStopwatchTicks = (endTicks >= long.MaxValue) ? (AmbientClock.Ticks - beginTicks) : (endTicks - beginTicks);

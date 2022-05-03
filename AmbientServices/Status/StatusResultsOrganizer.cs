@@ -458,8 +458,9 @@ namespace AmbientServices
             StatusAuditReport report = initialResults.Report ?? new StatusAuditReport(initialResults.Time, TimeSpan.Zero, null, StatusAuditAlert.None);
             CommonAlert = report.Alert;
             RatingSum = report.Alert?.Rating ?? StatusRating.Okay;
-            Sources = new List<string>();
-            Sources.Add(RenderSource(initialResults.SourceSystem));
+            Sources = new List<string> {
+                RenderSource(initialResults.SourceSystem)
+            };
             Target = RenderTarget(initialResults.TargetSystem);
             TimeRange = new DateTimeRange(initialResults.Time);
             Report = report;
@@ -474,8 +475,9 @@ namespace AmbientServices
             StatusAuditReport report = initialReport ?? new StatusAuditReport(time, TimeSpan.Zero, null, StatusAuditAlert.None);
             CommonAlert = report.Alert;
             RatingSum = report.Alert?.Rating ?? StatusRating.Okay;
-            Sources = new List<string>();
-            Sources.Add(RenderSource(source));
+            Sources = new List<string> {
+                RenderSource(source)
+            };
             Target = RenderTarget(target);
             TimeRange = new DateTimeRange(time);
             Report = report;

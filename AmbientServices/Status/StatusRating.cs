@@ -143,7 +143,7 @@
             // pending?
             if (float.IsNaN(rating)) return 0x808080;
 
-            float AdjustPortion(float portion)
+            static float AdjustPortion(float portion)
             {
                 return 0.2f + 0.6f * portion;
             }
