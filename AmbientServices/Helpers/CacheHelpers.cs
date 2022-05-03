@@ -15,8 +15,8 @@ namespace AmbientServices
         private static readonly string DefaultCacheKeyPrefix = typeof(TOWNER).Name + "-";
         private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
 
-        private IAmbientCache? _explicitCache;
-        private string _cacheKeyPrefix = DefaultCacheKeyPrefix;
+        private readonly IAmbientCache? _explicitCache;
+        private readonly string _cacheKeyPrefix = DefaultCacheKeyPrefix;
 
         /// <summary>
         /// Creates the AmbientCache using the ambient cache service.

@@ -149,7 +149,7 @@ namespace AmbientServices.Test
 
         private static void Hammer(string typeName, int threadCount, Func<string?> f, TimeSpan timeout)
         {
-            ManualResetEvent continueEvent = new ManualResetEvent(false);
+            ManualResetEvent continueEvent = new(false);
             string?[] results = new string?[threadCount];
             Thread[] threads = new Thread[threadCount];
             ManualResetEvent[] startedEvent = new ManualResetEvent[threadCount];

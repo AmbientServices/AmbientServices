@@ -22,7 +22,7 @@ namespace AmbientServices
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class DefaultAmbientServiceAttribute : Attribute
     {
-        private IReadOnlyList<Type>? _registrationInterfaces;
+        private readonly IReadOnlyList<Type>? _registrationInterfaces;
 
         /// <summary>
         /// Constructs a DefaultAmbientServiceAttribute.
@@ -60,7 +60,7 @@ namespace AmbientServices
     /// </summary>
     internal static class DefaultAmbientServices
     {
-        private static Assembly _ThisAssembly;
+        private static readonly Assembly _ThisAssembly;
         private static readonly ConcurrentDictionary<Type, Type> _DefaultImplementations;
 
         static DefaultAmbientServices()

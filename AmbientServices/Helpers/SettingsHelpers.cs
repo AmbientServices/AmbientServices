@@ -149,14 +149,14 @@ namespace AmbientServices
     /// </summary>
     public class SettingsRegistry
     {
-        private static SettingsRegistry _DefaultRegistry = new();
+        private static readonly SettingsRegistry _DefaultRegistry = new();
         /// <summary>
         /// Gets the default registry.
         /// </summary>
         public static SettingsRegistry DefaultRegistry => _DefaultRegistry;
 
 
-        private ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new();
+        private readonly ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new();
         /// <summary>
         /// Registers an <see cref="IAmbientSettingInfo"/> in the global registry.
         /// </summary>
@@ -351,7 +351,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the last time the setting's value was retrieved.
         /// </summary>
-        public DateTime LastUsed => new DateTime(_lastUsedTicks);
+        public DateTime LastUsed => new(_lastUsedTicks);
         /// <summary>
         /// Gets the default value for the setting.
         /// </summary>
@@ -432,7 +432,7 @@ namespace AmbientServices
             get
             {
                 UpdateLastUsed();
-                return (_globalSetAndValue != null) ? _globalSetAndValue : new SettingsSetSettingValue<T>(_defaultValue, DefaultSettingsSet.Instance);
+                return _globalSetAndValue ?? new SettingsSetSettingValue<T>(_defaultValue, DefaultSettingsSet.Instance);
             }
         }
     }

@@ -465,7 +465,7 @@ namespace AmbientServices.Test
         }
         public override bool Equals(object obj)
         {
-            if (!(obj is DisposableCacheEntry dce)) return false;
+            if (obj is not DisposableCacheEntry dce) return false;
             return _key == dce._key;
         }
 

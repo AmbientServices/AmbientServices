@@ -157,7 +157,7 @@ namespace AmbientServices
         /// <returns><b>true</b> if the objects are equal, <b>false</b> if they are not.</returns>
         public override bool Equals(object? obj)
         {
-            if (!(obj is FilteredStackTrace)) return false;
+            if (obj is not FilteredStackTrace) return false;
             return base.Equals((StackTrace)obj);
         }
         /// <summary>

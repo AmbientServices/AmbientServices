@@ -18,9 +18,9 @@ namespace AmbientServices
         internal static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting(nameof(AmbientLogger) + "-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
         internal static readonly AmbientService<IAmbientLogger> _AmbientLogger = Ambient.GetService<IAmbientLogger>();
 
-        private string _typeName;
-        private IAmbientLogger? _logger;
-        private AmbientLogFilter _logFilter;
+        private readonly string _typeName;
+        private readonly IAmbientLogger? _logger;
+        private readonly AmbientLogFilter _logFilter;
 
         /// <summary>
         /// Constructs an AmbientLogger using the ambient logger and ambient settings set.
@@ -48,7 +48,7 @@ namespace AmbientServices
         {
             if (!_logFilter.IsBlocked(level, _typeName, category))
             {
-                if (!string.IsNullOrEmpty(category)) category = category + ":";
+                if (!string.IsNullOrEmpty(category)) category += ":";
                 message = string.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, _typeName, category, message);
                 _logger!.Log(message);  // the calling of this method is short-circuited when _logger is null
             }
@@ -185,7 +185,7 @@ namespace AmbientServices
         }
         internal bool IsCategoryBlocked(string? categoryName)
         {
-            categoryName = categoryName ?? "";
+            categoryName ??= "";
             bool blocked = _categoryBlockSetting.Value?.IsMatch(categoryName) ?? false;
             if (blocked) return true;
             bool allowed = _categoryAllowSetting.Value?.IsMatch(categoryName) ?? true;

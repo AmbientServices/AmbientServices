@@ -251,9 +251,9 @@ namespace AmbientServices.Test
         public static void Load()
         {
             ITestAmbientService service = _Accessor.Global;
-            if (!(service is DefaultTestAmbientService2)) throw new InvalidOperationException();
+            if (service is not DefaultTestAmbientService2) throw new InvalidOperationException();
             ITestAmbientService2 service2 = _Accessor2.Global;
-            if (!(service2 is DefaultTestAmbientService2)) throw new InvalidOperationException();
+            if (service2 is not DefaultTestAmbientService2) throw new InvalidOperationException();
         }
     }
 }

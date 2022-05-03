@@ -29,7 +29,7 @@ namespace AmbientServices
         /// Gets a new <see cref="Pseudorandom"/> using a thread-safe seed generator.
         /// Because <see cref="Pseudorandom"/> is a value type, even getting a single random number through this property is efficient.
         /// </summary>
-        public static Pseudorandom Next => new Pseudorandom((int)NextGlobalSeed);
+        public static Pseudorandom Next => new((int)NextGlobalSeed);
 
         private ulong _seed;
 
@@ -440,7 +440,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets a <see cref="decimal"/> with a random value.  All possible values should be roughly evenly distributed.
         /// </summary>
-        public decimal NextDecimal => new decimal(NextInt32Signed, NextInt32Signed, NextInt32Signed, NextBoolean, (byte)(NextUInt32 % DecimalMaxScalePlusOne));
+        public decimal NextDecimal => new(NextInt32Signed, NextInt32Signed, NextInt32Signed, NextBoolean, (byte)(NextUInt32 % DecimalMaxScalePlusOne));
         /// <summary>
         /// Gets a <see cref="double"/> with a random value.  All possible values should be roughly evenly distributed, including special values like <see cref="double.NaN"/>, <see cref="double.Epsilon"/>, <see cref="double.PositiveInfinity"/>, etc.
         /// </summary>
@@ -533,7 +533,7 @@ namespace AmbientServices
         /// <returns>true if <paramref name="obj"/> is logically equal to this instance, false if it is not.</returns>
         public override bool Equals(object? obj)
         {
-            if (!(obj is Pseudorandom)) return false;
+            if (obj is not Pseudorandom) return false;
             return Equals((Pseudorandom)obj);
         }
         /// <summary>

@@ -969,13 +969,13 @@ namespace AmbientServices.Test
             void callback(object o) { ++invocations; }
             using (AmbientClock.Pause())
             {
-                StringBuilder errorInfo = new StringBuilder();
+                StringBuilder errorInfo = new();
                 // this test is testing against system objects which are timing-dependent to make sure they behave the same way the ambient versions do
                 // so they fail occasionally, so we'll retry several times to be sure they're really misbehaving
                 for (int attempt = 0; attempt < 5; ++attempt)
                 {
                     errorInfo.Clear();
-                    using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, null, 10000, 10000)) // this assumes the test will finish in 10 seconds
+                    using (AmbientCallbackTimer timer = new(callback, null, 10000, 10000)) // this assumes the test will finish in 10 seconds
                     {
                         if (AmbientCallbackTimer.ActiveCount <= 0) errorInfo.AppendLine($"AmbientCallbackTimer.ActiveCount is {AmbientCallbackTimer.ActiveCount} but should be at least one!");
                     }
@@ -994,7 +994,7 @@ namespace AmbientServices.Test
             int invocations = 0;
             void callback(object o) { ++invocations; }
             using (AmbientClock.Pause())
-            await using (AmbientCallbackTimer timer = new AmbientCallbackTimer(callback, null, 100, 100))
+            await using (AmbientCallbackTimer timer = new(callback, null, 100, 100))
             {
             }
         }
@@ -1584,7 +1584,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemSafeRegisterWaitForSingleObject()
         {
-            AutoResetEvent are = new AutoResetEvent(false);
+            AutoResetEvent are = new(false);
             int signaledInvocations = 0;
             int timedOutInvocations = 0;
             void callback(object state, bool timedOut) { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; }
@@ -1607,7 +1607,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AutoResetEvent are = new AutoResetEvent(false);
+                AutoResetEvent are = new(false);
                 int signaledInvocations = 0;
                 int timedOutInvocations = 0;
                 WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };

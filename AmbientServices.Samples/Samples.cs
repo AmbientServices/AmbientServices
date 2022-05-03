@@ -114,7 +114,7 @@ class User
 /// </summary>
 class UserManager
 {
-    private static readonly AmbientLocalCache<UserManager> Cache = new AmbientLocalCache<UserManager>();
+    private static readonly AmbientLocalCache<UserManager> Cache = new();
 
     /// <summary>
     /// Finds the user with the specified emali address.
@@ -176,7 +176,7 @@ class UserManager
 /// </summary>
 public static class AssemblyLoggingExtensions
 {
-    private static readonly AmbientLogger<Assembly> Logger = new AmbientLogger<Assembly>();
+    private static readonly AmbientLogger<Assembly> Logger = new();
 
     /// <summary>
     /// Log that the assembly was loaded.
@@ -246,7 +246,7 @@ class DownloadAndUnzip
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default;
-        HttpClient client = new HttpClient();
+        HttpClient client = new();
         using HttpResponseMessage response = await client.GetAsync(_downlaodUrl);
         long totalBytesRead = 0;
         int bytesRead;
@@ -285,7 +285,7 @@ class DownloadAndUnzip
         IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default;
 
-        ZipArchive archive = new ZipArchive(_package);
+        ZipArchive archive = new(_package);
         int entries = archive.Entries.Count;
         for (int entry = 0; entry < entries; ++entry)
         {
@@ -313,7 +313,7 @@ class BufferPool
     private static readonly IAmbientSetting<int> MaxTotalBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-MaxTotalBytes", "The maximum total number of bytes to use for all the allocated buffers.  The default value is 1MB.", s => Int32.Parse(s), "1000000");
     private static readonly IAmbientSetting<int> DefaultBufferBytes = AmbientSettings.GetAmbientSetting<int>(nameof(BufferPool) + "-BufferBytes", "The number of bytes to allocate for each buffer.  The default value is 8000 bytes.", s => Int32.Parse(s), "8000");
 
-    private SizedBufferRecycler _recycler;  // interlocked
+    private readonly SizedBufferRecycler _recycler;  // interlocked
 
     class SizedBufferRecycler
     {
@@ -408,7 +408,7 @@ public interface IAmbientCallStack
 [DefaultAmbientService]
 class BasicAmbientCallStack : IAmbientCallStack
 {
-    private static AsyncLocal<ImmutableStack<string>> Stack = new AsyncLocal<ImmutableStack<string>>();
+    private static readonly AsyncLocal<ImmutableStack<string>> Stack = new();
 
     private static ImmutableStack<string> GetStack()
     {
@@ -752,9 +752,9 @@ public static class StatisticsReporter
 /// </summary>
 class GlobalQueue
 {
-    private static Mutex Mutex = new Mutex(false);
-    private static Queue<object> Queue = new Queue<object>();
-    private static readonly AmbientBottleneck GlobalQueueBottleneck = new AmbientBottleneck("GlobalQueue-Access", AmbientBottleneckUtilizationAlgorithm.Linear, true, "A bottleneck which only allows one accessor at a time.");
+    private static readonly Mutex Mutex = new(false);
+    private static readonly Queue<object> Queue = new();
+    private static readonly AmbientBottleneck GlobalQueueBottleneck = new("GlobalQueue-Access", AmbientBottleneckUtilizationAlgorithm.Linear, true, "A bottleneck which only allows one accessor at a time.");
 
     /// <summary>
     /// Adds a new item to the queue.
@@ -804,7 +804,7 @@ class EbsAccessor
     private const int IopsPageSize = 16 * 1024;
 
     private readonly string _volumePrefix;
-    private readonly AmbientBottleneck _bottleneck = new AmbientBottleneck("Ebs-Iops", AmbientBottleneckUtilizationAlgorithm.Linear, false, "A bottleneck which has a limit, but which is not based on access time.", 1000, TimeSpan.FromSeconds(1));
+    private readonly AmbientBottleneck _bottleneck = new("Ebs-Iops", AmbientBottleneckUtilizationAlgorithm.Linear, false, "A bottleneck which has a limit, but which is not based on access time.", 1000, TimeSpan.FromSeconds(1));
 
     /// <summary>
     /// Creates an EBS accessor for the specified volume.
@@ -830,7 +830,7 @@ class EbsAccessor
         int bytesRead;
         using (AmbientBottleneckAccessor? access = _bottleneck.EnterBottleneck())
         {
-            using (FileStream f = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (FileStream f = new(filePath, FileMode.Open, FileAccess.Read))
             {
                 f.Position = fileOffset;
                 bytesRead = f.Read(buffer, bufferOffset, bytes);
@@ -845,9 +845,9 @@ class EbsAccessor
 /// </summary>
 class BottleneckReporter
 {
-    private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
+    private readonly AmbientBottleneckSurveyorCoordinator _surveyor = new();
     private Dictionary<string, double>? _mostRecentWindowTopBottlenecks;  // interlocked
-    private IDisposable _timeWindow;
+    private readonly IDisposable _timeWindow;
 
     /// <summary>
     /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
@@ -860,7 +860,7 @@ class BottleneckReporter
 
     private Task OnMostRecentWindowClosed(IAmbientBottleneckSurvey analysis)
     {
-        Dictionary<string, double> mostRecentWindowTopBottlenecks = new Dictionary<string, double>();
+        Dictionary<string, double> mostRecentWindowTopBottlenecks = new();
         foreach (AmbientBottleneckAccessor record in analysis.GetMostUtilizedBottlenecks(10))
         {
             mostRecentWindowTopBottlenecks.Add(record.Bottleneck.Id, record.Utilization);
@@ -955,10 +955,10 @@ class SqlAccessor
 /// </summary>
 class ProfileReporter
 {
-    private AmbientBottleneckSurveyorCoordinator _surveyor = new AmbientBottleneckSurveyorCoordinator();
+    private readonly AmbientBottleneckSurveyorCoordinator _surveyor = new();
     private Dictionary<string, long>? _mostRecentWindowServiceProfile;  // interlocked
-    private AmbientServiceProfilerCoordinator _coordinator;
-    private IDisposable? _timeWindow;
+    private readonly AmbientServiceProfilerCoordinator _coordinator;
+    private readonly IDisposable? _timeWindow;
     /// <summary>
     /// Constructs a Bottleneck reporter that holds onto the top ten utilized bottlenecks for the entire process for the previous one-minute window.
     /// </summary>
@@ -970,7 +970,7 @@ class ProfileReporter
 
     private Task OnMostRecentWindowClosed(IAmbientServiceProfile profile)
     {
-        Dictionary<string, long> serviceProfile = new Dictionary<string, long>();
+        Dictionary<string, long> serviceProfile = new();
         foreach (AmbientServiceProfilerAccumulator record in profile.ProfilerStatistics)
         {
             serviceProfile.Add(record.Group, record.TotalStopwatchTicksUsed);
@@ -1033,7 +1033,7 @@ class DiskAuditor
         {
             if (_readonly)
             {
-                StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+                StatusResultsBuilder readBuilder = new("Read");
                 statusBuilder.AddChild(readBuilder);
                 try
                 {
@@ -1044,7 +1044,7 @@ class DiskAuditor
                         AmbientStopwatch s = AmbientStopwatch.StartNew();
                         try
                         {
-                            using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            using (FileStream fs = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
                                 byte[] b = new byte[1];
                                 await fs.ReadAsync(b, 0, 1, cancel);
@@ -1070,8 +1070,8 @@ class DiskAuditor
             }
             else
             {
-                StatusResultsBuilder writeBuilder = new StatusResultsBuilder("Write");
-                StatusResultsBuilder readBuilder = new StatusResultsBuilder("Read");
+                StatusResultsBuilder writeBuilder = new("Write");
+                StatusResultsBuilder readBuilder = new("Read");
                 statusBuilder.AddChild(writeBuilder);
                 statusBuilder.AddChild(readBuilder);
                 // attempt to write a temporary file
@@ -1081,7 +1081,7 @@ class DiskAuditor
                     AmbientStopwatch s = AmbientStopwatch.StartNew();
                     try
                     {
-                        using FileStream fs = new FileStream(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096);
+                        using FileStream fs = new(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096);
                         byte[] b = new byte[1];
                         await fs.WriteAsync(b, 0, 1);
                         await fs.FlushAsync();
@@ -1095,7 +1095,7 @@ class DiskAuditor
                     s.Reset();
                     try
                     {
-                        using (FileStream fs = new FileStream(targetPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        using (FileStream fs = new(targetPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         {
                             byte[] b = new byte[1];
                             await fs.ReadAsync(b, 0, 1, cancel);
@@ -1198,13 +1198,13 @@ public class TimeDependentServiceTest
     public async Task TestCancellation()
     {
         // this first part *should* get cancelled because we're using the system clock
-        AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
+        AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
         await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token).AsTask());
 
         // switch the current call context to the artifically-paused ambient clock and try again
         using (AmbientClock.Pause())
         {
-            AmbientCancellationTokenSource cts2 = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
+            AmbientCancellationTokenSource cts2 = new(TimeSpan.FromSeconds(1));
             // this should *not* throw because the clock has been paused
             await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
 
@@ -1227,13 +1227,13 @@ public class TimeDependentServiceTest
     {
         using (AmbientClock.Pause())
         {
-            AmbientCancellationTokenSource cts = new AmbientCancellationTokenSource(TimeSpan.FromSeconds(1));
+            AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
             await AsyncFunctionThatCouldTimeoutUnderHeavyLoad(cts.Token);
         }
     }
     private async ValueTask AsyncFunctionThatCouldTimeoutUnderHeavyLoad(CancellationToken cancel)
     {
-        AmbientStopwatch stopwatch = new AmbientStopwatch(true);
+        AmbientStopwatch stopwatch = new(true);
         for (int count = 0; count < 9; ++count)
         {
             await Task.Delay(100);

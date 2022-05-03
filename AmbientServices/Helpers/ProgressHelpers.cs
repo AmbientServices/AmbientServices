@@ -35,7 +35,9 @@ namespace AmbientServices
             CancellationTokenSource source = new(); source.Cancel(); return source.Token;
         }
 
-        private IAmbientClock? _clock;
+#pragma warning disable IDE0052 // Remove unread private members    I'd like to keep this around for debugging and just in case
+        private readonly IAmbientClock? _clock;
+#pragma warning restore IDE0052 // Remove unread private members
         private CancellationTokenSource? _tokenSource;      // note that if this is not nullable, you can't tell if the token source has been disposed, which causes all sorts of problems
         private AmbientEventTimer? _ambientTimer;
 

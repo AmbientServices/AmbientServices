@@ -65,7 +65,7 @@ namespace AmbientServices
         private static Thread FlusherThread()
         {
             // fire up a background thread to flush the trace data
-            Thread thread = new(new ThreadStart(_BackgroundThread));
+            Thread thread = new(new ThreadStart(TraceBufferBackgoundFlusher));
             thread.Name = "TraceBuffer.FlusherThread";
             thread.Priority = ThreadPriority.BelowNormal;
             thread.IsBackground = true;
@@ -154,7 +154,7 @@ namespace AmbientServices
                 return ret.ToString();
             }
         }
-        private static void _BackgroundThread()
+        private static void TraceBufferBackgoundFlusher()
         {
             // loop forever!
             while (true)

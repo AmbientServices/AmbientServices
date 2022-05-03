@@ -222,7 +222,7 @@ namespace AmbientServices
 
         private sealed class ScopedClockPauser : IDisposable
         {
-            private IAmbientClock? _clockToRestore;
+            private readonly IAmbientClock? _clockToRestore;
 
             internal ScopedClockPauser()
             {
@@ -507,7 +507,9 @@ namespace AmbientServices
         private long _nextRaiseStopwatchTicks;
         private int _autoReset;
         private int _enabled;
-        private EventHolder _eventHolder;
+#pragma warning disable IDE0044 // Add readonly modifier
+        private EventHolder _eventHolder;  // NOTE: making this readonly screws up *everything*
+#pragma warning restore IDE0044 // Add readonly modifier
 
         private struct EventHolder
         {
@@ -952,7 +954,9 @@ namespace AmbientServices
         {
             Interlocked.Increment(ref _TimerCount);
             long nowStopwatchTicks = _clock!.Ticks; // this is only called where _clock is not null
+#if DEBUG
             IAmbientClock tempClock = _clock;
+#endif
             _clock.RegisterTimeChangedNotificationSink(this);
             _periodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(period.Ticks);
             long ticksToNextInvocation = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(dueTime.Ticks);

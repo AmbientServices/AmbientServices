@@ -99,7 +99,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the beginning of the time range for the access.
         /// </summary>
-        public DateTime AccessBegin => new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp));
+        public DateTime AccessBegin => new(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp));
         /// <summary>
         /// Gets the end of the time range for the access, if the access is finished.
         /// </summary>
@@ -195,23 +195,14 @@ namespace AmbientServices
 
         private static double ComputeUtilization(AmbientBottleneckUtilizationAlgorithm limitType, long totalStopwatchTicks, double limitUsed, double? limit, TimeSpan? limitPeriod)
         {
-            double result;
             if (limit == null || Math.Abs(limit.Value) < 1) limit = 1.0;
             double limitPeriodStopwatchTicks = (limitPeriod == null) ? 1.0 : TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Value.Ticks);
             if (totalStopwatchTicks < 1) totalStopwatchTicks = 1;
-            switch (limitType)
-            {
-                case AmbientBottleneckUtilizationAlgorithm.Linear:
-                    result = (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodStopwatchTicks);
-                    break;
-                case AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach:
-                    result = 1.0 - 1.0 / (2.0 * limitUsed / totalStopwatchTicks + 1.0);
-                    break;
-                default:
-                case AmbientBottleneckUtilizationAlgorithm.Zero:
-                    result = 0.0;
-                    break;
-            }
+            var result = limitType switch {
+                AmbientBottleneckUtilizationAlgorithm.Linear => (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodStopwatchTicks),
+                AmbientBottleneckUtilizationAlgorithm.ExponentialLimitApproach => 1.0 - 1.0 / (2.0 * limitUsed / totalStopwatchTicks + 1.0),
+                _ => 0.0,
+            };
             return result;
         }
 

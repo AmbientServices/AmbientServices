@@ -166,8 +166,8 @@ The regular expression will attempt to match the system identifier, with the val
     public class AmbientServiceProfilerAccumulator
     {
         private readonly string _group;
-        private long _executionCount;           // interlocked
-        private long _totalStopwatchTicksUsed;  // interlocked
+        private readonly long _executionCount;           // interlocked
+        private readonly long _totalStopwatchTicksUsed;  // interlocked
 
         /// <summary>
         /// Gets the group the accumulator is for.
@@ -184,7 +184,7 @@ The regular expression will attempt to match the system identifier, with the val
         /// <summary>
         /// Gets the amount of time used by this system group.
         /// </summary>
-        public TimeSpan TimeUsed => new TimeSpan(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_totalStopwatchTicksUsed));
+        public TimeSpan TimeUsed => new(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_totalStopwatchTicksUsed));
 
         /// <summary>
         /// Constructs a AmbientServiceProfileAccumulator for the specified system.

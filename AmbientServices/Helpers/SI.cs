@@ -81,10 +81,10 @@ namespace AmbientServices.Utility
         /// </summary>
         public const double Yotta = 1000.0 * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L;
 
-        private static string[] sSmallSiPrefixes = { "milli", "micro", "nano", "pico", "femto", "atto", "zepto", "yocto" };
-        private static string[] sShortSmallSiPrefixes = { "m", "μ", "n", "p", "f", "a", "z", "y" };
-        private static string[] sLargeSiPrefixes = { "kilo", "mega", "giga", "tera", "peta", "exa", "zetta", "yotta" };
-        private static string[] sShortLargeSiPrefixes = { "k", "M", "G", "T", "P", "E", "Z", "Y" };     // NOTE here that the proper SI prefix for kilo is a lower-case k, not upper-case like all the others.  This is to distinguish Kilo- from Kelvin, which is an unfortunate inconsistency.
+        private static readonly string[] sSmallSiPrefixes = { "milli", "micro", "nano", "pico", "femto", "atto", "zepto", "yocto" };
+        private static readonly string[] sShortSmallSiPrefixes = { "m", "μ", "n", "p", "f", "a", "z", "y" };
+        private static readonly string[] sLargeSiPrefixes = { "kilo", "mega", "giga", "tera", "peta", "exa", "zetta", "yotta" };
+        private static readonly string[] sShortLargeSiPrefixes = { "k", "M", "G", "T", "P", "E", "Z", "Y" };     // NOTE here that the proper SI prefix for kilo is a lower-case k, not upper-case like all the others.  This is to distinguish Kilo- from Kelvin, which is an unfortunate inconsistency.
         private const int YottaPrefixIndex = 7;
         private const int YoctoPrefixIndex = 7;
         /// <summary>

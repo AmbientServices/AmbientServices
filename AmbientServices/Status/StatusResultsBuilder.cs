@@ -12,7 +12,7 @@ namespace AmbientServices
     public class StatusResultsBuilder
     {
         private string? _sourceSystem;
-        private string _targetSystem;
+        private readonly string _targetSystem;
         private int _relativeDetailLevel;
         private StatusNatureOfSystem _natureOfSystem;
         private DateTime _auditStartTime;
