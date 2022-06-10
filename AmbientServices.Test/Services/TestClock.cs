@@ -625,7 +625,7 @@ namespace AmbientServices.Test
                 bool disposed = false;
                 using (AmbientEventTimer timer = new(TimeSpan.FromMilliseconds(100)))
                 {
-                    Assert.IsFalse(timer.AutoReset);
+                    Assert.IsTrue(timer.AutoReset);
                     Assert.AreEqual(100.0, timer.Interval);
                     Assert.IsFalse(timer.Enabled);
                     timer.Enabled = true;
@@ -638,6 +638,21 @@ namespace AmbientServices.Test
                 }
                 Assert.IsTrue(disposed);
             }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientClock"/>.
+        /// </summary>
+        [TestMethod]
+        public void EventTimerDefaults()
+        {
+            using System.Timers.Timer systemTimer = new(100.0);
+            using AmbientEventTimer ambientTimer = new(100.0);
+            Assert.AreEqual(systemTimer.Enabled, ambientTimer.Enabled);
+            Assert.AreEqual(systemTimer.AutoReset, ambientTimer.AutoReset);
+            Assert.AreEqual(systemTimer.Interval, ambientTimer.Interval);
+            Assert.AreEqual(systemTimer.Container, ambientTimer.Container);
+            Assert.AreEqual(systemTimer.Site, ambientTimer.Site);
+            Assert.AreEqual(systemTimer.SynchronizingObject, ambientTimer.SynchronizingObject);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.

@@ -101,6 +101,10 @@ namespace AmbientServices
     public interface IAmbientSetting<T>
     {
         /// <summary>
+        /// Gets the key of the setting, which may be useful in providing an override without having to match the name with a magic value.
+        /// </summary>
+        string Key { get; }
+        /// <summary>
         /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>
         T Value { get; }
@@ -492,6 +496,10 @@ namespace AmbientServices
             object? value = set.GetTypedValue(_settingInfo.Key);
             return (value == null) ? (_settingInfo.DefaultValue, DefaultSettingsSet.Instance.SetName) : ((T)value, set.SetName);
         }
+        /// <summary>
+        /// Gets the key of the setting, which may be useful in providing an override without having to match the name with a magic value.
+        /// </summary>
+        public string Key => _settingInfo.Key;
         /// <summary>
         /// Gets the current value of the setting (cached from the value given by the settings set).
         /// </summary>

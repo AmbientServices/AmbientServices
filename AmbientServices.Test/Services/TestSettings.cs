@@ -27,22 +27,21 @@ namespace AmbientServices.Test
             // use a local override in case we ran another test that left the global or local settings set set to something else on this thread
             BasicAmbientSettingsSet settings = new(nameof(AmbientSettingInt));
             using ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settings);
-            AmbientSetting<int> value;
-            value = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
-            Assert.AreEqual(0, value.Value);
-            value = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
-            Assert.AreEqual(1, value.Value);
-            value = new AmbientSetting<int>("int-setting-3", "", s => Int32.Parse(s), "1");
-            Assert.AreEqual(1, value.Value);
+            AmbientSetting<int> setting1 = new AmbientSetting<int>("int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
+            Assert.AreEqual(0, setting1.Value);
+            AmbientSetting<int> setting2 = new AmbientSetting<int>("int-setting-2", "", s => Int32.Parse(s), "1");
+            Assert.AreEqual(1, setting2.Value);
+            AmbientSetting<int> setting3 = new AmbientSetting<int>("int-setting-3", "", s => Int32.Parse(s), "1");
+            Assert.AreEqual(1, setting3.Value);
 
             // test changing the setting without an event listener
-            settings.ChangeSetting("int-setting-3", "5");
+            settings.ChangeSetting(setting3.Key, "5");
             // test changing the setting to the same value without an event listener
-            settings.ChangeSetting("int-setting-3", "5");
+            settings.ChangeSetting(setting3.Key, "5");
             // test changing the setting to null so we fall through to the global settings set
-            settings.ChangeSetting("int-setting-3", null);
-            int settingValue = value.Value;
-            Assert.AreEqual(1, value.Value);
+            settings.ChangeSetting(setting3.Key, null);
+            int settingValue = setting3.Value;
+            Assert.AreEqual(1, setting3.Value);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
