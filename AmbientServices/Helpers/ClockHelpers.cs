@@ -587,6 +587,7 @@ namespace AmbientServices
             : base(period.TotalMilliseconds)
         {
             _clock = clock;
+            _autoReset = 1;
             // is there a clock?
             if (clock != null)
             {
