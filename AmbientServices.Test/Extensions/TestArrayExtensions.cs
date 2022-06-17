@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace AmbientServices.Test
 {
@@ -75,6 +76,21 @@ namespace AmbientServices.Test
             int?[] a = new int?[] { 0, null, 2 };
             int hashCode = a.ValueHashCode();
             Assert.IsTrue(hashCode != 0);
+        }
+        [TestMethod]
+        public void AsEnumerableAsArray()
+        {
+            int a = 123;
+            foreach (int value in a.AsEnumerable())
+            {
+                Assert.AreEqual(value, a);
+            }
+            Assert.AreEqual(1, a.AsEnumerable().Count());
+            foreach (int value in a.AsArray())
+            {
+                Assert.AreEqual(value, a);
+            }
+            Assert.AreEqual(1, a.AsArray().Count());
         }
     }
 }
