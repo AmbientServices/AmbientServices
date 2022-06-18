@@ -91,25 +91,5 @@ namespace AmbientServices.Utility
             // they are equal!
             return true;
         }
-        /// <summary>
-        /// Converts a single item to an enumerable.
-        /// </summary>
-        /// <typeparam name="T">The type for the item.</typeparam>
-        /// <param name="singleItem">The item to put into an enumerable.</param>
-        /// <returns>An enumerable with just <paramref name="singleItem"/> in it.</returns>
-        public static IEnumerable<T> AsEnumerable<T>(this T singleItem)
-        {
-            yield return singleItem;
-        }
-        /// <summary>
-        /// Converts a single item to an enumerable.
-        /// </summary>
-        /// <typeparam name="T">The type for the item.</typeparam>
-        /// <param name="singleItem">The item to put into an enumerable.</param>
-        /// <returns>An enumerable with just <paramref name="singleItem"/> in it.</returns>
-        public static T[] AsArray<T>(this T singleItem)
-        {
-            return new T[] { singleItem };
-        }
     }
 }

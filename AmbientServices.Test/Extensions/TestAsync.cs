@@ -18,7 +18,7 @@ namespace AmbientServices.Test
         public void Async_Basic()
         {
             Assert.AreNotEqual(Async.MultithreadedContext, Async.SinglethreadedContext);
-            int result = Async.Synchronize(() =>
+            int result = Async.RunTaskSync(() =>
             {
                 Task<int> task = Async_BasicAsync();
                 return task;
@@ -30,7 +30,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void Async_AlreadyRun()
         {
-            Async.Synchronize(() => Task.CompletedTask);
+            Async.RunTaskSync(() => Task.CompletedTask);
         }
         /// <summary>
         /// Performs basic tests on the <see cref="Async"/> class.
@@ -38,7 +38,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void Async_NotAlreadyRun()
         {
-            Async.Synchronize(() => new Task(() => { }));
+            Async.RunTaskSync(() => new Task(() => { }));
         }
         /// <summary>
         /// Performs basic tests on the <see cref="Async"/> class.
@@ -46,7 +46,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ExpectedException))]
         public void Async_AggregateExceptionUnwrap()
         {
-            Async.Synchronize(() => throw new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionUnwrap))));
+            Async.RunTaskSync(() => throw new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionUnwrap))));
         }
         /// <summary>
         /// Performs basic tests on the <see cref="Async"/> class.
@@ -54,7 +54,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(ExpectedException))]
         public void Async_AggregateExceptionUnwrapWithTask()
         {
-            Async.Synchronize(async () => { await Task.Delay(10); throw new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionUnwrapWithTask))); });
+            Async.RunTaskSync(async () => { await Task.Delay(10); throw new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionUnwrapWithTask))); });
         }
         /// <summary>
         /// Performs basic tests on the <see cref="Async"/> class.
@@ -63,7 +63,7 @@ namespace AmbientServices.Test
         public void Async_AggregateExceptionUnwrapWithReturn()
         {
             Assert.AreNotEqual(Async.MultithreadedContext, Async.SinglethreadedContext);
-            int result = Async.Synchronize(async () =>
+            int result = Async.RunTaskSync(async () =>
             {
                 await Task.Delay(10);
                 return await Async_BasicAsyncThrow(new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionUnwrapWithReturn))));
@@ -75,7 +75,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(AggregateException))]
         public void Async_AggregateExceptionCantUnwrap()
         {
-            Async.Synchronize(() => throw new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionCantUnwrap)), new ExpectedException(nameof(Async_AggregateExceptionCantUnwrap))));
+            Async.RunTaskSync(() => throw new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionCantUnwrap)), new ExpectedException(nameof(Async_AggregateExceptionCantUnwrap))));
         }
         /// <summary>
         /// Performs basic tests on the <see cref="Async"/> class.
@@ -83,7 +83,7 @@ namespace AmbientServices.Test
         [TestMethod, ExpectedException(typeof(AggregateException))]
         public void Async_AggregateExceptionCantUnwrapWithTask()
         {
-            Async.Synchronize(async () => { await Task.Delay(10); throw new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionCantUnwrapWithTask)), new ExpectedException(nameof(Async_AggregateExceptionCantUnwrapWithTask))); });
+            Async.RunTaskSync(async () => { await Task.Delay(10); throw new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionCantUnwrapWithTask)), new ExpectedException(nameof(Async_AggregateExceptionCantUnwrapWithTask))); });
         }
         /// <summary>
         /// Performs basic tests on the <see cref="Async"/> class.
@@ -92,7 +92,7 @@ namespace AmbientServices.Test
         public void Async_AggregateExceptionCantUnwrapWithReturn()
         {
             Assert.AreNotEqual(Async.MultithreadedContext, Async.SinglethreadedContext);
-            int result = Async.Synchronize(async () =>
+            int result = Async.RunTaskSync(async () =>
             {
                 await Task.Delay(10);
                 return await Async_BasicAsyncThrow(new AggregateException(new ExpectedException(nameof(Async_AggregateExceptionUnwrapWithReturn)), new ExpectedException(nameof(Async_AggregateExceptionUnwrapWithReturn))));
@@ -105,14 +105,14 @@ namespace AmbientServices.Test
         public void Async_SynchronizeVariations()
         {
             TimeSpan timeout = TimeSpan.FromSeconds(60);
-            Async.Synchronize(() =>
+            Async.RunTaskSync(() =>
             {
                 Task task = Async_BasicAsyncPart2();
                 return task;
             });
-            Async.Synchronize(() => Async_BasicAsyncPart2(default));
-            int result = Async.Synchronize(Async_BasicAsyncPart3);
-            result = Async.Synchronize(() => Async_BasicAsyncPart4(default));
+            Async.RunTaskSync(() => Async_BasicAsyncPart2(default));
+            int result = Async.RunTaskSync(Async_BasicAsyncPart3);
+            result = Async.RunTaskSync(() => Async_BasicAsyncPart4(default));
         }
 
         /// <summary>
@@ -216,7 +216,7 @@ namespace AmbientServices.Test
         public void Async_Synchronize()
         {
             Assert.AreNotEqual(Async.MultithreadedContext, Async.SinglethreadedContext);
-            Async.Synchronize(AsyncTest);
+            Async.RunTaskSync(AsyncTest);
         }
         private async Task AsyncTest()
         {
@@ -235,7 +235,7 @@ namespace AmbientServices.Test
             int threadId = Thread.CurrentThread.ManagedThreadId;
             for (int count = 0; count < 3; ++count)
             {
-                Async.Synchronize(() => Loop1(mainThreadId));
+                Async.RunTaskSync(() => Loop1(mainThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
             }
@@ -246,16 +246,16 @@ namespace AmbientServices.Test
             int threadId = Thread.CurrentThread.ManagedThreadId;
             for (int count = 0; count < 3; ++count)
             {
-                await Async.ForceSync(() => Loop2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
+                Async.RunTaskSync(() => Loop2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 Assert.AreEqual(mainThreadId, threadId);
             }
             Assert.IsTrue(Async.UsingSynchronousExecution);
             for (int count = 0; count < 3; ++count)
             {
-                await Async.ForceAsync(() => Loop2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
+                await Async.RunTaskAsync(() => Loop2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
-                Assert.AreEqual(mainThreadId, threadId);    // ForceAsync, unlike a native await, keeps us on the same thread even though the action runs on another thread
+                Assert.AreEqual(mainThreadId, threadId);    // RunAsync, unlike a native await, keeps us on the same thread even though the action runs on another thread
             }
             Assert.IsTrue(Async.UsingSynchronousExecution);
             for (int count = 0; count < 3; ++count)
@@ -272,7 +272,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(threadId, mainThreadId2);
             for (int count = 0; count < 3; ++count)
             {
-                await Async.Run(() => Task.Delay(10));
+                await Async.RunTask(() => Task.Delay(10));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 if (Async.UsingSynchronousExecution)
                 {
@@ -315,7 +315,7 @@ namespace AmbientServices.Test
             int threadId = Thread.CurrentThread.ManagedThreadId;
             for (int count = 0; count < 3; ++count)
             {
-                int result = Async.Synchronize(() => LoopWithReturn1(mainThreadId));
+                int result = Async.RunTaskSync(() => LoopWithReturn1(mainThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
             }
@@ -326,16 +326,16 @@ namespace AmbientServices.Test
             int threadId = Thread.CurrentThread.ManagedThreadId;
             for (int count = 0; count < 3; ++count)
             {
-                int result = await Async.ForceSync(() => LoopWithReturn2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
+                int result = Async.RunTaskSync(() => LoopWithReturn2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 Assert.AreEqual(mainThreadId, threadId);
             }
             Assert.IsTrue(Async.UsingSynchronousExecution);
             for (int count = 0; count < 3; ++count)
             {
-                int result = await Async.ForceAsync(() => LoopWithReturn2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
+                int result = await Async.RunTaskAsync(() => LoopWithReturn2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
-                Assert.AreEqual(mainThreadId, threadId);    // ForceAsync, unlike a native await, keeps us on the same thread even though the action runs on another thread
+                Assert.AreEqual(mainThreadId, threadId);    // RunAsync, unlike a native await, keeps us on the same thread even though the action runs on another thread
             }
             Assert.IsTrue(Async.UsingSynchronousExecution);
             for (int count = 0; count < 3; ++count)
@@ -353,7 +353,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(threadId, mainThreadId2);
             for (int count = 0; count < 3; ++count)
             {
-                int result = await Async.Run(() => Task.FromResult(0));
+                int result = await Async.RunTask(() => Task.FromResult(0));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 if (Async.UsingSynchronousExecution)
                 {
@@ -397,7 +397,7 @@ namespace AmbientServices.Test
             int threadId = Thread.CurrentThread.ManagedThreadId;
             for (int count = 0; count < 3; ++count)
             {
-                Async.SynchronizeValue(() => ValueTaskLoop1(mainThreadId));
+                Async.RunSync(() => ValueTaskLoop1(mainThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
             }
@@ -408,16 +408,16 @@ namespace AmbientServices.Test
             int threadId = Thread.CurrentThread.ManagedThreadId;
             for (int count = 0; count < 3; ++count)
             {
-                await Async.ForceSync(() => ValueTaskLoop2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
+                Async.RunSync(() => ValueTaskLoop2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 Assert.AreEqual(mainThreadId, threadId);
             }
             Assert.IsTrue(Async.UsingSynchronousExecution);
             for (int count = 0; count < 3; ++count)
             {
-                await Async.ForceAsync(() => ValueTaskLoop2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
+                await Async.RunAsync(() => ValueTaskLoop2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
-                Assert.AreEqual(mainThreadId, threadId);    // ForceAsync, unlike a native await, keeps us on the same thread even though the action runs on another thread
+                Assert.AreEqual(mainThreadId, threadId);    // RunAsync, unlike a native await, keeps us on the same thread even though the action runs on another thread
             }
             Assert.IsTrue(Async.UsingSynchronousExecution);
             for (int count = 0; count < 3; ++count)
@@ -434,7 +434,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(threadId, mainThreadId2);
             for (int count = 0; count < 3; ++count)
             {
-                await Async.Run(() => Task.Delay(10));
+                await Async.RunTask(() => Task.Delay(10));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 if (Async.UsingSynchronousExecution)
                 {
@@ -477,7 +477,7 @@ namespace AmbientServices.Test
             int threadId = Thread.CurrentThread.ManagedThreadId;
             for (int count = 0; count < 3; ++count)
             {
-                int result = Async.SynchronizeValue(() => ValueTaskLoopWithReturn1(mainThreadId));
+                int result = Async.RunSync(() => ValueTaskLoopWithReturn1(mainThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
             }
@@ -488,16 +488,16 @@ namespace AmbientServices.Test
             int threadId = Thread.CurrentThread.ManagedThreadId;
             for (int count = 0; count < 3; ++count)
             {
-                int result = await Async.ForceSync(() => ValueTaskLoopWithReturn2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
+                int result = Async.RunSync(() => ValueTaskLoopWithReturn2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 Assert.AreEqual(mainThreadId, threadId);
             }
             Assert.IsTrue(Async.UsingSynchronousExecution);
             for (int count = 0; count < 3; ++count)
             {
-                int result = await Async.ForceAsync(() => ValueTaskLoopWithReturn2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
+                int result = await Async.RunAsync(() => ValueTaskLoopWithReturn2(mainThreadId, Thread.CurrentThread.ManagedThreadId));
                 threadId = Thread.CurrentThread.ManagedThreadId;
-                Assert.AreEqual(mainThreadId, threadId);    // ForceAsync, unlike a native await, keeps us on the same thread even though the action runs on another thread
+                Assert.AreEqual(mainThreadId, threadId);    // RunAsync, unlike a native await, keeps us on the same thread even though the action runs on another thread
             }
             Assert.IsTrue(Async.UsingSynchronousExecution);
             for (int count = 0; count < 3; ++count)
@@ -531,7 +531,7 @@ namespace AmbientServices.Test
             }
             for (int count = 0; count < 3; ++count)
             {
-                await Async.RunValue(() => default);
+                await Async.Run(() => default);
                 threadId = Thread.CurrentThread.ManagedThreadId;
                 if (Async.UsingSynchronousExecution)
                 {
@@ -585,41 +585,55 @@ namespace AmbientServices.Test
         {
             int mainThreadId = Thread.CurrentThread.ManagedThreadId;
             int threadId = Thread.CurrentThread.ManagedThreadId;
-            Async.Synchronize(async () =>
+            Async.RunTaskSync(async () =>
             {
                 await foreach (int ret in EnumerateAsync(10, default))
                 {
                     Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 }
             });
-            Async.SynchronizeValue(() => Async.AwaitForEach(EnumerateAsync(10, default), t =>
+            Async.RunSync(() => Async.AwaitForEach(EnumerateAsync(10, default), t =>
             {
                 Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
             }, default));
-            Async.SynchronizeValue(() => Async.AwaitForEach(EnumerateAsync(10, default), (t, c) =>
+            Async.RunSync(() => Async.AwaitForEach(EnumerateAsync(10, default), (t, c) =>
             {
                 Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 return default;
             }, default));
-            Async.Synchronize(async () =>
+            Async.RunTaskSync(async () =>
             {
                 foreach (int ret in await EnumerateAsync(10, default).ToListAsync())
                 {
                     Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 }
             });
-            Async.Synchronize(async () =>
+            Async.RunTaskSync(async () =>
             {
                 foreach (int ret in await EnumerateAsync(10, default).ToArrayAsync())
                 {
                     Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 }
             });
-            Async.Synchronize(async () =>
+            Async.RunTaskSync(async () =>
             {
                 foreach (int ret in await EnumerateAsync(10, default).ToEnumerableAsync())
                 {
                     Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.RunTaskSync(async () =>
+            {
+                await foreach (int ret in new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }.ToAsyncEnumerable())
+                {
+                    Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.RunTaskSync(async () =>
+            {
+                await foreach (int ret in Array.Empty<int>().ToAsyncEnumerable())
+                {
+                    Assert.Fail("There should be no entries!");
                 }
             });
             foreach (int ret in Async.AsyncEnumerableToEnumerable(() => EnumerateAsync(10, default)))
@@ -643,13 +657,13 @@ namespace AmbientServices.Test
             }
             Assert.AreEqual(limit - 1, max);
             max = 0;
-            await Async.RunValue(() => Async.AwaitForEach(EnumerateAsync(limit, default), ret =>
+            await Async.Run(() => Async.AwaitForEach(EnumerateAsync(limit, default), ret =>
             {
                 max = Math.Max(max, ret);
             }, default));
             Assert.AreEqual(limit - 1, max);
             max = 0;
-            await Async.RunValue(() => Async.AwaitForEach(EnumerateAsync(limit, default), (ret, c) =>
+            await Async.Run(() => Async.AwaitForEach(EnumerateAsync(limit, default), (ret, c) =>
             {
                 max = Math.Max(max, ret);
                 return default;
@@ -685,7 +699,7 @@ namespace AmbientServices.Test
             for (int ret = 0; ret < limit; ++ret)
             {
                 cancel.ThrowIfCancellationRequested();
-                await Async.Run(() => Task.Delay(10));
+                await Async.RunTask(() => Task.Delay(10));
                 yield return ret;
             }
         }
@@ -702,6 +716,13 @@ namespace AmbientServices.Test
                 foreach (int ret in await NullAsyncEnumerable().ToListAsync())
                 {
                     Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () =>
+            {
+                await foreach (int ret in ((int[])null!).ToAsyncEnumerable())
+                {
+                    Assert.Fail("Should be empty!");
                 }
             });
         }
@@ -725,7 +746,7 @@ namespace AmbientServices.Test
             int ret = 0;
             while (true)
             {
-                await Async.Run(() => Task.Delay(10));
+                await Async.RunTask(() => Task.Delay(10));
                 yield return ++ret;
             }
         }

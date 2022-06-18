@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,13 +31,27 @@ namespace AmbientServices
         /// <summary>
         /// Constructs an ambient file logger that writes files that start with the specified prefix.
         /// </summary>
-        /// <param name="filePrefix">The path and filename prefix to use for the log files.  Defaults to the temp folder with "AmbientFileLogger" as a filename prefix.</param>
+        /// <param name="filePrefix">
+        /// The path and filename prefix to use for the log files.  
+        /// If not specified, the executing process's ProcessName or the application domain's friendly name will be used as the prefix.
+        /// If specified without a full path, on windows the local application data folder on windows will be used as the path and on Linux /home/{Environment.UserName}/.local/share will be used as the path.
+        /// </param>
         /// <param name="fileExtension">The file extension (with leading .) to use for the files.  Defaults to ".log".</param>
         /// <param name="rotationPeriodMinutes">The number of minutes after which a new file should be used.  Suffixes will roll over to zero at midnight UTC every day.  Defaults to 60 minutes.</param>
         /// <param name="autoFlushSeconds">The number of seconds between automatic flushes of the log file.  Zero or negative values will disable automatic flushing, so all log messages will be buffered until the log file is rotated or <see cref="Flush"/> is called explicitly.</param>
         public BasicAmbientLogger(string? filePrefix, string? fileExtension = null, int rotationPeriodMinutes = 60, int autoFlushSeconds = 5)
         {
-            if (filePrefix == null) filePrefix = Path.GetTempPath() + nameof(BasicAmbientLogger);
+            // file prefix not specified?
+            if (filePrefix == null)
+            {
+                // use a default path that uses the executable name
+                filePrefix = GetExecutableName();
+            }
+            // else if we have a file prefix, but it doesn't have a directory, use the program data location
+            if (string.IsNullOrEmpty(Path.GetDirectoryName(filePrefix)))
+            {
+                filePrefix = Path.Combine(GetProgramDataFolderLocation(), filePrefix);
+            }
             if (fileExtension == null) fileExtension = ".log";
             if (!fileExtension.StartsWith(".", StringComparison.Ordinal)) fileExtension = "." + fileExtension;
             _filePrefix = filePrefix;
@@ -47,6 +62,34 @@ namespace AmbientServices
             // use that for the starting suffix
             string startingSuffix = PeriodString(_periodNumber);
             _fileBuffers = new RotatingFileBuffer(filePrefix, startingSuffix + _fileExtension, TimeSpan.FromSeconds(autoFlushSeconds));
+        }
+        private static string GetExecutableName()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+                || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+#if NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+                || RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD)
+#endif
+                )
+            {
+                return System.Diagnostics.Process.GetCurrentProcess().ProcessName;
+            }
+            return System.AppDomain.CurrentDomain.FriendlyName;
+        }
+        private static string GetProgramDataFolderLocation()
+        {
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string folderPath;
+            // fixup on linux
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && string.IsNullOrEmpty(path))
+            {
+                folderPath = $"/home/{Environment.UserName}/.local/share";
+                // make sure this directory exists
+                if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+                path = folderPath;
+            }
+            return path + Path.DirectorySeparatorChar;
         }
         /// <summary>
         /// Gets the file prefix.

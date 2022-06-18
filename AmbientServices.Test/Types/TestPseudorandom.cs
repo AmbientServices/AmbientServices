@@ -70,9 +70,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
+            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2, AverageFrequencyDecreaseFactor(distribution).ToString());
 
             distribution = new int[ushort.MaxValue + 1];
             rand = Pseudorandom.Next;
@@ -83,9 +83,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
+            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2, AverageFrequencyDecreaseFactor(distribution).ToString());
         }
         [TestMethod]
         public void PseudorandomMultithreadedDistributionUInt64()
@@ -100,9 +100,9 @@ namespace AmbientServices.Test
             );
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 200);
+            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 200, AverageFrequencyDecreaseFactor(distribution).ToString());
         }
         [TestMethod]
         public void PseudorandomSerialDistributionUInt64()
@@ -116,7 +116,7 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
 
             Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
 
@@ -129,7 +129,7 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
 
             Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
         }
@@ -145,7 +145,7 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
 
             Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
 
@@ -158,7 +158,7 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
 
             Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
         }

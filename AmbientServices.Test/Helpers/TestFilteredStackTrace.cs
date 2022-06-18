@@ -50,7 +50,7 @@ namespace AmbientServices.Test
             Assert.IsFalse(string.IsNullOrEmpty(trace.ToString()));
             trace = new FilteredStackTrace(new ExpectedException("This is a test"), 0, true);
             Assert.IsTrue(string.IsNullOrEmpty(trace.ToString().Trim()));
-            Async.Synchronize(async () => 
+            Async.RunTaskSync(async () => 
             {
                 string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(1, 1)?.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
                 FilteredStackTrace.AddSourcePathToErase(projectPath ?? "Z:\\");

@@ -46,15 +46,26 @@ namespace AmbientServices.Test
                 await BasicAmbientLogger.TryDeleteAllFiles(tempPath);
             }
         }
+        [TestMethod]
+        public async Task BasicAmbientLoggerAtDefaultPath()
+        {
+            using (AmbientClock.Pause())
+            using (BasicAmbientLogger loggerImp = new())
+            {
+                // delete any preexisting files
+                await BasicAmbientLogger.TryDeleteAllFiles(loggerImp.FilePrefix);
+            }
+        }
 
         [TestMethod]
         public async Task BasicAmbientLoggerFileRotation()
         {
+            string tempPath = Path.GetTempPath() + Guid.NewGuid().ToString("N");
             string logFilePrefix = null;
             try
             {
                 using (AmbientClock.Pause())
-                using (BasicAmbientLogger logger = new(null, null, 8 * 60))
+                using (BasicAmbientLogger logger = new(tempPath + nameof(BasicAmbientLoggerFileRotation) + Guid.NewGuid().ToString("N"), null, 8 * 60))
                 {
                     logFilePrefix = logger.FilePrefix;
                     // delete any preexisting files
