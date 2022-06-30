@@ -563,6 +563,19 @@ namespace AmbientServices.Test
             }
             return 0;
         }
+        /// <summary>
+        /// Performs basic tests on the <see cref="Async"/> class.
+        /// </summary>
+        [TestMethod]
+        public void Sync_Enumerator()
+        {
+            int count = 0;
+            foreach (int ret in 1.ToSingleItemEnumerable())
+            {
+                Assert.AreEqual(1, ++count);
+                Assert.AreEqual(1, ret);
+            }
+        }
 #if NETSTANDARD2_1 || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
         /// <summary>
         /// Performs basic tests on the <see cref="Async"/> class.
@@ -625,6 +638,13 @@ namespace AmbientServices.Test
             Async.RunTaskSync(async () =>
             {
                 await foreach (int ret in new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }.ToAsyncEnumerable())
+                {
+                    Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.RunTaskSync(async () =>
+            {
+                await foreach (int ret in 1.ToSingleItemAsyncEnumerable())
                 {
                     Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 }

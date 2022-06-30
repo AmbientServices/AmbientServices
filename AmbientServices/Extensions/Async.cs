@@ -389,6 +389,40 @@ namespace AmbientServices
         }
 #endif
     }
+    /// <summary>
+    /// A static class to hold extensions to IEnumerable.
+    /// </summary>
+    public static class IEnumerableExtensions
+    {
+        /// <summary>
+        /// Converts a single item to an enumerable.
+        /// </summary>
+        /// <typeparam name="T">The type for the item.</typeparam>
+        /// <param name="singleItem">The item to put into an enumerable.</param>
+        /// <returns>An enumerable with just <paramref name="singleItem"/> in it.</returns>
+        public static IEnumerable<T> ToSingleItemEnumerable<T>(this T singleItem)
+        {
+            yield return singleItem;
+        }
+#if NETSTANDARD2_1 || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+        /// <summary>
+        /// Converts an enumerable into an async enumerable.  Works with very large (or even infinite) enumerations.
+        /// </summary>
+        /// <typeparam name="T">The type for the item.</typeparam>
+        /// <param name="e">The enumerable.</param>
+        /// <returns>An enumerable with just <paramref name="singleItem"/> in it.</returns>
+        public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> e, [EnumeratorCancellation] CancellationToken cancel = default)
+        {
+            if (e == null) throw new ArgumentNullException(nameof(e));
+            foreach (T t in e)
+            {
+                cancel.ThrowIfCancellationRequested();
+                yield return t;
+            }
+            await Task.CompletedTask.ConfigureAwait(false);
+        }
+#endif
+    }
 #if NETSTANDARD2_1 || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
     /// <summary>
     /// A static class to hold extensions to IAsyncEnumerable.
@@ -448,21 +482,16 @@ namespace AmbientServices
             return await Async.Run(() => ToListAsync<T>(ae, cancel));
         }
         /// <summary>
-        /// Converts an <see cref="IEnumerable{T}"/> into an <see cref="IAsyncEnumerable{T}"/>.
+        /// Converts a single item to an enumerable.
         /// </summary>
-        /// <typeparam name="T">The type within the enumeration.</typeparam>
-        /// <param name="enumerable">The <see cref="IEnumerable{T}"/>.</param>
-        /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
-        /// <returns>An async enumeration of all the items in the regular enumerator.</returns>
-        public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> enumerable, [EnumeratorCancellation] CancellationToken cancel = default)
+        /// <typeparam name="T">The type for the item.</typeparam>
+        /// <param name="singleItem">The item to put into an enumerable.</param>
+        /// <returns>An enumerable with just <paramref name="singleItem"/> in it.</returns>
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+        public static async IAsyncEnumerable<T> ToSingleItemAsyncEnumerable<T>(this T singleItem)
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
-            if (enumerable == null) throw new ArgumentNullException(nameof(enumerable));
-            foreach (T t in enumerable)
-            {
-                cancel.ThrowIfCancellationRequested();
-                yield return t;
-            }
-            await Task.CompletedTask.ConfigureAwait(false);
+            yield return singleItem;
         }
     }
 #endif
