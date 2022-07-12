@@ -623,7 +623,21 @@ namespace AmbientServices.Test
             });
             Async.RunTaskSync(async () =>
             {
+                foreach (int ret in await EnumerateAsync(10, default).GetAsyncEnumerator().ToListAsync())
+                {
+                    Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.RunTaskSync(async () =>
+            {
                 foreach (int ret in await EnumerateAsync(10, default).ToArrayAsync())
+                {
+                    Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.RunTaskSync(async () =>
+            {
+                foreach (int ret in await EnumerateAsync(10, default).GetAsyncEnumerator().ToArrayAsync())
                 {
                     Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 }
@@ -637,7 +651,21 @@ namespace AmbientServices.Test
             });
             Async.RunTaskSync(async () =>
             {
+                foreach (int ret in await EnumerateAsync(10, default).GetAsyncEnumerator().ToEnumerableAsync())
+                {
+                    Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.RunTaskSync(async () =>
+            {
                 await foreach (int ret in new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }.ToAsyncEnumerable())
+                {
+                    Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
+                }
+            });
+            Async.RunTaskSync(async () =>
+            {
+                await foreach (int ret in ((IEnumerable<int>)new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }).GetEnumerator().ToAsyncEnumerable())
                 {
                     Assert.AreEqual(mainThreadId, Thread.CurrentThread.ManagedThreadId);
                 }
@@ -652,6 +680,13 @@ namespace AmbientServices.Test
             Async.RunTaskSync(async () =>
             {
                 await foreach (int ret in Array.Empty<int>().ToAsyncEnumerable())
+                {
+                    Assert.Fail("There should be no entries!");
+                }
+            });
+            Async.RunTaskSync(async () =>
+            {
+                await foreach (int ret in ((IEnumerable<int>)Array.Empty<int>()).GetEnumerator().ToAsyncEnumerable())
                 {
                     Assert.Fail("There should be no entries!");
                 }
@@ -696,13 +731,31 @@ namespace AmbientServices.Test
             }
             Assert.AreEqual(limit - 1, max);
             max = 0;
+            foreach (int ret in await EnumerateAsync(limit, default).GetAsyncEnumerator().ToListAsync())
+            {
+                max = Math.Max(max, ret);
+            }
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
             foreach (int ret in await EnumerateAsync(limit, default).ToArrayAsync())
             {
                 max = Math.Max(max, ret);
             }
             Assert.AreEqual(limit - 1, max);
             max = 0;
+            foreach (int ret in await EnumerateAsync(limit, default).GetAsyncEnumerator().ToArrayAsync())
+            {
+                max = Math.Max(max, ret);
+            }
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
             foreach (int ret in await EnumerateAsync(limit, default).ToEnumerableAsync())
+            {
+                max = Math.Max(max, ret);
+            }
+            Assert.AreEqual(limit - 1, max);
+            max = 0;
+            foreach (int ret in await EnumerateAsync(limit, default).GetAsyncEnumerator().ToEnumerableAsync())
             {
                 max = Math.Max(max, ret);
             }
@@ -741,6 +794,13 @@ namespace AmbientServices.Test
             await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () =>
             {
                 await foreach (int ret in ((int[])null!).ToAsyncEnumerable())
+                {
+                    Assert.Fail("Should be empty!");
+                }
+            });
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () =>
+            {
+                await foreach (int ret in ((IEnumerator<int>)null!).ToAsyncEnumerable())
                 {
                     Assert.Fail("Should be empty!");
                 }

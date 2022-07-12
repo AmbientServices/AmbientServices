@@ -423,6 +423,30 @@ namespace AmbientServices
         }
 #endif
     }
+    /// <summary>
+    /// A static class to hold extensions to IEnumerable.
+    /// </summary>
+    public static class IEnumeratorExtensions
+    {
+#if NETSTANDARD2_1 || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+        /// <summary>
+        /// Converts an enumerable into an async enumerable.  Works with very large (or even infinite) enumerations.
+        /// </summary>
+        /// <typeparam name="T">The type for the item.</typeparam>
+        /// <param name="e">The enumerable.</param>
+        /// <returns>An enumerable with just <paramref name="singleItem"/> in it.</returns>
+        public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerator<T> e, [EnumeratorCancellation] CancellationToken cancel = default)
+        {
+            if (e == null) throw new ArgumentNullException(nameof(e));
+            while (e.MoveNext())
+            {
+                cancel.ThrowIfCancellationRequested();
+                yield return e.Current;
+            }
+            await Task.CompletedTask.ConfigureAwait(false);
+        }
+#endif
+    }
 #if NETSTANDARD2_1 || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
     /// <summary>
     /// A static class to hold extensions to IAsyncEnumerable.
@@ -430,11 +454,11 @@ namespace AmbientServices
     public static class IAsyncEnumerableExtensions
     {
         /// <summary>
-        /// Asynchronously converts an <see cref="IAsyncEnumerable{T}"/> into a list.
+        /// Asynchronously converts an <see cref="IAsyncEnumerator{T}"/> into a list.
         /// Note that since it returns a list, this function does NOT work with inifinite (or even very large) enumerations.
         /// </summary>
         /// <typeparam name="T">The type within the list.</typeparam>
-        /// <param name="ae">The <see cref="IAsyncEnumerable{T}"/>.</param>
+        /// <param name="ae">The <see cref="IAsyncEnumerator{T}"/>.</param>
         /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
         /// <returns>A <see cref="List{T}"/> containing all the items in the async enumerator.</returns>
         public static async ValueTask<List<T>> ToListAsync<T>(this IAsyncEnumerable<T> ae, CancellationToken cancel = default)
@@ -492,6 +516,64 @@ namespace AmbientServices
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             yield return singleItem;
+        }
+    }
+    /// <summary>
+    /// A static class to hold extensions to IAsyncEnumerable.
+    /// </summary>
+    public static class IAsyncEnumeratorExtensions
+    {
+        /// <summary>
+        /// Asynchronously converts an <see cref="IAsyncEnumerable{T}"/> into a list.
+        /// Note that since it returns a list, this function does NOT work with inifinite (or even very large) enumerations.
+        /// </summary>
+        /// <typeparam name="T">The type within the list.</typeparam>
+        /// <param name="ae">The <see cref="IAsyncEnumerable{T}"/>.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
+        /// <returns>A <see cref="List{T}"/> containing all the items in the async enumerator.</returns>
+        public static async ValueTask<List<T>> ToListAsync<T>(this IAsyncEnumerator<T> ae, CancellationToken cancel = default)
+        {
+            if (ae == null) throw new ArgumentNullException(nameof(ae));
+            List<T> ret = new();
+            while (await ae.MoveNextAsync().ConfigureAwait(false))
+            {
+                cancel.ThrowIfCancellationRequested();
+                ret.Add(ae.Current);
+            }
+            return ret;
+        }
+        /// <summary>
+        /// Asynchronously converts an <see cref="IAsyncEnumerator{T}"/> into an array.
+        /// Note that since it returns a array, this function does NOT work with inifinite (or even very large) enumerations.
+        /// </summary>
+        /// <typeparam name="T">The type within the list.</typeparam>
+        /// <param name="ae">The <see cref="IAsyncEnumerator{T}"/>.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
+        /// <returns>An array containing all the items in the async enumerator.</returns>
+        public static async ValueTask<T[]> ToArrayAsync<T>(this IAsyncEnumerator<T> ae, CancellationToken cancel = default)
+        {
+            if (ae == null) throw new ArgumentNullException(nameof(ae));
+            List<T> ret = new();
+            while (await ae.MoveNextAsync().ConfigureAwait(false))
+            {
+                cancel.ThrowIfCancellationRequested();
+                ret.Add(ae.Current);
+            }
+            return ret.ToArray();
+        }
+        /// <summary>
+        /// Asynchronously converts an <see cref="IAsyncEnumerator{T}"/> into an <see cref="IEnumerable{T}"/>.
+        /// Note that since it returns a array, this function does NOT work with inifinite (or even very large) enumerations.
+        /// </summary>
+        /// <typeparam name="T">The type within the list.</typeparam>
+        /// <param name="ae">The <see cref="IAsyncEnumerator{T}"/>.</param>
+        /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
+        /// <returns>An enumeration of all the items in the async enumerator.</returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2007:Consider calling ConfigureAwait on the awaited task", Justification = "The ConfigureAwait stuff is handled in Run")]
+        public static async ValueTask<IEnumerable<T>> ToEnumerableAsync<T>(this IAsyncEnumerator<T> ae, CancellationToken cancel = default)
+        {
+            // there may be a more efficient way to do this, but I haven't been able to find it
+            return await Async.Run(() => ToListAsync<T>(ae, cancel));
         }
     }
 #endif
