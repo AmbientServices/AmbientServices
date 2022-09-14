@@ -19,7 +19,7 @@ namespace AmbientServices
         void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime);
     }
     /// <summary>
-    /// An interface that abstracts an ambient clock which can be overridden in order to provide a different resolution or to artificially manipulate the current date-time and timing.
+    /// An interface that abstracts an ambient clock which can be overridden in order to provide a different resolution or to artificially manipulate the current date-time and timing for testing.
     /// </summary>
     /// <remarks>
     /// Note that there is no default implementation for this interface.  This results in a default of null, which falls back to using the native system calls.

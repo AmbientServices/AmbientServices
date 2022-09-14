@@ -326,7 +326,9 @@ namespace AmbientServices
         [DebuggerStepThrough]
         public static IEnumerable<T> AsyncEnumerableToEnumerable<T>(Func<IAsyncEnumerable<T>> funcAsyncEnumerable, CancellationToken cancel = default)
         {
+System.Diagnostics.Debug.WriteLine("AsyncEnumerableToEnumerable");
             if (funcAsyncEnumerable == null) throw new ArgumentNullException(nameof(funcAsyncEnumerable));
+System.Diagnostics.Debug.WriteLine("AsyncEnumerableToEnumerable funcAsyncEnumerable not null");
             IAsyncEnumerator<T> asyncEnum = funcAsyncEnumerable().GetAsyncEnumerator(cancel);
             try
             {

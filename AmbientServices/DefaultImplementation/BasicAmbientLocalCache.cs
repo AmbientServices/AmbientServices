@@ -115,7 +115,7 @@ namespace AmbientServices
                 if (expiration != null && expiration.Value.Kind == DateTimeKind.Local) expiration = expiration.Value.ToUniversalTime();
                 if (expiration < actualExpiration) actualExpiration = expiration;
                 CacheEntry entry = new(itemKey, actualExpiration, item, disposeWhenDiscarding);
-                _cache.AddOrUpdate(itemKey, entry, (k, v) => { Async.RunSync(async () => { CacheEntry c = v; if (c != null) await c.Dispose().ConfigureAwait(true); }); return entry; });
+                _cache.AddOrUpdate(itemKey, entry, (k, v) => { CacheEntry c = v; if (c != null) c.Dispose().AsTask().Wait(); return entry; });
                 if (actualExpiration == null)
                 {
                     _untimedQueue.Enqueue(itemKey);

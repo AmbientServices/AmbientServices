@@ -194,7 +194,7 @@ namespace AmbientServices
         internal void Invoke(Action action)
         {
             // are we already stopped?
-            if (_stop != 0)
+            if (_stop != 0 || _scheduler.Stopping)
             {
                 throw new InvalidOperationException("The Worker has already been stopped!");
             }
@@ -248,14 +248,14 @@ namespace AmbientServices
                     long startTicks = HighPerformanceFifoTaskScheduler.Ticks;
                     long completionTicks = startTicks;
                     // loop until we're told to stop
-                    while (_stop == 0)
+                    while (_stop == 0 && !_scheduler.Stopping)
                     {
                         startTicks = HighPerformanceFifoTaskScheduler.Ticks;
                         completionTicks = startTicks;
                         // wait for the wake thread event to be signalled so we can start some work
                         HighPerformanceFifoTaskScheduler.WaitForWork(_wakeThread);
                         // stop now?
-                        if (_stop != 0)
+                        if (_stop != 0 || _scheduler.Stopping)
                         {
                             break;
                         }
@@ -320,7 +320,7 @@ namespace AmbientServices
             // we're done with the work, so get rid of it so we're ready for the next one
             Interlocked.Exchange(ref _actionToPerform, null);
             // not stopping?
-            if (_stop == 0)
+            if (_stop == 0 && !_scheduler.Stopping)
             {
                 // release the worker back to the ready list
                 _scheduler.OnWorkerReady(this);
@@ -371,8 +371,9 @@ namespace AmbientServices
         internal readonly IAmbientStatistic? SchedulerSlowestInvocationMilliseconds;
 
         private readonly string _schedulerName;
-        private readonly Thread _schedulerMasterThread;
         private readonly ThreadPriority _schedulerThreadPriority;
+        private readonly int _schedulerMasterFrequencyMilliseconds;
+        private readonly Thread _schedulerMasterThread;
         private readonly ManualResetEvent _wakeSchedulerMasterThread = new(false);   // controls the master thread waking up
         private int _reset;                                                     // triggers a one-time reset of the thread count back to the default buffer size
         private int _stopMasterThread;                                          // interlocked
@@ -396,6 +397,8 @@ namespace AmbientServices
 
         private static readonly CpuMonitor CpuMonitor = new(1000);
         private static readonly HighPerformanceFifoTaskScheduler DefaultTaskScheduler = HighPerformanceFifoTaskScheduler.Start("Default", ThreadPriority.Normal, false);
+
+        internal bool Stopping => _stopMasterThread != 0;
 
         /// <summary>
         /// Gets the default <see cref="HighPerformanceFifoTaskScheduler"/>, one with normal priorities.
@@ -477,18 +480,20 @@ namespace AmbientServices
         /// </summary>
         /// <param name="schedulerName">The name of the task scheduler (used in logging and exceptions).</param>
         /// <param name="priority">The <see cref="ThreadPriority"/> for the threads that will be used ot execute the tasks.</param>
+        /// <param name="schedulerMasterFrequencyMilliseconds">How many milliseconds to wait each time around the master scheduler loop, ie. the frequency with which to check to see if we should alter the number of worker threads.</param>
         /// <returns>A new <see cref="HighPerformanceFifoTaskScheduler"/> instance.</returns>
-        public static HighPerformanceFifoTaskScheduler Start(string schedulerName, ThreadPriority priority = ThreadPriority.Normal)
+        public static HighPerformanceFifoTaskScheduler Start(string schedulerName, ThreadPriority priority = ThreadPriority.Normal, int schedulerMasterFrequencyMilliseconds = 1000)
         {
-            HighPerformanceFifoTaskScheduler ret = new(schedulerName, priority);
+            HighPerformanceFifoTaskScheduler ret = new(schedulerName, priority, schedulerMasterFrequencyMilliseconds);
             ret.Start();
             return ret;
         }
-        private HighPerformanceFifoTaskScheduler(string schedulerName, ThreadPriority priority = ThreadPriority.Normal)
+        private HighPerformanceFifoTaskScheduler(string schedulerName, ThreadPriority priority = ThreadPriority.Normal, int schedulerMasterFrequencyMilliseconds = 1000)
         {
             // save the scheduler name and priority
             _schedulerName = schedulerName;
             _schedulerThreadPriority = priority;
+            _schedulerMasterFrequencyMilliseconds = schedulerMasterFrequencyMilliseconds;
 
             SchedulerInvocations = _AmbientStatistics.Local?.GetOrAddStatistic(false, $"{nameof(SchedulerInvocations)}:{schedulerName}", "The total number of scheduler invocations");
             SchedulerInvocationTime = _AmbientStatistics.Local?.GetOrAddStatistic(true, $"{nameof(SchedulerInvocationTime)}:{schedulerName}", "The total number of ticks spent doing invocations");
@@ -546,21 +551,24 @@ namespace AmbientServices
             _wakeSchedulerMasterThread.Set();
             // wait for the scheduler master thread to recieve the message and shut down
             _schedulerMasterThread.Join();
-            // sleep up to 100ms while there are busy workers
-            for (int count = 0; _busyWorkers > 0 && count < 10; ++count)
-            {
-                System.Threading.Thread.Sleep(10);
-            }
-            // retire all the the workers (now that the master scheduler thread has stopped, it shouldn't be able to start any more workers)
+            // retire all the the workers (now that the master thread has stopped, it shouldn't be able to start any more workers)
             while (RetireOneWorker()) { }
-            // wait a bit just in case another one hadn't started yet
-            System.Threading.Thread.Sleep(100);
-            Debug.Assert(_readyWorkerList.Count == 0);
-            Debug.Assert(_busyWorkers == 0);
-            Debug.Assert(_workers == 0);
+            // if there are any busy workers, they will just stop and dispose of themselves when they see that the scheduler is stopping
             // remove us from the master list of schedulers
             Schedulers.Remove(this);
             _wakeSchedulerMasterThread.Dispose();
+
+            SchedulerInvocations?.Dispose();
+            SchedulerInvocationTime?.Dispose();
+            SchedulerPendingInvocations?.Dispose();
+            SchedulerWorkersCreated?.Dispose();
+            SchedulerWorkersRetired?.Dispose();
+            SchedulerInlineExecutions?.Dispose();
+            SchedulerWorkers?.Dispose();
+            SchedulerBusyWorkers?.Dispose();
+            SchedulerWorkersHighWaterMark?.Dispose();
+            SchedulerSlowestInvocationMilliseconds?.Dispose();
+
 #if DEBUG
             // we're being disposed properly, so no need to call the finalizer
             GC.SuppressFinalize(this);
@@ -610,8 +618,8 @@ namespace AmbientServices
             System.Threading.Thread.Sleep(0);
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "This is just the compiler not being smart enough to understand that Interlocked.Exchange(ref _stopMasterThread, 1) actually changes this value")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The workers created here are not disposed locally because they're kept in a collection.  They are disposed eventually.")]
+        //[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "This is just the compiler not being smart enough to understand that Interlocked.Exchange(ref _stopMasterThread, 1) actually changes this value")]
+        //[System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The workers created here are not disposed locally because they're kept in a collection.  They are disposed eventually.")]
         private void SchedulerMaster()
         {
             ExecuteWithCatchAndLog(() =>
@@ -625,7 +633,7 @@ namespace AmbientServices
                     ExecuteWithCatchAndLog(() =>
                     {
                         // sleep for up to one second or until we are awakened
-                        if (wakeSchedulerMasterThread.WaitOne(1000))
+                        if (wakeSchedulerMasterThread.WaitOne(_schedulerMasterFrequencyMilliseconds))
                         {
                             wakeSchedulerMasterThread.Reset();
                         }
@@ -768,19 +776,11 @@ namespace AmbientServices
             if (action == null) throw new ArgumentNullException(nameof(action));
             SchedulerInvocations?.Increment();
             SchedulerPendingInvocations?.Increment();
-        Retry:
             // try to get a ready thread
             HighPerformanceFifoWorker? worker = _readyWorkerList.Pop();
-            // no ready workers and not too many workers already?
+            // no ready workers?
             if (worker is null)
             {
-                // too many busy workers already or too much pressure?
-                if (_busyWorkers > MaxWorkerThreads)
-                {
-                    // just wait for things to change--we're overloaded and we're not going to make things better by starting up more threads!
-                    System.Threading.Thread.Sleep(100);
-                    goto Retry;
-                }
                 // record this miss
                 Interlocked.Exchange(ref _lastInlineExecutionTicks, Environment.TickCount);
                 SchedulerInlineExecutions?.Increment();

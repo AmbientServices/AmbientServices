@@ -152,6 +152,8 @@ namespace AmbientServices
     }
     /// <summary>
     /// An interface that gives write access to a single statistic.
+    /// Implementations are disposable, but should not throw exceptions if methods are called after disposal.
+    /// Disposability is meant to stop reporting results.
     /// </summary>
     public interface IAmbientStatistic : IAmbientStatisticReader, IDisposable
     {

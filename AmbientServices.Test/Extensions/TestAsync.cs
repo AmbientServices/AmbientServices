@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace AmbientServices.Test
 {
     [TestClass]
-    public class TestSynchronous
+    public class TestAsync
     {
         /// <summary>
         /// Performs basic tests on the <see cref="Async"/> class.
@@ -838,5 +838,26 @@ namespace AmbientServices.Test
             Assert.ThrowsException<ArgumentNullException>(() => c.Send(null!, null));
             Assert.ThrowsException<ArgumentNullException>(() => c.Post(null!, null));
         }
+        [TestMethod]
+        public void Async_ArgumentNullExceptions()
+        {
+            Assert.ThrowsException<ArgumentNullException>(() => Async.ConvertAggregateException(null!));
+            Assert.ThrowsException<ArgumentNullException>(() =>
+            {
+                foreach (var x in Async.AsyncEnumerableToEnumerable<IAsyncEnumerable<int>>(null!))
+                { 
+                }
+            });
+        }
+#if NETSTANDARD2_1 || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+        [TestMethod]
+        public async Task Async_ArgumentNullExceptionsAsync()
+        {
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await Async.AwaitForEach<int>(null!, n => { }));
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await Async.AwaitForEach<int>(1.ToSingleItemAsyncEnumerable(), (Action<int>)null!));
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await Async.AwaitForEach<int>(null!, (i, c) => new ValueTask()));
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(async () => await Async.AwaitForEach<int>(1.ToSingleItemAsyncEnumerable(), null!));
+        }
+#endif
     }
 }
