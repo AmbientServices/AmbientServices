@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace AmbientServices.Test
 {
@@ -32,6 +33,7 @@ namespace AmbientServices.Test
         {
             System.Threading.Tasks.ValueTask t = TraceBuffer.Flush();
             t.ConfigureAwait(false).GetAwaiter().GetResult();
+            HighPerformanceFifoTaskScheduler.Stop();
         }
 
         [TestMethod]

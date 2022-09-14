@@ -109,6 +109,10 @@ namespace AmbientServices
         {
             return System.Threading.Interlocked.Increment(ref _sampleValue);
         }
+        public long Decrement()
+        {
+            return System.Threading.Interlocked.Decrement(ref _sampleValue);
+        }
         public long Add(long addend)
         {
             return System.Threading.Interlocked.Add(ref _sampleValue, addend);

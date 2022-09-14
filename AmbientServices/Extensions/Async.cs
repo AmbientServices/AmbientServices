@@ -43,9 +43,15 @@ namespace AmbientServices
                 task.RunSynchronously(SynchronousTaskScheduler.Default);
             }
         }
-
-        private static void ConvertAggregateException(AggregateException ex)
+        /// <summary>
+        /// Converts the specified <see cref="AggregateException"/> into the inner exception type if there is only one inner exception.
+        /// If there is more than one inner exception, just returns.
+        /// </summary>
+        /// <param name="ex">The <see cref="AggregateException"/></param>
+        /// <exception cref="ArgumentNullException">If <paramref name="ex"/> is null.</exception>
+        public static void ConvertAggregateException(AggregateException ex)
         {
+            if (ex == null) throw new ArgumentNullException(nameof(ex));
             if (ex.InnerExceptions.Count < 2)
             {
                 System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerExceptions[0]).Throw();
@@ -410,7 +416,8 @@ namespace AmbientServices
         /// </summary>
         /// <typeparam name="T">The type for the item.</typeparam>
         /// <param name="e">The enumerable.</param>
-        /// <returns>An enumerable with just <paramref name="singleItem"/> in it.</returns>
+        /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
+        /// <returns>An async enumerable with the elements from <paramref name="e"/> in it.</returns>
         public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerable<T> e, [EnumeratorCancellation] CancellationToken cancel = default)
         {
             if (e == null) throw new ArgumentNullException(nameof(e));
@@ -434,7 +441,8 @@ namespace AmbientServices
         /// </summary>
         /// <typeparam name="T">The type for the item.</typeparam>
         /// <param name="e">The enumerable.</param>
-        /// <returns>An enumerable with just <paramref name="singleItem"/> in it.</returns>
+        /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to cancel the operation before it completes.</param>
+        /// <returns>An async enumerable with the elements from <paramref name="e"/> in it.</returns>
         public static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(this IEnumerator<T> e, [EnumeratorCancellation] CancellationToken cancel = default)
         {
             if (e == null) throw new ArgumentNullException(nameof(e));

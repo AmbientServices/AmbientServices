@@ -86,9 +86,9 @@ namespace AmbientServices
         /// <summary>
         /// Overrides the service implementation locally and temporarily.
         /// </summary>
-        /// <param name="newLocalServiceImplementation">The new local service implementation to use until the returned object is disposed.</param>
+        /// <param name="newLocalServiceImplementation">The new local service implementation to use until the returned object is disposed.  If null, temporarily removes the ambient service in this call context.</param>
         /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the local service implementation to what it was before this call.</returns>
-        public IDisposable ScopedLocalOverride(T newLocalServiceImplementation)
+        public IDisposable ScopedLocalOverride(T? newLocalServiceImplementation)
         {
             return new ScopedLocalServiceOverride<T>(newLocalServiceImplementation);
         }

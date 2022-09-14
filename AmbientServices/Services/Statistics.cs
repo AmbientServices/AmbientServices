@@ -161,6 +161,11 @@ namespace AmbientServices
         /// <returns>The incremented sample value.</returns>
         long Increment();
         /// <summary>
+        /// Decrements the statistic sample value.  Thread-safe, possibly interlocked.
+        /// </summary>
+        /// <returns>The decremented sample value.</returns>
+        long Decrement();
+        /// <summary>
         /// Adds to the statistic sample value.  Thread-safe, possibly interlocked.
         /// </summary>
         /// <param name="addend">The amount to add to the statistic sample value.</param>
