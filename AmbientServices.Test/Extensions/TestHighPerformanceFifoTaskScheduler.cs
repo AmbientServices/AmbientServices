@@ -38,7 +38,7 @@ namespace AmbientServices.Test
         public void StartNewNoStats()
         {
             using IDisposable d = StatisticsBackend.ScopedLocalOverride(null);
-            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Create(nameof(StartNewNoStats), ThreadPriority.Highest);
+            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Start(nameof(StartNewNoStats), ThreadPriority.Highest);
             HighPerformanceFifoTaskFactory testFactory = new(scheduler);
             List<Task> tasks = new();
             for (int i = 0; i < 100; ++i)
@@ -53,7 +53,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void ExecuteWithCatchAndLog()
         {
-            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Create(nameof(StartNewNoStats));
+            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Start(nameof(StartNewNoStats));
             scheduler.ExecuteWithCatchAndLog(() => throw new ExpectedException());
             scheduler.ExecuteWithCatchAndLog(() => throw new TaskCanceledException());
             //scheduler.ExecuteWithCatchAndLog(() => throw new ThreadAbortException()); // can't construct this, so can't test it
@@ -89,7 +89,7 @@ namespace AmbientServices.Test
         public void DisposedException()
         {
             HighPerformanceFifoTaskFactory test;
-            using (HighPerformanceFifoTaskScheduler testScheduler = HighPerformanceFifoTaskScheduler.Create(nameof(DisposedException)))
+            using (HighPerformanceFifoTaskScheduler testScheduler = HighPerformanceFifoTaskScheduler.Start(nameof(DisposedException)))
             {
                 test = new(testScheduler);
             }
@@ -187,6 +187,53 @@ namespace AmbientServices.Test
             Assert.IsTrue(HighPerformanceFifoTaskScheduler.Default.BusyWorkers >= 0);
             Assert.IsTrue(HighPerformanceFifoTaskScheduler.Default.MaximumConcurrencyLevel >= Environment.ProcessorCount);
         }
+        [TestMethod]
+        public void IntrusiveSinglyLinkedList()
+        {
+            InterlockedSinglyLinkedList<NodeTest> list1 = new();
+            InterlockedSinglyLinkedList<NodeTest> list2 = new();
+            NodeTest node = new() { Value = 1 };
+            list1.Push(node);
+            Assert.ThrowsException<ArgumentNullException>(() => list2.Push(null!));
+            Assert.ThrowsException<InvalidOperationException>(() => list2.Push(node));
+            list1.Validate();
+            Assert.AreEqual(1, list1.Count);
+            list1.Clear();
+            Assert.AreEqual(0, list1.Count);
+            list2.Push(node);
+            NodeTest? popped = list2.Pop();
+            Assert.AreEqual(node, popped);
+        }
+        class NodeTest : IntrusiveSinglyLinkedListNode
+        {
+            public int Value { get; set; }
+        }
+        [TestMethod]
+        public void Worker()
+        {
+            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Start(nameof(Worker));
+            HighPerformanceFifoWorker worker = HighPerformanceFifoWorker.Start(scheduler, "1", ThreadPriority.Normal);  // the worker disposes of itself
+            worker.Invoke(LongWait);
+            Assert.IsTrue(worker.IsBusy);
+            Assert.ThrowsException<InvalidOperationException>(() => worker.Invoke(LongWait));
+            Assert.IsFalse(HighPerformanceFifoWorker.IsWorkerInternalMethod(null));
+            Assert.IsFalse(HighPerformanceFifoWorker.IsWorkerInternalMethod(typeof(TestHighPerformanceFifoTaskScheduler).GetMethod(nameof(Worker))));
+            Assert.IsTrue(HighPerformanceFifoWorker.IsWorkerInternalMethod(typeof(HighPerformanceFifoWorker).GetMethod("Invoke", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)));
+            Assert.IsTrue(HighPerformanceFifoWorker.IsWorkerInternalMethod(typeof(HighPerformanceFifoWorker).GetMethod("WorkerFunc", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)));
+            worker.Stop();
+            Assert.ThrowsException<InvalidOperationException>(() => worker.Invoke(null!));
+        }
+        public void LongWait()
+        {
+            Thread.Sleep(5000);
+        }
+        [TestMethod]
+        public void WorkerNullWork()
+        {
+            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Start(nameof(WorkerNullWork));
+            HighPerformanceFifoWorker worker = scheduler.CreateWorker();    // the worker disposes of itself
+            worker.Invoke(null!);
+        }
     }
     public class FakeWork
     {
@@ -206,7 +253,8 @@ namespace AmbientServices.Test
             //string? threadName = Thread.CurrentThread.Name;
 
             Assert.AreEqual(typeof(HighPerformanceFifoSynchronizationContext), SynchronizationContext.Current?.GetType());
-            Assert.IsFalse(HighPerformanceFifoTaskScheduler.IsIdleWorkerPoolThread(new StackTrace()));
+            Assert.ThrowsException<ArgumentNullException>(() => HighPerformanceFifoTaskScheduler.IsIdleHighPerformanceFifoTaskShcedulerThread(null!));
+            Assert.IsFalse(HighPerformanceFifoTaskScheduler.IsIdleHighPerformanceFifoTaskShcedulerThread(new StackTrace()));
             Stopwatch s = Stopwatch.StartNew();
             for (int outer = 0; outer < (int)(hash % 256) && !cancel.IsCancellationRequested; ++outer)
             {

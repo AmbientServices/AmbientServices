@@ -112,7 +112,7 @@ namespace AmbientServices
     {
         /// <summary>
         /// Gets whether or not the statistic is a time-based statistic.  Immutable.
-        /// Has no effect on how the internal implementation.
+        /// Has no effect on the internal implementation.
         /// Time-based statistics can be converted into seconds by dividing by <see cref="System.Diagnostics.Stopwatch.Frequency"/>.
         /// </summary>
         bool IsTimeBased { get; }
