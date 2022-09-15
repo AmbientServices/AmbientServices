@@ -10,7 +10,7 @@ namespace AmbientServices.Utility
     /// Note that we could increase the code coverage by making a single function with a delegate to reduce the uncovered lines to two,
     /// but this would likely have a significant performance impace without affecting the actual testabilty or reliability of the code.
     /// </remarks>
-    internal static class InterlockedExtensions
+    public static class InterlockedExtensions
     {
         /// <summary>
         /// Replaces the value with the specified value if the specified value is greater.
