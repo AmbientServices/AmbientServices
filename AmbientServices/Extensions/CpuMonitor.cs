@@ -32,6 +32,7 @@ namespace AmbientServices
         /// Constructs a system CPU usage monitor.
         /// </summary>
         /// <param name="windowMilliseconds">The minimum number of milliseconds to wait before computing a new usage metric (more frequent queries will return the same value).</param>
+        /// <param name="mock">An optional <see cref="IMockCpuUsage"/> to use to override actual system CPU usage measurements.</param>
         public CpuMonitor(long windowMilliseconds = 250, IMockCpuUsage? mock = null)
         {
             _updateWindowTicks = TimeSpan.FromMilliseconds(windowMilliseconds).Ticks;
@@ -46,6 +47,7 @@ namespace AmbientServices
         /// Constructs a system CPU usage monitor.
         /// </summary>
         /// <param name="windowSize">A <see cref="TimeSpan"/> indicating the minimum sampling window size.</param>
+        /// <param name="mock">An optional <see cref="IMockCpuUsage"/> to use to override actual system CPU usage measurements.</param>
         public CpuMonitor(TimeSpan windowSize, IMockCpuUsage? mock = null) : this((long)windowSize.TotalMilliseconds, mock)
         {
         }

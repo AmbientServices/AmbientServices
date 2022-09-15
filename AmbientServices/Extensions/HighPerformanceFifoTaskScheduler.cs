@@ -496,7 +496,6 @@ namespace AmbientServices
         /// Starts a new <see cref="HighPerformanceFifoTaskScheduler"/> in test mode with the specified configuration.
         /// </summary>
         /// <param name="schedulerName">The name of the task scheduler (used in logging and exceptions).</param>
-        /// <param name="priority">The <see cref="ThreadPriority"/> for the threads that will be used ot execute the tasks.</param>
         /// <param name="schedulerMasterFrequencyMilliseconds">How many milliseconds to wait each time around the master scheduler loop, ie. the frequency with which to check to see if we should alter the number of worker threads.</param>
         /// <param name="bufferThreadCount">The number of threads to start with and to keep as a buffer after resetting.</param>
         /// <param name="maxThreads">The maximum number of threads to use, or zero to let the system decide.</param>
