@@ -20,6 +20,7 @@ namespace AmbientServices.Test
     {
         private static readonly AmbientService<IAmbientLogger> LoggerBackend = Ambient.GetService<IAmbientLogger>();
         private static readonly AmbientService<IAmbientStatistics> StatisticsBackend = Ambient.GetService<IAmbientStatistics>();
+        private static readonly AmbientService<IMockCpuUsage> MockCpu = Ambient.GetService<IMockCpuUsage>();
 
         [TestMethod]
         public void StartNew()
@@ -29,7 +30,7 @@ namespace AmbientServices.Test
             for (int i = 0; i < 1000; ++i)
             {
                 FakeWork w = new(i, true);
-                tasks.Add(HighPerformanceFifoTaskFactory.Default.StartNew(() => w.DoWorkAsync(CancellationToken.None).AsTask()));
+                tasks.Add(HighPerformanceFifoTaskFactory.Default.StartNew(() => w.DoMixedWorkAsync(CancellationToken.None).AsTask()));
             }
             Task.WaitAll(tasks.ToArray());
             HighPerformanceFifoTaskScheduler.Default.Reset();
@@ -44,7 +45,7 @@ namespace AmbientServices.Test
             for (int i = 0; i < 100; ++i)
             {
                 FakeWork w = new(i, true);
-                tasks.Add(testFactory.StartNew(() => w.DoWorkAsync(CancellationToken.None).AsTask()));
+                tasks.Add(testFactory.StartNew(() => w.DoDelayOnlyWorkAsync(CancellationToken.None).AsTask()));
             }
             Task.WaitAll(tasks.ToArray());
             scheduler.Invoke(() => { });
@@ -74,10 +75,64 @@ namespace AmbientServices.Test
             for (int i = 0; i < 250; ++i)
             {
                 FakeWork w = new(i, true);
-                tasks.Add(RunInHPContext(() => w.DoWorkAsync(CancellationToken.None)));
+                tasks.Add(RunInHPContext(() => w.DoMixedWorkAsync(CancellationToken.None)));
             }
             Task.WaitAll(tasks.ToArray());
             HighPerformanceFifoTaskScheduler.Default.Reset();
+        }
+        class MockCpuUsage : IMockCpuUsage
+        {
+            public float RecentUsage { get; set;}
+        }
+        [TestMethod]
+        public void TooManyWorkers()
+        {
+            MockCpuUsage mockCpu = new();
+            using IDisposable d = MockCpu.ScopedLocalOverride(mockCpu);
+            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Start(nameof(TooManyWorkers), 10, 1, 2);
+            HighPerformanceFifoTaskFactory factory = new(scheduler);
+            List<Task> tasks = new();
+            for (int i = 0; i < 20; ++i)
+            {
+                FakeWork w = new(i, true);
+                tasks.Add(factory.StartNew(() => w.DoDelayOnlyWorkAsync(CancellationToken.None).AsTask(), CancellationToken.None, TaskCreationOptions.None, scheduler));
+            }
+            Task.WaitAll(tasks.ToArray());
+            scheduler.Reset();
+        }
+        [TestMethod]
+        public void ResetManyWorkers()
+        {
+            MockCpuUsage mockCpu = new();
+            using IDisposable s = StatisticsBackend.ScopedLocalOverride(null);
+            using IDisposable c = MockCpu.ScopedLocalOverride(mockCpu);
+            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Start(nameof(ResetManyWorkers), 10, 1, 2);
+            HighPerformanceFifoTaskFactory factory = new(scheduler);
+            List<Task> tasks = new();
+            for (int i = 0; i < 20; ++i)
+            {
+                FakeWork w = new(i, true);
+                tasks.Add(factory.StartNew(() => w.DoDelayOnlyWorkAsync(CancellationToken.None).AsTask(), CancellationToken.None, TaskCreationOptions.None, scheduler));
+            }
+            Task.WaitAll(tasks.ToArray());
+            scheduler.Reset();
+        }
+        [TestMethod]
+        public void ScaleDown()
+        {
+            MockCpuUsage mockCpu = new();
+            using IDisposable d = MockCpu.ScopedLocalOverride(mockCpu);
+            using HighPerformanceFifoTaskScheduler scheduler = HighPerformanceFifoTaskScheduler.Start(nameof(ScaleDown), 10, 1, 2);
+            HighPerformanceFifoTaskFactory factory = new(scheduler);
+            List<Task> tasks = new();
+            for (int i = 0; i < 20; ++i)
+            {
+                FakeWork w = new(i, true);
+                tasks.Add(factory.StartNew(() => w.DoDelayOnlyWorkAsync(CancellationToken.None).AsTask(), CancellationToken.None, TaskCreationOptions.None, scheduler));
+            }
+            Task.WaitAll(tasks.ToArray());
+            // give the master thread time to scale down
+            Thread.Sleep(1000);
         }
         [TestMethod, ExpectedException(typeof(ExpectedException))]
         public async Task StartNewException()
@@ -147,9 +202,20 @@ namespace AmbientServices.Test
             }
         }
         [TestMethod]
+        public void GetScheduledTasks()
+        {
+            IEnumerable<Task> tasks = HighPerformanceFifoTaskScheduler.Default.GetScheduledTasksDirect();
+            Assert.AreEqual(0, tasks.Count());
+        }
+        [TestMethod]
         public void InvokeException()
         {
             Assert.ThrowsException<ArgumentNullException>(() => HighPerformanceFifoTaskScheduler.Default.Invoke(null!));
+        }
+        [TestMethod]
+        public void QueueTaskExceptions()
+        {
+            Assert.ThrowsException<ArgumentNullException>(() => HighPerformanceFifoTaskScheduler.Default.QueueTaskDirect(null!));
         }
         [TestMethod]
         public void SendAndPostExceptions()
@@ -246,15 +312,13 @@ namespace AmbientServices.Test
             _id = id;
         }
 
-        public async ValueTask DoWorkAsync(CancellationToken cancel = default)
+        public async ValueTask DoMixedWorkAsync(CancellationToken cancel = default)
         {
             ulong hash = GetHash(_id);
             await Task.Yield();
             //string? threadName = Thread.CurrentThread.Name;
 
             Assert.AreEqual(typeof(HighPerformanceFifoSynchronizationContext), SynchronizationContext.Current?.GetType());
-            Assert.ThrowsException<ArgumentNullException>(() => HighPerformanceFifoTaskScheduler.IsIdleHighPerformanceFifoTaskShcedulerThread(null!));
-            Assert.IsFalse(HighPerformanceFifoTaskScheduler.IsIdleHighPerformanceFifoTaskShcedulerThread(new StackTrace()));
             Stopwatch s = Stopwatch.StartNew();
             for (int outer = 0; outer < (int)(hash % 256) && !cancel.IsCancellationRequested; ++outer)
             {
@@ -278,6 +342,25 @@ namespace AmbientServices.Test
                 }
                 mem.Stop();
                 Assert.AreEqual(typeof(HighPerformanceFifoSynchronizationContext), SynchronizationContext.Current?.GetType());
+                Stopwatch io = Stopwatch.StartNew();
+                // simulate I/O by blocking
+                await Task.Delay((int)((hash >> 32) % (_fast ? 5UL : 500UL)), cancel);
+                io.Stop();
+                Assert.AreEqual(typeof(HighPerformanceFifoSynchronizationContext), SynchronizationContext.Current?.GetType());
+            }
+            Assert.AreEqual(typeof(HighPerformanceFifoSynchronizationContext), SynchronizationContext.Current?.GetType());
+            //Debug.WriteLine($"Ran work {_id} on {threadName}!", "Work");
+        }
+        public async ValueTask DoDelayOnlyWorkAsync(CancellationToken cancel = default)
+        {
+            ulong hash = GetHash(_id);
+            await Task.Yield();
+            //string? threadName = Thread.CurrentThread.Name;
+
+            Assert.AreEqual(typeof(HighPerformanceFifoSynchronizationContext), SynchronizationContext.Current?.GetType());
+            Stopwatch s = Stopwatch.StartNew();
+            for (int outer = 0; outer < (int)(hash % 256) && !cancel.IsCancellationRequested; ++outer)
+            {
                 Stopwatch io = Stopwatch.StartNew();
                 // simulate I/O by blocking
                 await Task.Delay((int)((hash >> 32) % (_fast ? 5UL : 500UL)), cancel);

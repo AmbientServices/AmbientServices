@@ -84,10 +84,12 @@ namespace AmbientServices
         /// Gets the instance for this singleton class.
         /// </summary>
         public static HighPerformanceFifoSynchronizationContext Default => _Default;
+        private readonly HighPerformanceFifoTaskScheduler _scheduler;
 
-        private HighPerformanceFifoSynchronizationContext()
+        private HighPerformanceFifoSynchronizationContext(HighPerformanceFifoTaskScheduler? scheduler = null)
         {
             SetWaitNotificationRequired();
+            _scheduler = scheduler ?? HighPerformanceFifoTaskScheduler.Default;
         }
 
         /// <summary>
@@ -98,7 +100,7 @@ namespace AmbientServices
         public override void Send(SendOrPostCallback d, object? state)
         {
             if (d == null) throw new ArgumentNullException(nameof(d));
-            HighPerformanceFifoTaskScheduler.Default.Invoke(() => d(state));
+            _scheduler.Invoke(() => d(state));
         }
         /// <summary>
         /// Posts a message.
@@ -108,7 +110,7 @@ namespace AmbientServices
         public override void Post(SendOrPostCallback d, object? state)
         {
             if (d == null) throw new ArgumentNullException(nameof(d));
-            HighPerformanceFifoTaskScheduler.Default.Invoke(() => d(state));
+            _scheduler.Invoke(() => d(state));
         }
         /// <summary>
         /// Creates a "copy" of this <see cref="HighPerformanceFifoSynchronizationContext"/>, which in this case just returns the singleton instance because there is nothing held in memory anyway.
@@ -373,10 +375,13 @@ namespace AmbientServices
         private readonly string _schedulerName;
         private readonly ThreadPriority _schedulerThreadPriority;
         private readonly int _schedulerMasterFrequencyMilliseconds;
+        private readonly int _bufferWorkerThreads;
+        private readonly int _maxWorkerThreads;
+        private readonly bool _testMode;
         private readonly Thread _schedulerMasterThread;
-        private readonly ManualResetEvent _wakeSchedulerMasterThread = new(false);   // controls the master thread waking up
-        private int _reset;                                                     // triggers a one-time reset of the thread count back to the default buffer size
-        private int _stopMasterThread;                                          // interlocked
+        private readonly ManualResetEvent _wakeSchedulerMasterThread = new(false);  // controls the master thread waking up
+        private int _reset;                                                         // triggers a one-time reset of the thread count back to the default buffer size
+        private int _stopMasterThread;                                              // interlocked
 
         // a list of workers that are ready to do some work
         private readonly InterlockedSinglyLinkedList<HighPerformanceFifoWorker> _readyWorkerList = new();
@@ -480,20 +485,37 @@ namespace AmbientServices
         /// </summary>
         /// <param name="schedulerName">The name of the task scheduler (used in logging and exceptions).</param>
         /// <param name="priority">The <see cref="ThreadPriority"/> for the threads that will be used ot execute the tasks.</param>
-        /// <param name="schedulerMasterFrequencyMilliseconds">How many milliseconds to wait each time around the master scheduler loop, ie. the frequency with which to check to see if we should alter the number of worker threads.</param>
         /// <returns>A new <see cref="HighPerformanceFifoTaskScheduler"/> instance.</returns>
-        public static HighPerformanceFifoTaskScheduler Start(string schedulerName, ThreadPriority priority = ThreadPriority.Normal, int schedulerMasterFrequencyMilliseconds = 1000)
+        public static HighPerformanceFifoTaskScheduler Start(string schedulerName, ThreadPriority priority = ThreadPriority.Normal)
         {
-            HighPerformanceFifoTaskScheduler ret = new(schedulerName, priority, schedulerMasterFrequencyMilliseconds);
+            HighPerformanceFifoTaskScheduler ret = new(schedulerName, priority);
             ret.Start();
             return ret;
         }
-        private HighPerformanceFifoTaskScheduler(string schedulerName, ThreadPriority priority = ThreadPriority.Normal, int schedulerMasterFrequencyMilliseconds = 1000)
+        /// <summary>
+        /// Starts a new <see cref="HighPerformanceFifoTaskScheduler"/> in test mode with the specified configuration.
+        /// </summary>
+        /// <param name="schedulerName">The name of the task scheduler (used in logging and exceptions).</param>
+        /// <param name="priority">The <see cref="ThreadPriority"/> for the threads that will be used ot execute the tasks.</param>
+        /// <param name="schedulerMasterFrequencyMilliseconds">How many milliseconds to wait each time around the master scheduler loop, ie. the frequency with which to check to see if we should alter the number of worker threads.</param>
+        /// <param name="bufferThreadCount">The number of threads to start with and to keep as a buffer after resetting.</param>
+        /// <param name="maxThreads">The maximum number of threads to use, or zero to let the system decide.</param>
+        /// <returns>A new <see cref="HighPerformanceFifoTaskScheduler"/> instance.</returns>
+        internal static HighPerformanceFifoTaskScheduler Start(string schedulerName, int schedulerMasterFrequencyMilliseconds, int bufferThreadCount, int maxThreads)
+        {
+            HighPerformanceFifoTaskScheduler ret = new(schedulerName, ThreadPriority.Normal, schedulerMasterFrequencyMilliseconds, bufferThreadCount, maxThreads);
+            ret.Start();
+            return ret;
+        }
+        private HighPerformanceFifoTaskScheduler(string schedulerName, ThreadPriority priority = ThreadPriority.Normal, int schedulerMasterFrequencyMilliseconds = 1000, int bufferThreadCount = 0, int maxThreads = 0)
         {
             // save the scheduler name and priority
             _schedulerName = schedulerName;
             _schedulerThreadPriority = priority;
             _schedulerMasterFrequencyMilliseconds = schedulerMasterFrequencyMilliseconds;
+            _bufferWorkerThreads = (bufferThreadCount == 0) ? BufferThreadCount : bufferThreadCount;
+            _maxWorkerThreads = (maxThreads == 0) ? MaxWorkerThreads : maxThreads;
+            _testMode = true;
 
             SchedulerInvocations = _AmbientStatistics.Local?.GetOrAddStatistic(false, $"{nameof(SchedulerInvocations)}:{schedulerName}", "The total number of scheduler invocations");
             SchedulerInvocationTime = _AmbientStatistics.Local?.GetOrAddStatistic(true, $"{nameof(SchedulerInvocationTime)}:{schedulerName}", "The total number of ticks spent doing invocations");
@@ -515,7 +537,7 @@ namespace AmbientServices
         private void Start()
         {
             // initialize some workers immediately
-            for (int i = 0; i < BufferThreadCount; ++i)
+            for (int i = 0; i < _bufferWorkerThreads; ++i)
             {
 #pragma warning disable CA2000 // Dispose objects before losing scope  This is put into a collection and disposed later
                 HighPerformanceFifoWorker worker = CreateWorker();
@@ -648,21 +670,21 @@ namespace AmbientServices
                         int totalWorkers = _workers;
                         int readyWorkers = _readyWorkerList.Count;
                         int busyWorkers = _busyWorkers;
-                        if (readyWorkers <= BufferThreadCount)
+                        if (readyWorkers <= _bufferWorkerThreads)
                         {
                             float recentCpuUsage = CpuMonitor.RecentUsage;
                             // too many workers already, or CPU too high?  (if the CPU is too high, we risk starving internal status checking processes and the server might appear to be offline)
-                            if (totalWorkers > MaxWorkerThreads || recentCpuUsage > MaxCpuUsage)
+                            if (totalWorkers > _maxWorkerThreads || recentCpuUsage > MaxCpuUsage)
                             {
                                 // have we NOT already logged that we are using an insane number of threads in the past 60 minutes?
                                 int now = Environment.TickCount;
                                 int lastWarning = _highThreadsWarningTickCount;
-                                if (TimeElapsed(lastWarning, now) > HighThreadCountWarningEnvironmentTicks)
+                                if (lastWarning == 0 || TimeElapsed(lastWarning, now) > HighThreadCountWarningEnvironmentTicks)
                                 {
                                     // race to log a warning--did we win the race?
                                     if (Interlocked.CompareExchange(ref _highThreadsWarningTickCount, now, lastWarning) == lastWarning)
                                     {
-                                        Logger.Log($"'{_schedulerName}': {readyWorkers + busyWorkers} threads exceeds the limit of {MaxWorkerThreads} for this computer!", "Busy", AmbientLogLevel.Warning);
+                                        Logger.Log($"'{_schedulerName}': {readyWorkers + busyWorkers} threads exceeds the limit of {_maxWorkerThreads} for this scheduler!", "Busy", AmbientLogLevel.Warning);
                                     }
                                 }
                                 // now we will just carry on because we will not expand beyond the number of threads we have now
@@ -671,7 +693,7 @@ namespace AmbientServices
                             else if (recentCpuUsage < MinAddThreadsCpuUsage)
                             {
                                 // initialize enough workers to maintain the buffer thread count
-                                for (int i = 0; i < BufferThreadCount - readyWorkers; ++i)
+                                for (int i = 0; i < _bufferWorkerThreads - readyWorkers; ++i)
                                 {
                                     // create a new worker
                                     HighPerformanceFifoWorker worker = CreateWorker();
@@ -691,7 +713,7 @@ namespace AmbientServices
                         else if (_reset > 0)
                         {
                             Interlocked.Exchange(ref _reset, 0);
-                            while (_readyWorkerList.Count < BufferThreadCount)
+                            while (_readyWorkerList.Count > _bufferWorkerThreads)
                             {
                                 // retire one worker--did it turn out to be busy?
                                 if (!RetireOneWorker())
@@ -705,17 +727,17 @@ namespace AmbientServices
                             lastRetirementTicks = Environment.TickCount;
                         }
                         // enough ready workers that we could get by with less
-                        else if (readyWorkers > Math.Max(3, BufferThreadCount * 2))
+                        else if (readyWorkers > Math.Max(3, _bufferWorkerThreads * 2))
                         {
                             // haven't had an inline execution or new worker creation or removed any workers for a while?
-                            if (
+                            if (_testMode || (
                                     ticksSinceCreation > RetireCheckAfterCreationTickCount &&
                                     ticksSinceInlineExecution > RetireCheckAfterCreationTickCount &&
                                     ticksSinceRetirement > RetireCheckFastestRetirementFrequencyTickCount
-                                )
+                                ))
                             {
                                 // was the highest concurrency since the last time we checked such that we didn't need many of the threads?
-                                if (_peakConcurrentUsageSinceLastRetirementCheck < Math.Max(1, totalWorkers - BufferThreadCount))
+                                if (_peakConcurrentUsageSinceLastRetirementCheck < Math.Max(1, totalWorkers - _bufferWorkerThreads))
                                 {
                                     // retire one worker
                                     RetireOneWorker();
@@ -767,7 +789,7 @@ namespace AmbientServices
         }
 
         /// <summary>
-        /// Runs an action asynchronously.  No assumption is made about the identity under which the action is run.
+        /// Runs an action asynchronously, if possible.  No assumption is made about the identity under which the action is run.
         /// </summary>
         /// <param name="action">The action to perform asynchronously.</param>
         /// <returns><b>false</b> if no workers were available and the action ran inline and is now done, or <b>true</b> the action was given to a worker to complete asynchronously.</returns>
@@ -779,14 +801,17 @@ namespace AmbientServices
             // try to get a ready thread
             HighPerformanceFifoWorker? worker = _readyWorkerList.Pop();
             // no ready workers?
-            if (worker is null)
+            if (worker is null || Stopping)
             {
-                // record this miss
-                Interlocked.Exchange(ref _lastInlineExecutionTicks, Environment.TickCount);
-                SchedulerInlineExecutions?.Increment();
-                // wake the master thread so it will add more threads ASAP
-                _wakeSchedulerMasterThread.Set();
-                Logger.Log($"'{_schedulerName}': no available workers--invoking inline.", "Busy", AmbientLogLevel.Warning);
+                if (!Stopping)
+                {
+                    // record this miss
+                    Interlocked.Exchange(ref _lastInlineExecutionTicks, Environment.TickCount);
+                    SchedulerInlineExecutions?.Increment();
+                    // wake the master thread so it will add more threads ASAP
+                    _wakeSchedulerMasterThread.Set();
+                    Logger.Log($"'{_schedulerName}': no available workers--invoking inline.", "Busy", AmbientLogLevel.Warning);
+                }
                 // execute the action inline
                 RunWithHighPerformanceContext(action);
                 return false;
@@ -821,7 +846,7 @@ namespace AmbientServices
             System.Threading.SynchronizationContext? oldContext = SynchronizationContext.Current;
             try
             {
-                SynchronizationContext.SetSynchronizationContext(HighPerformanceFifoSynchronizationContext.Default);
+                if (oldContext is not HighPerformanceFifoSynchronizationContext) SynchronizationContext.SetSynchronizationContext(HighPerformanceFifoSynchronizationContext.Default);
                 action();
             }
             finally
@@ -829,57 +854,10 @@ namespace AmbientServices
                 SynchronizationContext.SetSynchronizationContext(oldContext);
             }
         }
-        private static bool IsWorkerInternalMethod(MethodBase? method)
+        internal IEnumerable<Task> GetScheduledTasksDirect()
         {
-            if (method == null || method.DeclaringType != typeof(HighPerformanceFifoTaskScheduler)) return false;
-            return method.Name.StartsWith($"<{nameof(WaitForWork)}>", StringComparison.Ordinal);
+            return GetScheduledTasks();
         }
-
-        private static bool IsBlockingMethod(MethodBase? method)
-        {
-            if (method == null) return false;
-            return method.Name == "WaitOneNative"
-                || method.Name == "WaitOne"
-                || method.Name == "InternalWaitOne";
-        }
-        /// <summary>
-        /// Checks to see whether or not the specified <see cref="StackTrace"/> indicates that the corresponding thread of execution is an idle scheduler thread.
-        /// This method may be used to filter out idle worker threads from lists where idle threads are irrelevant.
-        /// It may indicate that the thread is not idle when it really is if the internal .NET implementation details are changed without a corresponding change here,
-        /// or if threads use the same method names as those used by the .NET implementation where it blocks waiting for work.
-        /// </summary>
-        /// <param name="trace">A <see cref="StackTrace"/> that is to be checked to see if the thread of execution indicates that the thread is idle and waiting for work.</param>
-        /// <returns>true if <paramref name="trace"/> indicates that the thread is idle, false if it indicates that the thread is actively working.</returns>
-        /// <exception cref="ArgumentNullException"></exception>
-        public static bool IsIdleHighPerformanceFifoTaskShcedulerThread(StackTrace trace)
-        {
-            /*
-             * Note that several strings here are dependent on the internals of .NET libraries.
-             * If the libraries change, this will cause this function to fail to indicate that a thread is idle
-             * This should not cause serious issues.
-             */
-            if (trace == null) throw new ArgumentNullException(nameof(trace));
-            // not blocked?
-            if (IsBlockingMethod(trace.GetFrame(0)!.GetMethod()!))
-            {
-                return false;
-            }
-            // skip more blocking functions
-            int frame = 2;
-            MethodBase? method;
-            while (IsBlockingMethod(method = trace.GetFrame(frame)?.GetMethod()) || IsWorkerInternalMethod(method) || HighPerformanceFifoWorker.IsWorkerInternalMethod(method))
-            {
-                ++frame;
-            }
-            // worker function or scheduler master?
-            method = trace.GetFrame(frame)!.GetMethod()!;
-            if (HighPerformanceFifoWorker.IsWorkerInternalMethod(method) || IsWorkerInternalMethod(method))
-            {
-                return true;
-            }
-            return false;
-        }
-
         /// <summary>
         /// Gets the list of scheduled tasks.  In this case, this is always empty, as all tasks are either executed immediately on another thread or executed inline.
         /// </summary>
@@ -887,6 +865,10 @@ namespace AmbientServices
         protected override IEnumerable<Task> GetScheduledTasks()
         {
             return Array.Empty<Task>();
+        }
+        internal void QueueTaskDirect(Task task)
+        {
+            QueueTask(task);
         }
         /// <summary>
         /// Queues the specified task to the high performance FIFO scheduler.
@@ -896,7 +878,7 @@ namespace AmbientServices
         {
             if (task == null) throw new ArgumentNullException(nameof(task));
             if (_stopMasterThread != 0) throw new ObjectDisposedException(nameof(HighPerformanceFifoTaskScheduler));
-            HighPerformanceFifoTaskScheduler.Default.Invoke(() =>
+            Invoke(() =>
             {
                 TryExecuteTask(task);
             });
@@ -914,7 +896,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the maximum number of tasks that can be concurrently running under this scheduler.
         /// </summary>
-        public override int MaximumConcurrencyLevel => MaxWorkerThreads;
+        public override int MaximumConcurrencyLevel => _maxWorkerThreads;
     }
 
     internal class IntrusiveSinglyLinkedListNode
