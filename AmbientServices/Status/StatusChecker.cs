@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AmbientServices.Utilities;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
@@ -101,7 +102,7 @@ namespace AmbientServices
         {
             // POSSIBLE BREAKING CHANGE: maybe it would be good to have a public function that 
             // catches exceptions and handles them properly and also always saves results using SetLatestResults?
-            return TaskExtensions.ValueTaskFromResult(LatestResults);
+            return TaskUtilities.ValueTaskFromResult(LatestResults);
         }
         /// <summary>
         /// Disposes of the instance.

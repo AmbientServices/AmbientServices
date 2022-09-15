@@ -1,5 +1,4 @@
-﻿using AmbientServices;
-using AmbientServices.Utility;
+﻿using AmbientServices.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -13,7 +12,7 @@ namespace AmbientServices.Test
     /// A class that holds tests for enum extension methods.
     /// </summary>
     [TestClass]
-    public class TestEnumExtensions
+    public class TestEnumUtilities
     {
         enum TestEmptyEnum
         {
@@ -38,10 +37,10 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EnumMaxEnumValue()
         {
-            Assert.AreEqual(default, EnumExtensions.MaxEnumValue<TestEmptyEnum>());
-            Assert.AreEqual(TestOneValueEnum.ValueOne, EnumExtensions.MaxEnumValue<TestOneValueEnum>());
-            Assert.AreEqual(TestTwoValueEnum.ValueTwo, EnumExtensions.MaxEnumValue<TestTwoValueEnum>());
-            Assert.AreEqual(TestOverrideEnum.ValueTwo, EnumExtensions.MaxEnumValue<TestOverrideEnum>());
+            Assert.AreEqual(default, EnumUtilities.MaxEnumValue<TestEmptyEnum>());
+            Assert.AreEqual(TestOneValueEnum.ValueOne, EnumUtilities.MaxEnumValue<TestOneValueEnum>());
+            Assert.AreEqual(TestTwoValueEnum.ValueTwo, EnumUtilities.MaxEnumValue<TestTwoValueEnum>());
+            Assert.AreEqual(TestOverrideEnum.ValueTwo, EnumUtilities.MaxEnumValue<TestOverrideEnum>());
         }
     }
 }

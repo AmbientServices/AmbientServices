@@ -1,27 +1,18 @@
-﻿using System;
+﻿using AmbientServices.Utilities;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Text;
 
-namespace AmbientServices.Utility
+namespace AmbientServices.Extensions
 {
     /// <summary>
     /// A static partial class that extends <see cref="string"/>.
     /// </summary>
     internal static partial class StringExtensions
     {
-        private static readonly char[] DecimalPointCharArray = ".,".ToCharArray();
-        private static readonly char[] NumberSeparatorCharArray = ".,-".ToCharArray();
         private static readonly System.Text.RegularExpressions.Regex DigitSequenceRegex = new(@"\d+", System.Text.RegularExpressions.RegexOptions.Compiled);
         private static readonly System.Text.RegularExpressions.Regex CommaSeparatedDigits = new(@"(?<csn>\d+(?:,\d+)+)", System.Text.RegularExpressions.RegexOptions.Compiled);
-        private static readonly System.Text.RegularExpressions.Regex NumberRegex = new(
-            @"(?<ps>(?:-?\d+)\.(?:(?:\d+)\.)+(?:\d+))" +    // finds a sequence of numbers separated by periods, such as 2020.5.7, and prevents them from being detected as real numbers (they should be treated as a sequence of whole numbers)
-            @"|(?<ds>(?:-?\d+)-(?:(?:\d+)-)+(?:\d+))" +     // finds a sequence of numbers separated by dashes, such as 2020-5-7, and prevents them from being detected as negative numbers (they should be treated as a sequence of whole numbers)
-            @"|(?<nr>(?<![0-9])(?:-(?:\d*)\.\d+))" +        // finds a negative real
-            @"|(?<ni>(?<![0-9])(?:-(?:\d+)))" +             // finds a negative integer
-            @"|(?<pr>(?<![-.,]\d*)(?:(?:\d*)\.\d+))" +      // finds a positive real
-            @"|(?<pi>(?<![-.,]\d*)(?:\d+))",                // finds a positive integer
-            System.Text.RegularExpressions.RegexOptions.Compiled);
         /// <summary>
         /// Compares two strings naturally, so that numeric sequences embedded in the strings are sorted numerically instead of based on the characters.
         /// For example, a regular string sort would sort "a100b" before "a99b", but a natural string sort would not.
@@ -76,78 +67,10 @@ namespace AmbientServices.Utility
             int maxDigitsB = DigitSequenceRegex.Matches(normB + ".0").Cast<System.Text.RegularExpressions.Match>().Select(digitChunk => digitChunk.Value.Length).Max();
             int maxDigits = Math.Max(maxDigitsA, maxDigitsB);
             // next expand each digit sequence to that length and transform the string into one that will sorts the way we want it to
-            normA = NormalizeStringWithNumberSequences(normA, maxDigits);
-            normB = NormalizeStringWithNumberSequences(normB, maxDigits);
+            normA = StringUtilities.NormalizeStringWithNumberSequences(normA, maxDigits);
+            normB = StringUtilities.NormalizeStringWithNumberSequences(normB, maxDigits);
             // now compare the strings
             return CultureInfo.InvariantCulture.CompareInfo.Compare(normA, normB, ignoreCase ? CompareOptions.OrdinalIgnoreCase : CompareOptions.Ordinal);
-        }
-
-        private static string NormalizeStringWithNumberSequences(string str, int maxDigits)
-        {
-            str = NumberRegex.Replace(str,
-                delegate (System.Text.RegularExpressions.Match m)
-                {
-                    int matchGroup = 1;
-                    for (; matchGroup < m.Groups.Count; ++matchGroup)
-                    {
-                        if (m.Groups[matchGroup].Captures.Count > 0) break;
-                    }
-                    // I don't think this should ever happen, but just in case...
-                    if (matchGroup >= m.Groups.Count) return m.Value;
-                    int prefixIndex = m.Index - 1;
-                    int decimalPointIndex;
-                    string wholePart;
-                    string fractionPart;
-                    string[] numberParts;
-                    // Note that the use of 1 and 4 here is to be sure that negatives sort before positives.  1 is like a sideways minus sign and 4 is like a plus sign as well.
-                    switch (matchGroup)
-                    {
-                        case 1: // ps: period sequence
-                            numberParts = m.Value.Split(NumberSeparatorCharArray);
-                            return (numberParts[0].Length == 0 && m.Value[0] == '-')
-                            ? NegativePartTransform("1", numberParts[0].PadLeft(maxDigits, '0')) + "." + string.Join(".", numberParts.Skip(1).Select(s => "4" + s.PadLeft(maxDigits, '0')))
-                            : string.Join(".", numberParts.Select(s => "4" + s.PadLeft(maxDigits, '0')));
-                        case 2: // ds: dash sequence
-                            numberParts = m.Value.Split(NumberSeparatorCharArray);
-                            return (numberParts[0].Length == 0 && m.Value[0] == '-')
-                            ? NegativePartTransform("1", numberParts[0].PadLeft(maxDigits, '0')) + "-" + string.Join("-", numberParts.Skip(1).Select(s => "4" + s.PadLeft(maxDigits, '0')))
-                            : string.Join("-", numberParts.Select(s => "4" + s.PadLeft(maxDigits, '0')));
-                        case 3: // nr: negative real
-                            decimalPointIndex = m.Value.IndexOfAny(DecimalPointCharArray, 1);
-                            System.Diagnostics.Debug.Assert(decimalPointIndex > 0);
-                            wholePart = NegativePartTransform("1", m.Value.Substring(1, decimalPointIndex - 1).PadLeft(maxDigits, '0'));
-                            fractionPart = NegativePartTransform("4", m.Value.Substring(decimalPointIndex + 1, m.Value.Length - decimalPointIndex - 1).PadRight(maxDigits, '0'));
-                            return wholePart + fractionPart;
-                        case 4: // ni: negative integer
-                            return NegativePartTransform("1", m.Value.Substring(1).PadLeft(maxDigits, '0'));
-                        case 5: // pr: positive real
-                            decimalPointIndex = m.Value.IndexOfAny(DecimalPointCharArray, 0);
-                            System.Diagnostics.Debug.Assert(decimalPointIndex >= 0);
-                            wholePart = "4" + m.Value.Substring(0, decimalPointIndex).PadLeft(maxDigits, '0');
-                            fractionPart = "4" + m.Value.Substring(decimalPointIndex + 1, m.Value.Length - decimalPointIndex - 1).PadRight(maxDigits, '0');
-                            return wholePart + fractionPart;
-                        case 6: // pi: positive integer
-                            return "4" + m.Value.PadLeft(maxDigits, '0');
-                        default:
-                            // this should also never happen, but just in case...
-                            throw new InvalidOperationException("The match group number was not expected--the regex must have changed without a corresponding change in the code!");
-                    }
-                });
-            return str;
-        }
-
-        private static string NegativePartTransform(string prefix, string str)
-        {
-            System.Diagnostics.Debug.Assert(str[0] != '-');
-            // use 1 as the 'negative prefix' because it should sort before the 'positive prefix' of 4
-            StringBuilder builder = new(prefix);
-            for (int off = 0; off < str.Length; ++off)
-            {
-                char c = str[off];
-                System.Diagnostics.Debug.Assert(c >= '0' && c <= '9');
-                builder.Append((char)('0' + (9 - (c - '0'))));
-            }
-            return builder.ToString();
         }
 
 #if !NETCOREAPP3_1 && !NET5_0_OR_GREATER

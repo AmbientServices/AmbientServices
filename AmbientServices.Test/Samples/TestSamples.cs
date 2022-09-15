@@ -1,5 +1,5 @@
 ﻿using AmbientServices;
-using AmbientServices.Utility;
+using AmbientServices.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
@@ -252,7 +252,7 @@ namespace AmbientServices.Test.Samples
                 // types = assembly.GetTypes();
                 // runs, but lines after that do not, not do any catch blocks or finally blocks, and yet the function returns an empty array somehow
                 // add the following to help diagnose the issue: bool testSamples = (assembly.GetName().Name == "AmbientServices.Samples");
-                //Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{DefaultAmbientServices.TestSamplesLoaded},{DefaultAmbientServices.TestSamplesDependent},{DefaultAmbientServices.TestSamplesTypes},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoaded},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedLoading},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedLoaded},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedException},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedOtherException},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedFinally},{AmbientServices.Utility.AssemblyExtensions.TestSamplesLoadedTypes},{new StackTrace()}");
+                //Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{DefaultAmbientServices.TestSamplesLoaded},{DefaultAmbientServices.TestSamplesDependent},{DefaultAmbientServices.TestSamplesTypes},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoading},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedOtherException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedFinally},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedTypes},{new StackTrace()}");
                 Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{typeof(BasicAmbientCallStack).Assembly.GetLoadableTypes().Length},{new StackTrace()}");
             }
             Assert.IsFalse(String.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));

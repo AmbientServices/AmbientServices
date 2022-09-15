@@ -1,5 +1,4 @@
 ﻿using AmbientServices;
-using AmbientServices.Utility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -50,15 +49,6 @@ namespace AmbientServices.Test
             Assert.IsFalse(string.IsNullOrEmpty(trace.ToString()));
             trace = new FilteredStackTrace(new ExpectedException("This is a test"), 0, true);
             Assert.IsTrue(string.IsNullOrEmpty(trace.ToString().Trim()));
-            Async.RunTaskSync(async () => 
-            {
-                string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(1, 1)?.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
-                FilteredStackTrace.AddSourcePathToErase(projectPath ?? "Z:\\");
-                FilteredStackTrace.AddNamespaceToFilter("Async.Synchronize");
-                trace = new FilteredStackTrace(new ExpectedException("This is a test"), 0, true);
-                Assert.IsTrue(string.IsNullOrEmpty(trace.ToString().Trim()));
-                await Task.CompletedTask;
-            });
             Ignore.IgnoreNamespace.TestEraseAndFilter();
             FilteredStackTrace.AddNamespaceToFilter("NonExistentNamespace.Subspace");
             Assert.IsTrue(FilteredStackTrace.ShouldFilterMethod("NonExistentNamespace.Subspace.TestNamespaceFilter"));

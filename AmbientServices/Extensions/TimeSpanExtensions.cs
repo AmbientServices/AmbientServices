@@ -1,8 +1,9 @@
-﻿using System;
+﻿using AmbientServices.Utilities;
+using System;
 using System.Diagnostics;
 using System.Linq;
 
-namespace AmbientServices.Utility
+namespace AmbientServices.Extensions
 {
     /// <summary>
     /// A static class that extends <see cref="System.TimeSpan"/>.
@@ -11,112 +12,6 @@ namespace AmbientServices.Utility
     {
         private static readonly char[] Alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
         private static readonly char[] Numeric = "-0123456789. \t".ToCharArray();
-        internal static readonly long TimeSpanToStopwatchMultiplier;
-        internal static readonly long TimeSpanToStopwatchDivisor;
-        private static readonly double TimeSpanToStopwatchRatio;
-        internal static readonly long StopwatchToTimeSpanMultiplier;
-        internal static readonly long StopwatchToTimeSpanDivisor;
-        private static readonly double StopwatchToTimeSpanRatio;
-        private static readonly long BaselineStopwatchTimestamp;
-        private static readonly long BaselineDateTimeTicks;
-        private static readonly long _TimeSpanStopwatchConversionLeastCommonMultiple;
-#pragma warning disable CA1810  // it should be faster in this case to do it this way because the values depend on each other
-        static TimeSpanExtensions()
-#pragma warning restore CA1810
-        {
-            ulong timeSpanTicksPerSecond = TimeSpan.TicksPerSecond;
-            ulong stopwatchTicksPerSecond = (ulong)Stopwatch.Frequency;
-            // adjust the multipliers and divisors to reduce the range of values that will cause overflow during conversion by removing all common divisors
-            ulong gcd = GCD(timeSpanTicksPerSecond, stopwatchTicksPerSecond);
-            TimeSpanToStopwatchMultiplier = (long)(stopwatchTicksPerSecond / gcd);
-            TimeSpanToStopwatchDivisor = (long)(timeSpanTicksPerSecond / gcd);
-            TimeSpanToStopwatchRatio = TimeSpanToStopwatchMultiplier / (double)TimeSpanToStopwatchDivisor;
-            StopwatchToTimeSpanMultiplier = (long)(timeSpanTicksPerSecond / gcd);
-            StopwatchToTimeSpanDivisor = (long)(stopwatchTicksPerSecond / gcd);
-            StopwatchToTimeSpanRatio = StopwatchToTimeSpanMultiplier / (double)StopwatchToTimeSpanDivisor;
-            BaselineStopwatchTimestamp = Stopwatch.GetTimestamp();     // note that it doesn't matter if AmbientClock is in use--these are *relative* numbers, so the conversion should work either way
-#if DEBUG   // delay this a little bit just in case it makes a difference
-            System.Threading.Thread.Sleep(73);
-#endif
-            BaselineDateTimeTicks = DateTime.UtcNow.Ticks;
-            // make sure that nobody else gets times before these
-            System.Threading.Thread.MemoryBarrier();
-            _TimeSpanStopwatchConversionLeastCommonMultiple = TimeSpanToStopwatchMultiplier * TimeSpanToStopwatchDivisor;
-        }
-        internal static ulong GCD(ulong a, ulong b)
-        {
-            while (a != 0 && b != 0)
-            {
-                if (a > b) a %= b; else b %= a;
-            }
-            return a | b;
-        }
-        /// <summary>
-        /// Gets the smallest number of ticks than can be successfully roundtripped between stopwatch ticks and timespan ticks without any loss of accuracy.
-        /// </summary>
-        internal static long TimeSpanStopwatchConversionLeastCommonMultiple => _TimeSpanStopwatchConversionLeastCommonMultiple;
-        /// <summary>
-        /// Converts <see cref="TimeSpan"/> ticks to <see cref="System.Diagnostics.Stopwatch"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="double"/> multipliation if not.
-        /// </summary>
-        /// <param name="timeSpanTicks">The number of <see cref="TimeSpan"/> ticks.</param>
-        /// <returns>The equivalent number of <see cref="System.Diagnostics.Stopwatch"/> ticks</returns>
-        public static long TimeSpanTicksToStopwatchTicks(long timeSpanTicks)
-        {
-            try
-            {
-                checked
-                {
-                    return timeSpanTicks * TimeSpanToStopwatchMultiplier / TimeSpanToStopwatchDivisor;
-                }
-            }
-            // Coverage note: the testability of this code depends on the values of system constants which cannot be altered by the test code
-            catch (OverflowException)
-            {
-                return (long)(timeSpanTicks * TimeSpanToStopwatchRatio);
-            }
-        }
-        /// <summary>
-        /// Converts <see cref="System.Diagnostics.Stopwatch"/> ticks to <see cref="TimeSpan"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="double"/> multipliation if not.
-        /// </summary>
-        /// <param name="timeSpanTicks">The number of <see cref="System.Diagnostics.Stopwatch"/> ticks.</param>
-        /// <returns>The equivalent number of <see cref="TimeSpan"/> ticks</returns>
-        public static long StopwatchTicksToTimeSpanTicks(long timeSpanTicks)
-        {
-            try
-            {
-                checked
-                {
-                    return timeSpanTicks * StopwatchToTimeSpanMultiplier / StopwatchToTimeSpanDivisor;
-                }
-            }
-            // Coverage note: the testability of this code depends on the values of system constants which cannot be altered by the test code
-            catch (OverflowException)
-            {
-                return (long)(timeSpanTicks * StopwatchToTimeSpanRatio);
-            }
-        }
-        /// <summary>
-        /// Converts a stopwatch timestamp to UTC <see cref="DateTime"/> ticks.
-        /// </summary>
-        /// <param name="stopwatchTimestamp">A timestamp gathered from <see cref="Stopwatch.GetTimestamp()"/>.</param>
-        /// <returns>The number of UTC <see cref="DateTime "/>ticks.</returns>
-        public static long StopwatchTimestampToDateTime(long stopwatchTimestamp)
-        {
-            long stopwatchTicksAgo = stopwatchTimestamp - BaselineStopwatchTimestamp;
-            long dateTimeTicksAgo = StopwatchTicksToTimeSpanTicks(stopwatchTicksAgo);
-            return BaselineDateTimeTicks + dateTimeTicksAgo;
-        }
-        /// <summary>
-        /// Converts UTC <see cref="DateTime"/> ticks to a stopwatch timestamp.
-        /// </summary>
-        /// <param name="dateTimeTicks">Ticks from a UTC <see cref="DateTime"/>.</param>
-        /// <returns>The corresponding <see cref="Stopwatch"/> timestamp.</returns>
-        public static long DateTimeToStopwatchTimestamp(long dateTimeTicks)
-        {
-            long dateTimeTicksAgo = dateTimeTicks - BaselineDateTimeTicks;
-            long stopwatchTicksAgo = TimeSpanTicksToStopwatchTicks(dateTimeTicksAgo);
-            return BaselineStopwatchTimestamp + stopwatchTicksAgo;
-        }
         /// <summary>
         /// Attempts to parse a string as a timespan.
         /// </summary>
@@ -152,36 +47,6 @@ namespace AmbientServices.Utility
                 "MS" or "MILLISECOND" or "MILLISECONDS" => TimeSpan.FromMilliseconds(units),
                 _ => TimeSpan.FromTicks((long)units),
             };
-        }
-        private static bool MatchUnits(double total, int count)
-        {
-            if (total < 2.0)
-            {
-                return false;
-            }
-            return total >= count;
-        }
-        private static string UnitString(string prefix, double count, string postfix)
-        {
-            int intPart = (int)count;
-            int firstDecimal = ((int)(count * 10.0) % 10);
-            if (intPart < 10 && firstDecimal != 0)
-            {
-                return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + firstDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
-            }
-            return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
-        }
-        private static string UnitStringWithPlural(string prefix, double count, string postfix)
-        {
-            int intPart = (int)count;
-            int firstDecimal = ((int)(count * 10.0) % 10);
-            if (intPart < 10 && firstDecimal != 0)
-            {
-                return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + firstDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
-            }
-            // else nothing past the decimal
-            if (intPart != 1) postfix += "s";
-            return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
         }
         /// <summary>
         /// Gets a short string representing the specified timespan.
@@ -272,6 +137,36 @@ namespace AmbientServices.Utility
                 return UnitStringWithPlural(sign, absTimeSpan.TotalSeconds, " second");
             }
             return UnitStringWithPlural(sign, absTimeSpan.TotalMilliseconds, " millisecond");
+        }
+        private static bool MatchUnits(double total, int count)
+        {
+            if (total < 2.0)
+            {
+                return false;
+            }
+            return total >= count;
+        }
+        private static string UnitString(string prefix, double count, string postfix)
+        {
+            int intPart = (int)count;
+            int firstDecimal = ((int)(count * 10.0) % 10);
+            if (intPart < 10 && firstDecimal != 0)
+            {
+                return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + firstDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
+            }
+            return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
+        }
+        private static string UnitStringWithPlural(string prefix, double count, string postfix)
+        {
+            int intPart = (int)count;
+            int firstDecimal = ((int)(count * 10.0) % 10);
+            if (intPart < 10 && firstDecimal != 0)
+            {
+                return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + firstDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
+            }
+            // else nothing past the decimal
+            if (intPart != 1) postfix += "s";
+            return prefix + intPart.ToString(System.Globalization.CultureInfo.InvariantCulture) + postfix;
         }
     }
 }

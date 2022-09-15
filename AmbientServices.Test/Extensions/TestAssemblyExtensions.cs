@@ -1,5 +1,5 @@
 ﻿using AmbientServices;
-using AmbientServices.Utility;
+using AmbientServices.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -31,42 +31,25 @@ namespace AmbientServices.Test
             test = _LateAssignmentTest.Global;
             Assert.IsNotNull(test);
         }
-        private void LateAssignment()
-        {
-            string path = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            // NOW load the assembly (this should register the default implementation)
-            Assembly assembly = Assembly.LoadFile(path + "\\AmbientServices.Test.DelayedLoad.dll");
-        }
-        [TestMethod]
-        public void TypesFromException()
-        {
-            ReflectionTypeLoadException ex = new(new Type[] { typeof(string) }, new Exception[0]);
-            Assert.AreEqual(1, Utility.AssemblyExtensions.TypesFromException(ex).Count());
-            ex = new ReflectionTypeLoadException(new Type[] { typeof(string), null }, new Exception[0]);
-            Assert.AreEqual(1, Utility.AssemblyExtensions.TypesFromException(ex).Count());
-        }
         [TestMethod]
         public void DoesAssemblyReferToAssembly()
         {
-            Assert.IsFalse(Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(typeof(System.ValueTuple).Assembly, Assembly.GetExecutingAssembly()));
-            Assert.IsTrue(Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), typeof(IAmbientLocalCache).Assembly));
-            Assert.IsTrue(Utility.AssemblyExtensions.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly(), Assembly.GetExecutingAssembly()));
+            Assert.IsFalse(typeof(System.ValueTuple).Assembly.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly()));
+            Assert.IsTrue(Assembly.GetExecutingAssembly().DoesAssemblyReferToAssembly(typeof(IAmbientLocalCache).Assembly));
+            Assert.IsTrue(Assembly.GetExecutingAssembly().DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly()));
         }
         [TestMethod]
         public void ReflectionTypeLoadException()
         {
             // Note that Assembly.Location returns empty string if the assembly is a single file application, but this is a test application, which is *not* a single file executable, so we should get a location
             string dllPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, "ReflectionTypeLoadException.Assembly.dll");
-            Type[] types = Utility.AssemblyExtensions.GetLoadableTypes(Assembly.LoadFrom(dllPath)).ToArray();
+            Type[] types = Assembly.LoadFrom(dllPath).GetLoadableTypes().ToArray();
         }
-        [TestMethod]
-        public void AssemblyExtensionsNullArgumentExceptions()
+        private void LateAssignment()
         {
-            Assembly n = null!;
-            Assert.ThrowsException<ArgumentNullException>(() => n.GetLoadableTypes());
-            Assert.ThrowsException<ArgumentNullException>(() => n.DoesAssemblyReferToAssembly(n));
-            ReflectionTypeLoadException ex = null!;
-            Assert.ThrowsException<ArgumentNullException>(() => Utility.AssemblyExtensions.TypesFromException(ex));
+            string path = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            // NOW load the assembly (this should register the default implementation)
+            Assembly assembly = Assembly.LoadFile(path + "\\AmbientServices.Test.DelayedLoad.dll");
         }
     }
 }

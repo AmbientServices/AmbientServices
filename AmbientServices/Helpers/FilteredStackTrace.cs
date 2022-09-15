@@ -1,11 +1,12 @@
-﻿using System;
+﻿using AmbientServices.Extensions;
+using AmbientServices.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using AmbientServices.Utility;
 using static System.FormattableString;
 
 namespace AmbientServices
@@ -328,7 +329,7 @@ namespace AmbientServices
         private static ConcurrentHashSet<string> InitializeSourcePathsToErase()
         {
             ConcurrentHashSet<string> dict = new();
-            string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(1, 1);
+            string? projectPath = AssemblyUtilities.GetCallingCodeSourceFolder(1, 1);
             if (projectPath != null && !string.IsNullOrEmpty(projectPath) && (projectPath.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal) || projectPath.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal)))
             {
                 // suppress the folder for the project folder so we get the project folder name in the output
@@ -363,7 +364,7 @@ namespace AmbientServices
         /// <param name="subfolders">The number of subfolders the calling code's source module is in, with zero meaning the calling source module is in the root of the project.</param>
         public static void EraseCallingSourcePath(int subfolders = 0)
         {
-            string? projectPath = AssemblyExtensions.GetCallingCodeSourceFolder(subfolders, 1)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string? projectPath = AssemblyUtilities.GetCallingCodeSourceFolder(subfolders, 1)?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             if (projectPath != null && !string.IsNullOrEmpty(projectPath)) _SourcePathsToErase.Add(projectPath);
         }
         /// <summary>

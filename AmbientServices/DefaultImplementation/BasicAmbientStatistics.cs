@@ -1,4 +1,4 @@
-﻿using AmbientServices.Utility;
+﻿using AmbientServices.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -123,11 +123,11 @@ namespace AmbientServices
         }
         public long SetMin(long newPossibleMinValue)
         {
-            return InterlockedExtensions.TryOptomisticMin(ref _sampleValue, newPossibleMinValue);
+            return InterlockedUtilities.TryOptomisticMin(ref _sampleValue, newPossibleMinValue);
         }
         public long SetMax(long newPossibleMaxValue)
         {
-            return InterlockedExtensions.TryOptomisticMax(ref _sampleValue, newPossibleMaxValue);
+            return InterlockedUtilities.TryOptomisticMax(ref _sampleValue, newPossibleMaxValue);
         }
         public void Dispose()
         {

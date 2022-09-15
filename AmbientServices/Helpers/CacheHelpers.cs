@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AmbientServices.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
@@ -47,7 +48,7 @@ namespace AmbientServices
         public ValueTask<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default) where T : class
         {
             IAmbientCache? cache = _explicitCache ?? _Cache.Local;
-            if (cache == null) return TaskExtensions.ValueTaskFromResult<T?>(null);
+            if (cache == null) return TaskUtilities.ValueTaskFromResult<T?>(null);
             return cache.Retrieve<T>(_cacheKeyPrefix + itemKey, refresh, cancel);
         }
         /// <summary>

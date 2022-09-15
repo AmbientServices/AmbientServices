@@ -1,5 +1,5 @@
 ﻿using AmbientServices;
-using AmbientServices.Utility;
+using AmbientServices.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;

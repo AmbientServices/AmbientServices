@@ -1,4 +1,4 @@
-﻿using AmbientServices.Utility;
+﻿using AmbientServices.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -38,7 +38,7 @@ namespace AmbientServices
         /// <remarks>
         /// This property is thread-safe.
         /// </remarks>
-        public static TimeSpan Elapsed => TimeSpan.FromTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp()));
+        public static TimeSpan Elapsed => TimeSpan.FromTicks(TimeSpanUtilities.StopwatchTicksToTimeSpanTicks(_Clock.Local?.Ticks ?? Stopwatch.GetTimestamp()));
         /// <summary>
         /// Gets the current virtual UTC <see cref="DateTime"/>.
         /// </summary>
@@ -109,7 +109,7 @@ namespace AmbientServices
         /// <param name="skipTime">The amount of time to skip ahead.</param>
         public static void SkipAhead(TimeSpan skipTime)
         {
-            if (_Clock.Override is PausedAmbientClock controllable) controllable.SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(skipTime.Ticks));
+            if (_Clock.Override is PausedAmbientClock controllable) controllable.SkipAhead(TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(skipTime.Ticks));
         }
         /// <summary>
         /// The ambient clock equivalent of <see cref="Thread.Sleep(int)"/>.
@@ -286,7 +286,7 @@ namespace AmbientServices
 
             private static DateTime UtcDateTimeFromStopwatchTicks(long stopwatchTicks)
             {
-                return new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(stopwatchTicks), DateTimeKind.Utc);
+                return new DateTime(TimeSpanUtilities.StopwatchTimestampToDateTime(stopwatchTicks), DateTimeKind.Utc);
             }
 
             /// <summary>
@@ -336,7 +336,7 @@ namespace AmbientServices
             /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called directly or indirectly from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> implementation.</remarks>
             public void SkipAhead(TimeSpan time)
             {
-                SkipAhead(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(time.Ticks));
+                SkipAhead(TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(time.Ticks));
             }
         }
     }
@@ -425,7 +425,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>
-        public TimeSpan Elapsed => TimeSpan.FromTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(ElapsedTicks));
+        public TimeSpan Elapsed => TimeSpan.FromTicks(TimeSpanUtilities.StopwatchTicksToTimeSpanTicks(ElapsedTicks));
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>
@@ -596,7 +596,7 @@ namespace AmbientServices
 
                 long nowStopwatchTicks = clock.Ticks;
                 clock.RegisterTimeChangedNotificationSink(this);
-                _periodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(period.Ticks);
+                _periodStopwatchTicks = TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(period.Ticks);
                 _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
                 _enabled = 0;
             }
@@ -960,8 +960,8 @@ namespace AmbientServices
             IAmbientClock tempClock = _clock;
 #endif
             _clock.RegisterTimeChangedNotificationSink(this);
-            _periodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(period.Ticks);
-            long ticksToNextInvocation = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(dueTime.Ticks);
+            _periodStopwatchTicks = TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(period.Ticks);
+            long ticksToNextInvocation = TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(dueTime.Ticks);
             _nextRaiseStopwatchTicks = nowStopwatchTicks + ticksToNextInvocation;
         }
 

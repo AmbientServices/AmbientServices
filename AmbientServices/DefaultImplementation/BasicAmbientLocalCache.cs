@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AmbientServices.Utilities;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
@@ -228,9 +229,9 @@ namespace AmbientServices
             CacheEntry? disposeEntry;
             if (_cache.TryRemove(itemKey, out disposeEntry))
             {
-                if (disposeEntry.Entry is T) return TaskExtensions.ValueTaskFromResult((T?)disposeEntry.Entry);
+                if (disposeEntry.Entry is T) return TaskUtilities.ValueTaskFromResult((T?)disposeEntry.Entry);
             }
-            return TaskExtensions.ValueTaskFromResult((T?)default);
+            return TaskUtilities.ValueTaskFromResult((T?)default);
         }
 
         private async ValueTask EjectEntry(CacheEntry entry, CancellationToken cancel = default)

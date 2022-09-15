@@ -1,4 +1,4 @@
-﻿using AmbientServices.Utility;
+﻿using AmbientServices.Utilities;
 using System;
 
 namespace AmbientServices
@@ -99,11 +99,11 @@ namespace AmbientServices
         /// <summary>
         /// Gets the beginning of the time range for the access.
         /// </summary>
-        public DateTime AccessBegin => new(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp));
+        public DateTime AccessBegin => new(TimeSpanUtilities.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp));
         /// <summary>
         /// Gets the end of the time range for the access, if the access is finished.
         /// </summary>
-        public DateTime? AccessEnd => (_accessEndStopwatchTimestamp >= long.MaxValue) ? null : new DateTime(TimeSpanExtensions.StopwatchTimestampToDateTime(_accessEndStopwatchTimestamp));
+        public DateTime? AccessEnd => (_accessEndStopwatchTimestamp >= long.MaxValue) ? null : new DateTime(TimeSpanUtilities.StopwatchTimestampToDateTime(_accessEndStopwatchTimestamp));
         /// <summary>
         /// Gets the number of times the bottleneck was accessed.  This is only statistical and is not used to compute <see cref="Utilization"/> or rank bottlenecks.
         /// </summary>
@@ -158,7 +158,7 @@ namespace AmbientServices
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
             _bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
-            _accessBeginStopwatchTimestamp = TimeSpanExtensions.DateTimeToStopwatchTimestamp(accessBegin.Ticks);
+            _accessBeginStopwatchTimestamp = TimeSpanUtilities.DateTimeToStopwatchTimestamp(accessBegin.Ticks);
             _accessEndStopwatchTimestamp = long.MaxValue;
         }
 
@@ -184,7 +184,7 @@ namespace AmbientServices
         {
             if (_bottleneck.Automatic) throw new InvalidOperationException("SetUsage cannot be used on Automatic bottlenecks!");
             System.Threading.Interlocked.Add(ref _accessCount, additionalAccessCount);
-            InterlockedExtensions.TryOptomisticAdd(ref _limitUsed, additionalLimitUsed);
+            InterlockedUtilities.TryOptomisticAdd(ref _limitUsed, additionalLimitUsed);
             UpdateUtilization();
         }
 
@@ -196,7 +196,7 @@ namespace AmbientServices
         private static double ComputeUtilization(AmbientBottleneckUtilizationAlgorithm limitType, long totalStopwatchTicks, double limitUsed, double? limit, TimeSpan? limitPeriod)
         {
             if (limit == null || Math.Abs(limit.Value) < 1) limit = 1.0;
-            double limitPeriodStopwatchTicks = (limitPeriod == null) ? 1.0 : TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Value.Ticks);
+            double limitPeriodStopwatchTicks = (limitPeriod == null) ? 1.0 : TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(limitPeriod.Value.Ticks);
             if (totalStopwatchTicks < 1) totalStopwatchTicks = 1;
             double result = limitType switch {
                 AmbientBottleneckUtilizationAlgorithm.Linear => (1.0 * limitUsed / totalStopwatchTicks) / (1.0 * limit.Value / limitPeriodStopwatchTicks),

@@ -1,4 +1,5 @@
-﻿using AmbientServices.Utility;
+﻿using AmbientServices.Extensions;
+using AmbientServices.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;

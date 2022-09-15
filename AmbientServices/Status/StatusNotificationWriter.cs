@@ -1,4 +1,4 @@
-﻿using AmbientServices.Utility;
+﻿using AmbientServices.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Text;

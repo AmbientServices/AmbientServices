@@ -1,4 +1,4 @@
-﻿using AmbientServices.Utility;
+﻿using AmbientServices.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Diagnostics;
@@ -133,74 +133,6 @@ namespace AmbientServices.Test
             s = "3.287E+3thisisjunk";
             t = s.TryParseTimeSpan();
             Assert.AreEqual(TimeSpan.FromTicks(3287), t);
-        }
-        [TestMethod]
-        public void GCD()
-        {
-            Assert.AreEqual(1UL, TimeSpanExtensions.GCD(53, 7));
-            Assert.AreEqual(5UL, TimeSpanExtensions.GCD(60, 5));
-            Assert.AreEqual(5UL, TimeSpanExtensions.GCD(35, 15));
-        }
-        /// <summary>
-        /// Performs tests on <see cref="IAmbientClock"/>.
-        /// </summary>
-        [TestMethod]
-        public void TimeSpanTicksToStopwatchTicks()
-        {
-            foreach (long millisecondsToSleep in new long[] { 100, 1000, 10000, 100000 })
-            {
-                StringBuilder s = new();
-                s.AppendLine($"millisecondsToSleep = {millisecondsToSleep}");
-                s.AppendLine($"Stopwatch.Frequency = {Stopwatch.Frequency}");
-                s.AppendLine($"TimeSpan.TicksPerSecond = {TimeSpan.TicksPerSecond}");
-                s.AppendLine($"TimeSpanExtensions.TimeSpanToStopwatchMultiplier = {TimeSpanExtensions.TimeSpanToStopwatchMultiplier}");
-                s.AppendLine($"TimeSpanExtensions.TimeSpanToStopwatchDivisor = {TimeSpanExtensions.TimeSpanToStopwatchDivisor}");
-                s.AppendLine($"TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks = {TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks}");
-                s.AppendLine($"TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks) = {TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks)}");
-                Assert.AreEqual(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks), millisecondsToSleep * Stopwatch.Frequency / 1000, s.ToString());
-            }
-        }
-        [TestMethod]
-        public void TimeSpanStopwatchTicksRoundTrip()
-        {
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 1, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 1)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000)));
-
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 1, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 1)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000)));
-            Assert.AreEqual(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000, TimeSpanExtensions.StopwatchTicksToTimeSpanTicks(TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000)));
-        }
-        [TestMethod]
-        public void TimeSpanDateTimeStopwatchTicksRoundTrip()
-        {
-            long diff;
-
-            diff = DateTimeTicksDifference(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100)));
-            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
-            diff = DateTimeTicksDifference(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000)));
-            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
-            diff = DateTimeTicksDifference(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000)));
-            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
-            diff = DateTimeTicksDifference(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000, TimeSpanExtensions.DateTimeToStopwatchTimestamp(TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000)));
-            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
-
-            long baseTicks = DateTime.UtcNow.Ticks;
-
-            diff = DateTimeTicksDifference(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100)));
-            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
-            diff = DateTimeTicksDifference(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000)));
-            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
-            diff = DateTimeTicksDifference(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 10000000000)));
-            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
-            diff = DateTimeTicksDifference(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000, TimeSpanExtensions.StopwatchTimestampToDateTime(TimeSpanExtensions.DateTimeToStopwatchTimestamp(baseTicks + TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000)));
-            Assert.IsTrue(diff < TimeSpanExtensions.TimeSpanStopwatchConversionLeastCommonMultiple);
-        }
-        private static long DateTimeTicksDifference(long ticksA, long ticksB)
-        {
-            return Math.Abs(ticksA - ticksB);
         }
     }
 }

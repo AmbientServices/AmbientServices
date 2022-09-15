@@ -1397,7 +1397,7 @@ class Application
 ```
 
 ## Miscellaneous
-Several non-service type utilities and extensions to system classes are also included because they are needed by the implementations.
+Several non-service type utilities and extensions to system classes are also included because they are needed by the implementations, but they are in separate namespaces AmbientServices.Utilities and AmbientServices.Extensions to avoid conflicts with existing code.
 These include InterlockedExtensions for threadsafe tracking of min/max values, 
 ArrayExtensions for comparing arrays by value, 
 StringExtensions for doing natural string comparisons,

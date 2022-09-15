@@ -1,5 +1,5 @@
 using AmbientServices;
-using AmbientServices.Utility;
+using AmbientServices.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -194,7 +194,7 @@ namespace AmbientServices.Test
         public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
         {
             statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenIrrelevant;
-            StatusRatingRange currentAuditRating = (StatusRatingRange)(_auditNumber++ % (int)EnumExtensions.MaxEnumValue<StatusRatingRange>());
+            StatusRatingRange currentAuditRating = (StatusRatingRange)(_auditNumber++ % (int)EnumUtilities.MaxEnumValue<StatusRatingRange>());
             float rating = (StatusRating.GetRangeUpperBound(currentAuditRating) + StatusRating.GetRangeLowerBound(currentAuditRating)) / 2;
             if (rating <= StatusRating.Fail)
             {

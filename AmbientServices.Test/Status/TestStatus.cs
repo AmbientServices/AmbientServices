@@ -1,4 +1,5 @@
 using AmbientServices;
+using AmbientServices.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -217,7 +218,7 @@ namespace AmbientServices.Test
         protected internal override bool Applicable => true;
         public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
-            return TaskExtensions.ValueTaskFromResult(_results);
+            return TaskUtilities.ValueTaskFromResult(_results);
         }
     }
     internal class TestAlwaysPending : StatusChecker
@@ -232,7 +233,7 @@ namespace AmbientServices.Test
         protected internal override bool Applicable => true;
         public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
-            return TaskExtensions.ValueTaskFromResult(_results);
+            return TaskUtilities.ValueTaskFromResult(_results);
         }
     }
     internal class TestNotApplicableStatus : StatusChecker
@@ -248,7 +249,7 @@ namespace AmbientServices.Test
         protected internal override bool Applicable => false;
         public override ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
-            return TaskExtensions.ValueTaskFromResult(_results);
+            return TaskUtilities.ValueTaskFromResult(_results);
         }
     }
     internal class TestAuditableStatusNoChildren : StatusAuditor

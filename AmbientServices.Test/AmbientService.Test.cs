@@ -1,5 +1,3 @@
-using AmbientServices;
-using AmbientServices.Utility;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Linq;
@@ -33,7 +31,6 @@ namespace AmbientServices.Test
         {
             System.Threading.Tasks.ValueTask t = TraceBuffer.Flush();
             t.ConfigureAwait(false).GetAwaiter().GetResult();
-            HighPerformanceFifoTaskScheduler.Stop();
         }
 
         [TestMethod]

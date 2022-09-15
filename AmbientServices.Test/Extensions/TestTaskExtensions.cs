@@ -1,4 +1,5 @@
 ﻿using AmbientServices;
+using AmbientServices.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Threading.Tasks;

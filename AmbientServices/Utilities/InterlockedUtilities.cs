@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace AmbientServices.Utility
+namespace AmbientServices.Utilities
 {
     /// <summary>
     /// A static class to hold enhanced functions for performing interlocked operations.
@@ -10,7 +10,7 @@ namespace AmbientServices.Utility
     /// Note that we could increase the code coverage by making a single function with a delegate to reduce the uncovered lines to two,
     /// but this would likely have a significant performance impace without affecting the actual testabilty or reliability of the code.
     /// </remarks>
-    public static class InterlockedExtensions
+    public static class InterlockedUtilities
     {
         /// <summary>
         /// Replaces the value with the specified value if the specified value is greater.
@@ -31,10 +31,8 @@ namespace AmbientServices.Utility
                 if (possibleNewMin >= oldValue) return oldValue;
                 // try to put in our value--did we win the race?
                 if (oldValue == System.Threading.Interlocked.CompareExchange(ref valueReference, possibleNewMin, oldValue))
-                {
                     // we're done and we were the new min
                     return possibleNewMin;
-                }
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
                 if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
             }
@@ -58,10 +56,8 @@ namespace AmbientServices.Utility
                 if (possibleNewMax <= oldValue) return oldValue;
                 // try to put in our value--did we win the race?
                 if (oldValue == System.Threading.Interlocked.CompareExchange(ref valueReference, possibleNewMax, oldValue))
-                {
                     // we're done and we were the new max
                     return possibleNewMax;
-                }
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
                 if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
             }
@@ -85,10 +81,8 @@ namespace AmbientServices.Utility
                 if (possibleNewMin >= oldValue) return oldValue;
                 // try to put in our value--did we win the race?
                 if (oldValue == System.Threading.Interlocked.CompareExchange(ref valueReference, possibleNewMin, oldValue))
-                {
                     // we're done and we were the new min
                     return possibleNewMin;
-                }
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
                 if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
             }
@@ -112,10 +106,8 @@ namespace AmbientServices.Utility
                 if (possibleNewMax <= oldValue) return oldValue;
                 // try to put in our value--did we win the race?
                 if (oldValue == System.Threading.Interlocked.CompareExchange(ref valueReference, possibleNewMax, oldValue))
-                {
                     // we're done and we were the new max
                     return possibleNewMax;
-                }
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
                 if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
             }
@@ -137,10 +129,8 @@ namespace AmbientServices.Utility
                 double oldValue = valueReference;
                 // try to put in our value--did we win the race?
                 if (oldValue == System.Threading.Interlocked.CompareExchange(ref valueReference, oldValue + toAdd, oldValue))
-                {
                     // return the new value
                     return oldValue + toAdd;
-                }
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
                 if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
             }
@@ -168,10 +158,8 @@ namespace AmbientServices.Utility
                 double newAverage = sampleValue + (oldAverage - sampleValue) * (1 / Math.Pow(2.0, decayHalfLives));
                 // try to put in our value--did we win the race?
                 if (oldAverage == System.Threading.Interlocked.CompareExchange(ref valueReference, newAverage, oldAverage))
-                {
                     // we're done--return the new average
                     return newAverage;
-                }
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
                 if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldAverage;
             }

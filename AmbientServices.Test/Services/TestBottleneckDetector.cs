@@ -1,5 +1,5 @@
 ﻿using AmbientServices;
-using AmbientServices.Utility;
+using AmbientServices.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
@@ -328,10 +328,10 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 BasicAmbientBottleneckDetector bd = new();
-                long limitStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(1000).Ticks);
-                long useStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(300).Ticks);
+                long limitStopwatchTicks = TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(1000).Ticks);
+                long useStopwatchTicks = TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(300).Ticks);
                 TimeSpan limitPeriod = TimeSpan.FromSeconds(7);
-                long limitPeriodStopwatchTicks = TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(limitPeriod.Ticks);
+                long limitPeriodStopwatchTicks = TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(limitPeriod.Ticks);
                 AmbientBottleneck bottleneckDetectorAccessRecordPropertiesBottleneck = new("BottleneckDetectorAccessRecordProperties-LinearTest", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordProperties Test", limitStopwatchTicks, limitPeriod);
                 AmbientBottleneckAccessor a1 = null;
                 try
@@ -354,7 +354,7 @@ namespace AmbientServices.Test
                     Assert.AreEqual(start, a1.AccessBegin);
                     Assert.AreEqual(AmbientClock.UtcNow, a1.AccessEnd);
                     DateTime accessEnd = a1.AccessEnd ?? AmbientClock.UtcNow;
-                    Assert.AreEqual(useStopwatchTicks, TimeSpanExtensions.TimeSpanTicksToStopwatchTicks((accessEnd - a1.AccessBegin).Ticks));
+                    Assert.AreEqual(useStopwatchTicks, TimeSpanUtilities.TimeSpanTicksToStopwatchTicks((accessEnd - a1.AccessBegin).Ticks));
                     Assert.AreEqual(useStopwatchTicks, (long)a1.LimitUsed);
                     Assert.AreEqual((1.0 * useStopwatchTicks / useStopwatchTicks) / (1.0 * limitStopwatchTicks / limitPeriodStopwatchTicks), a1.Utilization);
                     Assert.AreNotEqual(0, a1.GetHashCode());

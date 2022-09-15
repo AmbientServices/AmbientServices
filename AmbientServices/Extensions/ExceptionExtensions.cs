@@ -1,7 +1,8 @@
-﻿using System;
+﻿using AmbientServices.Utilities;
+using System;
 using System.Text;
 
-namespace AmbientServices.Utility
+namespace AmbientServices.Extensions
 {
     /// <summary>
     /// A static class that extends <see cref="System.Exception"/>.
@@ -17,20 +18,8 @@ namespace AmbientServices.Utility
         {
             if (exception == null) throw new ArgumentNullException(nameof(exception));
             StringBuilder stack = new();
-            BuildFilteredString(exception, stack);
+            ExceptionUtilities.BuildFilteredString(exception, stack);
             return stack.ToString();
-        }
-
-        internal static void BuildFilteredString(Exception exception, StringBuilder output)
-        {
-            Exception? innerException = exception.InnerException;
-            if (innerException != null) BuildFilteredString(innerException, output);
-
-            if (output.Length > 0) output.AppendLine();
-
-            output.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "[{0}] {1}", exception.GetType().Name, exception.Message);
-            output.AppendLine();
-            output.Append(new FilteredStackTrace(exception));
         }
         /// <summary>
         /// Gets the type name for the exception, which is literally the type name with any trailing &quot;Exception&quot; removed.

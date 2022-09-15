@@ -1,4 +1,4 @@
-﻿using AmbientServices.Utility;
+﻿using AmbientServices.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -167,10 +167,10 @@ namespace AmbientServices
             _targetSystem = targetSystem ?? "";
             _time = time;
             _relativeDetailLevel = relativeDetailLevel;
-            _properties = ImmutableArrayExtensions.FromEnumerable(properties);
+            _properties = ImmutableArrayUtilities.FromEnumerable(properties);
             _report = null;
             _natureOfSystem = natureOfSystem;
-            _children = ImmutableArrayExtensions.FromEnumerable(children);
+            _children = ImmutableArrayUtilities.FromEnumerable(children);
         }
         /// <summary>
         /// Cosntructs a <see cref="StatusResults"/> from the specified property data.
@@ -187,7 +187,7 @@ namespace AmbientServices
             _targetSystem = targetSystem;
             _time = time;
             _relativeDetailLevel = relativeDetailLevel;
-            _properties = ImmutableArrayExtensions.FromEnumerable(properties);
+            _properties = ImmutableArrayUtilities.FromEnumerable(properties);
             _report = report;
             _natureOfSystem = StatusNatureOfSystem.Leaf;
             _children = ImmutableArray<StatusResults>.Empty;
@@ -206,7 +206,7 @@ namespace AmbientServices
             _relativeDetailLevel = 0;
             _properties = ImmutableArray<StatusProperty>.Empty;
             _natureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
-            _children = ImmutableArrayExtensions.FromEnumerable(children);
+            _children = ImmutableArrayUtilities.FromEnumerable(children);
             _report = null;
         }
 

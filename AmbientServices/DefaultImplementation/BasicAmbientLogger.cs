@@ -1,4 +1,4 @@
-﻿using AmbientServices.Utility;
+﻿using AmbientServices.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -121,7 +121,7 @@ namespace AmbientServices
                     break;
                 }
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
-                if (!InterlockedExtensions.TryAgainAfterOptomisticMissDelay(attempt++)) break;
+                if (!InterlockedUtilities.TryAgainAfterOptomisticMissDelay(attempt++)) break;
             }
             if (!_disposedValue) _fileBuffers.BufferLine(message);
         }

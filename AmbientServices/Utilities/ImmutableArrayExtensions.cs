@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace AmbientServices.Utility
+namespace AmbientServices.Utilities
 {
-    internal static class ImmutableArrayExtensions
+    internal static class ImmutableArrayUtilities
     {
         /// <summary>
         /// Creates an <see cref="ImmutableArray{T}"/> from an <see cref="IEnumerable{T}"/>.
