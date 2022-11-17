@@ -973,7 +973,7 @@ namespace AmbientServices.Test
                 Assert.IsTrue(mre.WaitOne(0));
             }
         }
-#if NET5_0
+#if NET5_0_OR_GREATER
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
         /// </summary>
@@ -1056,23 +1056,35 @@ namespace AmbientServices.Test
 #endif
             SystemCallbackTimerTimeoutInfiniteInitialConstructor()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            object testState = new();
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    object testState = new();
 #if NET5_0
             await
 #endif
-            using AmbientCallbackTimer timer = new(callback, testState, Timeout.Infinite, 47);
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(13));
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(47));
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(47));
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(47));
-            Assert.AreEqual(0, invocations);
+                    using AmbientCallbackTimer timer = new(callback, testState, Timeout.Infinite, 47);
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(13));
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(47));
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(47));
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(47));
+                    Assert.AreEqual(0, invocations);
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1080,17 +1092,29 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerTimeoutInfiniteTimeSpanInitialChange()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            using AmbientCallbackTimer timer = new(callback);
-            timer.Change(Timeout.Infinite, 270);
-            Thread.Sleep(TimeSpan.FromMilliseconds(250));
-            Assert.AreEqual(0, invocations);                            // these should be reliable because the callback should *never* be invoked even once
-            Thread.Sleep(TimeSpan.FromMilliseconds(250));
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(250));
-            Assert.AreEqual(0, invocations);
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    using AmbientCallbackTimer timer = new(callback);
+                    timer.Change(Timeout.Infinite, 270);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(250));
+                    Assert.AreEqual(0, invocations);                            // these should be reliable because the callback should *never* be invoked even once
+                    Thread.Sleep(TimeSpan.FromMilliseconds(250));
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(250));
+                    Assert.AreEqual(0, invocations);
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1098,17 +1122,29 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerInifiniteTimeoutInitialChange()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            using AmbientCallbackTimer timer = new(callback);
-            timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
-            Thread.Sleep(TimeSpan.FromMilliseconds(250));
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(250));
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(250));
-            Assert.AreEqual(0, invocations);
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    using AmbientCallbackTimer timer = new(callback);
+                    timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(250));
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(250));
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(250));
+                    Assert.AreEqual(0, invocations);
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1116,21 +1152,33 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerTimeoutInfiniteInitialTimeoutInfiniteSubsequent()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            object testState = new();
-            using AmbientCallbackTimer timer = new(callback, testState, Timeout.Infinite, Timeout.Infinite);
-            Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
-                                                // if it becomes unreliable, we shall comment out this assert
-            Thread.Sleep(TimeSpan.FromMilliseconds(13));
-            Assert.AreEqual(0, invocations);        // these should be okay because we should *never* get called back
-            Thread.Sleep(TimeSpan.FromMilliseconds(47));
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(47));
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(47));
-            Assert.AreEqual(0, invocations);
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    object testState = new();
+                    using AmbientCallbackTimer timer = new(callback, testState, Timeout.Infinite, Timeout.Infinite);
+                    Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
+                                                        // if it becomes unreliable, we shall comment out this assert
+                    Thread.Sleep(TimeSpan.FromMilliseconds(13));
+                    Assert.AreEqual(0, invocations);        // these should be okay because we should *never* get called back
+                    Thread.Sleep(TimeSpan.FromMilliseconds(47));
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(47));
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(47));
+                    Assert.AreEqual(0, invocations);
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1138,16 +1186,28 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerInfiniteLongSubsequentChange()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            using AmbientCallbackTimer timer = new(callback);
-            timer.Change(330L, Timeout.Infinite);
-            Assert.AreEqual(0, invocations);
-            Thread.Sleep(TimeSpan.FromMilliseconds(500));
-            Assert.IsTrue(invocations <= 1, invocations.ToString());        // this test is somewhat more reliable than the test above because the callback should only ever be invoked once at most
-            Thread.Sleep(TimeSpan.FromMilliseconds(990));
-            Assert.IsTrue(invocations <= 1, invocations.ToString());
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    using AmbientCallbackTimer timer = new(callback);
+                    timer.Change(330L, Timeout.Infinite);
+                    Assert.AreEqual(0, invocations);
+                    Thread.Sleep(TimeSpan.FromMilliseconds(500));
+                    Assert.IsTrue(invocations <= 1, invocations.ToString());        // this test is somewhat more reliable than the test above because the callback should only ever be invoked once at most
+                    Thread.Sleep(TimeSpan.FromMilliseconds(990));
+                    Assert.IsTrue(invocations <= 1, invocations.ToString());
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1155,19 +1215,31 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerTimeoutInfiniteSubsequentConstructor()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            object testState = new();
-            using AmbientCallbackTimer timer = new(callback, testState, 370, Timeout.Infinite);
-            Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
-                                                // if it becomes unreliable, we shall comment out this assert
-            Thread.Sleep(TimeSpan.FromMilliseconds(560));
-            Assert.IsTrue(invocations <= 1, invocations.ToString());        // these should be okay because we shouldn't ever be called more than once anyway
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            Assert.IsTrue(invocations <= 1, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            Assert.IsTrue(invocations <= 1, invocations.ToString());
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    object testState = new();
+                    using AmbientCallbackTimer timer = new(callback, testState, 370, Timeout.Infinite);
+                    Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
+                                                        // if it becomes unreliable, we shall comment out this assert
+                    Thread.Sleep(TimeSpan.FromMilliseconds(560));
+                    Assert.IsTrue(invocations <= 1, invocations.ToString());        // these should be okay because we shouldn't ever be called more than once anyway
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    Assert.IsTrue(invocations <= 1, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    Assert.IsTrue(invocations <= 1, invocations.ToString());
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1175,18 +1247,30 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerInitialAndRepeatingAfterConstruction()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            using AmbientCallbackTimer timer = new(callback);
-            Assert.AreEqual(0, invocations);
-            timer.Change(1000U, 770U);
-            Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
-                                                // if it becomes unreliable, we shall comment out this assert
-            Thread.Sleep(TimeSpan.FromMilliseconds(1500));
-            //                Assert.IsTrue(invocations == 1, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(650));
-            //                Assert.IsTrue(invocations == 2, invocations.ToString());
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    using AmbientCallbackTimer timer = new(callback);
+                    Assert.AreEqual(0, invocations);
+                    timer.Change(1000U, 770U);
+                    Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
+                                                        // if it becomes unreliable, we shall comment out this assert
+                    Thread.Sleep(TimeSpan.FromMilliseconds(1500));
+                    //                Assert.IsTrue(invocations == 1, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(650));
+                    //                Assert.IsTrue(invocations == 2, invocations.ToString());
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1194,19 +1278,31 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerInitialAndRepeatingOnConstruction()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            object testState = new();
-            using AmbientCallbackTimer timer = new(callback, testState, 370, 530);
-            Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
-                                                // if it becomes unreliable, we shall comment out this assert
-            Thread.Sleep(TimeSpan.FromMilliseconds(560));
-            //                Assert.IsTrue(invocations == 1, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            //                Assert.IsTrue(invocations == 2, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            //                Assert.IsTrue(invocations == 3, invocations.ToString());
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    object testState = new();
+                    using AmbientCallbackTimer timer = new(callback, testState, 370, 530);
+                    Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
+                                                        // if it becomes unreliable, we shall comment out this assert
+                    Thread.Sleep(TimeSpan.FromMilliseconds(560));
+                    //                Assert.IsTrue(invocations == 1, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    //                Assert.IsTrue(invocations == 2, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    //                Assert.IsTrue(invocations == 3, invocations.ToString());
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1214,19 +1310,31 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerInitialAndRepeatingOnConstructionUnsigned()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            object testState = new();
-            using AmbientCallbackTimer timer = new(callback, testState, 370U, 530U);
-            Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
-                                                // if it becomes unreliable, we shall comment out this assert
-            Thread.Sleep(TimeSpan.FromMilliseconds(560));
-            //                Assert.IsTrue(invocations == 1, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            //                Assert.IsTrue(invocations == 2, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            //                Assert.IsTrue(invocations == 3, invocations.ToString());
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    object testState = new();
+                    using AmbientCallbackTimer timer = new(callback, testState, 370U, 530U);
+                    Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
+                                                        // if it becomes unreliable, we shall comment out this assert
+                    Thread.Sleep(TimeSpan.FromMilliseconds(560));
+                    //                Assert.IsTrue(invocations == 1, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    //                Assert.IsTrue(invocations == 2, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    //                Assert.IsTrue(invocations == 3, invocations.ToString());
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1234,19 +1342,31 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerInitialAndRepeatingOnConstructionLong()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            object testState = new();
-            using AmbientCallbackTimer timer = new(callback, testState, 370L, 530L);
-            Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
-                                                // if it becomes unreliable, we shall comment out this assert
-            Thread.Sleep(TimeSpan.FromMilliseconds(560));
-            //                Assert.IsTrue(invocations == 1, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            //                Assert.IsTrue(invocations == 2, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            //                Assert.IsTrue(invocations == 3, invocations.ToString());
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    object testState = new();
+                    using AmbientCallbackTimer timer = new(callback, testState, 370L, 530L);
+                    Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
+                                                        // if it becomes unreliable, we shall comment out this assert
+                    Thread.Sleep(TimeSpan.FromMilliseconds(560));
+                    //                Assert.IsTrue(invocations == 1, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    //                Assert.IsTrue(invocations == 2, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    //                Assert.IsTrue(invocations == 3, invocations.ToString());
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1254,37 +1374,61 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerInitialAndRepeatingOnConstructionTimeSpan()
         {
-            Assert.IsTrue(AmbientClock.IsSystemClock);
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            object testState = new();
-            using AmbientCallbackTimer timer = new(callback, testState, TimeSpan.FromMilliseconds(370), TimeSpan.FromMilliseconds(530));
-            Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
-                                                // if it becomes unreliable, we shall comment out this assert
-            Thread.Sleep(TimeSpan.FromMilliseconds(560));
-            //                Assert.IsTrue(invocations == 1, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            //                Assert.IsTrue(invocations == 2, invocations.ToString());
-            Thread.Sleep(TimeSpan.FromMilliseconds(530));
-            //                Assert.IsTrue(invocations == 3, invocations.ToString());
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    Assert.IsTrue(AmbientClock.IsSystemClock);
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    object testState = new();
+                    using AmbientCallbackTimer timer = new(callback, testState, TimeSpan.FromMilliseconds(370), TimeSpan.FromMilliseconds(530));
+                    Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
+                                                        // if it becomes unreliable, we shall comment out this assert
+                    Thread.Sleep(TimeSpan.FromMilliseconds(560));
+                    //                Assert.IsTrue(invocations == 1, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    //                Assert.IsTrue(invocations == 2, invocations.ToString());
+                    Thread.Sleep(TimeSpan.FromMilliseconds(530));
+                    //                Assert.IsTrue(invocations == 3, invocations.ToString());
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
-        /// <summary>
-        /// Performs tests on <see cref="IAmbientClock"/>.
-        /// </summary>
-        [TestMethod]
+            /// <summary>
+            /// Performs tests on <see cref="IAmbientClock"/>.
+            /// </summary>
+            [TestMethod]
         public void SystemCallbackTimerDisposeWithWait()
         {
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            ManualResetEvent mre = new(false);
-            AmbientCallbackTimer timer = new(callback);
-            timer.Dispose();
-            Assert.IsFalse(timer.Dispose(mre));
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    ManualResetEvent mre = new(false);
+                    AmbientCallbackTimer timer = new(callback);
+                    timer.Dispose();
+                    Assert.IsFalse(timer.Dispose(mre));
 
-            mre = new ManualResetEvent(false);
-            timer = new AmbientCallbackTimer(callback, null, 100, 100);
-            Assert.IsTrue(timer.Dispose(mre));
-            Assert.IsTrue(mre.WaitOne(0));
+                    mre = new ManualResetEvent(false);
+                    timer = new AmbientCallbackTimer(callback, null, 100, 100);
+                    Assert.IsTrue(timer.Dispose(mre));
+                    Assert.IsTrue(mre.WaitOne(0));
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1292,16 +1436,28 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemCallbackTimerArgumentExceptions()
         {
-            int invocations = 0;
-            void callback(object o) { ++invocations; }
-            Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
-            using AmbientCallbackTimer timer = new(callback);
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
-            IAmbientClockTimeChangedNotificationSink sink = timer;
-            Assert.ThrowsException<InvalidOperationException>(() => { sink.TimeChanged(null!, long.MinValue, long.MaxValue, DateTime.MinValue, DateTime.MaxValue); });
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    int invocations = 0;
+                    void callback(object o) { ++invocations; }
+                    Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
+                    Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
+                    Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
+                    using AmbientCallbackTimer timer = new(callback);
+                    Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
+                    Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
+                    IAmbientClockTimeChangedNotificationSink sink = timer;
+                    Assert.ThrowsException<InvalidOperationException>(() => { sink.TimeChanged(null!, long.MinValue, long.MaxValue, DateTime.MinValue, DateTime.MaxValue); });
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1575,21 +1731,33 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemUnsafeRegisterWaitForSingleObject()
         {
-            AutoResetEvent are = new(false);
-            int signaledInvocations = 0;
-            int timedOutInvocations = 0;
-            void callback(object state, bool timedOut) { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; }
-            AmbientRegisteredWaitHandle registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are, callback, null, 500, false);
-            Assert.AreEqual(0, signaledInvocations);
-            Assert.AreEqual(0, timedOutInvocations);
-            Thread.Sleep(750);
-            Assert.AreEqual(0, signaledInvocations);
-//            Assert.IsTrue(timedOutInvocations == 1);
-            are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
-            Thread.Sleep(400);
-//            Assert.IsTrue(signaledInvocations == 1, signaledInvocations.ToString());
-//            Assert.IsTrue(timedOutInvocations == 1);  // since the signal occured, a timeout should *not* have in the subsequent 400ms
-            registered.Unregister(are);
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    AutoResetEvent are = new(false);
+                    int signaledInvocations = 0;
+                    int timedOutInvocations = 0;
+                    void callback(object state, bool timedOut) { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; }
+                    AmbientRegisteredWaitHandle registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are, callback, null, 500, false);
+                    Assert.AreEqual(0, signaledInvocations);
+                    Assert.AreEqual(0, timedOutInvocations);
+                    Thread.Sleep(750);
+                    Assert.AreEqual(0, signaledInvocations);
+                    //            Assert.IsTrue(timedOutInvocations == 1);
+                    are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                    Thread.Sleep(400);
+                    //            Assert.IsTrue(signaledInvocations == 1, signaledInvocations.ToString());
+                    //            Assert.IsTrue(timedOutInvocations == 1);  // since the signal occured, a timeout should *not* have in the subsequent 400ms
+                    registered.Unregister(are);
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
 #if NET6_0_OR_GREATER   // only do this in the code coverage framework version because it's flaky and running it more than once is just more likely to cause the build to fail
 
@@ -1599,20 +1767,32 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SystemSafeRegisterWaitForSingleObject()
         {
-            AutoResetEvent are = new(false);
-            int signaledInvocations = 0;
-            int timedOutInvocations = 0;
-            void callback(object state, bool timedOut) { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; }
-            AmbientRegisteredWaitHandle registered = AmbientThreadPool.RegisterWaitForSingleObject(are, callback, null, 500, false);
-            Assert.AreEqual(0, signaledInvocations);
-            Assert.AreEqual(0, timedOutInvocations);
-            Thread.Sleep(750);
-            Assert.AreEqual(0, signaledInvocations);
-//            Assert.IsTrue(timedOutInvocations >= 0);
-            are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
-            Thread.Sleep(400);
-            Assert.AreEqual(1, signaledInvocations);
-//            Assert.IsTrue(timedOutInvocations == 1); // since the signal occured, a timeout should *not* have in the subsequent 400ms
+            for (int attempt = 0; ; ++attempt)
+            {
+                try
+                {
+                    AutoResetEvent are = new(false);
+                    int signaledInvocations = 0;
+                    int timedOutInvocations = 0;
+                    void callback(object state, bool timedOut) { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; }
+                    AmbientRegisteredWaitHandle registered = AmbientThreadPool.RegisterWaitForSingleObject(are, callback, null, 500, false);
+                    Assert.AreEqual(0, signaledInvocations);
+                    Assert.AreEqual(0, timedOutInvocations);
+                    Thread.Sleep(750);
+                    Assert.AreEqual(0, signaledInvocations);
+                    //            Assert.IsTrue(timedOutInvocations >= 0);
+                    are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                    Thread.Sleep(400);
+                    Assert.AreEqual(1, signaledInvocations);
+                    //            Assert.IsTrue(timedOutInvocations == 1); // since the signal occured, a timeout should *not* have in the subsequent 400ms
+                    // if we get here, we succeeded
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (attempt > 10) throw;
+                }
+            }
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientClock"/>.
