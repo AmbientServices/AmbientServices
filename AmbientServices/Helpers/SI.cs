@@ -4,9 +4,18 @@ namespace AmbientServices.Utilities
 {
     /// <summary>
     /// A static class to hold units and unit conversions for the International System of Units (SI).
+    /// See https://en.wikipedia.org/wiki/Metric_prefix for definitions.
     /// </summary>
     public static class SI
     {
+        /// <summary>
+        /// A multiplier equivalent to the SI prefix of the corresponding name.
+        /// </summary>
+        public const double Quecto = .001 * .001 * .001 * .001 * .001 * .001 * .001 * .001 * .001 * .001;
+        /// <summary>
+        /// A multiplier equivalent to the SI prefix of the corresponding name.
+        /// </summary>
+        public const double Ronto = .001 * .001 * .001 * .001 * .001 * .001 * .001 * .001 * .001;
         /// <summary>
         /// A multiplier equivalent to the SI prefix of the corresponding name.
         /// </summary>
@@ -80,13 +89,21 @@ namespace AmbientServices.Utilities
         /// A multiplier equivalent to the SI prefix of the corresponding name.
         /// </summary>
         public const double Yotta = 1000.0 * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L;
+        /// <summary>
+        /// A multiplier equivalent to the SI prefix of the corresponding name.
+        /// </summary>
+        public const double Ronna = 1000.0 * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L;
+        /// <summary>
+        /// A multiplier equivalent to the SI prefix of the corresponding name.
+        /// </summary>
+        public const double Quetta = 1000.0 * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L * 1000L;
 
-        private static readonly string[] sSmallSiPrefixes = { "milli", "micro", "nano", "pico", "femto", "atto", "zepto", "yocto" };
-        private static readonly string[] sShortSmallSiPrefixes = { "m", "μ", "n", "p", "f", "a", "z", "y" };
-        private static readonly string[] sLargeSiPrefixes = { "kilo", "mega", "giga", "tera", "peta", "exa", "zetta", "yotta" };
-        private static readonly string[] sShortLargeSiPrefixes = { "k", "M", "G", "T", "P", "E", "Z", "Y" };     // NOTE here that the proper SI prefix for kilo is a lower-case k, not upper-case like all the others.  This is to distinguish Kilo- from Kelvin, which is an unfortunate inconsistency.
-        private const int YottaPrefixIndex = 7;
-        private const int YoctoPrefixIndex = 7;
+        private static readonly string[] sSmallSiPrefixes = { "milli", "micro", "nano", "pico", "femto", "atto", "zepto", "yocto", "ronto", "quecto" };
+        private static readonly string[] sShortSmallSiPrefixes = { "m", "μ", "n", "p", "f", "a", "z", "y", "r", "q" };
+        private static readonly string[] sLargeSiPrefixes = { "kilo", "mega", "giga", "tera", "peta", "exa", "zetta", "yotta", "ronna", "quetta" };
+        private static readonly string[] sShortLargeSiPrefixes = { "k", "M", "G", "T", "P", "E", "Z", "Y", "R", "Q" };     // NOTE here that the proper SI prefix for kilo is a lower-case k, not upper-case like all the others.  This is to distinguish Kilo- from Kelvin, which is an unfortunate inconsistency.
+        private const int QuectoPrefixIndex = 9;
+        private const int QuettaPrefixIndex = 9;
         /// <summary>
         /// Gets a string containing an abbreviated version of a number using the International System of Units (SI).
         /// SI Units are exact decimal units, mostly powers of 1000.
@@ -111,11 +128,11 @@ namespace AmbientServices.Utilities
                 if (number == -double.Epsilon) return "-EPS";
                 if (number == double.Epsilon) return positiveSign ? "+EPS" : "EPS";
                 string[] prefixes = longName ? sSmallSiPrefixes : sShortSmallSiPrefixes;
-                string extraYoctos = "";
-                while (number < Yocto && number > -1.0 * Yocto)
+                string extraQuectos = "";
+                while (number < Quecto && number > -1.0 * Quecto)
                 {
-                    extraYoctos += prefixes[YoctoPrefixIndex];
-                    number /= Yocto;
+                    extraQuectos += prefixes[QuectoPrefixIndex];
+                    number /= Quecto;
                 }
                 int magnitude;
                 for (magnitude = 0; magnitude < sSmallSiPrefixes.Length && number > -0.9995 && number < 0.9995; ++magnitude)
@@ -131,7 +148,7 @@ namespace AmbientServices.Utilities
                 }
                 System.Diagnostics.Debug.Assert(number > -999.5 && number < 999.5);
                 int digitsAfterDecimal = Math.Max(0, maxCharacters - (int)Math.Log10(Math.Abs(number)) - 2);     // Log10 give us the number of digits *before* the decimal point minus one, but we have to compensate for the decimal point itself as well
-                return ((positiveSign && number > 0.0) ? "+" : "") + number.ToString("N0" + digitsAfterDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture), culture.NumberFormat) + (longName ? (" ") : "") + prefixes[magnitude - 1] + extraYoctos + postfix;
+                return ((positiveSign && number > 0.0) ? "+" : "") + number.ToString("N0" + digitsAfterDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture), culture.NumberFormat) + (longName ? (" ") : "") + prefixes[magnitude - 1] + extraQuectos + postfix;
             }
             // large number?
             else if (number <= -999.5 || number >= 999.5)
@@ -139,11 +156,11 @@ namespace AmbientServices.Utilities
                 if (number == double.MinValue) return "-MAX";
                 if (number == double.MaxValue) return positiveSign ? "+MAX" : "MAX";
                 string[] prefixes = longName ? sLargeSiPrefixes : sShortLargeSiPrefixes;
-                string extraYottas = "";
-                while (number >= 1000.0 * Yotta || number <= -1000.0 * Yotta)
+                string extraQuettas = "";
+                while (number >= 1000.0 * Quetta|| number <= -1000.0 * Quetta)
                 {
-                    extraYottas += prefixes[YottaPrefixIndex];
-                    number /= Yotta;
+                    extraQuettas += prefixes[QuettaPrefixIndex];
+                    number /= Quetta;
                 }
                 int magnitude;
                 for (magnitude = 0; magnitude < sLargeSiPrefixes.Length && (number <= -999.5 || number >= 999.5); ++magnitude)
@@ -153,7 +170,7 @@ namespace AmbientServices.Utilities
                 // note that the rounding issue in the corresponding algorithm above doesn't happen when we're going this direction because we're dividing here and will naturally end up with the smaller number (which is what we want because a number that's too large will result in three digits to the LEFT of the decimal point, which is what we're tyring to avoid)
                 System.Diagnostics.Debug.Assert(number > -999.5 && number < 999.5);
                 int digitsAfterDecimal = Math.Max(0, maxCharacters - (int)Math.Log10(Math.Abs(number)) - 2);     // Log10 give us the number of digits *before* the decimal point minus one, but we have to compensate for the decimal point itself as well
-                return ((positiveSign && number > 0.0) ? "+" : "") + number.ToString("N0" + digitsAfterDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture), culture.NumberFormat) + (longName ? (" ") : "") + (longName ? sLargeSiPrefixes : sShortLargeSiPrefixes)[magnitude - 1] + extraYottas + postfix;
+                return ((positiveSign && number > 0.0) ? "+" : "") + number.ToString("N0" + digitsAfterDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture), culture.NumberFormat) + (longName ? (" ") : "") + (longName ? sLargeSiPrefixes : sShortLargeSiPrefixes)[magnitude - 1] + extraQuettas + postfix;
             }
             else // just a normal number!
             {

@@ -91,30 +91,30 @@ namespace AmbientServices.Test
             result = (-1000.0).ToSi(longName: true, postfix: "byte");
             Assert.AreEqual("-1.00 kilobyte", result);
 
-            result = (SI.Yotta * 1000).ToSi();
-            Assert.AreEqual("1.00kY", result);
-            result = (SI.Yotta * 1000).ToSi(positiveSign: true);
-            Assert.AreEqual("+1.00kY", result);
-            result = (-SI.Yotta * 1000).ToSi();
-            Assert.AreEqual("-1.00kY", result);
+            result = (SI.Quetta * 1000).ToSi();
+            Assert.AreEqual("1.00kQ", result);
+            result = (SI.Quetta * 1000).ToSi(positiveSign: true);
+            Assert.AreEqual("+1.00kQ", result);
+            result = (-SI.Quetta * 1000).ToSi();
+            Assert.AreEqual("-1.00kQ", result);
 
-            result = (SI.Yotta * SI.Yotta).ToSi();
-            Assert.AreEqual("1.00YY", result);
-            result = (SI.Yotta * SI.Yotta).ToSi(positiveSign: true);
-            Assert.AreEqual("+1.00YY", result);
-            result = (-SI.Yotta * SI.Yotta).ToSi();
-            Assert.AreEqual("-1.00YY", result);
+            result = (SI.Quetta * SI.Quetta).ToSi();
+            Assert.AreEqual("1.00QQ", result);
+            result = (SI.Quetta * SI.Quetta).ToSi(positiveSign: true);
+            Assert.AreEqual("+1.00QQ", result);
+            result = (-SI.Quetta * SI.Quetta).ToSi();
+            Assert.AreEqual("-1.00QQ", result);
 
-            result = (SI.Yotta * SI.Yotta * SI.Yotta).ToSi();
-            Assert.AreEqual("1.00YYY", result);
-            result = (SI.Yotta * SI.Yotta * SI.Yotta).ToSi(positiveSign: true);
-            Assert.AreEqual("+1.00YYY", result);
-            result = (-SI.Yotta * SI.Yotta * SI.Yotta).ToSi();
-            Assert.AreEqual("-1.00YYY", result);
-            result = (SI.Yotta * SI.Yotta * SI.Yotta).ToSi(longName: true);
-            Assert.AreEqual("1.00 yottayottayotta", result);
-            result = (SI.Yotta * SI.Yotta * SI.Yotta).ToSi(longName: true, positiveSign: true);
-            Assert.AreEqual("+1.00 yottayottayotta", result);
+            result = (SI.Quetta * SI.Quetta * SI.Quetta).ToSi();
+            Assert.AreEqual("1.00QQQ", result);
+            result = (SI.Quetta * SI.Quetta * SI.Quetta).ToSi(positiveSign: true);
+            Assert.AreEqual("+1.00QQQ", result);
+            result = (-SI.Quetta * SI.Quetta * SI.Quetta).ToSi();
+            Assert.AreEqual("-1.00QQQ", result);
+            result = (SI.Quetta * SI.Quetta * SI.Quetta).ToSi(longName: true);
+            Assert.AreEqual("1.00 quettaquettaquetta", result);
+            result = (SI.Quetta * SI.Quetta * SI.Quetta).ToSi(longName: true, positiveSign: true);
+            Assert.AreEqual("+1.00 quettaquettaquetta", result);
 
             result = 0.001.ToSi();
             Assert.AreEqual("1.00m", result);
@@ -123,30 +123,30 @@ namespace AmbientServices.Test
             result = (-0.001).ToSi();
             Assert.AreEqual("-1.00m", result);
 
-            result = (SI.Yocto / 1000.0).ToSi();
-            Assert.AreEqual("1.00my", result);
-            result = (SI.Yocto / 1000.0).ToSi(positiveSign: true);
-            Assert.AreEqual("+1.00my", result);
-            result = (-SI.Yocto / 1000.0).ToSi();
-            Assert.AreEqual("-1.00my", result);
+            result = (SI.Quecto / 1000.0).ToSi();
+            Assert.AreEqual("1.00mq", result);
+            result = (SI.Quecto / 1000.0).ToSi(positiveSign: true);
+            Assert.AreEqual("+1.00mq", result);
+            result = (-SI.Quecto / 1000.0).ToSi();
+            Assert.AreEqual("-1.00mq", result);
 
-            result = (SI.Yocto * SI.Yocto).ToSi();
-            Assert.AreEqual("1.00yy", result);
-            result = (SI.Yocto * SI.Yocto).ToSi(positiveSign: true);
-            Assert.AreEqual("+1.00yy", result);
-            result = (-SI.Yocto * SI.Yocto).ToSi();
-            Assert.AreEqual("-1.00yy", result);
+            result = (SI.Quecto * SI.Quecto).ToSi();
+            Assert.AreEqual("1.00qq", result);
+            result = (SI.Quecto * SI.Quecto).ToSi(positiveSign: true);
+            Assert.AreEqual("+1.00qq", result);
+            result = (-SI.Quecto * SI.Quecto).ToSi();
+            Assert.AreEqual("-1.00qq", result);
 
-            result = (SI.Yocto * SI.Yocto * SI.Yocto).ToSi();
-            Assert.AreEqual("1.00yyy", result);
-            result = (SI.Yocto * SI.Yocto * SI.Yocto).ToSi(positiveSign: true);
-            Assert.AreEqual("+1.00yyy", result);
-            result = (-SI.Yocto * SI.Yocto * SI.Yocto).ToSi();
-            Assert.AreEqual("-1.00yyy", result);
-            result = (SI.Yocto * SI.Yocto * SI.Yocto).ToSi(longName: true);
-            Assert.AreEqual("1.00 yoctoyoctoyocto", result);
-            result = (SI.Yocto * SI.Yocto * SI.Yocto).ToSi(longName: true, positiveSign: true);
-            Assert.AreEqual("+1.00 yoctoyoctoyocto", result);
+            result = (SI.Quecto * SI.Quecto * SI.Quecto).ToSi();
+            Assert.AreEqual("1.00qqq", result);
+            result = (SI.Quecto * SI.Quecto * SI.Quecto).ToSi(positiveSign: true);
+            Assert.AreEqual("+1.00qqq", result);
+            result = (-SI.Quecto * SI.Quecto * SI.Quecto).ToSi();
+            Assert.AreEqual("-1.00qqq", result);
+            result = (SI.Quecto * SI.Quecto * SI.Quecto).ToSi(longName: true);
+            Assert.AreEqual("1.00 quectoquectoquecto", result);
+            result = (SI.Quecto * SI.Quecto * SI.Quecto).ToSi(longName: true, positiveSign: true);
+            Assert.AreEqual("+1.00 quectoquectoquecto", result);
         }
         [TestMethod]
         public void SIRounding()
