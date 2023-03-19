@@ -38,7 +38,7 @@ jobs:
     - name: Test .NET 6 with coverage
       run: dotnet test -c Release -f net6.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
     - name: ReportGenerator
-      uses: danielpalme/ReportGenerator-GitHub-Action@4.8.9
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.1.19
       with:
         reports: '**/coverage.cobertura.xml' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
         targetdir: 'coveragereport' # REQUIRED # The directory where the generated report should be saved.
@@ -52,7 +52,9 @@ jobs:
         verbosity: 'Info' # The verbosity level of the log messages. Values: Verbose, Info, Warning, Error, Off
         title: '' # Optional title.
         tag: '${{ github.run_number }}_${{ github.run_id }}' # Optional tag or build version.
+        license: '' # Optional license for PRO version. Get your license here: https://reportgenerator.io/pro
         customSettings: '' # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
+        toolpath: 'reportgeneratortool' # Default directory for installing the dotnet tool.
     - name: Upload coverage report artifact
       uses: actions/upload-artifact@v1.0.0
       with:
