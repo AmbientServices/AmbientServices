@@ -31,6 +31,8 @@ jobs:
       run: dotnet tool install --global dotnet-set-version
     - name: Run dotnet-set-version
       run: dotnet-set-version 0.8.${{ github.run_number }} -NoPackageOutputPath
+    - name: Install dotnet-markdown-sample-code
+      run: dotnet tool install --global dotnet-markdown-sample-code
     - name: Build AmbientServices
       run: dotnet build AmbientServices -c Release
     - name: Build AmbientServices.Samples
