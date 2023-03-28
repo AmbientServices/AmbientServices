@@ -49,7 +49,7 @@ namespace AmbientServices.Test
         {
             string path = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             // NOW load the assembly (this should register the default implementation)
-            Assembly assembly = Assembly.LoadFile(path + System.IO.Path.PathSeparator + "AmbientServices.Test.DelayedLoad.dll");
+            Assembly assembly = Assembly.LoadFile(path + System.IO.Path.DirectorySeparatorChar + "AmbientServices.Test.DelayedLoad.dll");
         }
     }
 }
