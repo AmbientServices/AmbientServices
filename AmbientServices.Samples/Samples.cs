@@ -17,8 +17,6 @@ using System.Net.Http;
 using System.Net;
 #endif
 
-[assembly: System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-
 /*
     * 
     * 
