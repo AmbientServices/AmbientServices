@@ -240,7 +240,8 @@ namespace AmbientServices
                 foreach (StackFrame? frame in frames)
                 {
                     if (frame == null) continue;
-                    string fullMethodName = frame!.GetMethod()!.DeclaringType!.FullName!;  // I don't think the method of a stack frame or its declaring type or its name can be null
+                    // the Method/Declaring type IS null in some situations!
+                    string fullMethodName = (frame.GetMethod()?.DeclaringType ?? typeof(object)).FullName ?? "Unknown.Method";
                     if (
                         !ShouldFilterMethod(fullMethodName) && (
                             first || !ShouldFilterMethodAfterFirst(fullMethodName)
