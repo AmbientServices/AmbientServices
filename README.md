@@ -18,13 +18,13 @@ For example, logging and performance tracking should never alter function output
 ## Performance Services
 Advanced ambient services provide detailed system performance monitoring.
 
-There are three primary questions that may be answered through performance monitoring.  
+There are three primary questions that may be answered through performance monitoring.
 
     Q: How well are the various systems functioning under how much load?  
         A: This question may be answered using AmbientStatistics that track the usage, performance, and effectiveness of major system functions.
     Q: Why did an operation take as long as it did?  
         A: This question may be answered using AmbientServiceProfiler to track which operations delayed the response by how much.
-    Q: How close is the system to maxing out?  
+    Q: How close is the system to maxing out?
         A: This question may be answered using AmbientBottleneckDetector to track saturation of possible system bottlenecks so you can determine scalability even before load testing.
 
 By using these services, with very little overhead, you can easily track how various parts of your system are performing all the time, not just when you run it with a code profiler.
@@ -847,7 +847,7 @@ public static class StatisticsReporter
 The default implementation uses thread-safe lock-free statistics instances, keeping all the information associated with each statistic.
 
 ## AmbientServiceProfiler
-The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on course-grained profiling.  
+The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on course-grained profiling.
 This profiling can be used to determine how the time for a request, program, or time window was used.
 The code being profiled calls into the `IAmbientServiceProfiler` each time the system that is executing switches (only one system can be active per call context at a time).
 A system identifier contains a main system name followed by various subsystem and result identifiers (of course results aren't available until the next system begins executing, so the profiler allows the service to update the system identifier after execution completes).
@@ -977,7 +977,7 @@ class ProfileReporter
 ```
 
 ### Default Implementation
-The default implementation uses thread-safe lock-free instances.  
+The default implementation uses thread-safe lock-free instances.
 Each system switch is transformed according to the setting and then distributed to all the profilers the switch applies to.
 
 ## AmbientBottleneckDetector
