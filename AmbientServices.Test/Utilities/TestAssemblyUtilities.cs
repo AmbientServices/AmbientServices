@@ -32,7 +32,7 @@ namespace AmbientServices.Test
         {
             Assembly n = null!;
             Assert.ThrowsException<ArgumentNullException>(() => n.GetLoadableTypes());
-            Assert.ThrowsException<ArgumentNullException>(() => n.DoesAssemblyReferToAssembly(n));
+            Assert.ThrowsException<ArgumentNullException>(() => n.DoesAssemblyReferDirectlyToAssembly(n));
             ReflectionTypeLoadException ex = null!;
             Assert.ThrowsException<ArgumentNullException>(() => AssemblyUtilities.TypesFromException(ex));
         }

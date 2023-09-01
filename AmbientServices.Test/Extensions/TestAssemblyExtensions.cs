@@ -34,9 +34,9 @@ namespace AmbientServices.Test
         [TestMethod]
         public void DoesAssemblyReferToAssembly()
         {
-            Assert.IsFalse(typeof(System.ValueTuple).Assembly.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly()));
-            Assert.IsTrue(Assembly.GetExecutingAssembly().DoesAssemblyReferToAssembly(typeof(IAmbientLocalCache).Assembly));
-            Assert.IsTrue(Assembly.GetExecutingAssembly().DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly()));
+            Assert.IsFalse(typeof(System.ValueTuple).Assembly.DoesAssemblyReferDirectlyToAssembly(Assembly.GetExecutingAssembly()));
+            Assert.IsTrue(Assembly.GetExecutingAssembly().DoesAssemblyReferDirectlyToAssembly(typeof(IAmbientLocalCache).Assembly));
+            Assert.IsTrue(Assembly.GetExecutingAssembly().DoesAssemblyReferDirectlyToAssembly(Assembly.GetExecutingAssembly()));
         }
         [TestMethod]
         public void ReflectionTypeLoadException()

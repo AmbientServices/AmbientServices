@@ -114,7 +114,7 @@ namespace AmbientServices
         private void AddCheckersAndAuditors(Assembly assembly)
         {
             // does the loaded assembly refer to this one?  if it doesn't, there can't possibly be any of the classes we're looking for
-            if (assembly.DoesAssemblyReferToAssembly(Assembly.GetExecutingAssembly()))
+            if (assembly.DoesAssemblyReferDirectlyToAssembly(Assembly.GetExecutingAssembly()))
             {
                 // loop through all the types looking for types that are not abstract, inherit from StatusNode (directly or indirectly) and have a public empty constructor
                 foreach (Type type in assembly.GetLoadableTypes())

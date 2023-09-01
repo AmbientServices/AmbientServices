@@ -43,7 +43,18 @@ namespace AmbientServices.Extensions
             return Array.Empty<Type>();
         }
         /// <summary>
-        /// Checks to see if this assembly refers to the specified assembly.
+        /// Checks to see if this assembly refers directly to the specified assembly.
+        /// </summary>
+        /// <param name="assembly">The assembly to check.</param>
+        /// <param name="referredToAssembly">The referred to assembly to look for.</param>
+        /// <returns><b>true</b> if <paramref name="assembly"/> refers to <paramref name="referredToAssembly"/>.</returns>
+        public static bool DoesAssemblyReferDirectlyToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
+        {
+            if (assembly == null) throw new ArgumentNullException(nameof(assembly));
+            return (assembly == referredToAssembly || assembly.GetReferencedAssemblies().FirstOrDefault(a => a.FullName == referredToAssembly.FullName) != null);
+        }
+        /// <summary>
+        /// Checks to see if this assembly refers to the specified assembly (directly or indirectly).
         /// </summary>
         /// <param name="assembly">The assembly to check.</param>
         /// <param name="referredToAssembly">The referred to assembly to look for.</param>
@@ -51,7 +62,14 @@ namespace AmbientServices.Extensions
         public static bool DoesAssemblyReferToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
         {
             if (assembly == null) throw new ArgumentNullException(nameof(assembly));
-            return (assembly == referredToAssembly || assembly.GetReferencedAssemblies().FirstOrDefault(a => a.FullName == referredToAssembly.FullName) != null);
+            if (assembly == referredToAssembly) return true;
+            foreach (AssemblyName referringAssemblyName in assembly.GetReferencedAssemblies())
+            {
+                if (referringAssemblyName.FullName == referringAssemblyName.FullName) return true;
+                Assembly a = Assembly.ReflectionOnlyLoad(referringAssemblyName.FullName);
+                if (DoesAssemblyReferToAssembly(a, referredToAssembly)) return true;
+            }
+            return false;
         }
     }
 }

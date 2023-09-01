@@ -54,7 +54,7 @@ namespace AmbientServices
         private static void RegisterAssemblyThresholds(System.Reflection.Assembly assembly)
         {
             // does the loaded assembly refer to this one (if it doesn't, it can't have the stuff we're looking for)
-            if (assembly.DoesAssemblyReferToAssembly(System.Reflection.Assembly.GetExecutingAssembly()))
+            if (assembly.DoesAssemblyReferDirectlyToAssembly(System.Reflection.Assembly.GetExecutingAssembly()))
             {
                 // loop through all the types looking for types that are not abstract, inherit from StatusNode (directly or indirectly) and have a public empty constructor
                 foreach (Type type in assembly.GetLoadableTypes())
