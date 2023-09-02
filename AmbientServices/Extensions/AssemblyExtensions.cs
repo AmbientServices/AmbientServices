@@ -54,23 +54,16 @@ namespace AmbientServices.Extensions
             return (assembly == referredToAssembly || assembly.GetReferencedAssemblies().FirstOrDefault(a => a.FullName == referredToAssembly.FullName) != null);
         }
         /// <summary>
-        /// Checks to see if this assembly refers to the specified assembly (directly or indirectly).
+        /// Checks to see if this assembly refers to the specified assembly.
         /// </summary>
         /// <param name="assembly">The assembly to check.</param>
         /// <param name="referredToAssembly">The referred to assembly to look for.</param>
         /// <returns><b>true</b> if <paramref name="assembly"/> refers to <paramref name="referredToAssembly"/>.</returns>
         public static bool DoesAssemblyReferToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
         {
-            if (assembly == null) throw new ArgumentNullException(nameof(assembly));
-            if (referredToAssembly == null) throw new ArgumentNullException(nameof(referredToAssembly));
-            if (assembly == referredToAssembly) return true;
-            foreach (AssemblyName referringAssemblyName in assembly.GetReferencedAssemblies())
-            {
-                if (referringAssemblyName.FullName == referredToAssembly.FullName) return true;
-                Assembly a = Assembly.Load(referringAssemblyName);
-                if (DoesAssemblyReferToAssembly(a, referredToAssembly)) return true;
-            }
-            return false;
+            // I attempted to implement a recursive algorithm, but it ended up causing hangs in the tests, even when I added a HashSet to prevent loops,
+            // and I'm beginning to doubt whether a recursive algorithm is needed to list indirectly-referenced assemblies
+            return DoesAssemblyReferDirectlyToAssembly(assembly, referredToAssembly);
         }
     }
 }
