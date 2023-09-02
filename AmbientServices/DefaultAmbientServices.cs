@@ -97,6 +97,7 @@ namespace AmbientServices
                 // is this assembly us or does it reference us?
                 if (assembly == _ThisAssembly || assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
                 {
+                    System.Diagnostics.Trace.WriteLine($"Loading Ambient Types From {assembly.FullName}");
                     foreach (Type type in assembly.GetLoadableTypes())
                     {
                         yield return type;
@@ -137,6 +138,7 @@ namespace AmbientServices
             // does the being-loaded assembly reference THIS assembly?
             if (assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
             {
+                System.Diagnostics.Trace.WriteLine($"Loading Ambient Types From {assembly.FullName}");
                 // check every type in the being-loaded assembly to see if the type indicates a default service implementation
                 foreach (Type type in assembly.GetLoadableTypes())
                 {
