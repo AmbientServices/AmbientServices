@@ -62,10 +62,11 @@ namespace AmbientServices.Extensions
         public static bool DoesAssemblyReferToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
         {
             if (assembly == null) throw new ArgumentNullException(nameof(assembly));
+            if (referredToAssembly == null) throw new ArgumentNullException(nameof(referredToAssembly));
             if (assembly == referredToAssembly) return true;
             foreach (AssemblyName referringAssemblyName in assembly.GetReferencedAssemblies())
             {
-                if (referringAssemblyName.FullName == referringAssemblyName.FullName) return true;
+                if (referringAssemblyName.FullName == referredToAssembly.FullName) return true;
                 Assembly a = Assembly.ReflectionOnlyLoad(referringAssemblyName.FullName);
                 if (DoesAssemblyReferToAssembly(a, referredToAssembly)) return true;
             }

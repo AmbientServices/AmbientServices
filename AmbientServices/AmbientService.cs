@@ -78,7 +78,7 @@ namespace AmbientServices
             get
             {
                 LocalServiceReference<T>? ret = _localReference.Value;
-                if (ret == null) ret = _localReference.Value = new LocalServiceReference<T>();    // initialize if needed
+                ret ??= _localReference.Value = new LocalServiceReference<T>();    // initialize if needed
                 return ret;
             }
         }
@@ -242,8 +242,8 @@ namespace AmbientServices
         private static readonly T _ImplementationSingleton = CreateInstance();
         private static T CreateInstance()
         {
-            ConstructorInfo? ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
-            if (ci == null) throw new InvalidOperationException("The type must have a default constructor!");
+            ConstructorInfo ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)
+                ?? throw new InvalidOperationException("Classes with [DefaultAmbientService] attributes applied type must have a default constructor!");
             return (T)ci.Invoke(Array.Empty<object>());
         }
         public static T GetImplementation() { return _ImplementationSingleton; }

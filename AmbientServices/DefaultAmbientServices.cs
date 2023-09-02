@@ -91,19 +91,21 @@ namespace AmbientServices
         /// <returns>An enumeration of <see cref="Type"/>s.</returns>
         private static IEnumerable<Type> AllLoadedReferringTypes()
         {
+            List<Assembly> checkedAssemblies = new();
             // loop through all the assemblies loaded in our AppDomain
             foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 // is this assembly us or does it reference us?
                 if (assembly == _ThisAssembly || assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
                 {
-                    System.Diagnostics.Trace.WriteLine($"Loading Ambient Types From {assembly.FullName}");
+                    checkedAssemblies.Add(assembly);
                     foreach (Type type in assembly.GetLoadableTypes())
                     {
                         yield return type;
                     }
                 }
             }
+            System.Diagnostics.Trace.WriteLine($"Loading Ambient Types From {String.Join(",", checkedAssemblies.Select(a => a.FullName))}");
         }
         /// <summary>
         /// Adds the default implementation for the specified interface type.
@@ -138,7 +140,7 @@ namespace AmbientServices
             // does the being-loaded assembly reference THIS assembly?
             if (assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
             {
-                System.Diagnostics.Trace.WriteLine($"Loading Ambient Types From {assembly.FullName}");
+                System.Diagnostics.Trace.WriteLine($"Late Loading Ambient Types From {assembly.FullName}");
                 // check every type in the being-loaded assembly to see if the type indicates a default service implementation
                 foreach (Type type in assembly.GetLoadableTypes())
                 {
