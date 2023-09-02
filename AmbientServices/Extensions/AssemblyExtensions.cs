@@ -67,7 +67,7 @@ namespace AmbientServices.Extensions
             foreach (AssemblyName referringAssemblyName in assembly.GetReferencedAssemblies())
             {
                 if (referringAssemblyName.FullName == referredToAssembly.FullName) return true;
-                Assembly a = Assembly.ReflectionOnlyLoad(referringAssemblyName.FullName);
+                Assembly a = Assembly.Load(referringAssemblyName);
                 if (DoesAssemblyReferToAssembly(a, referredToAssembly)) return true;
             }
             return false;
