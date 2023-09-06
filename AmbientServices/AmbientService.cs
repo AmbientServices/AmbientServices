@@ -270,12 +270,22 @@ namespace AmbientServices
         }
         private static T? DefaultImplementation()
         {
-            Type? impType = DefaultAmbientServices.TryFind(typeof(T));
-            if (impType == null) return null;       // there is no default implementation (yet)
-            Type type = typeof(DefaultServiceImplementation<>).MakeGenericType(impType);
-            MethodInfo mi = type.GetMethod(nameof(DefaultServiceImplementation<T>.GetImplementation))!; // DefaultServiceImplementation<T> has a public GetImplementation method, so this should always succeed
-            T implementation = (T)mi.Invoke(null, Array.Empty<object>())!;  // DefaultServiceImplementation<T> returns a non-null T
-            return implementation;
+            try
+            {
+                Type? impType = DefaultAmbientServices.TryFind(typeof(T));
+                if (impType == null) return null;       // there is no default implementation (yet)
+                Type type = typeof(DefaultServiceImplementation<>).MakeGenericType(impType);
+                MethodInfo mi = type.GetMethod(nameof(DefaultServiceImplementation<T>.GetImplementation))!; // DefaultServiceImplementation<T> has a public GetImplementation method, so this should always succeed
+                T implementation = (T)mi.Invoke(null, Array.Empty<object>())!;  // DefaultServiceImplementation<T> returns a non-null T
+                return implementation;
+            }
+            catch (Exception ex)
+            {
+                string traceMessage = $"Error constructing default {typeof(T).FullName}: {ex.ToString()}!";
+                System.Diagnostics.Trace.WriteLine(traceMessage);
+                Console.WriteLine(traceMessage);
+            }
+            return null;
         }
         private T? LateAssignedDefaultServiceImplementation()
         {
