@@ -50,7 +50,14 @@ namespace AmbientServices
             // else if we have a file prefix, but it doesn't have a directory, use the program data location
             if (string.IsNullOrEmpty(Path.GetDirectoryName(filePrefix)))
             {
-                filePrefix = Path.Combine(GetProgramDataFolderLocation(), filePrefix);
+                try
+                {
+                    filePrefix = Path.Combine(GetProgramDataFolderLocation(), filePrefix);
+                }
+                catch
+                {
+                    filePrefix = $"{Path.GetTempPath()}{GetExecutableName()}_AmbientLogger";
+                }
             }
             if (fileExtension == null) fileExtension = ".log";
             if (!fileExtension.StartsWith(".", StringComparison.Ordinal)) fileExtension = "." + fileExtension;
