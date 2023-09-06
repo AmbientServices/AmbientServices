@@ -281,7 +281,7 @@ namespace AmbientServices
             }
             catch (Exception ex)
             {
-                string traceMessage = $"Error constructing default {typeof(T).FullName}: {ex.ToString()}!";
+                string traceMessage = $"Error constructing default {typeof(T).FullName}: {ex}!";
                 System.Diagnostics.Trace.WriteLine(traceMessage);
                 Console.WriteLine(traceMessage);
             }
