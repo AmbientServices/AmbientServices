@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Drawing.Text;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -76,14 +77,27 @@ namespace AmbientServices.Test
 
             _Test.GlobalChanged -= globalChanged;
         }
-
-        [TestMethod, ExpectedException(typeof(TypeInitializationException))]
+#nullable enable
+        [TestMethod]
         public void NonInterfaceType()
         {
-            AmbientService<DefaultTest> defaultTest = Ambient.GetService<DefaultTest>();
-            DefaultTest test = defaultTest.Global;
+            Exception? ex = null;
+            void EventHandler(object? sender, InitializationErrorEventArgs e)
+            {
+                ex = e.Exception;
+            }
+            Ambient.InitializationError += EventHandler;
+            try
+            {
+                AmbientService<DefaultTest> defaultTest = Ambient.GetService<DefaultTest>();
+                Assert.IsInstanceOfType(ex, typeof(ArgumentException));
+            }
+            finally
+            {
+                Ambient.InitializationError -= EventHandler;
+            }
         }
-
+#nullable restore
         [TestMethod]
         public void MultipleInterfaces()
         {
@@ -160,11 +174,27 @@ namespace AmbientServices.Test
             Assert.IsInstanceOfType(_LocalTest.Local, typeof(LocalTest3));
             Assert.AreEqual(_LocalTest.Global, _LocalTest.Local);
         }
+#nullable enable
         [TestMethod]
         public void NoDefaultConstructor()
         {
-            Assert.ThrowsException<TypeInitializationException>(() => Ambient.GetService<INoDefaultConstructor>());
+            Exception? ex = null;
+            void EventHandler(object? sender, InitializationErrorEventArgs e)
+            {
+                ex = e.Exception;
+            }
+            Ambient.InitializationError += EventHandler;
+            try
+            {
+                Ambient.GetService<INoDefaultConstructor>();
+                Assert.IsInstanceOfType(ex, typeof(TargetInvocationException));
+            }
+            finally
+            {
+                Ambient.InitializationError -= EventHandler;
+            }
         }
+#nullable restore
     }
 
     interface IJunk

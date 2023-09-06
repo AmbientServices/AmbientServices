@@ -9,6 +9,20 @@ using System.Threading;
 namespace AmbientServices
 {
     /// <summary>
+    /// A class that contains information about an initialization error.
+    /// </summary>
+    public class InitializationErrorEventArgs : EventArgs 
+    {
+        private readonly Exception _exception;
+
+        public InitializationErrorEventArgs(Exception ex)
+        {
+            _exception = ex;
+        }
+
+        public Exception Exception => _exception;
+    }
+    /// <summary>
     /// A static class that provides access to <see cref="AmbientService{T}"/>s.
     /// </summary>
     public static class Ambient
@@ -32,6 +46,17 @@ namespace AmbientServices
         {
             service = AmbientService<T>.Instance;
             return service;
+        }
+        /// <summary>
+        /// An event that will notify subscribers when a service initialization error occurs.
+        /// The notification may happen on any arbitrary thread.
+        /// Thread-safe.
+        /// </summary>
+        public static event EventHandler<InitializationErrorEventArgs>? InitializationError;
+
+        internal static void NotifyInitializationError(Exception ex)
+        {
+            InitializationError?.Invoke(null, new InitializationErrorEventArgs(ex));
         }
     }
     /// <summary>
@@ -284,6 +309,7 @@ namespace AmbientServices
                 string traceMessage = $"Error constructing default {typeof(T).FullName}: {ex}!";
                 System.Diagnostics.Trace.WriteLine(traceMessage);
                 Console.WriteLine(traceMessage);
+                Ambient.NotifyInitializationError(ex);
             }
             return null;
         }
