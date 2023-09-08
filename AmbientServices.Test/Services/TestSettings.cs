@@ -326,6 +326,10 @@ namespace AmbientServices.Test
                 settingsSet.ChangeSetting(testSettingKey, secondValue);
                 Assert.AreEqual(secondValue, testSetting.Value);
                 Assert.AreEqual(secondValue, notificationNewValue);
+                string thirdValue = null;   // should cause it to revert to the default value (which is the initial value)
+                settingsSet.ChangeSetting(testSettingKey, thirdValue);
+                Assert.AreEqual(initialValue, testSetting.Value);
+                Assert.AreEqual(secondValue, notificationNewValue);     // no notification happened because we used the default value!
             }
         }
         /// <summary>

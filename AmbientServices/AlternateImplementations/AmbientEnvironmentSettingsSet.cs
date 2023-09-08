@@ -27,18 +27,18 @@ namespace AmbientServices
         private AmbientEnvironmentSettingsSet()
         {
             _rawValues = new ConcurrentDictionary<string, string>();
-            IDictionary values = Environment.GetEnvironmentVariables();
+            Dictionary<string, string> newEnvironment = GetFromEnvironment();
             _typedValues = new ConcurrentDictionary<string, object>();
-            if (values != null)
+            if (newEnvironment.Count > 0)
             {
-                foreach (DictionaryEntry entry in values)
+                foreach (KeyValuePair<string, string> kvp in newEnvironment)
                 {
-                    _rawValues.AddOrUpdate((string)entry.Key, (string)entry.Value, (k, v) => (string)entry.Value);
+                    _rawValues.AddOrUpdate(kvp.Key, kvp.Value, (k, v) => kvp.Value);
                 }
-                foreach (string key in values.Keys)
+                foreach (KeyValuePair<string, string> kvp in newEnvironment)
                 {
-                    IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
-                    _typedValues[key] = (ps != null) ? ps.Convert(this, (string)values[key]) : values[key];
+                    IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(kvp.Key);
+                    _typedValues[kvp.Key] = (ps != null) ? ps.Convert(this, kvp.Value) : kvp.Value;
                 }
             }
             _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<AmbientEnvironmentSettingsSet, object?, IAmbientSettingInfo>(
@@ -61,12 +61,7 @@ namespace AmbientServices
         /// </summary>
         public void Refresh()
         {
-            IDictionary values = Environment.GetEnvironmentVariables();
-            Dictionary<string, string> newEnvironment = new();
-            foreach (DictionaryEntry entry in values)
-            {
-                newEnvironment[(string)entry.Key] = (string)entry.Value;
-            }
+            Dictionary<string, string> newEnvironment = GetFromEnvironment();
             // loop through all the old values
             foreach (string key in _rawValues.Keys)
             {
@@ -81,12 +76,27 @@ namespace AmbientServices
             foreach (KeyValuePair<string, string> kvp in newEnvironment)
             {
                 // is there *not* a value for this key or the value has changed?
-                if (!_rawValues.TryGetValue(kvp.Key, out string value) || value != kvp.Value)
+                if (!_rawValues.TryGetValue(kvp.Key, out string? value) || value != kvp.Value)
                 {
                     InternalChangeSetting(kvp.Key, kvp.Value);
                 }
                 // else ignore this environment variable, because it's the same as the value we already have
             }
+        }
+
+        private static Dictionary<string, string> GetFromEnvironment()
+        {
+            IDictionary values = Environment.GetEnvironmentVariables();
+            Dictionary<string, string> newEnvironment = new();
+            foreach (object? obj in values)
+            {
+                if (obj is not DictionaryEntry entry) continue;
+                string? key = (string?)entry.Key;
+                string? value = (string?)entry.Value;
+                if (key == null || value == null) continue;
+                newEnvironment[key] = value;
+            }
+            return newEnvironment;
         }
         /// <summary>
         /// Gets the name of the settings set so that a settings consumer can know where a changed setting value came from.
@@ -119,7 +129,7 @@ namespace AmbientServices
         /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.
         /// </summary>
         /// <param name="key">A string that uniquely identifies the setting.</param>
-        /// <param name="value">The new string value for the setting, or null to remove the setting and revert to the .</param>
+        /// <param name="value">The new string value for the setting, or null if the setting should be removed.</param>
         /// <returns>Whether or not the setting actually changed.</returns>
         public bool ChangeSetting(string key, string? value)
         {

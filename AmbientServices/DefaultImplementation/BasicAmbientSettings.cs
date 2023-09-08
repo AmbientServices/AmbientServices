@@ -107,7 +107,7 @@ namespace AmbientServices
         /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.
         /// </summary>
         /// <param name="key">A string that uniquely identifies the setting.</param>
-        /// <param name="value">The new string value for the setting, or null to remove the setting and revert to the .</param>
+        /// <param name="value">The new string value for the setting, or null if the setting should be removed.</param>
         /// <returns>Whether or not the setting actually changed.</returns>
         public bool ChangeSetting(string key, string? value)
         {

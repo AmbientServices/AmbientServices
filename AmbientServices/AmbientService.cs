@@ -15,11 +15,17 @@ namespace AmbientServices
     {
         private readonly Exception _exception;
 
+        /// <summary>
+        /// Constructs an InitializationErrorEventArgs from the specified exception.
+        /// </summary>
+        /// <param name="ex">The <see cref="Exception"/> that caused the initialization error.</param>
         public InitializationErrorEventArgs(Exception ex)
         {
             _exception = ex;
         }
-
+        /// <summary>
+        /// The <see cref="Exception"/> that caused the initialization error.
+        /// </summary>
         public Exception Exception => _exception;
     }
     /// <summary>
