@@ -90,7 +90,7 @@ namespace AmbientServices.Test
             try
             {
                 AmbientService<DefaultTest> defaultTest = Ambient.GetService<DefaultTest>();
-                Assert.IsInstanceOfType(ex, typeof(ArgumentException));
+                Assert.IsInstanceOfType(ex, typeof(ArgumentException), ex?.ToString() ?? "Exception is null!");
             }
             finally
             {
