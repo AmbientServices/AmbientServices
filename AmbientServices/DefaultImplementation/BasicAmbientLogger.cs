@@ -1,4 +1,5 @@
 ﻿using AmbientServices.Utilities;
+using AmbientServices.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -60,7 +61,7 @@ namespace AmbientServices
                 }
             }
             if (fileExtension == null) fileExtension = ".log";
-            if (!fileExtension.StartsWith(".", StringComparison.Ordinal)) fileExtension = "." + fileExtension;
+            if (!fileExtension.StartsWith('.')) fileExtension = "." + fileExtension;
             _filePrefix = filePrefix;
             _fileExtension = fileExtension;
             _rotationPeriodMinutes = rotationPeriodMinutes;

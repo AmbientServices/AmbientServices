@@ -124,5 +124,15 @@ namespace AmbientServices.Extensions
         }
 #pragma warning restore CA1801
 #endif
+#if !NET8_0_OR_GREATER
+        public static bool StartsWith(this string str, char value)
+        {
+            return str.StartsWith(value.ToString(), StringComparison.Ordinal);
+        }
+        public static bool EndsWith(this string str, char value)
+        {
+            return str.EndsWith(value.ToString(), StringComparison.Ordinal);
+        }
+#endif
     }
 }

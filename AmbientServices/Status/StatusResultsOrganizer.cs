@@ -120,7 +120,7 @@ namespace AmbientServices
                 StatusResultsOrganizer parent = this;
                 string? localtarget = results.TargetSystem;
                 // a child of the root?
-                if (localtarget?.StartsWith("/", StringComparison.Ordinal) ?? false)
+                if (localtarget?.StartsWith('/') ?? false)
                 {
                     parent = root;
                     localtarget = localtarget.Substring(1);
@@ -144,7 +144,7 @@ namespace AmbientServices
                         StatusResultsOrganizer parent = this;
                         string? localTarget = results.TargetSystem;
                         // a child of the root?
-                        if (localTarget.StartsWith("/", StringComparison.Ordinal))
+                        if (localTarget.StartsWith('/'))
                         {
                             parent = root;
                             localTarget = localTarget.Substring(1);
@@ -404,8 +404,8 @@ namespace AmbientServices
 
         private static string ComputeTarget(string parentTargetSystem, string childTarget)
         {
-            if (childTarget.StartsWith("/", StringComparison.Ordinal) || string.IsNullOrEmpty(parentTargetSystem)) return childTarget;
-            if (parentTargetSystem.EndsWith("/", StringComparison.Ordinal)) return parentTargetSystem + childTarget.TrimStart('.');
+            if (childTarget.StartsWith('/') || string.IsNullOrEmpty(parentTargetSystem)) return childTarget;
+            if (parentTargetSystem.EndsWith('/')) return parentTargetSystem + childTarget.TrimStart('.');
             return parentTargetSystem.TrimEnd('.') + "." + childTarget.TrimStart('.');
         }
 
