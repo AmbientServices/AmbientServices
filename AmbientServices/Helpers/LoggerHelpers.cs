@@ -19,16 +19,20 @@ namespace AmbientServices
         internal static readonly AmbientService<IAmbientLogger> _AmbientLogger = Ambient.GetService<IAmbientLogger>();
 
         private readonly string _typeName;
+        private readonly bool _useLocalLogger;
         private readonly IAmbientLogger? _logger;
         private readonly AmbientLogFilter _logFilter;
+
+        private IAmbientLogger? DynamicLogger => _useLocalLogger ? _AmbientLogger.Local : _logger;
 
         /// <summary>
         /// Constructs an AmbientLogger using the ambient logger and ambient settings set.
         /// </summary>
         /// <param name="type">The type doing the logging.</param>
         public AmbientLogger(Type type)
-            : this(type, _AmbientLogger.Local, null)
+            : this(type, null, null)
         {
+            _useLocalLogger = true;
         }
         /// <summary>
         /// Constructs an AmbientLogger with the specified logger and settings set.
@@ -131,7 +135,7 @@ namespace AmbientServices
         /// Constructs an AmbientLogger using the ambient logger and ambient settings set.
         /// </summary>
         public AmbientLogger()
-            : this(_AmbientLogger.Local, null)
+            : base(typeof(TOWNER))
         {
         }
         /// <summary>
