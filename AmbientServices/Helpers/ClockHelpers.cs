@@ -846,7 +846,7 @@ namespace AmbientServices
         /// <param name="dueTime">The number of milliseconds to delay before calling the callback.  <see cref="Timeout.Infinite"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
         [CLSCompliant(false)]
-        public AmbientCallbackTimer(TimerCallback callback, object state, uint dueTime, uint period)
+        public AmbientCallbackTimer(TimerCallback callback, object? state, uint dueTime, uint period)
             : this(_Clock.Local, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
         {
         }
@@ -857,7 +857,7 @@ namespace AmbientServices
         /// <param name="state">The state <see cref="object"/> to pass to the callback.</param>
         /// <param name="dueTime">The number of milliseconds to delay before calling the callback.  <see cref="Timeout.Infinite"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">The number of milliseconds between callbacks.  <see cref="Timeout.Infinite"/> to disable periodic signaling.</param>
-        public AmbientCallbackTimer(TimerCallback callback, object state, long dueTime, long period)
+        public AmbientCallbackTimer(TimerCallback callback, object? state, long dueTime, long period)
             : this(_Clock.Local, callback, state, TimeSpan.FromMilliseconds(dueTime), TimeSpan.FromMilliseconds(period))
         {
         }
@@ -868,7 +868,7 @@ namespace AmbientServices
         /// <param name="state">The state <see cref="object"/> to pass to the callback.</param>
         /// <param name="dueTime">A <see cref="TimeSpan"/> indicating the number of milliseconds to delay before calling the callback.  <see cref="Timeout.InfiniteTimeSpan"/> to prevent the timer from starting.  Zero to start the timer immediately.</param>
         /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
-        public AmbientCallbackTimer(TimerCallback callback, object state, TimeSpan dueTime, TimeSpan period)
+        public AmbientCallbackTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
             : this(_Clock.Local, callback, state, dueTime, period)
         {
         }
