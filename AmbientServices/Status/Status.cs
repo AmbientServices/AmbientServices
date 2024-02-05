@@ -5,11 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-#if NET5_0_OR_GREATER
-using static System.ArgumentNullException;
-#else
-using static AmbientServices.Extensions.ArgumentNullExceptionExtensions;
-#endif
 
 namespace AmbientServices
 {
