@@ -21,7 +21,11 @@ namespace AmbientServices.Utilities
         /// <returns>The list of types that *are* loadable, as obtained from the exception.</returns>
         internal static Type[] TypesFromException(ReflectionTypeLoadException ex)
         {
-            if (ex == null) throw new ArgumentNullException(nameof(ex));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(ex);
+#else
+            if (ex is null) throw new ArgumentNullException(nameof(ex));
+#endif
             return ex.Types.Where(t => t != null).ToArray()!; // the where condition filters out null values!
         }
         /// <summary>

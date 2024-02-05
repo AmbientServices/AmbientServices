@@ -1,11 +1,15 @@
 ﻿using AmbientServices.Extensions;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+#if NET5_0_OR_GREATER
+using static System.ArgumentNullException;
+#else
+using static AmbientServices.Extensions.ArgumentNullExceptionExtensions;
+#endif
 
 namespace AmbientServices
 {
@@ -137,7 +141,11 @@ namespace AmbientServices
         /// <param name="checker">The <see cref="StatusChecker"/> to add.</param>
         public void AddCheckerOrAuditor(StatusChecker checker)
         {
-            if (checker == null) throw new ArgumentNullException(nameof(checker));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(checker);
+#else
+            if (checker is null) throw new ArgumentNullException(nameof(checker));
+#endif
             Logger.Log("Adding Checker: " + checker.GetType().Name, "Registration");
             _checkers.Add(checker);
             // is this checker an auditor?
@@ -153,7 +161,11 @@ namespace AmbientServices
         /// <param name="checker">The <see cref="StatusChecker"/> to remove.</param>
         public void RemoveCheckerOrAuditor(StatusChecker checker)
         {
-            if (checker == null) throw new ArgumentNullException(nameof(checker));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(checker);
+#else
+            if (checker is null) throw new ArgumentNullException(nameof(checker));
+#endif
             _checkers.Remove(checker);
             Logger.Log("Removed Checker: " + checker.GetType().Name, "Registration");
         }
@@ -275,7 +287,11 @@ namespace AmbientServices
         /// <returns>true if the specified type is a testable status checker class.</returns>
         public static bool IsTestableStatusCheckerClass(Type type)
         {
-            if (type == null) throw new ArgumentNullException(nameof(type));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(type);
+#else
+            if (type is null) throw new ArgumentNullException(nameof(type));
+#endif
             return !type.IsAbstract && typeof(StatusChecker).IsAssignableFrom(type) && type.GetConstructor(Array.Empty<Type>()) != null;
         }
     }

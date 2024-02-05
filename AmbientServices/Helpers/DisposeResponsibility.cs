@@ -13,7 +13,7 @@ namespace AmbientServices;
 public static class DisposeResponsibility
 {
     /// <summary>
-    /// Gets an enumeration of all pending disposals tracked by instances of <see cref="DisposeTracker{T}"/>, 
+    /// Gets an enumeration of all pending disposals tracked by instances of <see cref="DisposeResponsibility{T}"/>, 
     /// with the path that created them and the number of instances created through that path that have not yet been disposed.
     /// Entries are returned in descending order of the number of pending disposals.
     /// </summary>
@@ -26,7 +26,6 @@ public static class DisposeResponsibility
 /// This class should ALWAYS be disposed.
 /// </summary>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
-/// <param name="Contained">A <see cref="IDisposable"/> type contained within the tracker.</param>
 public sealed class DisposeResponsibility<T> : IDisposable
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
     , IAsyncDisposable
@@ -63,6 +62,7 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// Constructs a dispose responsibility object which takes responsibility for disposing the specified disposable object.
     /// </summary>
     /// <param name="contained">The disposable object that is owned and will be disposed by the instance.</param>
+    /// <param name="stackOnCreation">The creation stack to associated with <paramref name="contained"/>.</param>
     public DisposeResponsibility(T contained, string? stackOnCreation = null)
     {
         _contained = contained;
