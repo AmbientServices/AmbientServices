@@ -117,7 +117,7 @@ namespace AmbientServices
         {
             if (_logger == null) return;
 #if NET5_0_OR_GREATER
-            ArgumentNullException.ThrowIfNull(nameof(ex));
+            ArgumentNullException.ThrowIfNull(ex);
 #else
             if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
