@@ -394,7 +394,11 @@ namespace AmbientServices
         /// <returns>An array of bytes of the specified length populated with random byte values.</returns>
         public void NextBytes(byte[] target, int offset = 0, int length = -1)
         {
-            if (target == null) throw new ArgumentNullException(nameof(target));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(target);
+#else
+            if (target is null) throw new ArgumentNullException(nameof(target));
+#endif
             int index = 0;
             ulong rawData;
             for (int endOffset = (length < 0 || offset + length > target.Length) ? target.Length : (offset + length); offset < endOffset; offset += 8, index = ((index + 1) % 8))
@@ -466,7 +470,11 @@ namespace AmbientServices
         /// <returns>A random value for that enum.</returns>
         public object NextEnum(Type type)
         {
-            if (type == null) throw new ArgumentNullException(nameof(type));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(type);
+#else
+            if (type is null) throw new ArgumentNullException(nameof(type));
+#endif
             if (!(typeof(System.Enum)).IsAssignableFrom(type)) throw new ArgumentException("The type must be an enum type!", nameof(type));
             FieldInfo[] enumValues = type.GetFields(BindingFlags.Public | BindingFlags.Static);
             // is this a flags type?

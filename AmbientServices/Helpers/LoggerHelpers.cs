@@ -42,8 +42,12 @@ namespace AmbientServices
         /// <param name="loggerSettingsSet">A <see cref="IAmbientSettingsSet"/> from which the settings should be queried.</param>
         public AmbientLogger(Type type, IAmbientLogger? logger, IAmbientSettingsSet? loggerSettingsSet = null)
         {
-            if (type == null) throw new ArgumentNullException(nameof(type));
-            _typeName = type.Name;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(type);
+#else
+            if (type is null) throw new ArgumentNullException(nameof(type));
+#endif
+            _typeName = type!.Name;
             _logger = logger;
             _logFilter = (loggerSettingsSet == null) ? AmbientLogFilter.Default : new AmbientLogFilter(_typeName, loggerSettingsSet);
         }
@@ -76,8 +80,13 @@ namespace AmbientServices
         /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
         public void Log(Func<string> messageLambda, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
         {
+            if (_logger == null) return;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(messageLambda);
+#else
+            if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
+#endif
             if (DynamicLogger == null) return;
-            if (messageLambda == null) throw new ArgumentNullException(nameof(messageLambda));
             InnerLog(messageLambda(), category, level);
         }
         /// <summary>
@@ -88,8 +97,13 @@ namespace AmbientServices
         /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
         public void Log(Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
         {
+            if (_logger == null) return;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(ex);
+#else
+            if (ex is null) throw new ArgumentNullException(nameof(ex));
+#endif
             if (DynamicLogger == null) return;
-            if (ex == null) throw new ArgumentNullException(nameof(ex));
             InnerLog(ex.ToString(), category, level);
         }
         /// <summary>
@@ -101,8 +115,13 @@ namespace AmbientServices
         /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
         public void Log(string message, Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
         {
+            if (_logger == null) return;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(nameof(ex));
+#else
+            if (ex is null) throw new ArgumentNullException(nameof(ex));
+#endif
             if (DynamicLogger == null) return;
-            if (ex == null) throw new ArgumentNullException(nameof(ex));
             InnerLog(message + Environment.NewLine + ex.ToString(), category, level);
         }
         /// <summary>
@@ -114,9 +133,18 @@ namespace AmbientServices
         /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
         public void Log(Func<string> messageLambda, Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
         {
-            if (ex == null) throw new ArgumentNullException(nameof(ex));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(ex);
+#else
+            if (ex is null) throw new ArgumentNullException(nameof(ex));
+#endif
+            if (_logger == null) return;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(messageLambda);
+#else
+            if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
+#endif
             if (DynamicLogger == null) return;
-            if (messageLambda == null) throw new ArgumentNullException(nameof(messageLambda));
             InnerLog(messageLambda() + Environment.NewLine + ex.ToString(), category, level);
         }
     }

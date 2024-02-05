@@ -16,7 +16,11 @@ namespace AmbientServices.Extensions
         /// <returns>A filtered string for the exception.</returns>
         public static string ToFilteredString(this Exception exception)
         {
-            if (exception == null) throw new ArgumentNullException(nameof(exception));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(exception);
+#else
+            if (exception is null) throw new ArgumentNullException(nameof(exception));
+#endif
             StringBuilder stack = new();
             ExceptionUtilities.BuildFilteredString(exception, stack);
             return stack.ToString();
@@ -28,7 +32,11 @@ namespace AmbientServices.Extensions
         /// <returns>The type name for the exception.</returns>
         public static string TypeName(this Exception e)
         {
-            if (e == null) throw new ArgumentNullException(nameof(e));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(e);
+#else
+            if (e is null) throw new ArgumentNullException(nameof(e));
+#endif
             string typeName = e.GetType().Name;
             return typeName.EndsWith("Exception", StringComparison.Ordinal) ? typeName.Substring(0, typeName.Length - 9) : typeName;
         }

@@ -30,7 +30,11 @@ namespace AmbientServices.Extensions
         /// <returns>A hash code based on the values in the array.</returns>
         public static int ValueHashCode<TYPE>(this TYPE[] array)
         {
-            if (array == null) throw new ArgumentNullException(nameof(array));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(array);
+#else
+            if (array is null) throw new ArgumentNullException(nameof(array));
+#endif
             int code = array.Length;
             // loop through each element and compare
             for (int offset = 0; offset < array.Length; ++offset)
