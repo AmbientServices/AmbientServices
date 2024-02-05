@@ -122,6 +122,18 @@ public sealed class DisposeResponsibility<T> : IDisposable
     }
 #endif
     /// <summary>
+    /// Disposes of any existing disposable and takes responsibility for the newly specified disposable.
+    /// </summary>
+    /// <param name="newDisposable">The new disposable to take responsibility for.</param>
+    /// <param name="stackOnCreation">The creation stack to associated with <paramref name="contained"/>.</param>
+    public void Replace(T? newDisposable, string? stackOnCreation = null)
+    {
+        Dispose();
+        _contained = newDisposable;
+        _stackOnCreation = PendingDispose.OnConstruct(stackOnCreation, 1024);
+        GC.ReRegisterForFinalize(this);
+    }
+    /// <summary>
     /// Transfers the responsibility in this instance into the target instance.
     /// </summary>
     /// <param name="targetOwnership">The <see cref="DisposeResponsibility{T}"/> instance that will hereafter take responsibility (and responsibility to dispose).</param>
@@ -135,6 +147,7 @@ public sealed class DisposeResponsibility<T> : IDisposable
         targetOwnership.Dispose();
         targetOwnership._contained = _contained;
         targetOwnership._stackOnCreation = _stackOnCreation;
+        GC.ReRegisterForFinalize(targetOwnership);
         _contained = null;
         _stackOnCreation = "";
     }
@@ -152,6 +165,7 @@ public sealed class DisposeResponsibility<T> : IDisposable
         Dispose();
         _contained = sourceOwnership._contained;
         _stackOnCreation = sourceOwnership._stackOnCreation;
+        GC.ReRegisterForFinalize(this);
         sourceOwnership._contained = null;
         sourceOwnership._stackOnCreation = "";
     }
