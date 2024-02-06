@@ -224,7 +224,7 @@ class DownloadAndUnzip
     {
         IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default;
-        HttpClient client = new();
+        using HttpClient client = new();
         using HttpResponseMessage response = await client.GetAsync(_downlaodUrl);
         long totalBytesRead = 0;
         int bytesRead;
@@ -263,7 +263,7 @@ class DownloadAndUnzip
         IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default;
 
-        ZipArchive archive = new(_package);
+        using ZipArchive archive = new(_package);
         int entries = archive.Entries.Count;
         for (int entry = 0; entry < entries; ++entry)
         {
@@ -322,13 +322,13 @@ public class TimeDependentServiceTest
     public async Task TestCancellation()
     {
         // this first part *should* get cancelled because we're using the system clock
-        AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
+        using AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
         await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token).AsTask());
 
         // switch the current call context to the artifically-paused ambient clock and try again
         using (AmbientClock.Pause())
         {
-            AmbientCancellationTokenSource cts2 = new(TimeSpan.FromSeconds(1));
+            using AmbientCancellationTokenSource cts2 = new(TimeSpan.FromSeconds(1));
             // this should *not* throw because the clock has been paused
             await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
 
@@ -351,7 +351,7 @@ public class TimeDependentServiceTest
     {
         using (AmbientClock.Pause())
         {
-            AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
+            using AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
             await AsyncFunctionThatCouldTimeoutUnderHeavyLoad(cts.Token);
         }
     }

@@ -110,7 +110,7 @@ namespace AmbientServices.Test
                 try
                 {
                     AmbientCancellationTokenSource cts = new();
-                    TestAuditCancelTokenSourceAndHangOnAudit ahuc = new();
+                    using TestAuditCancelTokenSourceAndHangOnAudit ahuc = new();
                     status.AddCheckerOrAuditor(ahuc);
                     await status.Start();
                     // note that in this case, the initial audit should never run because the clock is paused, and that's just fine--manual refreshes can still happen
@@ -134,10 +134,10 @@ namespace AmbientServices.Test
                 Status status = new(false);
                 try
                 {
-                    TestCheckerException ce = new();
+                    using TestCheckerException ce = new();
                     status.AddCheckerOrAuditor(ce);
                     await status.Start();
-                    AmbientCancellationTokenSource cts = new(1);
+                    using AmbientCancellationTokenSource cts = new(1);
                     await status.RefreshAsync(cts.Token);
                 }
                 finally

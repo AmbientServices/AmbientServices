@@ -49,8 +49,10 @@ public class TestDisposeResponsibility
             Assert.IsNotNull(fifthOwner.ToString());
         }
         {
+#pragma warning disable CA2000
             using (DisposeResponsibility<Derived> owner = new(new Derived())) { }
             using DisposeResponsibility<Derived> firstOwner = new(new Derived());
+#pragma warning restore CA2000
             Assert.AreEqual(1, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
             Assert.IsTrue(firstOwner.ContainsDisposable);
             using DisposeResponsibility<Base> secondOwner = new(firstOwner);

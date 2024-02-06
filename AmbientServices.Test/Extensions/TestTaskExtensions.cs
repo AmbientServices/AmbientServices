@@ -20,7 +20,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AmbientCancellationTokenSource cts = new(5000);
+                using AmbientCancellationTokenSource cts = new(5000);
                 Task t = cts.Token.AsTask();
                 Assert.IsFalse(cts.IsCancellationRequested);
                 Assert.IsFalse(t.IsCanceled);
@@ -41,7 +41,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AmbientCancellationTokenSource cts = new(5000);
+                using AmbientCancellationTokenSource cts = new(5000);
                 Task t = cts.Token.AsValueTask().AsTask();
                 Assert.IsFalse(cts.IsCancellationRequested);
                 Assert.IsFalse(t.IsCanceled);

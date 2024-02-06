@@ -111,8 +111,8 @@ namespace AmbientServices.Test
             AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck1 = new("BottleneckDetectorAccessRecordCombine-LinearTest1", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test1", AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
             AmbientBottleneck BottleneckDetectorAccessRecordPropertiesBottleneck2 = new("BottleneckDetectorAccessRecordCombine-LinearTest2", AmbientBottleneckUtilizationAlgorithm.Linear, true, "BottleneckDetectorAccessRecordCombine Test2", AmbientStopwatch.Frequency / 5000, TimeSpan.FromSeconds(1));
             DateTime start = AmbientClock.UtcNow;
-            AmbientBottleneckAccessor a1 = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck1, start);
-            AmbientBottleneckAccessor a2 = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck2, start);
+            using AmbientBottleneckAccessor a1 = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck1, start);
+            using AmbientBottleneckAccessor a2 = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck2, start);
             Assert.ThrowsException<ArgumentException>(() => a1.Combine(a2));
             Assert.ThrowsException<ArgumentNullException>(
                 () =>
@@ -148,7 +148,7 @@ namespace AmbientServices.Test
                     Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0));
                     Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, 0, 0, 0, 0.0));
                     Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0, 0, 0, 0.0));
-                    AmbientBottleneckAccessor r = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck, start);
+                    using AmbientBottleneckAccessor r = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck, start);
                     Assert.ThrowsException<InvalidOperationException>(() => r.SetUsage(0, 0));
                     Assert.ThrowsException<InvalidOperationException>(() => r.AddUsage(0, 0));
                 }

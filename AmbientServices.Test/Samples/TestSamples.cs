@@ -198,7 +198,7 @@ namespace AmbientServices.Test.Samples
         [TestMethod]
         public async Task LocalDiskAuditor()
         {
-            LocalDiskAuditor lda = new();
+            using LocalDiskAuditor lda = new();
             StatusResultsBuilder builder = new(lda);
             await lda.Audit(builder);
             StatusAuditAlert alert = builder.WorstAlert;
@@ -213,12 +213,14 @@ namespace AmbientServices.Test.Samples
             using (AmbientClock.Pause())
             {
                 Status s = new(false);
-                LocalDiskAuditor lda = null;
-                AmbientCancellationTokenSource cts = new(5000);
+                using DisposeResponsibility<LocalDiskAuditor> lda = new();
+                using AmbientCancellationTokenSource cts = new(5000);
                 try
                 {
-                    lda = new LocalDiskAuditor();
-                    s.AddCheckerOrAuditor(lda);
+#pragma warning disable CA2000
+                    lda.AssumeResponsibility(new LocalDiskAuditor());
+#pragma warning restore CA2000
+                    s.AddCheckerOrAuditor(lda.Contained);
                     await s.Start(cts.Token);
                     // run all the tests (just the one here) right now
                     await s.RefreshAsync(cts.Token);
@@ -228,7 +230,7 @@ namespace AmbientServices.Test.Samples
                 finally
                 {
                     await s.Stop();
-                    if (lda != null) s.RemoveCheckerOrAuditor(lda);     // note that lda could be null if the constructor throws!
+                    if (lda.ContainsDisposable) s.RemoveCheckerOrAuditor(lda.Contained);     // note that lda could be null if the constructor throws!
                 }
             }
         }
