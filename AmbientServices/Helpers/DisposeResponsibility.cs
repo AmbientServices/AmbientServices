@@ -21,15 +21,45 @@ public static class DisposeResponsibility
 }
 
 /// <summary>
+/// An interface that abstracts an object that contains an <see cref="IDisposable"/> and allows transfer of the disposal responsibility between isntances (and the stack).
+/// Instances should ALWAYS be disposed.
+/// </summary>
+/// <typeparam name="T">The disposable type being wrapped.</typeparam>
+public interface IDisposeResponsibility<out T> : IDisposable
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+    , IAsyncDisposable
+#endif
+    where T : class, IDisposable
+{
+    /// <summary>
+    /// The contained disposable object.  Throws an <see cref="ObjectDisposedException"/> if the object is no longer contained.
+    /// </summary>
+    public T Contained { get; }
+    /// <summary>
+    /// The contained disposable object, or null if no disposable is contained.
+    /// </summary>
+    public T? NullableContained { get; }
+    /// <summary>
+    /// Returns whether or not this instance contains a disposable and therefore still has responsibility for disposing it.
+    /// </summary>
+    public bool ContainsDisposable { get; }
+    /// <summary>
+    /// Gets a string containing the stack at the time the responsibility was created.
+    /// </summary>
+    public string StackOnCreation { get; }
+    /// <summary>
+    /// Intended for internal use.  Takes responsibility from the instance (presumably to transfer it to another responsibility object).
+    /// </summary>
+    public void ShirkResponsibility();
+}
+
+/// <summary>
 /// A class that wraps a contained <see cref="IDisposable"/> and allows transfer of the disposal responsibility between objects (and the stack).
 /// Also starts tracking the need for object disposal as returned by <see cref="DisposeResponsibility.AllPendingDisposals"/>.
 /// This class should ALWAYS be disposed.
 /// </summary>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
-public sealed class DisposeResponsibility<T> : IDisposable
-#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-    , IAsyncDisposable
-#endif
+public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>
     where T : class, IDisposable
 {
     private string _stackOnCreation;
@@ -47,6 +77,10 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// Returns whether or not this instance contains a disposable and therefore still has responsibility for disposing it.
     /// </summary>
     public bool ContainsDisposable => _contained != null;
+    /// <summary>
+    /// Gets a string containing the stack at the time the responsibility was created.
+    /// </summary>
+    public string StackOnCreation => _stackOnCreation;
 
 #if DEBUG
     ~DisposeResponsibility()
@@ -76,17 +110,16 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// Constructs a dispose responsibility object that takes responsibility from the specified responsibility object.
     /// </summary>
     /// <param name="other">Another dispose responsibility object to taks responsibility from.</param>
-    public DisposeResponsibility(DisposeResponsibility<T> other)
+    public DisposeResponsibility(IDisposeResponsibility<T> other)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(other);
 #else
         if (other == null) throw new ArgumentNullException(nameof(other));
 #endif
-        _stackOnCreation = other._stackOnCreation;
-        _contained = other._contained;
-        other._contained = null;
-        other._stackOnCreation = "";
+        _stackOnCreation = other.StackOnCreation;
+        _contained = other.Contained;
+        other.ShirkResponsibility();
     }
 
     /// <summary>
@@ -125,11 +158,11 @@ public sealed class DisposeResponsibility<T> : IDisposable
     }
 #endif
     /// <summary>
-    /// Disposes of any existing disposable and takes responsibility for the newly specified disposable.
+    /// Disposes of any existing disposable and assumes responsibility for the newly specified disposable.
     /// </summary>
     /// <param name="newDisposable">The new disposable to take responsibility for.</param>
     /// <param name="stackOnCreation">The creation stack to associated with <paramref name="newDisposable"/>.</param>
-    public void TakeResponsibility(T? newDisposable, string? stackOnCreation = null)
+    public void AssumeResponsibility(T? newDisposable, string? stackOnCreation = null)
     {
         Dispose();
         _contained = newDisposable;
@@ -137,28 +170,10 @@ public sealed class DisposeResponsibility<T> : IDisposable
         GC.ReRegisterForFinalize(this);
     }
     /// <summary>
-    /// Transfers the responsibility in this instance into the target instance.
-    /// </summary>
-    /// <param name="targetOwnership">The <see cref="DisposeResponsibility{T}"/> instance that will hereafter take responsibility (and responsibility to dispose).</param>
-    public void TransferRespopnsibilityTo(DisposeResponsibility<T> targetOwnership)
-    {
-#if NET5_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(targetOwnership);
-#else
-        if (targetOwnership == null) throw new ArgumentNullException(nameof(targetOwnership));
-#endif
-        targetOwnership.Dispose();
-        targetOwnership._contained = _contained;
-        targetOwnership._stackOnCreation = _stackOnCreation;
-        GC.ReRegisterForFinalize(targetOwnership);
-        _contained = null;
-        _stackOnCreation = "";
-    }
-    /// <summary>
     /// Transfers the responsibility from a specified instance into this instance.
     /// </summary>
-    /// <param name="sourceOwnership">The <see cref="DisposeResponsibility{T}"/> instance whose contained disposable will will hereafter be owned by this instance.</param>
-    public void TransferResponsibilityFrom(DisposeResponsibility<T> sourceOwnership)
+    /// <param name="sourceOwnership">The <see cref="IDisposeResponsibility{T}"/> instance whose contained disposable will will hereafter be owned by this instance.</param>
+    public void TransferResponsibilityFrom(IDisposeResponsibility<T> sourceOwnership)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(sourceOwnership);
@@ -166,11 +181,18 @@ public sealed class DisposeResponsibility<T> : IDisposable
         if (sourceOwnership == null) throw new ArgumentNullException(nameof(sourceOwnership));
 #endif
         Dispose();
-        _contained = sourceOwnership._contained;
-        _stackOnCreation = sourceOwnership._stackOnCreation;
+        _contained = sourceOwnership.NullableContained;
+        _stackOnCreation = sourceOwnership.StackOnCreation;
         GC.ReRegisterForFinalize(this);
-        sourceOwnership._contained = null;
-        sourceOwnership._stackOnCreation = "";
+        sourceOwnership.ShirkResponsibility();
+    }
+    /// <summary>
+    /// Intended for internal use.  Takes responsibility from the instance (presumably to transfer it to another responsibility object).
+    /// </summary>
+    public void ShirkResponsibility()
+    {
+        _contained = null;
+        _stackOnCreation = "";
     }
     /// <summary>
     /// Gets a string representation of the contained disposable (if any).
