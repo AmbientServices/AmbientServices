@@ -125,8 +125,8 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// Disposes of any existing disposable and takes responsibility for the newly specified disposable.
     /// </summary>
     /// <param name="newDisposable">The new disposable to take responsibility for.</param>
-    /// <param name="stackOnCreation">The creation stack to associated with <paramref name="contained"/>.</param>
-    public void Replace(T? newDisposable, string? stackOnCreation = null)
+    /// <param name="stackOnCreation">The creation stack to associated with <paramref name="newDisposable"/>.</param>
+    public void Transfer(T? newDisposable, string? stackOnCreation = null)
     {
         Dispose();
         _contained = newDisposable;

@@ -23,7 +23,7 @@ namespace AmbientServices.Test
             IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(false, "counter", "counter test");
             Assert.AreEqual(1, counter.Increment());
             Assert.AreEqual(3, counter.Add(2));
-            Assert.AreEqual(2, counter.Add(-1));
+            Assert.AreEqual(2, counter.Decrement());
             Assert.AreEqual("counter", counter.Id);
             Assert.AreEqual("counter test", counter.Description);
             Assert.AreEqual(false, counter.IsTimeBased);
@@ -43,7 +43,7 @@ namespace AmbientServices.Test
             {
                 Assert.AreEqual(1, timeBasedCounter.Increment());
                 Assert.AreEqual(3, timeBasedCounter.Add(2));
-                Assert.AreEqual(2, timeBasedCounter.Add(-1));
+                Assert.AreEqual(2, timeBasedCounter.Decrement());
                 Assert.AreEqual("time-based", timeBasedCounter.Id);
                 Assert.AreEqual("time-based test", timeBasedCounter.Description);
                 Assert.AreEqual(true, timeBasedCounter.IsTimeBased);
