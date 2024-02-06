@@ -40,6 +40,10 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// </summary>
     public T Contained => (_contained == null) ? throw new ObjectDisposedException("The contained disposable object is no longer owned by this responsibility object!") : _contained;
     /// <summary>
+    /// The contained disposable object, or null if no disposable is contained.
+    /// </summary>
+    public T? NullableContained => _contained;
+    /// <summary>
     /// Returns whether or not this instance contains a disposable and therefore still has responsibility for disposing it.
     /// </summary>
     public bool ContainsDisposable => _contained != null;

@@ -66,6 +66,7 @@ public class TestDisposeResponsibility
         Assert.IsFalse(fifthOwner.ContainsDisposable);
         Assert.IsTrue(sixthOwner.ContainsDisposable);
         Assert.IsTrue(seventhOwner.ContainsDisposable);
+        Assert.IsNotNull(seventhOwner.NullableContained);
         Assert.ThrowsException<ArgumentNullException>(() => seventhOwner.TransferRespopnsibilityTo(null!));
         Assert.ThrowsException<ArgumentNullException>(() => seventhOwner.TransferResponsibilityFrom(null!));
         Assert.IsNotNull(seventhOwner.ToString());
