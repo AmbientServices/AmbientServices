@@ -24,20 +24,20 @@ public class TestDisposeResponsibility
         Assert.IsTrue(secondOwner.ContainsDisposable);
         using DisposeResponsibility<Stream> thirdOwner = new();
         Assert.AreEqual(1, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
-        secondOwner.TransferTo(thirdOwner);
+        secondOwner.TransferRespopnsibilityTo(thirdOwner);
         Assert.IsFalse(firstOwner.ContainsDisposable);
         Assert.IsFalse(secondOwner.ContainsDisposable);
         Assert.IsTrue(thirdOwner.ContainsDisposable);
         using DisposeResponsibility<Stream> fourthOwner = new();
         Assert.AreEqual(1, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
-        fourthOwner.TransferFrom(thirdOwner);
+        fourthOwner.TransferResponsibilityFrom(thirdOwner);
         Assert.IsFalse(firstOwner.ContainsDisposable);
         Assert.IsFalse(secondOwner.ContainsDisposable);
         Assert.IsFalse(thirdOwner.ContainsDisposable);
         Assert.IsTrue(fourthOwner.ContainsDisposable);
         using DisposeResponsibility<Stream> fifthOwner = new(new MemoryStream());
         Assert.AreEqual(2, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
-        fourthOwner.TransferTo(fifthOwner);
+        fourthOwner.TransferRespopnsibilityTo(fifthOwner);
         Assert.AreEqual(1, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
         Assert.IsFalse(firstOwner.ContainsDisposable);
         Assert.IsFalse(secondOwner.ContainsDisposable);
@@ -46,7 +46,7 @@ public class TestDisposeResponsibility
         Assert.IsTrue(fifthOwner.ContainsDisposable);
         using DisposeResponsibility<Stream> sixthOwner = new(new MemoryStream());
         Assert.AreEqual(2, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
-        sixthOwner.TransferFrom(fifthOwner);
+        sixthOwner.TransferResponsibilityFrom(fifthOwner);
         Assert.AreEqual(1, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
         Assert.IsFalse(firstOwner.ContainsDisposable);
         Assert.IsFalse(secondOwner.ContainsDisposable);
@@ -57,7 +57,7 @@ public class TestDisposeResponsibility
         using DisposeResponsibility<MemoryStream> seventhOwner = new();
         Assert.ThrowsException<ObjectDisposedException>(() => seventhOwner.Contained);
         Assert.AreEqual(1, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
-        seventhOwner.Transfer(new());
+        seventhOwner.TakeResponsibility(new());
         Assert.AreEqual(2, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
         Assert.IsFalse(firstOwner.ContainsDisposable);
         Assert.IsFalse(secondOwner.ContainsDisposable);
@@ -66,8 +66,8 @@ public class TestDisposeResponsibility
         Assert.IsFalse(fifthOwner.ContainsDisposable);
         Assert.IsTrue(sixthOwner.ContainsDisposable);
         Assert.IsTrue(seventhOwner.ContainsDisposable);
-        Assert.ThrowsException<ArgumentNullException>(() => seventhOwner.TransferTo(null!));
-        Assert.ThrowsException<ArgumentNullException>(() => seventhOwner.TransferFrom(null!));
+        Assert.ThrowsException<ArgumentNullException>(() => seventhOwner.TransferRespopnsibilityTo(null!));
+        Assert.ThrowsException<ArgumentNullException>(() => seventhOwner.TransferResponsibilityFrom(null!));
         Assert.IsNotNull(seventhOwner.ToString());
     }
 }

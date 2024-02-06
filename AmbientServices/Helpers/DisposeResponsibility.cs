@@ -126,7 +126,7 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// </summary>
     /// <param name="newDisposable">The new disposable to take responsibility for.</param>
     /// <param name="stackOnCreation">The creation stack to associated with <paramref name="newDisposable"/>.</param>
-    public void Transfer(T? newDisposable, string? stackOnCreation = null)
+    public void TakeResponsibility(T? newDisposable, string? stackOnCreation = null)
     {
         Dispose();
         _contained = newDisposable;
@@ -137,7 +137,7 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// Transfers the responsibility in this instance into the target instance.
     /// </summary>
     /// <param name="targetOwnership">The <see cref="DisposeResponsibility{T}"/> instance that will hereafter take responsibility (and responsibility to dispose).</param>
-    public void TransferTo(DisposeResponsibility<T> targetOwnership)
+    public void TransferRespopnsibilityTo(DisposeResponsibility<T> targetOwnership)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(targetOwnership);
@@ -155,7 +155,7 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// Transfers the responsibility from a specified instance into this instance.
     /// </summary>
     /// <param name="sourceOwnership">The <see cref="DisposeResponsibility{T}"/> instance whose contained disposable will will hereafter be owned by this instance.</param>
-    public void TransferFrom(DisposeResponsibility<T> sourceOwnership)
+    public void TransferResponsibilityFrom(DisposeResponsibility<T> sourceOwnership)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(sourceOwnership);
