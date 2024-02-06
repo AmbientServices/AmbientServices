@@ -65,14 +65,13 @@ public sealed class DisposeResponsibility<T> : IDisposable
     /// <summary>
     /// Constructs a dispose responsibility object which takes responsibility for disposing the specified disposable object.
     /// </summary>
-    /// <param name="contained">The disposable object that is owned and will be disposed by the instance.</param>
+    /// <param name="contained">An optional disposable object that will be owned and disposed by the instance.</param>
     /// <param name="stackOnCreation">The creation stack to associated with <paramref name="contained"/>.</param>
-    public DisposeResponsibility(T contained, string? stackOnCreation = null)
+    public DisposeResponsibility(T? contained, string? stackOnCreation = null)
     {
         _contained = contained;
-        _stackOnCreation = PendingDispose.OnConstruct(stackOnCreation, 1024);
+        _stackOnCreation = (contained != null) ? PendingDispose.OnConstruct(stackOnCreation, 1024) : "";
     }
-
     /// <summary>
     /// Constructs a dispose responsibility object that takes responsibility from the specified responsibility object.
     /// </summary>
