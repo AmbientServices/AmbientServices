@@ -195,6 +195,16 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>
         _stackOnCreation = "";
     }
     /// <summary>
+    /// Returns a new instance to be returned from the containing function, with dispose responsibility transferred from this instance to that one.
+    /// </summary>
+    /// <returns>A new <see cref="DisposeResponsibility{T}"/> with disposal responsibility.</returns>
+    public DisposeResponsibility<T> TransferResponsibilityToCaller()
+    {
+        DisposeResponsibility<T> newInstance = new();
+        newInstance.TransferResponsibilityFrom(this);
+        return newInstance;
+    }
+    /// <summary>
     /// Gets a string representation of the contained disposable (if any).
     /// </summary>
     /// <returns>A string representation of the contained disposable (if any).</returns>
