@@ -118,12 +118,12 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// <param name="other">Another dispose responsibility object to taks responsibility from.</param>
     public DisposeResponsibility(IDisposeResponsibility<T> other)
     {
-        if (other is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(other);
 #else
             if (other == null) throw new ArgumentNullException(nameof(other));
 #endif
+        if (other is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
         _stackOnCreation = other.StackOnCreation;
         _contained = other.Contained;
         isr.ShirkResponsibility();
@@ -182,12 +182,12 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// <param name="sourceOwnership">The <see cref="IDisposeResponsibility{T}"/> instance whose contained disposable will will hereafter be owned by this instance.</param>
     public void TransferResponsibilityFrom(IDisposeResponsibility<T> sourceOwnership)
     {
-        if (sourceOwnership is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(sourceOwnership);
 #else
         if (sourceOwnership == null) throw new ArgumentNullException(nameof(sourceOwnership));
 #endif
+        if (sourceOwnership is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
         Dispose();
         _contained = sourceOwnership.NullableContained;
         _stackOnCreation = sourceOwnership.StackOnCreation;
