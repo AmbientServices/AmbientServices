@@ -47,19 +47,25 @@ public interface IDisposeResponsibility<out T> : IDisposable
     /// Gets a string containing the stack at the time the responsibility was created.
     /// </summary>
     public string StackOnCreation { get; }
+}
+
+internal interface IShirkResponsibility
+{
     /// <summary>
     /// Intended for internal use.  Takes responsibility from the instance (presumably to transfer it to another responsibility object).
     /// </summary>
-    public void ShirkResponsibility();
+    internal void ShirkResponsibility();
 }
 
 /// <summary>
 /// A class that wraps a contained <see cref="IDisposable"/> and allows transfer of the disposal responsibility between objects (and the stack).
+/// Ensures that 
 /// Also starts tracking the need for object disposal as returned by <see cref="DisposeResponsibility.AllPendingDisposals"/>.
-/// This class should ALWAYS be disposed.
+/// Instances of this class contained in another instance should only be contained in objects that are disposable and should ALWAYS be disposed.
+/// Instances of this class on the stack should ALWAYS be in a using statement.  The responsibility to dispose may be transferred out to another instance using <see cref="TransferResponsibilityToCaller"/> passed into a constructor, by calling <see cref="TransferResponsibilityFrom(IDisposeResponsibility{T})"/> on another instance and passing in this instance, or by returning an instance to a caller, but each instance of this class should always be disposed to prevent leaks.
 /// </summary>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
-public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>
+public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirkResponsibility
     where T : class, IDisposable
 {
     private string _stackOnCreation;
@@ -112,14 +118,15 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>
     /// <param name="other">Another dispose responsibility object to taks responsibility from.</param>
     public DisposeResponsibility(IDisposeResponsibility<T> other)
     {
+        if (other is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(other);
 #else
-        if (other == null) throw new ArgumentNullException(nameof(other));
+            if (other == null) throw new ArgumentNullException(nameof(other));
 #endif
         _stackOnCreation = other.StackOnCreation;
         _contained = other.Contained;
-        other.ShirkResponsibility();
+        isr.ShirkResponsibility();
     }
 
     /// <summary>
@@ -175,6 +182,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>
     /// <param name="sourceOwnership">The <see cref="IDisposeResponsibility{T}"/> instance whose contained disposable will will hereafter be owned by this instance.</param>
     public void TransferResponsibilityFrom(IDisposeResponsibility<T> sourceOwnership)
     {
+        if (sourceOwnership is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(sourceOwnership);
 #else
@@ -184,12 +192,12 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>
         _contained = sourceOwnership.NullableContained;
         _stackOnCreation = sourceOwnership.StackOnCreation;
         GC.ReRegisterForFinalize(this);
-        sourceOwnership.ShirkResponsibility();
+        isr.ShirkResponsibility();
     }
     /// <summary>
     /// Intended for internal use.  Takes responsibility from the instance (presumably to transfer it to another responsibility object).
     /// </summary>
-    public void ShirkResponsibility()
+    void IShirkResponsibility.ShirkResponsibility()
     {
         _contained = null;
         _stackOnCreation = "";
