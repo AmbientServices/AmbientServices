@@ -475,7 +475,7 @@ class BufferPool
 ```
 ### Default Implementation
 The default implementation just uses a local initally-empty ConcurrentDictionary to keep track of settings values, so the default settings values will be used unless the default settings set is altered.  
-An alternate interface, `IMutableAmbientSettings`, extends `IAmbientSettingsSet` and adds methods to change the settings values in this implementation.  
+An alternate interface, `IMutableAmbientSettingsSet`, extends `IAmbientSettingsSet` and adds methods to change the settings values in this implementation.  
 Other service implementations may or may not support changing settings values and may or may not support this interface to do so.  
 The simplicity of this abstraction is due to the wide variety of settings systems available and the fact that nearly all use cases can be handled using this abstraction.  
 Since the interface is only one function, implementing a bridge to Configuration.AppSettings or some other more appropriate settings repository is very simple.
