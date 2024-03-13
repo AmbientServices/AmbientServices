@@ -188,7 +188,11 @@ namespace AmbientServices
 
         public void BottleneckExited(AmbientBottleneckAccessor? bottleneckAccessor)
         {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(bottleneckAccessor);
+#else
             if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+#endif
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
@@ -270,14 +274,22 @@ namespace AmbientServices
         }
         public void BottleneckEntered(AmbientBottleneckAccessor? bottleneckAccessor)
         {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(bottleneckAccessor);
+#else
             if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+#endif
             _currentWindowSurvey.BottleneckEntered(bottleneckAccessor);
         }
 
         public void BottleneckExited(AmbientBottleneckAccessor? bottleneckAccessor)
         {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(bottleneckAccessor);
+#else
             if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
-            _currentWindowSurvey.BottleneckExited( bottleneckAccessor);
+#endif
+            _currentWindowSurvey.BottleneckExited(bottleneckAccessor);
         }
 
 
@@ -364,7 +376,11 @@ namespace AmbientServices
 
         public void BottleneckEntered(AmbientBottleneckAccessor bottleneckAccessor)
         {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(bottleneckAccessor);
+#else
             if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+#endif
             // is this bottleneck being surveyed?
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
@@ -377,7 +393,11 @@ namespace AmbientServices
 
         public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(bottleneckAccessor);
+#else
             if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+#endif
             // is this bottleneck being surveyed?
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
@@ -425,7 +445,11 @@ namespace AmbientServices
 
         public void BottleneckExited(AmbientBottleneckAccessor? bottleneckAccessor)
         {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(bottleneckAccessor);
+#else
             if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+#endif
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;
@@ -590,7 +614,11 @@ namespace AmbientServices
 
         public void BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
         {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(bottleneckAccessor);
+#else
             if (bottleneckAccessor is null) throw new ArgumentNullException(nameof(bottleneckAccessor));
+#endif
             string bottleneckId = bottleneckAccessor.Bottleneck.Id;
             // is this bottleneck being surveyed?
             bool blocked = _block?.IsMatch(bottleneckId) ?? false;

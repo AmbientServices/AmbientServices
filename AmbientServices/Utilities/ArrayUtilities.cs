@@ -19,7 +19,11 @@ namespace AmbientServices.Utilities
         /// <returns>Whether or not the content of the arrays are equal.</returns>
         public static bool ValueEquals(Type elementType, Array? array1, Array? array2)
         {
-            if (elementType == null) throw new ArgumentNullException(nameof(elementType));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(elementType);
+#else
+            if (elementType is null) throw new ArgumentNullException(nameof(elementType));
+#endif
             if (array1 == null)
             {
                 return array2 == null;

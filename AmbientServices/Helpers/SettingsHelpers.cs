@@ -167,7 +167,11 @@ namespace AmbientServices
         /// <param name="setting">The <see cref="IAmbientSettingInfo"/> to register.</param>
         public void Register(IAmbientSettingInfo setting)
         {
-            if (setting == null) throw new ArgumentNullException(nameof(setting));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(setting);
+#else
+            if (setting is null) throw new ArgumentNullException(nameof(setting));
+#endif
             WeakReference<IAmbientSettingInfo> newReference = new(setting);
             WeakReference<IAmbientSettingInfo> existingReference;
             int loopCount = 0;

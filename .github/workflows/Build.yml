@@ -11,10 +11,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Setup .NET 3.1
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 3.1.x
     - name: Setup .NET 6.0
       uses: actions/setup-dotnet@v4
       with:
@@ -46,7 +42,7 @@ jobs:
     - name: Test .NET 8 with coverage
       run: dotnet test -c Release -f net8.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
     - name: ReportGenerator
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.1.19
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.1
       with:
         reports: '**/coverage.cobertura.xml' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
         targetdir: 'coveragereport' # REQUIRED # The directory where the generated report should be saved.
@@ -64,7 +60,7 @@ jobs:
         customSettings: '' # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
         toolpath: 'reportgeneratortool' # Default directory for installing the dotnet tool.
     - name: Upload coverage report artifact
-      uses: actions/upload-artifact@v1.0.0	# Not used yet
+      uses: actions/upload-artifact@v3	# Not used yet
       with:
         name: CoverageReport # Artifact name        
         path: coveragereport # Directory containing files to upload
@@ -72,7 +68,5 @@ jobs:
       run: dotnet test -c Release -f net7.0 --blame-hang-timeout 120s
     - name: Test .NET 6.0
       run: dotnet test -c Release -f net6.0 --blame-hang-timeout 120s
-    - name: Test .NET Core 3.1
-      run: dotnet test -c Release -f netcoreapp3.1 --blame-hang-timeout 120s
     - name: Publish
       run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.0.8.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json

@@ -77,7 +77,6 @@ namespace AmbientServices.Test
 
             _Test.GlobalChanged -= globalChanged;
         }
-#nullable enable
         [TestMethod]
         public void NonInterfaceType()
         {
@@ -97,7 +96,6 @@ namespace AmbientServices.Test
                 Ambient.InitializationError -= EventHandler;
             }
         }
-#nullable restore
         [TestMethod]
         public void MultipleInterfaces()
         {
@@ -174,7 +172,6 @@ namespace AmbientServices.Test
             Assert.IsInstanceOfType(_LocalTest.Local, typeof(LocalTest3));
             Assert.AreEqual(_LocalTest.Global, _LocalTest.Local);
         }
-#nullable enable
         [TestMethod]
         public void NoDefaultConstructor()
         {
@@ -194,7 +191,6 @@ namespace AmbientServices.Test
                 Ambient.InitializationError -= EventHandler;
             }
         }
-#nullable restore
     }
 
     interface IJunk

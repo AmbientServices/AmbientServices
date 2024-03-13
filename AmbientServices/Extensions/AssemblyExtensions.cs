@@ -22,7 +22,11 @@ namespace AmbientServices.Extensions
         [DebuggerNonUserCode]
         public static Type[] GetLoadableTypes(this System.Reflection.Assembly assembly)
         {
-            if (assembly == null) throw new ArgumentNullException(nameof(assembly));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(assembly);
+#else
+            if (assembly is null) throw new ArgumentNullException(nameof(assembly));
+#endif
             Type[] types;
             //int loop = 0;
             //do
@@ -50,7 +54,11 @@ namespace AmbientServices.Extensions
         /// <returns><b>true</b> if <paramref name="assembly"/> refers to <paramref name="referredToAssembly"/>.</returns>
         public static bool DoesAssemblyReferDirectlyToAssembly(this System.Reflection.Assembly assembly, Assembly referredToAssembly)
         {
-            if (assembly == null) throw new ArgumentNullException(nameof(assembly));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(assembly);
+#else
+            if (assembly is null) throw new ArgumentNullException(nameof(assembly));
+#endif
             return (assembly == referredToAssembly || assembly.GetReferencedAssemblies().FirstOrDefault(a => a.FullName == referredToAssembly.FullName) != null);
         }
         /// <summary>

@@ -43,7 +43,11 @@ namespace AmbientServices
         /// <param name="results">The <see cref="StatusResults"/> to copy from.</param>
         public StatusResultsBuilder(StatusResults results)
         {
-            if (results == null) throw new ArgumentNullException(nameof(results));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(results);
+#else
+            if (results is null) throw new ArgumentNullException(nameof(results));
+#endif
             _sourceSystem = results.SourceSystem;
             _targetSystem = results.TargetSystem;
             _auditStartTime = results.Time;
@@ -61,7 +65,11 @@ namespace AmbientServices
         /// <param name="checker">The <see cref="StatusChecker"/> we are going to build results for.</param>
         public StatusResultsBuilder(StatusChecker checker)
         {
-            if (checker == null) throw new ArgumentNullException(nameof(checker));
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(checker);
+#else
+            if (checker is null) throw new ArgumentNullException(nameof(checker));
+#endif
             _targetSystem = checker.TargetSystem;
             _auditStartTime = AmbientClock.UtcNow;
             _relativeDetailLevel = 1;

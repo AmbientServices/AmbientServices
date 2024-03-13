@@ -58,8 +58,8 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                StatusCheckerTest checker = new();
-                StatusResultsBuilder test = new(checker, new StatusProperty[] { new StatusProperty("Property1", "Value1"), new StatusProperty("Property2", "Value2") });
+                using StatusCheckerTest checker = new();
+                StatusResultsBuilder test = new(checker, new StatusProperty[] { new("Property1", "Value1"), new("Property2", "Value2") });
                 StatusProperty property = test.FindProperty("Property1");
                 Assert.AreEqual("Value1", property?.Value);
             }

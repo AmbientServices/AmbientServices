@@ -320,11 +320,11 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AmbientCancellationTokenSource noTimeoutSource = new();
-                AmbientCancellationTokenSource timeoutSource1 = new(100);
-                AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(100));
-                AmbientCancellationTokenSource timeoutSource3 = new();
-                AmbientCancellationTokenSource timeoutSource4 = new();
+                using AmbientCancellationTokenSource noTimeoutSource = new();
+                using AmbientCancellationTokenSource timeoutSource1 = new(100);
+                using AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(100));
+                using AmbientCancellationTokenSource timeoutSource3 = new();
+                using AmbientCancellationTokenSource timeoutSource4 = new();
                 timeoutSource3.CancelAfter(100);
                 timeoutSource4.CancelAfter(TimeSpan.FromMilliseconds(100));
                 await AmbientClock.TaskDelay(TimeSpan.FromMilliseconds(500));
@@ -346,10 +346,10 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
 #pragma warning disable CS0618 
-                CancellationTokenSource systemSource = new();
-                AmbientCancellationTokenSource noTimeoutSource = AmbientClock.CreateCancellationTokenSource();
-                AmbientCancellationTokenSource timeoutSource1 = AmbientClock.CreateCancellationTokenSource(systemSource);
-                AmbientCancellationTokenSource timeoutSource2 = AmbientClock.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100));
+                using CancellationTokenSource systemSource = new();
+                using AmbientCancellationTokenSource noTimeoutSource = AmbientClock.CreateCancellationTokenSource();
+                using AmbientCancellationTokenSource timeoutSource1 = AmbientClock.CreateCancellationTokenSource(systemSource);
+                using AmbientCancellationTokenSource timeoutSource2 = AmbientClock.CreateCancellationTokenSource(TimeSpan.FromMilliseconds(100));
 #pragma warning restore CS0618 
                 await AmbientClock.TaskDelay(TimeSpan.FromMilliseconds(500));
                 Assert.IsFalse(noTimeoutSource.IsCancellationRequested);
@@ -368,7 +368,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AmbientCancellationTokenSource timeoutSource = new(100);
+                using AmbientCancellationTokenSource timeoutSource = new(100);
                 Assert.IsFalse(timeoutSource.IsCancellationRequested);
                 await AmbientClock.TaskDelay(50);
                 Assert.IsFalse(timeoutSource.IsCancellationRequested);
@@ -390,11 +390,11 @@ namespace AmbientServices.Test
              for (int attempt = 0; attempt < 10; ++attempt)
             {
                 firstFailure = -1;
-                AmbientCancellationTokenSource noTimeoutSource = new();
-                AmbientCancellationTokenSource timeoutSource1 = new(100);
-                AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(100));
-                AmbientCancellationTokenSource timeoutSource3 = new();
-                AmbientCancellationTokenSource timeoutSource4 = new();
+                using AmbientCancellationTokenSource noTimeoutSource = new();
+                using AmbientCancellationTokenSource timeoutSource1 = new(100);
+                using AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(100));
+                using AmbientCancellationTokenSource timeoutSource3 = new();
+                using AmbientCancellationTokenSource timeoutSource4 = new();
                 timeoutSource3.CancelAfter(100);
                 timeoutSource4.CancelAfter(TimeSpan.FromMilliseconds(100));
                 await Task.Delay(TimeSpan.FromMilliseconds(500));
@@ -440,11 +440,11 @@ namespace AmbientServices.Test
         public async Task PausedCancellationTokenSource()
         {
             using IDisposable dispose = AmbientClock.Pause();
-            AmbientCancellationTokenSource noTimeoutSource = new();
+            using AmbientCancellationTokenSource noTimeoutSource = new();
             GC.Collect();
-            AmbientCancellationTokenSource timeoutSource1 = new(TimeSpan.FromMilliseconds(103));
+            using AmbientCancellationTokenSource timeoutSource1 = new(TimeSpan.FromMilliseconds(103));
             GC.Collect();
-            AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(1151));
+            using AmbientCancellationTokenSource timeoutSource2 = new(TimeSpan.FromMilliseconds(1151));
             GC.Collect();
             await Task.Delay(250);
             GC.Collect();
@@ -714,7 +714,7 @@ namespace AmbientServices.Test
             int disposed = 0;
             using (AmbientEventTimer timer = new(null))
             {
-                SemaphoreSlim ss = new(0);
+                using SemaphoreSlim ss = new(0);
                 Assert.IsTrue(timer.AutoReset);
                 Assert.IsFalse(timer.Enabled);
                 timer.AutoReset = false;
@@ -741,7 +741,7 @@ namespace AmbientServices.Test
             int disposed = 0;
             using (AmbientEventTimer timer = new(null))
             {
-                SemaphoreSlim ss = new(0);
+                using SemaphoreSlim ss = new(0);
                 Assert.IsFalse(timer.Enabled);
                 timer.AutoReset = true;
                 timer.Elapsed += (s, e) => { ++elapsed; ss.Release(); };
@@ -962,15 +962,15 @@ namespace AmbientServices.Test
             void callback(object o) { ++invocations; }
             using (AmbientClock.Pause())
             {
-                ManualResetEvent mre = new(false);
-                AmbientCallbackTimer timer = new(callback);
+                using ManualResetEvent mre = new(false);
+                using AmbientCallbackTimer timer = new(callback);
                 timer.Dispose();
                 Assert.IsFalse(timer.Dispose(mre));
 
-                mre = new ManualResetEvent(false);
-                timer = new AmbientCallbackTimer(callback, null, 100, 100);
-                Assert.IsTrue(timer.Dispose(mre));
-                Assert.IsTrue(mre.WaitOne(0));
+                using ManualResetEvent mre2 = new(false);
+                using AmbientCallbackTimer timer2 = new(callback, null, 100, 100);
+                Assert.IsTrue(timer2.Dispose(mre2));
+                Assert.IsTrue(mre2.WaitOne(0));
             }
         }
 #if NET5_0_OR_GREATER
@@ -1412,15 +1412,15 @@ namespace AmbientServices.Test
                 {
                     int invocations = 0;
                     void callback(object o) { ++invocations; }
-                    ManualResetEvent mre = new(false);
-                    AmbientCallbackTimer timer = new(callback);
+                    using ManualResetEvent mre = new(false);
+                    using AmbientCallbackTimer timer = new(callback);
                     timer.Dispose();
                     Assert.IsFalse(timer.Dispose(mre));
 
-                    mre = new ManualResetEvent(false);
-                    timer = new AmbientCallbackTimer(callback, null, 100, 100);
-                    Assert.IsTrue(timer.Dispose(mre));
-                    Assert.IsTrue(mre.WaitOne(0));
+                    using ManualResetEvent mre2 = new(false);
+                    using AmbientCallbackTimer timer2 = new(callback, null, 100, 100);
+                    Assert.IsTrue(timer2.Dispose(mre2));
+                    Assert.IsTrue(mre2.WaitOne(0));
                     // if we get here, we succeeded
                     break;
                 }
@@ -1473,7 +1473,7 @@ namespace AmbientServices.Test
                 for (int attempt = 0; attempt < 5; ++attempt)
                 {
                     errorInfo.Clear();
-                    AutoResetEvent are = new(false);
+                    using AutoResetEvent are = new(false);
                     int signaledInvocations = 0;
                     int timedOutInvocations = 0;
                     WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
@@ -1507,7 +1507,7 @@ namespace AmbientServices.Test
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                     if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting and 1000ms!");
                     if (2 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 2 after resetting and setting and 1000ms!");
-                    ManualResetEvent mre = new(false);
+                    using ManualResetEvent mre = new(false);
                     Assert.IsTrue(registered.Unregister(mre));
                     Assert.IsFalse(registered.Unregister(mre));
                     if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
@@ -1515,17 +1515,17 @@ namespace AmbientServices.Test
                     AmbientRegisteredWaitHandle wh = new(false, mre, (s, b) => { }, null, 10000, true);
                     wh.Unregister(mre);
 
-                    are = new AutoResetEvent(false);
+                    using AutoResetEvent are2 = new AutoResetEvent(false);
                     signaledInvocations = 0;
                     timedOutInvocations = 0;
                     callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
-                    registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are, callback, null, Timeout.Infinite, false);
+                    registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are2, callback, null, Timeout.Infinite, false);
                     if (0 != signaledInvocations) errorInfo.AppendLine($"Part 2: signaledInvocations is {signaledInvocations} but should be 0 after no time!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"Part 2: timedOutInvocations is {timedOutInvocations} but should be 0 after no time!");
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(10_000_000));
                     if (0 != signaledInvocations) errorInfo.AppendLine($"Part 2: signaledInvocations is {signaledInvocations} but should be 0 after 10s!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"Part 2: timedOutInvocations is {timedOutInvocations} but should be 0 after 10s!");
-                    are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                    are2.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
                     Thread.Sleep(100);
                     Thread.Sleep(100);
                     Thread.Sleep(100);
@@ -1533,8 +1533,8 @@ namespace AmbientServices.Test
                     Thread.Sleep(100);
                     if (1 != signaledInvocations) errorInfo.AppendLine($"Part 2: signaledInvocations is {signaledInvocations} but should be 1 after 10s and Set!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"Part 2: timedOutInvocations is {timedOutInvocations} but should be 0 after 10s and Set!");
-                    are.Reset();    // now that we've been signaled, we can reset the event
-                    are.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
+                    are2.Reset();    // now that we've been signaled, we can reset the event
+                    are2.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
                     Thread.Sleep(100);
                     Thread.Sleep(100);
                     Thread.Sleep(100);
@@ -1547,18 +1547,18 @@ namespace AmbientServices.Test
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"Part 2: timedOutInvocations is {timedOutInvocations} but should be 0 after 10s,Set,Reset,Set, and 10s!");
                     Assert.IsTrue(registered.Unregister(null));
 
-                    are = new(false);
+                    using AutoResetEvent are3 = new(false);
                     signaledInvocations = 0;
                     timedOutInvocations = 0;
                     callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
-                    registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are, callback, null, (uint)1000, false);
+                    registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are3, callback, null, (uint)1000, false);
                     if (0 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 0 when no time has passed!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 0 when no time has passed!");
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(1000));
                     if (0 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 0 when 1000ms has passed!");
                     if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 when 1000ms has passed!");
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
-                    are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                    are3.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
                     Thread.Sleep(100);
                     Thread.Sleep(100);
                     Thread.Sleep(100);
@@ -1566,8 +1566,8 @@ namespace AmbientServices.Test
                     Thread.Sleep(100);
                     if (1 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 1 when 1500ms has passed!");
                     if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 when 1500ms has passed!");
-                    are.Reset();    // now that we've been signaled, we can reset the event
-                    are.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
+                    are3.Reset();    // now that we've been signaled, we can reset the event
+                    are3.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
                     Thread.Sleep(100);
                     Thread.Sleep(100);
                     Thread.Sleep(100);
@@ -1581,23 +1581,23 @@ namespace AmbientServices.Test
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                     if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting and 1000ms!");
                     if (2 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 2 after resetting and setting and 1000ms!");
-                    mre = new(false);
-                    Assert.IsTrue(registered.Unregister(mre));
-                    Assert.IsFalse(registered.Unregister(mre));
-                    if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
+                    using ManualResetEvent mre3 = new(false);
+                    Assert.IsTrue(registered.Unregister(mre3));
+                    Assert.IsFalse(registered.Unregister(mre3));
+                    if (!mre3.WaitOne(0)) errorInfo.AppendLine($"mre3.WaitOne(0) should have indicated that a signal was received!!");
 
-                    are = new(false);
+                    using AutoResetEvent are4 = new(false);
                     signaledInvocations = 0;
                     timedOutInvocations = 0;
                     callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
-                    registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are, callback, null, TimeSpan.FromSeconds(1), false);
+                    registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are4, callback, null, TimeSpan.FromSeconds(1), false);
                     if (0 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 0 when no time has passed!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 0 when no time has passed!");
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(1000));
                     if (0 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 0 when 1000ms has passed!");
                     if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 when 1000ms has passed!");
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
-                    are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                    are4.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
                     Thread.Sleep(100);
                     Thread.Sleep(100);
                     Thread.Sleep(100);
@@ -1605,8 +1605,8 @@ namespace AmbientServices.Test
                     Thread.Sleep(100);
                     if (1 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 1 when 1500ms has passed!");
                     if (1 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 1 when 1500ms has passed!");
-                    are.Reset();    // now that we've been signaled, we can reset the event
-                    are.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
+                    are4.Reset();    // now that we've been signaled, we can reset the event
+                    are4.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
                     Thread.Sleep(100);
                     Thread.Sleep(100);
                     Thread.Sleep(100);
@@ -1620,10 +1620,10 @@ namespace AmbientServices.Test
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                     if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after resetting and setting and 1000ms!");
                     if (2 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 2 after resetting and setting and 1000ms!");
-                    mre = new(false);
-                    Assert.IsTrue(registered.Unregister(mre));
-                    Assert.IsFalse(registered.Unregister(mre));
-                    if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
+                    using ManualResetEvent mre4 = new(false);
+                    Assert.IsTrue(registered.Unregister(mre4));
+                    Assert.IsFalse(registered.Unregister(mre4));
+                    if (!mre4.WaitOne(0)) errorInfo.AppendLine($"mre4.WaitOne(0) should have indicated that a signal was received!!");
 
                     // wait a random time to break any kind of resonant failure
                     Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
@@ -1647,7 +1647,7 @@ namespace AmbientServices.Test
                 for (int attempt = 0; attempt < 5; ++attempt)
                 {
                     errorInfo.Clear();
-                    AutoResetEvent are = new(false);
+                    using AutoResetEvent are = new(false);
                     int signaledInvocations = 0;
                     int timedOutInvocations = 0;
                     WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
@@ -1681,23 +1681,23 @@ namespace AmbientServices.Test
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
                     if (2 != signaledInvocations) errorInfo.AppendLine($"signaledInvocations is {signaledInvocations} but should be 2 after 1000ms,Set,Reset,Set,1000ms!");
                     if (2 != timedOutInvocations) errorInfo.AppendLine($"timedOutInvocations is {timedOutInvocations} but should be 2 after 1000ms,Set,Reset,Set,1000ms!");
-                    ManualResetEvent mre = new(false);
+                    using ManualResetEvent mre = new(false);
                     Assert.IsTrue(registered.Unregister(mre));
                     Assert.IsFalse(registered.Unregister(mre));
                     if (!mre.WaitOne(0)) errorInfo.AppendLine($"mre.WaitOne(0) should have indicated that a signal was received!!");
 
 
-                    are = new AutoResetEvent(false);
+                    using AutoResetEvent are2 = new(false);
                     signaledInvocations = 0;
                     timedOutInvocations = 0;
                     callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
-                    registered = AmbientThreadPool.RegisterWaitForSingleObject(are, callback, null, Timeout.Infinite, false);
+                    registered = AmbientThreadPool.RegisterWaitForSingleObject(are2, callback, null, Timeout.Infinite, false);
                     if (0 != signaledInvocations) errorInfo.AppendLine($"Part 2: signaledInvocations is {signaledInvocations} but should be 0 after no time!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"Part 2: timedOutInvocations is {timedOutInvocations} but should be 0 after no time!");
                     AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(10_000_000));
                     if (0 != signaledInvocations) errorInfo.AppendLine($"Part 2: signaledInvocations is {signaledInvocations} but should be 0 after 10s!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"Part 2: timedOutInvocations is {timedOutInvocations} but should be 0 after 10s!");
-                    are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                    are2.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
                     Thread.Sleep(100);
                     Thread.Sleep(100);
                     Thread.Sleep(100);
@@ -1705,8 +1705,8 @@ namespace AmbientServices.Test
                     Thread.Sleep(100);
                     if (1 != signaledInvocations) errorInfo.AppendLine($"Part 2: signaledInvocations is {signaledInvocations} but should be 1 after 10s,Set!");
                     if (0 != timedOutInvocations) errorInfo.AppendLine($"Part 2: timedOutInvocations is {timedOutInvocations} but should be 0 after 10s,Set!");
-                    are.Reset();    // now that we've been signaled, we can reset the event
-                    are.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
+                    are2.Reset();    // now that we've been signaled, we can reset the event
+                    are2.Set();  // this should signal us again even though no virtual time has passed, but we need to sleep again, which will hopefully cause the signaler thread to run
                     Thread.Sleep(100);
                     Thread.Sleep(100);
                     Thread.Sleep(100);
@@ -1735,7 +1735,7 @@ namespace AmbientServices.Test
             {
                 try
                 {
-                    AutoResetEvent are = new(false);
+                    using AutoResetEvent are = new(false);
                     int signaledInvocations = 0;
                     int timedOutInvocations = 0;
                     void callback(object state, bool timedOut) { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; }
@@ -1771,7 +1771,7 @@ namespace AmbientServices.Test
             {
                 try
                 {
-                    AutoResetEvent are = new(false);
+                    using AutoResetEvent are = new(false);
                     int signaledInvocations = 0;
                     int timedOutInvocations = 0;
                     void callback(object state, bool timedOut) { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; }
@@ -1802,7 +1802,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AutoResetEvent are = new(false);
+                using AutoResetEvent are = new(false);
                 int signaledInvocations = 0;
                 int timedOutInvocations = 0;
                 WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
@@ -1837,20 +1837,20 @@ namespace AmbientServices.Test
 
 
                 // now do it again, but have the one-shot be the wait handle signal instead of the timeout
-                are = new AutoResetEvent(false);
+                using AutoResetEvent are2 = new(false);
                 signaledInvocations = 0;
                 timedOutInvocations = 0;
                 callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
-                registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are, callback, null, TimeSpan.FromMilliseconds(1000), true);
+                registered = AmbientThreadPool.UnsafeRegisterWaitForSingleObject(are2, callback, null, TimeSpan.FromMilliseconds(1000), true);
                 Assert.AreEqual(0, signaledInvocations);
                 Assert.AreEqual(0, timedOutInvocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
-                are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                are2.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
                 for (int loops = 0; (signaledInvocations != 1 || timedOutInvocations != 0) && loops < 100; ++loops) Thread.Sleep(100);
                 Assert.AreEqual(1, signaledInvocations);
                 Assert.AreEqual(0, timedOutInvocations);
-                are.Reset();    // now that we've been signaled, we can reset the event
-                are.Set();  // this should *not* signal us again because this was a one-shot
+                are2.Reset();    // now that we've been signaled, we can reset the event
+                are2.Set();  // this should *not* signal us again because this was a one-shot
                 Thread.Sleep(100);
                 Thread.Sleep(100);
                 Thread.Sleep(100);
@@ -1876,7 +1876,7 @@ namespace AmbientServices.Test
         {
             using (AmbientClock.Pause())
             {
-                AutoResetEvent are = new(false);
+                using AutoResetEvent are = new(false);
                 int signaledInvocations = 0;
                 int timedOutInvocations = 0;
                 WaitOrTimerCallback callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
@@ -1911,20 +1911,20 @@ namespace AmbientServices.Test
 
 
                 // now do it again, but have the one-shot be the wait handle signal instead of the timeout
-                are = new AutoResetEvent(false);
+                using AutoResetEvent are2 = new(false);
                 signaledInvocations = 0;
                 timedOutInvocations = 0;
                 callback = (state, timedOut) => { if (timedOut) ++timedOutInvocations; else ++signaledInvocations; };
-                registered = AmbientThreadPool.RegisterWaitForSingleObject(are, callback, null, TimeSpan.FromMilliseconds(1000), true);
+                registered = AmbientThreadPool.RegisterWaitForSingleObject(are2, callback, null, TimeSpan.FromMilliseconds(1000), true);
                 Assert.AreEqual(0, signaledInvocations);
                 Assert.AreEqual(0, timedOutInvocations);
                 AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(500));
-                are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
+                are2.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
                 for (int loops = 0; signaledInvocations != 1 && loops < 100; ++loops) Thread.Sleep(100);
                 Assert.IsTrue(signaledInvocations >= 0 && signaledInvocations <= 1, signaledInvocations.ToString());
                 Assert.AreEqual(0, timedOutInvocations);
-                are.Reset();    // now that we've been signaled, we can reset the event
-                are.Set();  // this should *not* signal us again because this was a one-shot
+                are2.Reset();    // now that we've been signaled, we can reset the event
+                are2.Set();  // this should *not* signal us again because this was a one-shot
                 Thread.Sleep(100);
                 Thread.Sleep(100);
                 Thread.Sleep(100);

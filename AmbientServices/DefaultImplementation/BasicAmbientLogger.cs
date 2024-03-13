@@ -284,7 +284,11 @@ namespace AmbientServices
         /// <param name="line">The string to put into the log.</param>
         public void BufferLine(string line)
         {
+#if NET7_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(_disposedValue, this);
+#else
             if (_disposedValue) throw new ObjectDisposedException(_baselineFilename);
+#endif
             _queue.Enqueue(line);
         }
         /// <summary>
@@ -293,7 +297,11 @@ namespace AmbientServices
         /// <param name="newSuffix">The new filename suffix.</param>
         public void BufferFileRotation(string newSuffix)
         {
+#if NET7_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(_disposedValue, this);
+#else
             if (_disposedValue) throw new ObjectDisposedException(_baselineFilename);
+#endif
             _queue.Enqueue(_SwitchFilesPrefix + newSuffix);
         }
         /// <summary>
@@ -306,7 +314,11 @@ namespace AmbientServices
         }
         private async ValueTask FlushInternal(CancellationToken cancel = default)
         {
+#if NET7_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(_disposedValue, this);
+#else
             if (_disposedValue) throw new ObjectDisposedException(_baselineFilename);
+#endif
             // queue up a special message so we know when we have processed up to the current spot in the queue
             _queue.Enqueue(_FlushString);
             try
