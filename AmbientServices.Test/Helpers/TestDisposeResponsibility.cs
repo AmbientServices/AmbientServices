@@ -1,7 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Drawing.Text;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AmbientServices.Test.Helpers;
 
@@ -9,7 +11,7 @@ namespace AmbientServices.Test.Helpers;
 public class TestDisposeResponsibility
 {
     [TestMethod]
-    public void OwnershipTransfer()
+    public async Task OwnershipTransfer()
     {
         {
             using (DisposeResponsibility<Stream> owner = new(new MemoryStream())) { }
@@ -34,7 +36,12 @@ public class TestDisposeResponsibility
             Assert.IsFalse(secondOwner.ContainsDisposable);
             Assert.IsFalse(thirdOwner.ContainsDisposable);
             Assert.IsTrue(fourthOwner.ContainsDisposable);
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            await using DisposeResponsibility<MemoryStream> fifthOwner = new();
+#else
             using DisposeResponsibility<MemoryStream> fifthOwner = new();
+            await Task.Yield();
+#endif
             Assert.ThrowsException<ObjectDisposedException>(() => fifthOwner.Contained);
             Assert.AreEqual(1, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
             fifthOwner.AssumeResponsibility(new());
@@ -47,6 +54,14 @@ public class TestDisposeResponsibility
             Assert.IsNotNull(fifthOwner.NullableContained);
             Assert.ThrowsException<ArgumentNullException>(() => fifthOwner.TransferResponsibilityFrom(null!));
             Assert.IsNotNull(fifthOwner.ToString());
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+            await using DisposeResponsibility<MemoryStream> emptyOwner1 = new();
+            _ = emptyOwner1.ToString();
+#pragma warning disable CA2000
+            await using DisposeResponsibility<Derived> emptyOwner2 = new(new Derived());
+            _ = emptyOwner2.ToString();
+#pragma warning restore CA2000
+#endif
         }
         {
 #pragma warning disable CA2000
@@ -73,6 +88,16 @@ public class TestDisposeResponsibility
             Assert.IsFalse(thirdOwner.ContainsDisposable);
             Assert.IsTrue(fourthOwner.ContainsDisposable);
         }
+        {
+            using DisposeResponsibility<Derived> disposeResponsibility = Subfunction();
+        }
+    }
+    private DisposeResponsibility<Derived> Subfunction()
+    {
+#pragma warning disable CA2000
+        using DisposeResponsibility<Derived> owner = new(new Derived());
+#pragma warning restore CA2000
+        return owner.TransferResponsibilityToCaller();
     }
 }
 

@@ -148,20 +148,21 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        if (Contained is IAsyncDisposable ad)
+        if (_contained is IAsyncDisposable ad)
         {
-            if (_contained is not null)
-            {
-                PendingDispose.OnDispose(_stackOnCreation);
-                await ad.DisposeAsync().ConfigureAwait(false);
-                GC.SuppressFinalize(this);
-                _contained = null;
-            } // else no need to dispse synchronously or asynchronously
+            PendingDispose.OnDispose(_stackOnCreation);
+            await ad.DisposeAsync().ConfigureAwait(false);
+            GC.SuppressFinalize(this);
+            _contained = null;
         }
-        else
+        else if (_contained is not null)
         {
-            Contained.Dispose();
+            PendingDispose.OnDispose(_stackOnCreation);
+            _contained.Dispose();
+            GC.SuppressFinalize(this);
+            _contained = null;
         }
+        // else no need to dispse synchronously or asynchronously
     }
 #endif
     /// <summary>

@@ -171,9 +171,35 @@ public static class AssemblyLoggingExtensions
         Logger.Log("Assembly " + assembly.FullName + " scanned", "Scan", AmbientLogLevel.Trace);
     }
 }
+/// <summary>
+/// A static class that does processing that logs to a rotating file instead of the default System.Diagnostics trace log.
+/// </summary>
+public static class MyProgram
+{
+    private static readonly AmbientLogger<Assembly> Logger = new();
+    /// <summary>
+    /// Does the main processing.
+    /// </summary>
+    public static void Process()
+    {
+        using BasicAmbientLogger bl = new();
+        using (new ScopedLocalServiceOverride<IAmbientLogger>(bl))
+        {
+            try
+            {
+                Logger.Log("Starting processing...", "Process", AmbientLogLevel.Debug);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, "Process", AmbientLogLevel.Critical);
+            }
+        }
+    }
+}
 ```
 ### Default Implementation
-The default implementation asynchronously buffers the log messages and flushes them in batches out to hourly rotating log files located in the system temp folder in files prefixed with "BasicAmbientLogger" and suffixed with the hour and a ".log" extension.
+The default implementation logs messages to the `System.Diagnostics.Trace` system,
+asynchronously buffers the log messages and flushes them in batches out to hourly rotating log files located in the system temp folder in files prefixed with "BasicAmbientLogger" and suffixed with the hour and a ".log" extension.
 An alternate implementation, `AmbientTraceLogger` asynchronously logs messages to a performance-enhanced wrapper on the system debug trace output.
 
 ## AmbientProgress

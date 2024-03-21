@@ -9,10 +9,8 @@ namespace AmbientServices
     /// Turn the logger off for maximum performance.
     /// </summary>
     [DefaultAmbientService]
-    public class DefaultAmbientLogger : IAmbientLogger, IDisposable
+    public class DefaultAmbientLogger : IAmbientLogger
     {
-        private bool _disposedValue;                    // too small to need interlocking
-
         /// <summary>
         /// Constructs a default ambient file logger that writes logs to the system trace log.
         /// </summary>
@@ -34,40 +32,6 @@ namespace AmbientServices
         public ValueTask Flush(CancellationToken cancel = default)
         {
             return default(ValueTask);
-        }
-        /// <summary>
-        /// Disposes of this instance.
-        /// </summary>
-        /// <param name="disposing">Whether or not the instance is being disposed (as opposed to finalized).</param>
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!_disposedValue)
-            {
-                _disposedValue = true;
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects)
-                }
-
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-            }
-        }
-
-        // // TODO: override finalizer only if 'Dispose(bool disposing)' has code to free unmanaged resources
-        // ~AmbientFileLogger()
-        // {
-        //     // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-        //     Dispose(disposing: false);
-        // }
-        /// <summary>
-        /// Disposes of the instance.
-        /// </summary>
-        public void Dispose()
-        {
-            // Do not change or override this method. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
         }
     }
 }
