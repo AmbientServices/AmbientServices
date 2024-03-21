@@ -13,7 +13,6 @@ namespace AmbientServices
     /// A basic implementation of <see cref="IAmbientLogger"/> that writes log messages to a rotating set of files.
     /// Turn the logger off for maximum performance.
     /// </summary>
-    [DefaultAmbientService]
     public class BasicAmbientLogger : IAmbientLogger, IDisposable
     {
         private readonly string _filePrefix;

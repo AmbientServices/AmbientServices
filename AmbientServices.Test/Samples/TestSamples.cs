@@ -252,7 +252,7 @@ namespace AmbientServices.Test.Samples
                 // this shows that AssemblyExtensions.GetLoadableTypes sometimes fails to return any types, at least on the samples assembly
                 // and that in AssemblyExtensions.GetLoadableTypes, the line before:
                 // types = assembly.GetTypes();
-                // runs, but lines after that do not, not do any catch blocks or finally blocks, and yet the function returns an empty array somehow
+                // runs, but lines after that do not, nor do any catch blocks or finally blocks, and yet the function returns an empty array somehow
                 // add the following to help diagnose the issue: bool testSamples = (assembly.GetName().Name == "AmbientServices.Samples");
                 //Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{DefaultAmbientServices.TestSamplesLoaded},{DefaultAmbientServices.TestSamplesDependent},{DefaultAmbientServices.TestSamplesTypes},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoading},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedOtherException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedFinally},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedTypes},{new StackTrace()}");
                 Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{typeof(BasicAmbientCallStack).Assembly.GetLoadableTypes().Length},{new StackTrace()}");
