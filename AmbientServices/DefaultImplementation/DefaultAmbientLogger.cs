@@ -23,7 +23,7 @@ namespace AmbientServices
         /// <param name="message">The message to log.</param>
         public void Log(string message)
         {
-            System.Diagnostics.Trace.Write(message);
+            System.Diagnostics.Trace.WriteLine(message);
         }
         /// <summary>
         /// Flushes everything that has been previously logged to the appropriate file on disk.
