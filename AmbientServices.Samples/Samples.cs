@@ -242,13 +242,13 @@ public static class MyProgram
 class DownloadAndUnzip
 {
     private readonly string _targetFolder;
-    private readonly string _downlaodUrl;
+    private readonly string _downloadUrl;
     private readonly MemoryStream _package;
 
     public DownloadAndUnzip(string targetFolder, string downloadUrl)
     {
         _targetFolder = targetFolder;
-        _downlaodUrl = downloadUrl;
+        _downloadUrl = downloadUrl;
         _package = new MemoryStream();
     }
 
@@ -270,7 +270,7 @@ class DownloadAndUnzip
         IAmbientProgress? progress = AmbientProgressService.Progress;
         CancellationToken cancel = progress?.CancellationToken ?? default;
         using HttpClient client = new();
-        using HttpResponseMessage response = await client.GetAsync(_downlaodUrl);
+        using HttpResponseMessage response = await client.GetAsync(_downloadUrl);
         long totalBytesRead = 0;
         int bytesRead;
         byte[] buffer = new byte[8192];

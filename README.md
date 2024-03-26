@@ -411,7 +411,7 @@ This is especially useful for things like logging.
 Errors that occur before the location of shared logs is determined (that location might be stored in a central database) can be stored in the event log or local file system as desired.  
 Once the centralized settings are hooked up, logging can automatically switch to a remote log store indicated in the centralized settings store.  
 No centralized (and often complicated) "startup" code is required for this kind of transition, just a subscription to the change event for a log configuration setting.
-Most code can (and usuall should) use the default ambient settings set, which will automatically transition from basic settings sets implementations to more complicated ones as initialization progresses and more complicated implementations become available for use.
+Most code can (and usually should) use the default ambient settings set, which will automatically transition from basic settings sets implementations to more complicated ones as initialization progresses and more complicated implementations become available for use.
 
 Settings by their very nature must be considered inputs for the purposes of functional programming.  
 They are by definition not passed on the stack (otherwise, they're just insanely-overpopulated collections of parameters someone decided to call "settings").
