@@ -40,6 +40,8 @@ namespace AmbientServices
 #pragma warning restore IDE0052 // Remove unread private members
         private CancellationTokenSource? _tokenSource;      // note that if this is not nullable, you can't tell if the token source has been disposed, which causes all sorts of problems
         private AmbientEventTimer? _ambientTimer;
+        private int _cancelAfterChecks;
+        private int _checks;
 
         /// <summary>
         /// Constructs an ambient cancellation token source using a system <see cref="CancellationTokenSource"/>.
@@ -101,7 +103,18 @@ namespace AmbientServices
         /// <summary>
         /// Gets whether or not a cancellation has been requested.
         /// </summary>
-        public bool IsCancellationRequested => _tokenSource?.IsCancellationRequested ?? true;
+        public bool IsCancellationRequested
+        {
+            get
+            {
+                if (_cancelAfterChecks != 0 && Interlocked.Increment(ref _checks) > _cancelAfterChecks) _tokenSource?.Cancel(false);
+                return _tokenSource?.IsCancellationRequested ?? true;
+            }
+        }
+        /// <summary>
+        /// Gets the number of checks that have been made towards cancellation (see <see cref="CancelAfterChecks(int)"/>.
+        /// </summary>
+        public int Checks => _checks;
         /// <summary>
         /// Marks the associated token as canceled.
         /// </summary>
@@ -115,7 +128,7 @@ namespace AmbientServices
         /// Schedules a cancellation after the sepecified time.
         /// </summary>
         /// <param name="millisecondsDelay">The number of milliseconds to delay before cancelling.</param>
-        public void CancelAfter(int millisecondsDelay) 
+        public void CancelAfter(int millisecondsDelay)
         {
             if (_ambientTimer != null) _ambientTimer.Dispose();
             ScheduleCancellation(TimeSpan.FromMilliseconds(millisecondsDelay));
@@ -128,8 +141,21 @@ namespace AmbientServices
         {
             CancelAfter((int)delay.TotalMilliseconds);
         }
+        /// <summary>
+        /// Schedules a cancellation after a certain number of checks to see if the token was canceled.
+        /// This is useful mainly for aborting processes part way through in order to test error handling and recovery.
+        /// Leaves any time-delayed cancellation in place.  If the underlying token source has been canceled, a new not-yet-canceled one will be created.
+        /// </summary>
+        /// <param name="numberOfChecks">The number of checks to cancel after.</param>
+        public void CancelAfterChecks(int numberOfChecks)
+        {
+            // already canceled?  create a new underlying cancellation source
+            if (_tokenSource?.IsCancellationRequested == true) _tokenSource = new();
+            Interlocked.Exchange(ref _checks, 0);
+            Interlocked.Exchange(ref _cancelAfterChecks, numberOfChecks);
+        }
 
-#region IDisposable Support
+        #region IDisposable Support
         /// <summary>
         /// Implementation of the standard dispose pattern.
         /// </summary>

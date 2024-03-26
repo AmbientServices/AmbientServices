@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -108,7 +109,7 @@ namespace AmbientServices.Test
             }
             Assert.AreEqual(progress, AmbientProgressService.GlobalProgress);
             Assert.AreEqual(0.10f, progress?.PortionComplete);
-            Assert.AreEqual("prefix-subitem", progress?.ItemCurrentlyBeingProcessed);
+            Assert.IsTrue(progress?.ItemCurrentlyBeingProcessed.StartsWith("prefix-"));
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -434,7 +435,7 @@ namespace AmbientServices.Test
         /// Performs tests on <see cref="IAmbientProgressService"/>.
         /// </summary>
         [TestMethod]
-        public void Cancellation()
+        public void CancellationTimed()
         {
             IAmbientProgress progress = AmbientProgressService.Progress;
             progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
@@ -448,6 +449,100 @@ namespace AmbientServices.Test
                 Assert.IsTrue(tokenSource?.IsCancellationRequested ?? false);
                 Assert.ThrowsException<OperationCanceledException>(() => AmbientProgressService.Progress?.ThrowIfCancelled());
             }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
+        /// </summary>
+        [TestMethod]
+        public void CancellationChecks()
+        {
+            //
+            // NOTE: be careful setting breakpoints here, as the debugger will likely evaluate IsCancellationRequested, throwing off when the cancellation occurs
+            //
+            IAmbientProgress progress = AmbientProgressService.Progress;
+            progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
+            AmbientCancellationTokenSource tokenSource = progress?.CancellationTokenSource;
+            tokenSource.CancelAfterChecks(4);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.AreEqual(4, tokenSource.Checks);
+            Assert.IsTrue(tokenSource.IsCancellationRequested);
+            Assert.IsTrue(tokenSource.IsCancellationRequested);
+            Assert.IsTrue(tokenSource.IsCancellationRequested);
+            Assert.AreEqual(7, tokenSource.Checks);
+            tokenSource.CancelAfterChecks(2);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.IsTrue(tokenSource.IsCancellationRequested);
+            progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
+            tokenSource = progress?.CancellationTokenSource;
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+            Assert.IsFalse(tokenSource.IsCancellationRequested);
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
+        /// </summary>
+        [TestMethod]
+        public void CancellationChecksUsingProgressUpdates()
+        {
+            //
+            // NOTE: be careful setting breakpoints here, as the debugger will likely evaluate IsCancellationRequested, throwing off when the cancellation occurs
+            //
+            IAmbientProgress progress = AmbientProgressService.Progress;
+            progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
+            AmbientCancellationTokenSource tokenSource = progress?.CancellationTokenSource;
+            tokenSource.CancelAfterChecks(4);
+            progress.Update(0.01f, "");
+            progress.Update(0.01f, "");
+            progress.Update(0.01f, "");
+            progress.Update(0.01f, "");
+            Assert.AreEqual(4, tokenSource.Checks);
+            Assert.ThrowsException<OperationCanceledException>(() => progress.Update(0.01f, ""));
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientProgressService"/>.
+        /// </summary>
+        [TestMethod]
+        public void CancellationChecksUsingSubProgressUpdates()
+        {
+            //
+            // NOTE: be careful setting breakpoints here, as the debugger will likely evaluate IsCancellationRequested, throwing off when the cancellation occurs
+            //
+            IAmbientProgress progress = AmbientProgressService.Progress;
+            progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
+            AmbientCancellationTokenSource tokenSource = progress?.CancellationTokenSource;
+            tokenSource.CancelAfterChecks(3);
+            using (progress?.TrackPart(0.0f, 1.0f, inheritCancellationTokenSource: true))
+            {
+                Assert.AreEqual(1, tokenSource.Checks);
+                SubProgressFunc(true);
+                Assert.AreEqual(4, tokenSource.Checks);
+            }
+            Assert.AreEqual(5, tokenSource.Checks);
+            tokenSource.CancelAfterChecks(0);
+            using (progress?.TrackPart(0.0f, 1.0f, inheritCancellationTokenSource: false))
+            {
+                AmbientCancellationTokenSource  innerTokenSource = progress?.CancellationTokenSource;
+                innerTokenSource.CancelAfterChecks(3);
+                Assert.AreEqual(0, innerTokenSource.Checks);
+                SubProgressFunc(false);
+                Assert.AreEqual(3, innerTokenSource.Checks);
+            }
+            Assert.AreEqual(4, tokenSource.Checks);
+        }
+        private void SubProgressFunc(bool expectFail)
+        {
+            IAmbientProgress progress = AmbientProgressService.Progress;
+            progress.Update(0.01f, "");
+            progress.Update(0.01f, "");
+            if (expectFail)
+                Assert.ThrowsException<OperationCanceledException>(() => progress.Update(0.01f, ""));
+            else
+                progress.Update(0.01f, "");
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientProgressService"/>.
