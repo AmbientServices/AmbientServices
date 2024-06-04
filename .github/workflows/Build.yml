@@ -60,13 +60,14 @@ jobs:
         customSettings: '' # Optional custom settings (separated by semicolon). See: https://github.com/danielpalme/ReportGenerator/wiki/Settings.
         toolpath: 'reportgeneratortool' # Default directory for installing the dotnet tool.
     - name: Upload coverage report artifact
-      uses: actions/upload-artifact@v3	# Not used yet
+      uses: actions/upload-artifact@v4	# Not used yet
       with:
         name: CoverageReport # Artifact name        
         path: coveragereport # Directory containing files to upload
+    # we tested NET8.0 above *with coverage*, now test the other frameworks without coverage
     - name: Test .NET 7.0
       run: dotnet test -c Release -f net7.0 --blame-hang-timeout 120s
-    - name: Test .NET 8.0
-      run: dotnet test -c Release -f net8.0 --blame-hang-timeout 120s
+    - name: Test .NET 6.0
+      run: dotnet test -c Release -f net6.0 --blame-hang-timeout 120s
     - name: Publish
       run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.0.8.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
