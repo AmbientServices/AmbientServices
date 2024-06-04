@@ -42,7 +42,7 @@ jobs:
     - name: Test .NET 8 with coverage
       run: dotnet test -c Release -f net8.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
     - name: ReportGenerator
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.1
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.3.6
       with:
         reports: '**/coverage.cobertura.xml' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
         targetdir: 'coveragereport' # REQUIRED # The directory where the generated report should be saved.
@@ -66,7 +66,7 @@ jobs:
         path: coveragereport # Directory containing files to upload
     - name: Test .NET 7.0
       run: dotnet test -c Release -f net7.0 --blame-hang-timeout 120s
-    - name: Test .NET 6.0
-      run: dotnet test -c Release -f net6.0 --blame-hang-timeout 120s
+    - name: Test .NET 8.0
+      run: dotnet test -c Release -f net8.0 --blame-hang-timeout 120s
     - name: Publish
       run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.0.8.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
