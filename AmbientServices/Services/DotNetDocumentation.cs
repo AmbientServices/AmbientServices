@@ -197,7 +197,7 @@ public class DotNetDocumentation
     private static string? GetNodeContents(XPathNavigator nav)
     {
         if (nav == null) return null;
-        string contents = nav.InnerXml.TrimStart('\r', '\n');
+        string contents = nav.InnerXml.Trim();
         return (contents.Trim().Length < 1) ? null : contents;
     }
     //private static string GetPlainTextNodeContents(XPathNavigator nav)
@@ -206,7 +206,6 @@ public class DotNetDocumentation
     //    contents = string.IsNullOrEmpty(contents) ? null : contents.Trim();
     //    return contents;
     //}
-
     /// <summary>
     /// Gets the documentation for the specified <see cref="System.Type"/>.
     /// </summary>
