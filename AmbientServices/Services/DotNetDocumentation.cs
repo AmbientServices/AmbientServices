@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.XPath;
 
@@ -206,6 +207,25 @@ public class DotNetDocumentation
     //    contents = string.IsNullOrEmpty(contents) ? null : contents.Trim();
     //    return contents;
     //}
+
+    private static readonly HashSet<Type> _StandardTypes = new(new Type[] { typeof(void), typeof(Task), typeof(ValueTask), typeof(string), typeof(char), typeof(bool), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(Guid), typeof(DateTime), typeof(DateTimeOffset), typeof(TimeSpan), typeof(Uri)
+#if NET6_0_OR_GREATER
+        , typeof(DateOnly), typeof(TimeOnly)
+#endif
+    });
+    /// <summary>
+    /// Gets an enumeration of standard types (that don't need documenting).
+    /// </summary>
+    public static IEnumerable<Type> StandardTypes => _StandardTypes;
+    /// <summary>
+    /// Gets the type of the specified type, or a proxy type if the type has a JSON proxy type.
+    /// </summary>
+    /// <param name="type">The actual runtime type.</param>
+    /// <returns>The <see cref="Type"/> that was passed in, or a proxy <see cref="Type"/> if there is a custom serializer that renders the specified type as if it where the proxy type.</returns>
+    public static Type GetTypeOrProxy(Type type)
+    {
+        return type.GetCustomAttribute<ProxyTypeAttribute>()?.Type ?? type;
+    }
     /// <summary>
     /// Gets the documentation for the specified <see cref="System.Type"/>.
     /// </summary>
@@ -738,3 +758,24 @@ public class MemberDocumentation
     }
 }
 #endif
+
+/// <summary>
+/// An attribute that causes the API documentation generator to replace the annotated type with the specified type to compensate for custom JSON serializers.
+/// </summary>
+[AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class)]
+public sealed class ProxyTypeAttribute : Attribute
+{
+    private readonly Type _type;
+    /// <summary>
+    /// Constructs a JSON proxy type attribute which overrides one type with another when documenting APIs, to compensate for custom JSON serializers.
+    /// </summary>
+    /// <param name="type">The <see cref="Type"/> to replace the type this attribute is applied to with.</param>
+    public ProxyTypeAttribute(Type type)
+    {
+        _type = type;
+    }
+    /// <summary>
+    /// Gets the <see cref="Type"/> to replace the annotated type with when documenting APIs.
+    /// </summary>
+    public Type Type => _type;
+}
