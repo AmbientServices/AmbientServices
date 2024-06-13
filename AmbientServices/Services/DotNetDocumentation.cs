@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.XPath;
@@ -208,10 +209,16 @@ public class DotNetDocumentation
     //    return contents;
     //}
 
-    private static readonly HashSet<Type> _StandardTypes = new(new Type[] { typeof(void), typeof(Task), typeof(ValueTask), typeof(string), typeof(char), typeof(bool), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(Guid), typeof(DateTime), typeof(DateTimeOffset), typeof(TimeSpan), typeof(Uri)
+    private static readonly HashSet<Type> _StandardTypes = new(new Type[] { 
+        typeof(void), typeof(Task), typeof(ValueTask), 
+        typeof(string), typeof(char), typeof(bool), typeof(byte), typeof(sbyte), 
+        typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), 
+        typeof(float), typeof(double),
+        typeof(Guid), typeof(DateTime), typeof(DateTimeOffset), typeof(TimeSpan), typeof(Uri),
 #if NET6_0_OR_GREATER
-        , typeof(DateOnly), typeof(TimeOnly)
+        typeof(DateOnly), typeof(TimeOnly),
 #endif
+        typeof(WaitHandle), typeof(CancellationToken), typeof(Microsoft.Win32.SafeHandles.SafeWaitHandle)
     });
     /// <summary>
     /// Gets an enumeration of standard types (that don't need documenting).
