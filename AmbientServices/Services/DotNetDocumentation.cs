@@ -786,3 +786,24 @@ public sealed class ProxyTypeAttribute : Attribute
     /// </summary>
     public Type Type => _type;
 }
+
+/// <summary>
+/// An attribute that indicates that another type, even if not explicitly referenced, should be included in the overall types documentation.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+public sealed class IncludeTypeInDocumentationAttribute : Attribute
+{
+    /// <summary>
+    /// Gets the type to add to the documentation.
+    /// </summary>
+    public Type Type { get; }
+
+    /// <summary>
+    /// Constructs an override body type attribute.
+    /// </summary>
+    /// <param name="type">The type to put in the documentation as the body type.</param>
+    public IncludeTypeInDocumentationAttribute(Type type)
+    {
+        Type = type;
+    }
+}
