@@ -790,7 +790,7 @@ public sealed class ProxyTypeAttribute : Attribute
 /// <summary>
 /// An attribute that indicates that another type, even if not explicitly referenced, should be included in the overall types documentation.
 /// </summary>
-[AttributeUsage(AttributeTargets.Module | AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.ReturnValue, AllowMultiple = true)]
+[AttributeUsage(AttributeTargets.Module | AttributeTargets.Struct | AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Enum | AttributeTargets.Method | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.ReturnValue, AllowMultiple = true)]
 public sealed class IncludeTypeInDocumentationAttribute : Attribute
 {
     /// <summary>
