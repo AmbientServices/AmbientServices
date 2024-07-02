@@ -807,3 +807,17 @@ public sealed class IncludeTypeInDocumentationAttribute : Attribute
         Type = type;
     }
 }
+
+/// <summary>
+/// An attribute that indicates that the parameter, property, field, return value, or interface should NOT be included in the overall types documentation.
+/// </summary>
+[AttributeUsage(AttributeTargets.Interface | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.ReturnValue, AllowMultiple = true)]
+public sealed class ExcludeInDocumentationAttribute : Attribute
+{
+    /// <summary>
+    /// Constructs an override body type attribute.
+    /// </summary>
+    public ExcludeInDocumentationAttribute()
+    {
+    }
+}
