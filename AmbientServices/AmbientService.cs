@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Threading;
 
@@ -38,7 +35,11 @@ namespace AmbientServices
         /// </summary>
         /// <typeparam name="T">The type of service that is needed.</typeparam>
         /// <returns>The <see cref="AmbientService{T}"/> instance.  This should never be null.</returns>
-        public static AmbientService<T> GetService<T>() where T : class
+        public static AmbientService<T> GetService<
+#if NETCOREAPP3_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+            T>() where T : class
         {
             return AmbientService<T>.Instance;
         }
@@ -48,7 +49,11 @@ namespace AmbientServices
         /// <typeparam name="T">The type of service that is needed.</typeparam>
         /// <param name="service">[OUT] Receives the ambient service.</param>
         /// <returns>The <see cref="AmbientService{T}"/> instance.  This should never be null.</returns>
-        public static AmbientService<T> GetService<T>(out AmbientService<T> service) where T : class
+        public static AmbientService<T> GetService<
+#if NETCOREAPP3_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+            T>(out AmbientService<T> service) where T : class
         {
             service = AmbientService<T>.Instance;
             return service;
@@ -79,7 +84,11 @@ namespace AmbientServices
     /// Using an implementation where a single AsyncLocal for the local override is checked on every access makes subcontext overrides naturally rollback as the stack is unwound.
     /// </remarks>
     /// <typeparam name="T">The interface for the service.</typeparam>
-    public class AmbientService<T> where T : class
+    public class AmbientService<
+#if NETCOREAPP3_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+        T> where T : class
     {
         private static readonly AmbientService<T> _Instance = new();
         /// <summary>
@@ -213,7 +222,11 @@ namespace AmbientServices
     /// to be undone when the test is complete just in case another test subsequently runs using the same call context.
     /// </summary>
     /// <typeparam name="T">The service interface type.</typeparam>
-    public sealed class ScopedLocalServiceOverride<T> : IDisposable where T : class
+    public sealed class ScopedLocalServiceOverride<
+#if NETCOREAPP3_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+        T> : IDisposable where T : class
     {
         private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
 
@@ -268,7 +281,11 @@ namespace AmbientServices
     /// A generic class used to ensure that only one instance of the default service implementation gets created.
     /// </summary>
     /// <typeparam name="T">The concrete type of the service.</typeparam>
-    internal class DefaultServiceImplementation<T> where T : class
+    internal class DefaultServiceImplementation<
+#if NETCOREAPP3_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+        T> where T : class
     {
         private static readonly T _ImplementationSingleton = CreateInstance();
         private static T CreateInstance()
@@ -283,7 +300,11 @@ namespace AmbientServices
     /// A class that manages a global service reference.
     /// </summary>
     /// <typeparam name="T">The interface type for the service being managed.</typeparam>
-    internal class GlobalServiceReference<T> where T : class
+    internal class GlobalServiceReference<
+#if NETCOREAPP3_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+    T> where T : class
     {
         /// <summary>
         /// A generic object whose instance is used to indicate that the default service implementation has been suppressed.

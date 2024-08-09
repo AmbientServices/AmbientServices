@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -155,7 +156,11 @@ namespace AmbientServices
         /// </summary>
         /// <param name="iface">The <see cref="Type"/> of interface whose implementation is wanted.</param>
         /// <returns>The <see cref="Type"/> that implements that interface, or null if no implementation could be found.</returns>
-        public static Type? TryFind(Type iface)
+        public static Type? TryFind(
+#if NETCOREAPP3_0_OR_GREATER
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+            Type iface)
         {
             if (!iface.IsInterface) throw new ArgumentException("The specified type is not an interface type!", nameof(iface));
             Type? impType;

@@ -80,13 +80,12 @@ namespace AmbientServices
         /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
         public void Log(Func<string> messageLambda, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
         {
-            if (_logger == null) return;
+            if (DynamicLogger == null) return;
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(messageLambda);
 #else
             if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
 #endif
-            if (DynamicLogger == null) return;
             InnerLog(messageLambda(), category, level);
         }
         /// <summary>
@@ -97,13 +96,12 @@ namespace AmbientServices
         /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
         public void Log(Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
         {
-            if (_logger == null) return;
+            if (DynamicLogger == null) return;
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(ex);
 #else
             if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
-            if (DynamicLogger == null) return;
             InnerLog(ex.ToString(), category, level);
         }
         /// <summary>
@@ -115,13 +113,12 @@ namespace AmbientServices
         /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
         public void Log(string message, Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
         {
-            if (_logger == null) return;
+            if (DynamicLogger == null) return;
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(ex);
 #else
             if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
-            if (DynamicLogger == null) return;
             InnerLog(message + Environment.NewLine + ex.ToString(), category, level);
         }
         /// <summary>
@@ -138,13 +135,12 @@ namespace AmbientServices
 #else
             if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
-            if (_logger == null) return;
+            if (DynamicLogger == null) return;
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(messageLambda);
 #else
             if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
 #endif
-            if (DynamicLogger == null) return;
             InnerLog(messageLambda() + Environment.NewLine + ex.ToString(), category, level);
         }
     }
