@@ -12,18 +12,18 @@ using System.Threading.Tasks;
 namespace AmbientServices
 {
     /// <summary>
-    /// A very basic ambient logger that just sends log data to a high-performance asynchronous wrapper on the system debug/trace output.
+    /// A very basic ambient logger that just sends log data to a high-performance asynchronous wrapper on the system console output.
     /// This logger is higher performance than the default one that writes to files, but it also effectively tosses data unless running under a debugger,
     /// so using the file logger by default is better for diagnosing issues that occur before the user is able to switch loggers.
     /// Switch to this logger for better performance, but less persistent log data.
     /// Turn the logger off for maximum performance.
     /// </summary>
-    public class AmbientTraceLogger : IAmbientLogger
+    public class AmbientConsoleLogger : IAmbientLogger
     {
         /// <summary>
-        /// Constructs an ambient trace logger, and implementation of <see cref="IAmbientLogger"/> that outputs log data to the system debug/trace output.
+        /// Constructs an ambient console logger, and implementation of <see cref="IAmbientLogger"/> that outputs log data to the system console output.
         /// </summary>
-        public AmbientTraceLogger()
+        public AmbientConsoleLogger()
         {
         }
         /// <summary>
@@ -35,26 +35,26 @@ namespace AmbientServices
 #endif
         public void Log(string message)
         {
-            TraceBuffer.BufferLine(message);
+            ConsoleBuffer.BufferLine(message);
         }
         /// <summary>
-        /// Asynchronously flushes log entries to the system debug/trace output.
+        /// Asynchronously flushes log entries to the system console output.
         /// </summary>
 #if NET5_0_OR_GREATER
         [UnsupportedOSPlatform("browser")]
 #endif
         public ValueTask Flush(CancellationToken cancel = default)
         {
-            return TraceBuffer.Flush(cancel);
+            return ConsoleBuffer.Flush(cancel);
         }
     }
     /// <summary>
-    /// A class to buffer debug trace messages and display them asynchronously.
+    /// A class to buffer debug console messages and display them asynchronously.
     /// </summary>
 #if NET5_0_OR_GREATER
     [UnsupportedOSPlatform("browser")]
 #endif
-    public static class TraceBuffer
+    public static class ConsoleBuffer
     {
         private static readonly string _FlushString = Guid.NewGuid().ToString();
         private static readonly ConcurrentQueue<string> _Queue = new();
@@ -64,10 +64,10 @@ namespace AmbientServices
 
         private static Thread FlusherThread()
         {
-            // fire up a background thread to flush the trace data
-            Thread thread = new(new ThreadStart(TraceBufferBackgoundFlusher)) {
+            // fire up a background thread to flush the console data
+            Thread thread = new(new ThreadStart(ConsoleBufferBackgoundFlusher)) {
                 IsBackground = true,
-                Name = "TraceBuffer.FlusherThread",
+                Name = "ConsoleBuffer.FlusherThread",
                 Priority = ThreadPriority.BelowNormal,
             };
             thread.Start();
@@ -126,7 +126,7 @@ namespace AmbientServices
             }
         }
         /// <summary>
-        /// Asynchronously flushes any queued trace lines.
+        /// Asynchronously flushes any queued console lines.
         /// </summary>
         /// <param name="cancel">A <see cref="CancellationToken"/> that the caller can use to interrupt the operation before completion.</param>
         public static async ValueTask Flush(CancellationToken cancel = default)
@@ -155,20 +155,20 @@ namespace AmbientServices
                 return ret.ToString();
             }
         }
-        private static void TraceBufferBackgoundFlusher()
+        private static void ConsoleBufferBackgoundFlusher()
         {
             // loop forever!
             while (true)
             {
                 try
                 {
-                    StringBuilder traceData = new();
-                    // get up to 10 lines of trace data
+                    StringBuilder consoleData = new();
+                    // get up to 10 lines of console data
                     for (int line = 0; line < 10; ++line)
                     {
                         // get the oldest item on the queue
                         string? s;
-                        // is there a string to trace?
+                        // is there a string to console?
                         if (_Queue.TryDequeue(out s))
                         {
                             if (s == _FlushString)
@@ -178,8 +178,8 @@ namespace AmbientServices
                             }
                             else
                             {
-                                // add this to the trace data
-                                traceData.Append(s);
+                                // add this to the console data
+                                consoleData.Append(s);
                             }
                             // is there more data? (don't wait if there isn't)
                             if (_Semaphore.Wait(0))
@@ -192,11 +192,11 @@ namespace AmbientServices
                         // else nothing left in the queue
                         else break;
                     }
-                    // is there a string to trace?
-                    if (traceData.Length > 0)
+                    // is there a string to console?
+                    if (consoleData.Length > 0)
                     {
-                        // trace out this string
-                        Trace.Write(traceData.ToString());
+                        // console out this string
+                        Console.Write(consoleData.ToString());
                     }
                     else
                     {
@@ -206,8 +206,8 @@ namespace AmbientServices
                 }
                 catch (Exception ex)
                 {
-                    // trace out this string
-                    Trace.Write(ex.ToString());
+                    // console out this string
+                    Console.Write(ex.ToString());
                 }
             }
         }
