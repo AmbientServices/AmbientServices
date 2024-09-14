@@ -20,6 +20,12 @@ namespace AmbientServices
     /// </summary>
     public class AmbientTraceLogger : IAmbientLogger
     {
+        private static readonly AmbientTraceLogger _Instance = new();
+        /// <summary>
+        /// Gets the default instance of the ambient debut/trace logger.
+        /// </summary>
+        public static AmbientTraceLogger Instance => _Instance;
+
         /// <summary>
         /// Constructs an ambient trace logger, and implementation of <see cref="IAmbientLogger"/> that outputs log data to the system debug/trace output.
         /// </summary>

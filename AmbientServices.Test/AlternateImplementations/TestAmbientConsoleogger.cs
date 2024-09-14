@@ -8,14 +8,14 @@ namespace AmbientServices.Test
     /// Summary description for StatusTest.
     /// </summary>
     [TestClass]
-    public class TestAmbientTraceLogger
+    public class TestAmbientConsoleLogger
     {
         [TestMethod]
-        public async Task AmbientTraceLoggerBasic()
+        public async Task AmbientConsoleLoggerBasic()
         {
             using (AmbientClock.Pause())
             {
-                AmbientTraceLogger logger = AmbientTraceLogger.Instance;
+                AmbientConsoleLogger logger = AmbientConsoleLogger.Instance;
                 // log the first test message (this will cause the file to be created, but only *after* this message gets flushed
                 logger?.Log("test1");
                 if (logger != null) await logger.Flush();
@@ -26,11 +26,11 @@ namespace AmbientServices.Test
         }
 
         [TestMethod]
-        public async Task AmbientTraceLoggerFileRotation()
+        public async Task AmbientConsoleLoggerFileRotation()
         {
             using (AmbientClock.Pause())
             {
-                AmbientTraceLogger logger = AmbientTraceLogger.Instance;
+                AmbientConsoleLogger logger = AmbientConsoleLogger.Instance;
                 // log the first test message (this will cause the file to be created, but only *after* this message gets flushed
                 logger.Log("test1");
                 await logger.Flush();
