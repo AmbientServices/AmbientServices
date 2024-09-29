@@ -1,6 +1,6 @@
-﻿using System;
+﻿using AmbientServices.Extensions;
+using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,21 +43,59 @@ public class DotNetDocumentation
 {
     private static readonly Dictionary<string, DotNetDocumentation> sDocumentations = new();
 
-    private readonly XPathNavigator fDocumentRoot;
+    private readonly XPathNavigator _documentRoot;
+    private readonly List<Type> _types;
 
-    private DotNetDocumentation(string xmlDocumentationFilePath)
+    /// <summary>
+    /// Loads the documentation for the specified assembly.
+    /// </summary>
+    /// <param name="assembly">The assembly to load documentation for.</param>
+    /// <returns>A <see cref="DotNetDocumentation"/> object that can be used to access the documentation for the specified assembly.</returns>
+    public static DotNetDocumentation Load(Assembly assembly)
+    {
+        if (assembly == null) throw new ArgumentNullException(nameof(assembly));
+        // get the fileName
+        string documentationFileName = DocumentationFile(assembly) ?? string.Empty;
+        // look it up in the cache to see if we've already loaded it
+        lock (sDocumentations)
+        {
+            // already loaded?
+            if (sDocumentations.ContainsKey(documentationFileName.ToUpperInvariant()))
+            {
+                // return the cached one
+                return sDocumentations[documentationFileName.ToUpperInvariant()];
+            }
+        }
+        Type[] types = assembly.GetLoadableTypes();
+        // load the documentation, if it exists, otherwise use empty documentation
+        DotNetDocumentation documentation = (!string.IsNullOrEmpty(documentationFileName) && System.IO.File.Exists(documentationFileName)) ? new DotNetDocumentation(documentationFileName, types) : new DotNetDocumentation();
+        lock (sDocumentations)
+        {
+            // put it in (yes, someone else may have already done so, but no big deal)!
+            sDocumentations[documentationFileName.ToUpperInvariant()] = documentation;
+        }
+        return documentation;
+    }
+
+    private DotNetDocumentation(string xmlDocumentationFilePath, IEnumerable<Type> types)
     {
         // open the documentation file
         using System.IO.Stream stream = new System.IO.FileStream(xmlDocumentationFilePath, System.IO.FileMode.Open, System.IO.FileAccess.Read);
         using XmlReader reader = XmlReader.Create(stream);
         // NOTE: as of 2021-05-13, there appears to be a bug in VS that causes a failure here because the XML documentation file has extra leftover data at the end when the file gets smaller
-        fDocumentRoot = new XPathDocument(reader).CreateNavigator();
+        _documentRoot = new XPathDocument(reader).CreateNavigator();
+        _types = new(types);
     }
     private DotNetDocumentation()
     {
         XmlDocument doc = new();
-        fDocumentRoot = doc.CreateNavigator()!; // we just created the XmlDocument, so it should be empty and should behave consistently
+        _documentRoot = doc.CreateNavigator()!; // we just created the XmlDocument, so it should be empty and should behave consistently
+        _types = new();
     }
+    /// <summary>
+    /// Gets an enumeration of the public <see cref="Type"/>s in the corresponding assembly, which should be documented.
+    /// </summary>
+    public IEnumerable<Type> PublicTypes => _types;
     private static string BuildParameterList(ParameterInfo[] parameters)
     {
         // when there are NO parameters, we output empty string (not "()")
@@ -93,25 +131,25 @@ public class DotNetDocumentation
     {
         if (type.FullName == null) return null;
         string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Type}:{type.FullName.Replace('+', '.')}{""}\"]";
-        return fDocumentRoot.SelectSingleNode(nodePath);
+        return _documentRoot.SelectSingleNode(nodePath);
     }
     private XPathNavigator? MethodDocumentation(MethodInfo method)
     {
         if (method.DeclaringType?.FullName == null) return null;
         string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Method}:{method.DeclaringType.FullName.Replace('+', '.') + "." + method.Name}{BuildParameterList(method.GetParameters())}\"]";
-        return fDocumentRoot.SelectSingleNode(nodePath);
+        return _documentRoot.SelectSingleNode(nodePath);
     }
     private XPathNavigator? PropertyDocumentation(PropertyInfo property)
     {
         if (property.DeclaringType?.FullName == null) return null;
         string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Property}:{property.DeclaringType.FullName.Replace('+', '.') + "." + property.Name}{""}\"]";
-        return fDocumentRoot.SelectSingleNode(nodePath);
+        return _documentRoot.SelectSingleNode(nodePath);
     }
     private XPathNavigator? FieldDocumentation(FieldInfo field)
     {
         if (field.DeclaringType?.FullName == null) return null;
         string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Field}:{field.DeclaringType.FullName.Replace('+', '.') + "." + field.Name}{""}\"]";
-        return fDocumentRoot.SelectSingleNode(nodePath);
+        return _documentRoot.SelectSingleNode(nodePath);
     }
     private static string? DocumentationFile(Assembly assembly)
     {
@@ -120,34 +158,11 @@ public class DotNetDocumentation
         documentationFileName = System.IO.Path.GetDirectoryName(documentationFileName) + System.IO.Path.DirectorySeparatorChar + System.IO.Path.GetFileNameWithoutExtension(documentationFileName) + ".xml";
         return documentationFileName;
     }
-    private static DotNetDocumentation Load(Assembly assembly)
-    {
-        // get the fileName
-        string documentationFileName = DocumentationFile(assembly) ?? string.Empty;
-        // look it up in the cache to see if we've already loaded it
-        lock (sDocumentations)
-        {
-            // already loaded?
-            if (sDocumentations.ContainsKey(documentationFileName.ToUpperInvariant()))
-            {
-                // return the cached one
-                return sDocumentations[documentationFileName.ToUpperInvariant()];
-            }
-        }
-        // load the documentation, if it exists, otherwise use empty documentation
-        DotNetDocumentation documentation = (!string.IsNullOrEmpty(documentationFileName) && System.IO.File.Exists(documentationFileName)) ? new DotNetDocumentation(documentationFileName) : new DotNetDocumentation();
-        lock (sDocumentations)
-        {
-            // put it in (yes, someone else may have already done so, but no big deal)!
-            sDocumentations[documentationFileName.ToUpperInvariant()] = documentation;
-        }
-        return documentation;
-    }
 
 
     private static ParameterDocumentation[]? BuildTypeParameters(XPathNavigator nav)
     {
-        System.Collections.Generic.List<ParameterDocumentation> parameters = new();
+        List<ParameterDocumentation> parameters = new();
         if (nav != null)
         {
             XPathNodeIterator iterator = nav.SelectChildren("typeparam", string.Empty);
@@ -168,7 +183,7 @@ public class DotNetDocumentation
 
     private static ParameterDocumentation[]? BuildParameters(XPathNavigator nav)
     {
-        System.Collections.Generic.List<ParameterDocumentation> parameters = new();
+        List<ParameterDocumentation> parameters = new();
         if (nav != null)
         {
             XPathNodeIterator iterator = nav.SelectChildren("param", string.Empty);
@@ -238,15 +253,14 @@ public class DotNetDocumentation
     /// </summary>
     /// <param name="type">The <see cref="System.Type"/> to get documentation for.</param>
     /// <returns>A <see cref="TypeDocumentation"/> containing documentation for the type, if one could be found.</returns>
-    public static TypeDocumentation? GetTypeDocumentation(Type type)
+    public TypeDocumentation? GetTypeDocumentation(Type type)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(type);
 #else
         if (type == null) throw new ArgumentNullException(nameof(type));
 #endif
-        DotNetDocumentation docs = Load(type.Assembly);
-        XPathNavigator? nav = docs.TypeDocumentation(type);
+        XPathNavigator? nav = TypeDocumentation(type);
         if (type.FullName == null || nav == null) return null;
         return new TypeDocumentation(type.FullName.Replace('+', '.'), GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
     }
@@ -255,15 +269,14 @@ public class DotNetDocumentation
     /// </summary>
     /// <param name="type">The <see cref="System.Type"/> to get documentation for.</param>
     /// <returns>A <see cref="TypeDocumentation"/> containing documentation for the type, if one could be found.</returns>
-    public static TypeDocumentation? GetNullableTypeDocumentation(Type type)
+    public TypeDocumentation? GetNullableTypeDocumentation(Type type)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(type);
 #else
         if (type == null) throw new ArgumentNullException(nameof(type));
 #endif
-        DotNetDocumentation docs = Load(type.Assembly);
-        XPathNavigator? nav = docs.TypeDocumentation(type);
+        XPathNavigator? nav = TypeDocumentation(type);
         if (type.FullName == null || nav == null) return null;
         return new TypeDocumentation("Nullable<" + type.FullName.Replace('+', '.') + ">", GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
     }
@@ -272,7 +285,7 @@ public class DotNetDocumentation
     /// </summary>
     /// <param name="method">A <see cref="MethodInfo"/> identifying the method to get documentation for.</param>
     /// <returns>A <see cref="MethodDocumentation"/> containing documentation for the specified method, if one could be found.</returns>
-    public static MethodDocumentation? GetMethodDocumentation(MethodInfo method)
+    public MethodDocumentation? GetMethodDocumentation(MethodInfo method)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(method);
@@ -280,8 +293,7 @@ public class DotNetDocumentation
         if (method == null) throw new ArgumentNullException(nameof(method));
 #endif
         if (method.DeclaringType == null) return null;
-        DotNetDocumentation docs = Load(method.DeclaringType.Assembly);
-        XPathNavigator? nav = docs.MethodDocumentation(method);
+        XPathNavigator? nav = MethodDocumentation(method);
         if (method.Name == null || nav == null) return null;
         return new MethodDocumentation(method.Name, BuildParameters(nav), GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), GetNodeContents(nav, "returns"), BuildTypeParameters(nav));
     }
@@ -290,7 +302,7 @@ public class DotNetDocumentation
     /// </summary>
     /// <param name="property">A <see cref="PropertyInfo"/> identifying the property to get documentation for.</param>
     /// <returns>A <see cref="MemberDocumentation"/> containing documentation for the specified property, if one could be found.</returns>
-    public static MemberDocumentation? GetPropertyDocumentation(PropertyInfo property)
+    public MemberDocumentation? GetPropertyDocumentation(PropertyInfo property)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(property);
@@ -298,8 +310,7 @@ public class DotNetDocumentation
         if (property == null) throw new ArgumentNullException(nameof(property));
 #endif
         if (property.DeclaringType == null) return null;
-        DotNetDocumentation docs = Load(property.DeclaringType.Assembly);
-        XPathNavigator? nav = docs.PropertyDocumentation(property);
+        XPathNavigator? nav = PropertyDocumentation(property);
         if (property.Name == null || nav == null) return null;
         return new MemberDocumentation(property.Name, GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"));
     }
@@ -308,7 +319,7 @@ public class DotNetDocumentation
     /// </summary>
     /// <param name="field">A <see cref="FieldInfo"/> identifying the field to get documentation for.</param>
     /// <returns>A <see cref="MemberDocumentation"/> containing documentation for the specified field, if one could be found.</returns>
-    public static MemberDocumentation? GetFieldDocumentation(FieldInfo field)
+    public MemberDocumentation? GetFieldDocumentation(FieldInfo field)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(field);
@@ -316,8 +327,7 @@ public class DotNetDocumentation
         if (field == null) throw new ArgumentNullException(nameof(field));
 #endif
         if (field.DeclaringType == null) return null;
-        DotNetDocumentation docs = Load(field.DeclaringType.Assembly);
-        XPathNavigator? nav = docs.FieldDocumentation(field);
+        XPathNavigator? nav = FieldDocumentation(field);
         if (field.Name == null || nav == null) return null;
         return new MemberDocumentation(field.Name, GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"));
     }
@@ -326,7 +336,7 @@ public class DotNetDocumentation
     /// </summary>
     /// <param name="member">A <see cref="MemberInfo"/> identifying the member to get documentation for.</param>
     /// <returns>A <see cref="MemberDocumentation"/> containing documentation for the specified member, if one could be found.</returns>
-    public static MemberDocumentation? GetMemberDocumentation(MemberInfo member)
+    public MemberDocumentation? GetMemberDocumentation(MemberInfo member)
     {
         PropertyInfo? memberProperty = member as PropertyInfo;
         FieldInfo? memberField = member as FieldInfo;

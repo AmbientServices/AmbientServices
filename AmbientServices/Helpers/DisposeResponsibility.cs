@@ -89,6 +89,9 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     public string StackOnCreation => _stackOnCreation;
 
 #if DEBUG
+    /// <summary>
+    /// DEBUG MODE ONLY: Finalizes the object and ensures that the contained object was disposed.
+    /// </summary>
     ~DisposeResponsibility()
     {
         System.Diagnostics.Debug.Assert(_contained == null, $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.");

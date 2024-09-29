@@ -42,11 +42,8 @@ namespace AmbientServices
         public BasicAmbientLogger(string? filePrefix, string? fileExtension = null, int rotationPeriodMinutes = 60, int autoFlushSeconds = 5)
         {
             // file prefix not specified?
-            if (filePrefix == null)
-            {
-                // use a default path that uses the executable name
-                filePrefix = GetExecutableName();
-            }
+            // use a default path that uses the executable name
+            filePrefix ??= GetExecutableName();
             // else if we have a file prefix, but it doesn't have a directory, use the program data location
             if (string.IsNullOrEmpty(Path.GetDirectoryName(filePrefix)))
             {
@@ -59,7 +56,7 @@ namespace AmbientServices
                     filePrefix = $"{Path.GetTempPath()}{GetExecutableName()}_AmbientLogger";
                 }
             }
-            if (fileExtension == null) fileExtension = ".log";
+            fileExtension ??= ".log";
             if (!fileExtension.StartsWith('.')) fileExtension = "." + fileExtension;
             _filePrefix = filePrefix;
             _fileExtension = fileExtension;
@@ -170,8 +167,7 @@ namespace AmbientServices
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
         public static ValueTask TryDeleteAllFiles(string filePathPrefix, CancellationToken cancel = default)
         {
-            string? directory = Path.GetDirectoryName(filePathPrefix);
-            if (directory == null) throw new ArgumentException("The specified file path must be non-null and a non-root path!", nameof(filePathPrefix));
+            string? directory = Path.GetDirectoryName(filePathPrefix) ?? throw new ArgumentException("The specified file path must be non-null and a non-root path!", nameof(filePathPrefix));
             string filename = Path.GetFileName(filePathPrefix)!;
             // clean up the files
             foreach (string file in Directory.GetFiles(directory, filename + "*.log"))
