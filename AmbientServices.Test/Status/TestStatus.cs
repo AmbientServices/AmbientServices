@@ -171,6 +171,36 @@ namespace AmbientServices.Test
             await s.Stop();
         }
         [TestMethod]
+        public async Task StatusHistory()
+        {
+            using (AmbientClock.Pause())
+            {
+                Status status = new(false);
+                try
+                {
+                    using TestSuperlativeExplicit ce = new();
+                    status.AddCheckerOrAuditor(ce);
+                    await status.Start();
+                    using AmbientCancellationTokenSource cts = new(1);
+                    await status.RefreshAsync(cts.Token);
+                    AmbientClock.SkipAhead(TimeSpan.FromMinutes(1));
+                    await status.RefreshAsync(cts.Token);
+                    AmbientClock.SkipAhead(TimeSpan.FromMinutes(1));
+                    await status.RefreshAsync(cts.Token);
+                    AmbientClock.SkipAhead(TimeSpan.FromMinutes(1));
+                    await status.RefreshAsync(cts.Token);
+                    AmbientClock.SkipAhead(TimeSpan.FromMinutes(1));
+                    await status.RefreshAsync(cts.Token);
+                    AmbientClock.SkipAhead(TimeSpan.FromMinutes(1));
+                    IEnumerable<StatusResults> history = status.History;
+                }
+                finally
+                {
+                    await status.Stop();
+                }
+            }
+        }
+        [TestMethod]
         public async Task StatusAddRemoveChecker()
         {
             Status s = new(false);

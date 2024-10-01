@@ -276,6 +276,18 @@ namespace AmbientServices
             }
         }
         /// <summary>
+        /// Gets all the historical <see cref="StatusResults"/> for the entire system.
+        /// </summary>
+        public IEnumerable<StatusResults> History
+        {
+            get
+            {
+                DateTime now = AmbientClock.UtcNow;
+                List<StatusResults> historicalResults = new(_checkers.SelectMany(checker => checker.History));
+                return historicalResults;
+            }
+        }
+        /// <summary>
         /// Checks to see if the secified type represents a testable status checker class (ie. one with a public constructor that takes no parameters).
         /// </summary>
         /// <param name="type">The type to check.</param>
