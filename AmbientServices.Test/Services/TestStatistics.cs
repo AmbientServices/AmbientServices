@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace AmbientServices.Test
 {
@@ -118,6 +119,76 @@ namespace AmbientServices.Test
                     break;
                 }
             }
+        }
+        [TestMethod]
+        public void StatisticsMissingSamples()
+        {
+            long?[] samples;
+
+            samples = MissingSampleHandling.Skip.HandleMissingSamples(new long?[] { null, null, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { });
+            samples = MissingSampleHandling.Skip.HandleMissingSamples(new long?[] { null, 10, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10 });
+            samples = MissingSampleHandling.Skip.HandleMissingSamples(new long?[] { null, 10, null, 20, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 20 });
+            samples = MissingSampleHandling.Skip.HandleMissingSamples(new long?[] { 10, null, 20, 30, 40 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 20, 30, 40 });
+            samples = MissingSampleHandling.Skip.HandleMissingSamples(new long?[] { 10, 20, 30, 40 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 20, 30, 40 });
+
+            samples = MissingSampleHandling.Zero.HandleMissingSamples(new long?[] { null, null, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 0, 0, 0, 0, 0 });
+            samples = MissingSampleHandling.Zero.HandleMissingSamples(new long?[] { null, 10, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 0, 10, 0, 0, 0 });
+            samples = MissingSampleHandling.Zero.HandleMissingSamples(new long?[] { null, 10, null, 20, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 0, 10, 0, 20, 0 });
+            samples = MissingSampleHandling.Zero.HandleMissingSamples(new long?[] { 10, null, 20, 30, 40 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 0, 20, 30, 40 });
+            samples = MissingSampleHandling.Zero.HandleMissingSamples(new long?[] { 10, 20, 30, 40 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 20, 30, 40 });
+
+            samples = MissingSampleHandling.LinearEstimation.HandleMissingSamples(new long?[] { null, null, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { null, null, null, null, null });
+            samples = MissingSampleHandling.LinearEstimation.HandleMissingSamples(new long?[] { null, 10, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 10, 10, 10, 10 });
+            samples = MissingSampleHandling.LinearEstimation.HandleMissingSamples(new long?[] { null, 10, null, 20, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 5, 10, 15, 20, 25 });
+            samples = MissingSampleHandling.LinearEstimation.HandleMissingSamples(new long?[] { null, 10, null, null, 20, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 7, 10, 13, 17, 20, 23 });
+            samples = MissingSampleHandling.LinearEstimation.HandleMissingSamples(new long?[] { 10, null, 20, 30, 40 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 15, 20, 30, 40 });
+            samples = MissingSampleHandling.LinearEstimation.HandleMissingSamples(new long?[] { 10, 20, 30, 40 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 20, 30, 40 });
+
+            samples = MissingSampleHandling.ExponentialEstimation.HandleMissingSamples(new long?[] { null, null, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { null, null, null, null, null });
+            samples = MissingSampleHandling.ExponentialEstimation.HandleMissingSamples(new long?[] { null, 10, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 10, 10, 10, 10 });
+            samples = MissingSampleHandling.ExponentialEstimation.HandleMissingSamples(new long?[] { null, 10, null, 20, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 7, 10, 14, 20, 28 });
+            samples = MissingSampleHandling.ExponentialEstimation.HandleMissingSamples(new long?[] { null, 10, null, null, 20, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 8, 10, 13, 16, 20, 25 });
+            samples = MissingSampleHandling.ExponentialEstimation.HandleMissingSamples(new long?[] { 10, null, 20, 30, 40 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 14, 20, 30, 40 });
+            samples = MissingSampleHandling.ExponentialEstimation.HandleMissingSamples(new long?[] { 10, 20, 30, 40 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 20, 30, 40 });
+
+            samples = MissingSampleHandling.LogarithmicEstimation.HandleMissingSamples(new long?[] { null, null, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { null, null, null, null, null });
+            samples = MissingSampleHandling.LogarithmicEstimation.HandleMissingSamples(new long?[] { null, 10, null, null, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 10, 10, 10, 10 });
+            samples = MissingSampleHandling.LogarithmicEstimation.HandleMissingSamples(new long?[] { null, 10, null, 11, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 8, 10, 11, 11, 11 });
+            samples = MissingSampleHandling.LogarithmicEstimation.HandleMissingSamples(new long?[] { null, 10, null, null, 11, null }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 9, 10, 10, 11, 11, 11 });
+            samples = MissingSampleHandling.LogarithmicEstimation.HandleMissingSamples(new long?[] { 10, null, 11, 13, 14 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 11, 11, 13, 14 });
+            samples = MissingSampleHandling.LogarithmicEstimation.HandleMissingSamples(new long?[] { 10, 11, 13, 14 }).ToArray();
+            AssertArraysEqualByValue(samples, new long?[] { 10, 11, 13, 14 });
+        }
+        private static void AssertArraysEqualByValue(long?[] a, long?[] b)
+        {
+            Assert.IsTrue(a.SequenceEqual(b));
         }
     }
 }

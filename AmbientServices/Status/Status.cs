@@ -283,7 +283,7 @@ namespace AmbientServices
             get
             {
                 DateTime now = AmbientClock.UtcNow;
-                List<StatusResults> historicalResults = new(_checkers.SelectMany(checker => checker.History));
+                List<StatusResults> historicalResults = new(_checkers.SelectMany(checker => checker.History).OrderByDescending(r => r.Time));
                 return historicalResults;
             }
         }
