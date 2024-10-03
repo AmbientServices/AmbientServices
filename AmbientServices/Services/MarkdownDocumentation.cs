@@ -577,35 +577,34 @@ class DocumentationCrefToHumanReadable
 {
     public static string ConvertCrefToReadableString(string cref)
     {
-        if (string.IsNullOrEmpty(cref))
+        if (cref.StartsWith("M:"))
         {
-            throw new ArgumentException("Cref string cannot be null or empty", nameof(cref));
+            return ConvertMethodCrefToReadableString(cref.Substring(2));
         }
-
-        // Remove the prefix (T:, M:, P:, F:, E:, etc.)
-        var typePrefix = cref.Substring(0, 2);
-        var typeString = cref.Substring(2);
-
-        switch (typePrefix)
+        else if (cref.StartsWith("T:"))
         {
-            case "T:":
-                return ConvertTypeCrefToReadableString(typeString);
-            case "M:":
-                return ConvertMethodCrefToReadableString(typeString);
-            case "P:":
-                return ConvertPropertyCrefToReadableString(typeString);
-            case "F:":
-                return ConvertFieldCrefToReadableString(typeString);
-            case "E:":
-                return ConvertEventCrefToReadableString(typeString);
-            default:
-                throw new ArgumentException("Unsupported cref prefix", nameof(cref));
+            return ConvertTypeCrefToReadableString(cref.Substring(2));
+        }
+        else if (cref.StartsWith("P:"))
+        {
+            return ConvertPropertyCrefToReadableString(cref.Substring(2));
+        }
+        else if (cref.StartsWith("F:"))
+        {
+            return ConvertFieldCrefToReadableString(cref.Substring(2));
+        }
+        else if (cref.StartsWith("E:"))
+        {
+            return ConvertEventCrefToReadableString(cref.Substring(2));
+        }
+        else
+        {
+            throw new ArgumentException("Invalid cref format", nameof(cref));
         }
     }
 
     private static string ConvertMethodCrefToReadableString(string methodCref)
     {
-        // Match the method cref pattern
         var match = Regex.Match(methodCref, @"^(?<typeName>[^.]+(\.[^.]+)*?)\.(?<methodName>[^`]+)(``(?<genericCount>\d+))?(\((?<parameters>.*)\))?$");
         if (match.Success)
         {
@@ -614,8 +613,24 @@ class DocumentationCrefToHumanReadable
             var genericCount = match.Groups["genericCount"].Success ? int.Parse(match.Groups["genericCount"].Value) : 0;
             var parameters = match.Groups["parameters"].Success ? match.Groups["parameters"].Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries) : Array.Empty<string>();
 
-            var readableParameters = string.Join(", ", parameters.Select(ConvertTypeCrefToReadableString));
-            var genericArgs = genericCount > 0 ? $"<{new string(',', genericCount - 1)}>" : string.Empty;
+            var readableParameters = string.Join(", ", parameters.Select(param =>
+            {
+                var trimmedParam = param.Trim();
+                if (trimmedParam.EndsWith("@"))
+                {
+                    return "out " + ConvertTypeCrefToReadableString(trimmedParam.Substring(0, trimmedParam.Length - 1));
+                }
+                else if (trimmedParam.StartsWith("in "))
+                {
+                    return "in " + ConvertTypeCrefToReadableString(trimmedParam.Substring(3));
+                }
+                else
+                {
+                    return ConvertTypeCrefToReadableString(trimmedParam);
+                }
+            }));
+
+            var genericArgs = genericCount > 0 ? $"<{string.Join(", ", Enumerable.Range(0, genericCount).Select(i => $"T{i}"))}>" : string.Empty;
 
             return $"{typeName}.{methodName}{genericArgs}({readableParameters})";
         }
@@ -625,35 +640,37 @@ class DocumentationCrefToHumanReadable
 
     private static string ConvertTypeCrefToReadableString(string typeCref)
     {
-        // Handle generic types
-        if (typeCref.Contains("`"))
+        // Handle generic type parameters
+        if (typeCref.StartsWith("``"))
         {
-            var match = Regex.Match(typeCref, @"^(?<typeName>[^`]+)`(?<genericCount>\d+)(\{(?<genericArgs>.+)\})?$");
-            if (match.Success)
-            {
-                var typeName = match.Groups["typeName"].Value;
-                var genericCount = int.Parse(match.Groups["genericCount"].Value);
-                var genericArgs = match.Groups["genericArgs"].Value.Split(',');
-                var readableGenericArgs = string.Join(", ", genericArgs.Select(ConvertTypeCrefToReadableString));
-                return $"{typeName}<{readableGenericArgs}>";
-            }
+            int genericIndex = int.Parse(typeCref.Substring(2));
+            return $"T{genericIndex}";
         }
 
         // Handle arrays
         if (typeCref.EndsWith("[]"))
         {
-            var elementTypeCref = typeCref.Substring(0, typeCref.Length - 2);
-            return $"{ConvertTypeCrefToReadableString(elementTypeCref)}[]";
+            return ConvertTypeCrefToReadableString(typeCref.Substring(0, typeCref.Length - 2)) + "[]";
         }
 
         // Handle nullable types
         if (typeCref.StartsWith("System.Nullable{"))
         {
-            var innerTypeCref = typeCref.Substring(16, typeCref.Length - 17); // Remove "System.Nullable{" and "}"
-            return $"{ConvertTypeCrefToReadableString(innerTypeCref)}?";
+            return ConvertTypeCrefToReadableString(typeCref.Substring(16, typeCref.Length - 17)) + "?";
         }
 
-        return typeCref.Replace('+', '.'); // Handle nested types
+        // Handle generic types
+        var genericMatch = Regex.Match(typeCref, @"^(?<typeName>[^`]+)\{(?<genericArgs>.*)\}$");
+        if (genericMatch.Success)
+        {
+            var typeName = genericMatch.Groups["typeName"].Value;
+            var genericArgs = genericMatch.Groups["genericArgs"].Value.Split(',')
+                .Select(arg => ConvertTypeCrefToReadableString(arg.Trim()));
+            return $"{typeName}<{string.Join(", ", genericArgs)}>";
+        }
+
+        // Handle normal types
+        return typeCref.Replace('{', '<').Replace('}', '>');
     }
 
     private static string ConvertPropertyCrefToReadableString(string propertyCref)
