@@ -94,7 +94,7 @@ namespace AmbientServices.Test
             IAmbientStatisticReader runTime = AmbientStatistics.Statistics["ExecutionTime"];
             Assert.AreEqual(MissingSampleHandling.LinearEstimation, runTime.MissingSampleHandling);
             Assert.AreEqual(AggregationTypes.Average, runTime.PreferredSpatialAggregationType);
-            Assert.AreEqual(AggregationTypes.Average, runTime.PreferredTemporalAggregationType);
+            Assert.AreEqual(AggregationTypes.MostRecent, runTime.PreferredTemporalAggregationType);
             Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max, runTime.SpatialAggregationTypes);
             Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max, runTime.TemporalAggregationTypes);
             IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(false, nameof(AmbientPerformanceMetricsProperties), nameof(AmbientPerformanceMetricsProperties) + " Test", true, 0
