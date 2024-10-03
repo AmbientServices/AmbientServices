@@ -156,7 +156,7 @@ namespace AmbientServices
 
         public AggregationTypes SpatialAggregationTypes => AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max;
 
-        public AggregationTypes PreferredTemporalAggregationType => AggregationTypes.Average;
+        public AggregationTypes PreferredTemporalAggregationType => AggregationTypes.MostRecent;
 
         public AggregationTypes PreferredSpatialAggregationType => AggregationTypes.Average;
 

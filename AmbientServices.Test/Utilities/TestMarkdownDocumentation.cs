@@ -16,18 +16,17 @@ public class TestMarkdownDocumentation
     public void Markdown()
     {
         MarkdownDocumentation mdd = new(DotNetDocumentation.Load(typeof(DotNetDocumentation).Assembly));
-
-        foreach ((string relativePath, string document) in mdd.EnumerateTypeDocumentation())
-        {
 #if false
+        foreach ((string humanReadable, string relativePath, string document) in mdd.EnumerateTypeDocumentation())
+        {
             string markdownPath = $"markdown/{relativePath.Replace(">", "_").Replace("<", "_")}";
             EnsureDirectoryExists(Path.GetDirectoryName(markdownPath));
             using FileStream fs = new(markdownPath, FileMode.OpenOrCreate, FileAccess.Write);
             using StreamWriter sw = new(fs);
             sw.Write(document);
             sw.Flush();
-#endif
         }
+#endif
     }
 
     private static void EnsureDirectoryExists(string path)

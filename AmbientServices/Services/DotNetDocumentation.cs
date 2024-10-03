@@ -1,6 +1,7 @@
 ﻿using AmbientServices.Extensions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -106,21 +107,18 @@ public class DotNetDocumentation
         System.Text.StringBuilder ret = new();
         ret.Append('(');
         // loop through all the parameters
-        foreach (ParameterInfo parameter in parameters)
+        for (int i = 0; i < parameters.Length; i++)
         {
-            // nullable parameter type?
-            if (parameter.ParameterType.IsGenericType && parameter.ParameterType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            if (i > 0) ret.Append(", ");
+            var parameter = parameters[i];
+            if (parameter.ParameterType.IsGenericParameter)
             {
-                // add the full parameter type name
-                ret.Append("System.Nullable{" + Nullable.GetUnderlyingType(parameter.ParameterType)!.FullName!.Replace('+', '.') + "}"); // GetUnderlyingType should never return null for a Nullable<>, and FullName on that should never return null
+                ret.Append(parameter.ParameterType.Name);
             }
             else
             {
-                // add the full parameter type name
-                ret.Append(parameter.ParameterType.FullName!.Replace('+', '.'));    // FullName should never be null in this situation
+                ret.Append(GetHumanReadableTypeName(parameter.ParameterType));
             }
-            // always add a , at the end
-            ret.Append(',');
         }
         // replace the last comma with a )
         ret.Replace(',', ')', ret.Length - 1, 1).Replace('&', '@');
@@ -262,8 +260,44 @@ public class DotNetDocumentation
 #endif
         XPathNavigator? nav = TypeDocumentation(type);
         if (type.FullName == null || nav == null) return null;
-        return new TypeDocumentation(type.FullName.Replace('+', '.'), GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
+        return new TypeDocumentation(GetHumanReadableTypeName(type), GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
     }
+
+    private static string GetHumanReadableTypeName(Type type)
+    {
+        if (type.IsArray)
+        {
+            return $"{GetHumanReadableTypeName(type.GetElementType())}[]";
+        }
+        if (type.IsGenericType)
+        {
+            if (type.GetGenericTypeDefinition() == typeof(Nullable<>))
+            {
+                return $"{GetHumanReadableTypeName(type.GetGenericArguments()[0])}?";
+            }
+            var genericTypeName = type.GetGenericTypeDefinition().Name;
+            var backtickIndex = genericTypeName.IndexOf('`');
+            if (backtickIndex >= 0)
+            {
+                genericTypeName = genericTypeName.Substring(0, backtickIndex);
+            }
+            var genericArgs = string.Join(", ", type.GetGenericArguments().Select(GetHumanReadableTypeName));
+            return $"{genericTypeName}<{genericArgs}>";
+        }
+        if (type.IsGenericParameter)
+        {
+            return type.Name;
+        }
+        if (type.DeclaringType != null && type.Name.Contains('<'))
+        {
+            // Handle compiler-generated types (e.g., async state machines)
+            var declaringTypeName = GetHumanReadableTypeName(type.DeclaringType);
+            var simpleName = type.Name.Split('<')[0];
+            return $"{declaringTypeName}.{simpleName}";
+        }
+        return type.Name;
+    }
+
     /// <summary>
     /// Gets the documentation for a <see cref="Nullable{T}"/> of the specified <see cref="System.Type"/>.
     /// </summary>
@@ -278,7 +312,7 @@ public class DotNetDocumentation
 #endif
         XPathNavigator? nav = TypeDocumentation(type);
         if (type.FullName == null || nav == null) return null;
-        return new TypeDocumentation("Nullable<" + type.FullName.Replace('+', '.') + ">", GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
+        return new TypeDocumentation("Nullable<" + GetHumanReadableTypeName(type) + ">", GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
     }
     /// <summary>
     /// Gets documentation for the specified method.
