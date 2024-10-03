@@ -393,7 +393,7 @@ public class MarkdownDocumentation
                                 markdown.Append('[');
                                 markdown.Append(humanReadable);
                                 markdown.Append("](");
-                                markdown.Append(HttpUtility.UrlEncode(relativeFilePath));
+                                markdown.Append(string.Join("/", relativeFilePath.Split('/').Select(HttpUtility.UrlEncode)));
                                 markdown.Append(')');
                             }
                             break;
@@ -462,69 +462,6 @@ public class MarkdownDocumentation
 
         return typeName;
     }
-    private static (string Text, string Url) ConvertCrefToLink(string cref)
-    {
-        string[] parts = cref.Split(':'
-#if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-            , 2
-#endif
-            );
-        if (parts.Length < 2) return (cref, cref); // Invalid cref format
-
-        string memberType = parts[0];
-        string fullName = parts[1];
-
-        string folder;
-        string name;
-        string parameters = string.Empty;
-
-        switch (memberType)
-        {
-            case "T": // Type
-                folder = "t";
-                name = GetFormattedTypeNameFromString(fullName);
-                break;
-            case "M": // Method
-                folder = "m";
-                int paramStart = fullName.IndexOfOrdinal('(');
-                if (paramStart != -1)
-                {
-                    name = fullName.Substring(0, paramStart).Replace('+', '.');
-                    parameters = ParseParameters(fullName.Substring(paramStart));
-                }
-                else
-                {
-                    name = fullName.Replace('+', '.');
-                }
-                break;
-            case "P": // Property
-                folder = "p";
-                name = fullName.Replace('+', '.');
-                break;
-            case "F": // Field
-                folder = "f";
-                name = fullName.Replace('+', '.');
-                break;
-            case "E": // Event
-                folder = "e";
-                name = fullName.Replace('+', '.');
-                break;
-            default:
-                return (fullName, fullName); // Unknown member type, return as-is
-        }
-
-        string[] nameParts = name.Split('.');
-        string displayName = nameParts[nameParts.Length - 1];
-        string url = $"{folder}/{name.Replace('.', '/')}";
-
-        if (!string.IsNullOrEmpty(parameters))
-        {
-            url += parameters;
-        }
-
-        return (displayName, url);
-    }
-
     private static string ParseParameters(string paramString)
     {
         if (string.IsNullOrEmpty(paramString) || paramString == "()") return string.Empty;
@@ -757,13 +694,13 @@ class DocumentationCrefToPath
         }
 
         // Remove the prefix (T:, M:, P:, F:, E:, etc.)
-        var typePrefix = cref.Substring(0, 2).ToLower();
+        var typePrefix = cref.Substring(0, 1).ToLower();
         var typeString = cref.Substring(2);
 
         // Encode the type string to a valid filename
         var encodedTypeString = EncodeToValidFileName(typeString);
 
-        return Path.Combine(typePrefix, encodedTypeString);
+        return $"{typePrefix}/{encodedTypeString}";
     }
 
     public static string ConvertPathToCref(string path)
