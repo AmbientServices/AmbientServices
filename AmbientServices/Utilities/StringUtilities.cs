@@ -87,33 +87,4 @@ internal static partial class StringUtilities
         }
         return builder.ToString();
     }
-
-    /// <summary>
-    /// Gets the index of the first occurrence of a character in a string using ordinal comparison.
-    /// </summary>
-    /// <param name="str">The string to search.</param>
-    /// <param name="c">The character to search for.</param>
-    /// <returns>The index of the first occurrence of the character in the string, or -1 if the character is not found.</returns>
-    public static int IndexOfOrdinal(this string str, char c)
-    {
-#if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return str.IndexOf(c, StringComparison.Ordinal);
-#else
-        return str.IndexOf(c);
-#endif
-    }
-    /// <summary>
-    /// Checks if a string contains a character using ordinal comparison.
-    /// </summary>
-    /// <param name="str">The string to search.</param>
-    /// <param name="c">The character to search for.</param>
-    /// <returns>true if the character is found in the string, false otherwise.</returns>
-    public static bool ContainsOrdinal(this string str, char c)
-    {
-#if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return str.Contains(c, StringComparison.Ordinal);
-#else
-        return str.Contains(c);
-#endif
-    }
 }

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 
 namespace AmbientServices;
 
+#pragma warning disable CA1510
 /// <summary>
 /// An interface to create and manage system statistics, which provide long-lived high-performance tracking of accumulated, minimum, maximum, or raw samples.
 /// Statistics can be used to track memory allocated, time waited, minimum or maximum sizes or times, request processing time, cache hit and misses, etc.
@@ -30,6 +30,9 @@ public interface IAmbientStatistics
     /// <param name="description">A human-readable description for the statistic.</param>
     /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
     /// <param name="initialValue">The initial value for the statistic, if it is created.</param>
+    /// <param name="minimumValue">An optional value indicating the minimum possible value, if applicable.</param>
+    /// <param name="maximumValue">An optional value indicating the maximum possible value, if applicable.</param>
+    /// <param name="fixedFlotingPointDigits">An optional value indicating how many digits past the decimal are always included in the sample value.</param>
     /// <param name="temporalAggregationTypes">A set of <see cref="AggregationTypes"/> indicating how this statistic should be aggregated over time.</param>
     /// <param name="spatialAggregationTypes">A set of <see cref="AggregationTypes"/> indicating how this statistic should be aggregated across systems.</param>
     /// <param name="preferredTemporalAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated over time.</param>
@@ -37,7 +40,7 @@ public interface IAmbientStatistics
     /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
     /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
     IAmbientStatistic GetOrAddStatistic(bool timeBased, string id, string description, bool replaceIfAlreadyExists = false
-        , long initialValue = 0
+        , long initialValue = 0, long? minimumValue = null, long? maximumValue = null, short fixedFlotingPointDigits = 0
         , AggregationTypes temporalAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
         , AggregationTypes spatialAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
         , AggregationTypes preferredTemporalAggregationType = AggregationTypes.Average
@@ -134,7 +137,23 @@ public interface IAmbientStatisticReader
     /// <summary>
     /// Gets the current statistic sample value.  Thread-safe, possibly interlocked.
     /// </summary>
-    long SampleValue { get; }
+    long CurrentValue { get; }
+    /// <summary>
+    /// The expected maximum value, if any.  Null if there is no expected maximum.  Immutable.
+    /// </summary>
+    long? ExpectedMin { get; }
+    /// <summary>
+    /// The expected minimum value, if any.  Null if there is no expected minimum.  Immutable.
+    /// </summary>
+    long? ExpectedMax { get; }
+    /// <summary>
+    /// The number of fixed floating point digits (zero if not applicable).
+    /// </summary>
+    short FixedFloatingPointDigits { get; }
+    /// <summary>
+    /// The multiplier for the number of fixed floating point digits (1 if not applicable).
+    /// </summary>
+    long FixedFloatingPointMultiplier { get; }
     /// <summary>
     /// The types of aggregation that should be used when aggregating samples over time.
     /// </summary>
@@ -200,10 +219,30 @@ public interface IAmbientStatistic : IAmbientStatisticReader, IDisposable
 
 
 /// <summary>
-/// A class that contains extension methods for <see cref="IAmbientStatisticReader"/> that add functions to aggregate statistic samples.
+/// A class that contains extension methods for various statistics interfaces that add functions to aggregate statistic samples.
 /// </summary>
-public static class IAmbientStatisticReaderAggregationExtensions
+public static class IAmbientStatisticsExtensions
 {
+    /// <summary>
+    /// Sets the statistic sample value.  Thread-safe, possibly interlocked.
+    /// </summary>
+    /// <param name="statistic">The <see cref="IAmbientStatistic"/> whose value should be set.</param>
+    /// <param name="newValue">The new value to use.</param>
+    public static void SetValue(this IAmbientStatistic statistic, float newValue)
+    {
+        if (statistic == null) throw new ArgumentNullException(nameof(statistic));
+        statistic.SetValue((long)(Math.Pow(10, statistic.FixedFloatingPointDigits) * newValue));
+    }
+    /// <summary>
+    /// Sets the statistic sample value.  Thread-safe, possibly interlocked.
+    /// </summary>
+    /// <param name="statistic">The <see cref="IAmbientStatistic"/> whose value should be set.</param>
+    /// <param name="newValue">The new value to use.</param>
+    public static void SetValue(this IAmbientStatistic statistic, double newValue)
+    {
+        if (statistic == null) throw new ArgumentNullException(nameof(statistic));
+        statistic.SetValue((long)(Math.Pow(10, statistic.FixedFloatingPointDigits) * newValue));
+    }
     /// <summary>
     /// Uses the preferred aggregation type to aggregate the samples.
     /// </summary>
@@ -213,29 +252,21 @@ public static class IAmbientStatisticReaderAggregationExtensions
     public static long? PreferredTemporalAggregation(this IAmbientStatisticReader reader, IEnumerable<long?> samples)
     {
         if (reader == null) throw new ArgumentNullException(nameof(reader));
-        switch (reader.PreferredTemporalAggregationType)
-        {
-            case AggregationTypes.Average:
-                return (long?)samples.Average();
-            case AggregationTypes.Min:
-                return samples.Min() ?? 0;
-            case AggregationTypes.Max:
-                return samples.Max() ?? 0;
-            case AggregationTypes.MostRecent:
-                return samples.LastOrDefault() ?? 0;
-            case AggregationTypes.None:
-            default:
-            case AggregationTypes.Sum:
-                return samples.Sum() ?? 0;
-        }
+        return reader.PreferredTemporalAggregationType switch {
+            AggregationTypes.Average => (long?)samples.Average(),
+            AggregationTypes.Min => samples.Min() ?? 0,
+            AggregationTypes.Max => samples.Max() ?? 0,
+            AggregationTypes.MostRecent => samples.LastOrDefault() ?? 0,
+            _ => samples.Sum() ?? 0,
+        };
     }
-    interface IMissingSampleExtrapolator
+    private interface IMissingSampleExtrapolator
     {
         long LeadingSampleExtrapolation(long firstNonNullSample, long secondNonNullSample, int samplesBetweenNonNullSamples, int indexBeforeAllNonNullValues);
         long MiddleSampleExtrapolation(long firstNonNullSample, long secondNonNullSample, int missingValueIndex, int missingValueCount);
         long TrailingSampleExtrapolation(long firstNonNullSample, long secondNonNullSample, int samplesBetweenNonNullSamples, int indexAfterAllNonNullValues);
     }
-    class LinearExtrapolator : IMissingSampleExtrapolator
+    private class LinearExtrapolator : IMissingSampleExtrapolator
     {
         private static readonly LinearExtrapolator _Instance = new();
         public static LinearExtrapolator Instance => _Instance;
@@ -253,7 +284,7 @@ public static class IAmbientStatisticReaderAggregationExtensions
             return secondNonNullSample + (secondNonNullSample - firstNonNullSample) / (samplesBetweenNonNullSamples + 1) * (indexAfterAllNonNullValues + 1);
         }
     }
-    class ExponentialExtrapolator : IMissingSampleExtrapolator
+    private class ExponentialExtrapolator : IMissingSampleExtrapolator
     {
         private static readonly ExponentialExtrapolator _Instance = new();
         public static ExponentialExtrapolator Instance => _Instance;
@@ -271,7 +302,7 @@ public static class IAmbientStatisticReaderAggregationExtensions
             return (long)Math.Round(Math.Pow(Math.E, Math.Log(highSample) + (Math.Log(highSample) - Math.Log(lowSample)) / (samplesBetweenNonNullSamples + 1) * (indexAfterAllNonNullValues + 1)));
         }
     }
-    class LogarithmicExtrapolator : IMissingSampleExtrapolator
+    private class LogarithmicExtrapolator : IMissingSampleExtrapolator
     {
         private static readonly LogarithmicExtrapolator _Instance = new();
         public static LogarithmicExtrapolator Instance => _Instance;
@@ -468,7 +499,6 @@ public static class IAmbientStatisticReaderAggregationExtensions
                 yield return extrapolator.TrailingSampleExtrapolation(previousNonNullSample!.Value, lastNonNullSample!.Value, distanceBetweenPreviousNonNullSampleAndLastNonNullSample, offset);
                 ++samplesOutput;
             }
-            missingSamplesAfterLastNonNullSample = 0;
         }
         System.Diagnostics.Debug.Assert(samplesOutput == sampleCount);
     }

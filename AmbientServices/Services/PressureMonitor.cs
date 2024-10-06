@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.Versioning;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace AmbientServices;
 
+#pragma warning disable CA1510
 /// <summary>
 /// An interface that abstracts an external pressure point.
 /// </summary>
@@ -74,7 +72,11 @@ public static class ExternalPressurePoints
 /// </summary>
 public class PressureMonitor : IDisposable
 {
+    private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
     private const int PressureRecalculateFrequencyMilliseconds = 1000;
+    private const short FixedFloatingPointDigits = 8;
+    private static readonly long MaxValue = (long)(1.00f * Math.Pow(10, FixedFloatingPointDigits));
+    private static readonly long NeutralValue = (long)(0.89f * Math.Pow(10, FixedFloatingPointDigits));
     private static readonly PressureMonitor _Default = new();
 
     /// <summary>
@@ -83,11 +85,14 @@ public class PressureMonitor : IDisposable
     public static PressureMonitor Default => _Default;
 
     private readonly AmbientCallbackTimer _timer;
+    private readonly IAmbientStatistic? _internalPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(PressureMonitor) + "-Internal", "The pressure level for internal attributes of this system", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits,  AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
+    private readonly IAmbientStatistic? _externalPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(PressureMonitor) + "-External", "The pressure level for external systems as seen by this system", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
+    private readonly IAmbientStatistic? _overallPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(PressureMonitor) + "-Overall", "The overall pressure level for this system", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits,AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
 
     private float _internalPressure;
     private float _externalPressure;
     private float _overallPressure;
-    private bool disposedValue;
+    private bool _disposed;
 
     /// <summary>
     /// Gets the (overall) internal system pressure (the highest of the individual internal pressures).
@@ -105,11 +110,17 @@ public class PressureMonitor : IDisposable
     /// <summary>
     /// Constructs a new pressure monitor with the specified frequency.
     /// </summary>
-    /// <param name="frequencyMilliseconds">The frequency to recompute pressure, in milliseconds.</param>
-    public PressureMonitor(int? frequencyMilliseconds = null)
+    /// <param name="frequency">The frequency to recompute pressure.</param>
+    public PressureMonitor(TimeSpan frequency)
     {
-        TimeSpan frequency = TimeSpan.FromMilliseconds(frequencyMilliseconds ?? PressureRecalculateFrequencyMilliseconds);
         _timer = new(OnTimerCallback, null, frequency, frequency);
+    }
+    /// <summary>
+    /// Constructs a new pressure monitor with the specified frequency.
+    /// </summary>
+    /// <param name="frequencyMilliseconds">The frequency to recompute pressure, in milliseconds.</param>
+    public PressureMonitor(int? frequencyMilliseconds = null) : this(TimeSpan.FromMilliseconds(frequencyMilliseconds ?? PressureRecalculateFrequencyMilliseconds))
+    {
     }
 
     private void OnTimerCallback(object? state)
@@ -121,6 +132,7 @@ public class PressureMonitor : IDisposable
             internalPressure = Max(internalPressure, pressure);
         }
         Interlocked.Exchange(ref _internalPressure, internalPressure);
+        _internalPressureStat?.SetValue(internalPressure);
 
         float externalPressure = 0;
         foreach (IPressurePoint pp in ExternalPressurePoints.List)
@@ -129,9 +141,11 @@ public class PressureMonitor : IDisposable
             externalPressure = Max(externalPressure, pressure);
         }
         Interlocked.Exchange(ref _externalPressure, externalPressure);
+        _internalPressureStat?.SetValue(externalPressure);
 
         float overallPressure = Math.Min(1.0f, Max(0.0f, internalPressure, externalPressure));
         Interlocked.Exchange(ref _overallPressure, overallPressure);
+        _internalPressureStat?.SetValue(overallPressure);
     }
     /// <summary>
     /// Gets the maximum of all the specified values.
@@ -140,13 +154,7 @@ public class PressureMonitor : IDisposable
     /// <returns>The highest of all the specified floating point numbers.</returns>
     public static float Max(params float[] items)
     {
-        if (items == null) throw new ArgumentNullException(nameof(items));
-        float max = float.MinValue;
-        foreach (float f in items)
-        {
-            if (f > max) max = f;
-        }
-        return max;
+        return Max((IEnumerable<float>)items);
     }
     /// <summary>
     /// Gets the maximum of all the specified values.
@@ -169,16 +177,19 @@ public class PressureMonitor : IDisposable
     /// <param name="disposing">Whether or not we are disposing.</param>
     protected virtual void Dispose(bool disposing)
     {
-        if (!disposedValue)
+        if (!_disposed)
         {
             if (disposing)
             {
                 _timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
                 _timer.Dispose();
+                _internalPressureStat?.Dispose();
+                _externalPressureStat?.Dispose();
+                _overallPressureStat?.Dispose();
             }
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
             // TODO: set large fields to null
-            disposedValue = true;
+            _disposed = true;
         }
     }
 
@@ -197,216 +208,5 @@ public class PressureMonitor : IDisposable
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
-    }
-}
-/// <summary>
-/// An <see cref="IPressurePoint"/> implementation that measures local CPU pressure.
-/// </summary>
-public sealed class CpuPressure : IPressurePoint
-{
-#if NET5_0_OR_GREATER
-    private readonly float _neutralValue;
-#endif
-    private object _previousSample;         // interlocked
-
-#if NET5_0_OR_GREATER
-    /// <summary>
-    /// Constructs a CPU pressure point.
-    /// </summary>
-    /// <param name="neutralValue">A neutral value to use in case we're running in a browser and this information is not available.</param>
-    public CpuPressure(float neutralValue = 0.89f)
-    {
-        _previousSample = CpuUsageSample.GetSample();
-        _neutralValue = neutralValue;
-    }
-#else
-    /// <summary>
-    /// Constructs a CPU pressure point.
-    /// </summary>
-    public CpuPressure()
-    {
-        _previousSample = CpuUsageSample.GetSample();
-    }
-#endif
-
-    /// <summary>
-    /// Gets the name of the pressure point, used for the performance counter instance and status reports.
-    /// </summary>
-    public string Name => "Cpu";
-
-    /// <summary>
-    /// Gets the pressure value (between 0.0 and 1.0).
-    /// </summary>
-    public float Pressure
-    {
-        get
-        {
-#if NET5_0_OR_GREATER
-            if (OperatingSystem.IsBrowser()) return _neutralValue;
-#endif
-            CpuUsageSample newSample = CpuUsageSample.GetSample();
-            CpuUsageSample oldSample = (CpuUsageSample)Interlocked.Exchange(ref _previousSample, newSample);
-            return 0.02f + CpuUsageSample.CpuUtilization(oldSample, newSample);   // _cpuMonitor is *process* usage, so we'll add a little extra to account for the rest of the system
-        }
-    }
-}
-
-/// <summary>
-/// A <see cref="IPressurePoint"/> implementation that measures local thread pool pressure.
-/// </summary>
-#if NET5_0_OR_GREATER
-[UnsupportedOSPlatform("browser")]
-#endif
-public sealed class ThreadPoolPressure : IPressurePoint
-{
-    private readonly int _maxPoolThreads;
-    private readonly int _maxProcessThreads;
-#if NETCOREAPP1_0_OR_GREATER
-    private readonly int _maxBufferedThreadPoolActions;
-    private readonly int _maxThreadsPerSecond;
-    private int _previousSampleThreadCount;
-    private int _threadsAddedThisSample;
-#endif
-
-#if NETCOREAPP1_0_OR_GREATER
-    /// <summary>
-    /// Constructs a pressure point that measures thread pool pressure.
-    /// </summary>
-    /// <param name="maxProcessThreads">The maxiumum number of threads to allow for this process.</param>
-    /// <param name="maxPoolThreads">The maximum number of threads to allow for the thread pool.</param>
-    /// <param name="maxThreadPerSecond">The maximum number of threads being created per second to allow.</param>
-    /// <param name="maxBufferedThreadPoolActions">The maximum number of buffered thread pool actions to allow.</param>
-    public ThreadPoolPressure(int maxProcessThreads = 64 * 1024, int maxPoolThreads = 64 * 1024, int maxThreadPerSecond = 1024, int maxBufferedThreadPoolActions = 64 * 1024)
-    {
-        _maxProcessThreads = maxProcessThreads;
-        _maxPoolThreads = maxPoolThreads;
-        _maxThreadsPerSecond = maxThreadPerSecond;
-        _maxBufferedThreadPoolActions = maxBufferedThreadPoolActions;
-    }
-#else
-    /// <summary>
-    /// Constructs a pressure point that measures thread pool pressure.
-    /// </summary>
-    /// <param name="maxProcessThreads">The maxiumum number of threads to allow for this process.</param>
-    /// <param name="maxPoolThreads">The maximum number of threads to allow for the thread pool.</param>
-    public ThreadPoolPressure(int maxProcessThreads = 64 * 1024, int maxPoolThreads = 64 * 1024)
-    {
-        _maxProcessThreads = maxProcessThreads;
-        _maxPoolThreads = maxPoolThreads;
-    }
-#endif
-
-    /// <summary>
-    /// Gets the name of the pressure point, used for the performance counter instance and status reports.
-    /// </summary>
-    public string Name => "ThreadPool";
-
-    /// <summary>
-    /// Gets the pressure value (between 0.0 and 1.0).
-    /// </summary>
-    public float Pressure
-    {
-        get
-        {
-            Process currentProcess = Process.GetCurrentProcess();
-            float processThreadPressure = 0.0f;
-#if NET5_0_OR_GREATER
-        if (!OperatingSystem.IsBrowser()) 
-        {
-#endif
-            int processThreads = currentProcess.Threads.Count;
-            processThreadPressure = (1.0f * processThreads) / _maxProcessThreads;
-#if NET5_0_OR_GREATER
-        }
-#endif
-#if NETCOREAPP1_0_OR_GREATER
-            float pendingWorkPressure = Math.Min(1.0f, (1.0f * ThreadPool.PendingWorkItemCount) / _maxBufferedThreadPoolActions);
-
-            int newThreadCount = ThreadPool.ThreadCount;
-            int previousThreadCount = Interlocked.Exchange(ref _previousSampleThreadCount, newThreadCount);
-            int threadsAdded = Math.Max(0, newThreadCount - _previousSampleThreadCount);
-            float threadCountChangePressure = Math.Max(0.0f, (threadsAdded * 1.0f) / _maxThreadsPerSecond);
-            Interlocked.Exchange(ref _threadsAddedThisSample, newThreadCount);
-#endif
-            ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxCompletionPortThreads);
-            ThreadPool.GetAvailableThreads(out int potentialAdditionalWorkerThreads, out int potentialAdditionalCompletionPortThreads);
-            int workerThreads = maxWorkerThreads - potentialAdditionalWorkerThreads;
-            int completionPortThreads = maxCompletionPortThreads - potentialAdditionalCompletionPortThreads;
-            float workerPressure = (1.0f * workerThreads / maxWorkerThreads);
-            float completionPortPressure = (1.0f * completionPortThreads / maxCompletionPortThreads);
-            float totalThreadPressure = Math.Min(0.0f, (workerThreads + completionPortThreads) * 1.0f / _maxPoolThreads);
-
-            return PressureMonitor.Max(
-#if NETCOREAPP1_0_OR_GREATER
-                    threadCountChangePressure, pendingWorkPressure,
-#endif
-                    processThreadPressure, workerPressure, completionPortPressure, totalThreadPressure
-                    );
-        }
-    }
-}
-
-/// <summary>
-/// A <see cref="IPressurePoint"/> implementation that measures local system memory pressure.
-/// </summary>
-#if NET5_0_OR_GREATER
-[UnsupportedOSPlatform("browser")]
-#endif
-public sealed class MemoryPressure : IPressurePoint
-{
-#if NETCOREAPP1_0_OR_GREATER
-    /// <summary>
-    /// Constructs a pressure point that measures memory pressure.
-    /// </summary>
-    public MemoryPressure()
-    {
-    }
-#else
-    private readonly long _maxBytesAllowed;
-
-    /// <summary>
-    /// Constructs a pressure point that measures memory pressure.
-    /// </summary>
-    /// <param name="maxBytesAllowed">The maximum number of bytes allowed to be used by this process.</param>
-    public MemoryPressure(long maxBytesAllowed = long.MaxValue)
-    {
-        _maxBytesAllowed = maxBytesAllowed;
-    }
-#endif
-
-    /// <summary>
-    /// Gets the name of the pressure point, used for the performance counter instance and status reports.
-    /// </summary>
-    public string Name => "ThreadPool";
-
-    /// <summary>
-    /// Gets the pressure value (between 0.0 and 1.0).
-    /// </summary>
-    public float Pressure
-    {
-        get
-        {
-#if NETCOREAPP1_0_OR_GREATER
-            GCMemoryInfo info = GC.GetGCMemoryInfo();
-            long totalPhysicalMemory = info.TotalAvailableMemoryBytes;
-            long reservedMemory = Math.Max(totalPhysicalMemory / 10, 25000000);
-            long usableMemory = totalPhysicalMemory - reservedMemory;
-            float loadMemoryPressure = (1.0f * info.MemoryLoadBytes) / usableMemory;
-            float workingSetMemoryPressure = 0;;
-#if NET5_0_OR_GREATER
-            if (!OperatingSystem.IsBrowser())
-            {
-#endif
-                long workingSetMemory = Process.GetCurrentProcess().WorkingSet64;
-                workingSetMemoryPressure = (1.0f * workingSetMemory) / usableMemory;
-#if NET5_0_OR_GREATER
-            }
-#endif
-            return Math.Max(loadMemoryPressure, workingSetMemoryPressure);
-#else
-            long totalBytes = GC.GetTotalMemory(false);
-            return (totalBytes * 1.0f) / _maxBytesAllowed;
-#endif
-        }
     }
 }
