@@ -19,6 +19,8 @@ namespace AmbientServices;
 /// </summary>
 public class MarkdownDocumentation
 {
+    private static readonly AmbientLogger<MarkdownDocumentation> Logger = new();
+
     private readonly DotNetDocumentation _netDocs;
     private readonly Dictionary<string, string> _crefToMarkdownDoc = new();
 
@@ -54,7 +56,7 @@ public class MarkdownDocumentation
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error processing member {member.Name}: {ex}");
+                        Logger.Log($"Error processing markdown for member {member.Name}:", ex);
                     }
                 }
                 foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
@@ -70,15 +72,31 @@ public class MarkdownDocumentation
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"Error processing method {method.Name}: {ex}");
+                        Logger.Log($"Error processing markdown for method {method.Name}:", ex);
                     }
                 }
                 _crefToMarkdownDoc.Add(cref, markdownDoc.ToString());
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing type {type.FullName}: {ex}");
+                Logger.Log($"Error processing markdown for type {type.FullName}:", ex);
             }
+        }
+    }
+
+    /// <summary>
+    /// Gets an index markdown document and an enumeration of markdown documents for each public types in the specified assembly.
+    /// </summary>
+    /// <param name="type">The <see cref="Type"/> to get documentation for.  Must be a type in the assembly passed to the constructor.</param>
+    /// <returns>A human-readable type name, the relative path for markdown, and the markdown document.</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public IEnumerable<(string HumanReadable, string RelativeFilePath, string MarkdownContent)> GetTypeDocumentation(Type type)
+    {
+        string cref = DocumentationTypeToCref.GenerateCrefString(type);
+        string humanReadable = DocumentationCrefToHumanReadable.ConvertCrefToReadableString(cref);
+        if (_crefToMarkdownDoc.TryGetValue(cref, out string? markdownDoc))
+        {
+            yield return (humanReadable, cref, markdownDoc);
         }
     }
 
