@@ -193,6 +193,8 @@ public sealed class MemoryPressurePoint : IPressurePoint
     private readonly IAmbientStatistic? _memoryPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(MemoryPressurePoint), "The pressure due to memory used", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
 
 #if NETCOREAPP1_0_OR_GREATER
+    private readonly IAmbientStatistic? _memoryLoadPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(MemoryPressurePoint) + "-MemoryLoad", "The pressure due to memory load", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
+    private readonly IAmbientStatistic? _workingSetPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(MemoryPressurePoint) + "-WorkingSet", "The pressure due to the working set", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
     /// <summary>
     /// Constructs a pressure point that measures memory pressure.
     /// </summary>
@@ -227,9 +229,10 @@ public sealed class MemoryPressurePoint : IPressurePoint
 #if NETCOREAPP1_0_OR_GREATER
             GCMemoryInfo info = GC.GetGCMemoryInfo();
             long totalPhysicalMemory = info.TotalAvailableMemoryBytes;
-            long reservedMemory = Math.Max(totalPhysicalMemory / 10, 25000000);
+            long reservedMemory = Math.Min(Math.Max(totalPhysicalMemory / 10, 25_000_000), 4_000_000_000);
             long usableMemory = totalPhysicalMemory - reservedMemory;
             float loadMemoryPressure = (1.0f * info.MemoryLoadBytes) / usableMemory;
+            _memoryLoadPressure?.SetValue(loadMemoryPressure);
             float workingSetMemoryPressure = 0;
 #if NET5_0_OR_GREATER
             if (!OperatingSystem.IsBrowser())
@@ -237,6 +240,7 @@ public sealed class MemoryPressurePoint : IPressurePoint
 #endif
                 long workingSetMemory = Process.GetCurrentProcess().WorkingSet64;
                 workingSetMemoryPressure = (1.0f * workingSetMemory) / usableMemory;
+                _workingSetPressure?.SetValue(workingSetMemoryPressure);
 #if NET5_0_OR_GREATER
             }
 #endif

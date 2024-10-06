@@ -820,7 +820,7 @@ namespace AmbientServices
         private bool _disposed; // To detect redundant calls
 
         /// <summary>
-        /// Constructs an AmbientCallbackTimer using the ambient clock.  The timer will not be set to call he callback.
+        /// Constructs an AmbientCallbackTimer using the ambient clock.  The timer will not be set to call the callback.
         /// </summary>
         /// <param name="callback">A <see cref="TimerCallback"/> that is called when the time elapses.</param>
         public AmbientCallbackTimer(TimerCallback callback)
