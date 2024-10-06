@@ -80,6 +80,7 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
     private static readonly long NeutralValue = (long)(0.89f * Math.Pow(10, FixedFloatingPointDigits));
 
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
+    private readonly IAmbientStatistic? _threadPoolPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(ThreadPoolPressurePoint) + "-Overall", "The overall thread pool pressure", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
     private readonly IAmbientStatistic? _processThreadPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(ThreadPoolPressurePoint) + "-ProcessThreads", "The process thread pressure level", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
 
     private readonly int _maxPoolThreads;
@@ -168,12 +169,14 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
             _completionPortPressure?.SetValue(completionPortPressure);
             _totalThreadPressure?.SetValue(totalThreadPressure);
 
-            return PressureMonitor.Max(
+            float overallThreadPressure = PressureMonitor.Max(
 #if NETCOREAPP1_0_OR_GREATER
                     threadCountChangePressure, pendingWorkPressure,
 #endif
                     processThreadPressure, workerPressure, completionPortPressure, totalThreadPressure
                     );
+            _threadPoolPressure?.SetValue(overallThreadPressure);
+            return overallThreadPressure;
         }
     }
 }
@@ -190,7 +193,7 @@ public sealed class MemoryPressurePoint : IPressurePoint
     private static readonly long MaxValue = (long)(1.00f * Math.Pow(10, FixedFloatingPointDigits));
     private static readonly long NeutralValue = (long)(0.89f * Math.Pow(10, FixedFloatingPointDigits));
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
-    private readonly IAmbientStatistic? _memoryPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(MemoryPressurePoint), "The pressure due to memory used", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
+    private readonly IAmbientStatistic? _memoryPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(MemoryPressurePoint) + "-Overall", "The pressure due to memory used", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);
 
 #if NETCOREAPP1_0_OR_GREATER
     private readonly IAmbientStatistic? _memoryLoadPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, nameof(MemoryPressurePoint) + "-MemoryLoad", "The pressure due to memory load", false, NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.MostRecent, AggregationTypes.Average, MissingSampleHandling.LinearEstimation);

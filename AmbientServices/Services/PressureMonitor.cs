@@ -141,11 +141,11 @@ public class PressureMonitor : IDisposable
             externalPressure = Max(externalPressure, pressure);
         }
         Interlocked.Exchange(ref _externalPressure, externalPressure);
-        _internalPressureStat?.SetValue(externalPressure);
+        _externalPressureStat?.SetValue(externalPressure);
 
         float overallPressure = Math.Min(1.0f, Max(0.0f, internalPressure, externalPressure));
         Interlocked.Exchange(ref _overallPressure, overallPressure);
-        _internalPressureStat?.SetValue(overallPressure);
+        _overallPressureStat?.SetValue(overallPressure);
     }
     /// <summary>
     /// Gets the maximum of all the specified values.
