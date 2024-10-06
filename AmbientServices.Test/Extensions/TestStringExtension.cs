@@ -186,7 +186,7 @@ public class TestStringExtensions
     [TestMethod]
     public void Ordinal()
     {
-        Assert.Equals(1, "abcdef".IndexOfOrdinal('b'));
+        Assert.AreEqual(1, "abcdef".IndexOfOrdinal('b'));
         Assert.IsTrue("abcdef".ContainsOrdinal('b'));
     }
 }
