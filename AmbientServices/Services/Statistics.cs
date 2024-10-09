@@ -27,8 +27,10 @@ public interface IAmbientStatistics
     /// </summary>
     /// <param name="timeBased">Whether or not this statistic is a time-based statistic.</param>
     /// <param name="id">A dash-delimited identifier for the statistic.</param>
+    /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
     /// <param name="description">A human-readable description for the statistic.</param>
     /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
+    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <paramref name="fixedFlotingPointDigits"/>).</param>
     /// <param name="initialValue">The initial value for the statistic, if it is created.</param>
     /// <param name="minimumValue">An optional value indicating the minimum possible value, if applicable.</param>
     /// <param name="maximumValue">An optional value indicating the maximum possible value, if applicable.</param>
@@ -39,7 +41,7 @@ public interface IAmbientStatistics
     /// <param name="preferredSpatialAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated across systems.</param>
     /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
     /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
-    IAmbientStatistic GetOrAddStatistic(bool timeBased, string id, string description, bool replaceIfAlreadyExists = false
+    IAmbientStatistic GetOrAddStatistic(bool timeBased, string id, string name, string description, bool replaceIfAlreadyExists = false, string? units = null
         , long initialValue = 0, long? minimumValue = null, long? maximumValue = null, short fixedFlotingPointDigits = 0
         , AggregationTypes temporalAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
         , AggregationTypes spatialAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
@@ -131,6 +133,10 @@ public interface IAmbientStatisticReader
     /// </summary>
     string Id { get; }
     /// <summary>
+    /// Gets a human-readable name, presumbly for the chart title.  Immutable.
+    /// </summary>
+    string Name { get; }
+    /// <summary>
     /// Gets a human-readable description of this statistic.  Immutable.
     /// </summary>
     string Description { get; }
@@ -146,6 +152,11 @@ public interface IAmbientStatisticReader
     /// The expected minimum value, if any.  Null if there is no expected minimum.  Immutable.
     /// </summary>
     long? ExpectedMax { get; }
+    /// <summary>
+    /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  Assumes that the numbers in the axis have already been divided by the FixedFloatingPointMultiplier.  Immutable.
+    /// If not specified and a time-based statistic, the units (after dividing by FixedFloatingPointMultiplier) are assumed to be seconds.
+    /// </summary>
+    string? Units { get; }
     /// <summary>
     /// The number of fixed floating point digits (zero if not applicable).
     /// </summary>

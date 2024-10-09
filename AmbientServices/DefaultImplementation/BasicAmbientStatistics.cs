@@ -26,7 +26,7 @@ internal class BasicAmbientStatistics : IAmbientStatistics
         return null;
     }
 
-    public IAmbientStatistic GetOrAddStatistic(bool timeBased, string id, string description, bool resetIfAlreadyExists
+    public IAmbientStatistic GetOrAddStatistic(bool timeBased, string id, string name, string description, bool resetIfAlreadyExists, string? units = null
         , long initialValue = 0, long? minimumValue = null, long? maximumValue = null, short fixedFlotingPointDigits = 0
         , AggregationTypes temporalAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
         , AggregationTypes spatialAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
@@ -38,12 +38,12 @@ internal class BasicAmbientStatistics : IAmbientStatistics
         IAmbientStatistic? statistic;
         if (resetIfAlreadyExists)
         {
-            statistic = new Statistic(() => _statistics.TryRemove(id, out _), timeBased, id, description, initialValue, minimumValue, maximumValue, fixedFlotingPointDigits, temporalAggregationTypes, spatialAggregationTypes, preferredTemporalAggregationType, preferredSpatialAggregationType, missingSampleHandling);
+            statistic = new Statistic(() => _statistics.TryRemove(id, out _), timeBased, id, name, description, units, initialValue, minimumValue, maximumValue, fixedFlotingPointDigits, temporalAggregationTypes, spatialAggregationTypes, preferredTemporalAggregationType, preferredSpatialAggregationType, missingSampleHandling);
             _statistics.AddOrUpdate(id, statistic, (k, v) => statistic);
         }
         else
         {
-            statistic = new Statistic(() => _statistics.TryRemove(id, out _), timeBased, id, description, initialValue, minimumValue, maximumValue, fixedFlotingPointDigits, temporalAggregationTypes, spatialAggregationTypes, preferredTemporalAggregationType, preferredSpatialAggregationType, missingSampleHandling);
+            statistic = new Statistic(() => _statistics.TryRemove(id, out _), timeBased, id, name, description, units, initialValue, minimumValue, maximumValue, fixedFlotingPointDigits, temporalAggregationTypes, spatialAggregationTypes, preferredTemporalAggregationType, preferredSpatialAggregationType, missingSampleHandling);
             statistic = _statistics.GetOrAdd(id, statistic) as IAmbientStatistic;   // this *could* return something that is only an IAmbientStatisticReader!
             if (statistic == null) throw new InvalidOperationException("The specified statistic identifier is already in use by a read-only statistic!");
         }
@@ -62,10 +62,12 @@ internal class Statistic : IAmbientStatistic
     private readonly Action _removeRegistration;
     private readonly bool _timeBased;
     private readonly string _id;
+    private readonly string _name;
     private readonly string _description;
+    private readonly string? _units;
     private long _currentValue;    // interlocked
 
-    public Statistic(Action removeRegistration, bool timeBased, string id, string description
+    public Statistic(Action removeRegistration, bool timeBased, string id, string name, string description, string? units = null
         , long initialValue = 0, long? expectedMinValue = null, long? expectedMaxValue = null, short fixedFloatingPointDigits = 0
         , AggregationTypes temporalAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
         , AggregationTypes spatialAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
@@ -77,7 +79,9 @@ internal class Statistic : IAmbientStatistic
         _removeRegistration = removeRegistration;
         _timeBased = timeBased;
         _id = id;
+        _name = name;
         _description = description;
+        _units = units;
         _currentValue = initialValue;
         ExpectedMin = expectedMinValue;
         ExpectedMax = expectedMaxValue;
@@ -99,7 +103,11 @@ internal class Statistic : IAmbientStatistic
 
     public string Id => _id;
 
+    public string Name => _name;
+
     public string Description => _description;
+
+    public string? Units => _units;
 
     public long CurrentValue => _currentValue;
 
@@ -164,7 +172,11 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 
     public string Id => "ExecutionTime";
 
+    public string Name => "Execution Time";
+
     public string Description => "The number of ticks elapsed since the statistics system started.";
+
+    public string? Units => "seconds";
 
     public long CurrentValue => AmbientClock.Ticks - _startTime;
 
