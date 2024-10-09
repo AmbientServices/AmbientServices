@@ -86,7 +86,7 @@ internal class Statistic : IAmbientStatistic
         ExpectedMin = expectedMinValue;
         ExpectedMax = expectedMaxValue;
         FixedFloatingPointDigits = fixedFloatingPointDigits;
-        FixedFloatingPointMultiplier = TenPow(fixedFloatingPointDigits);
+        FixedFloatingPointAdjustment = TenPow(fixedFloatingPointDigits);
         TemporalAggregationTypes = temporalAggregationTypes;
         SpatialAggregationTypes = spatialAggregationTypes;
         PreferredTemporalAggregationType = preferredTemporalAggregationType;
@@ -117,7 +117,7 @@ internal class Statistic : IAmbientStatistic
 
     public short FixedFloatingPointDigits { get; private set; }
 
-    public long FixedFloatingPointMultiplier { get; private set;}
+    public double FixedFloatingPointAdjustment { get; private set;}
 
     public AggregationTypes TemporalAggregationTypes { get; private set; }
 
@@ -176,7 +176,7 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 
     public string Description => "The number of ticks elapsed since the statistics system started.";
 
-    public string? Units => "seconds";
+    public string? Units => "ticks";
 
     public long CurrentValue => AmbientClock.Ticks - _startTime;
 
@@ -186,7 +186,7 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 
     public short FixedFloatingPointDigits => 0;
    
-    public long FixedFloatingPointMultiplier => 1;
+    public double FixedFloatingPointAdjustment => 1.0;
 
     public AggregationTypes TemporalAggregationTypes => AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max;
 

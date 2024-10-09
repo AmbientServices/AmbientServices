@@ -155,34 +155,45 @@ public interface IAmbientStatisticReader
     /// <summary>
     /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  Assumes that the numbers in the axis have already been divided by the FixedFloatingPointMultiplier.  Immutable.
     /// If not specified and a time-based statistic, the units (after dividing by FixedFloatingPointMultiplier) are assumed to be seconds.
+    /// Immutable.
     /// </summary>
     string? Units { get; }
     /// <summary>
     /// The number of fixed floating point digits (zero if not applicable).
+    /// Positive numbers indicate that the integer values returned by <see cref="CurrentValue"/>, <see cref="ExpectedMin"/>, and <see cref="ExpectedMax"/> have been multiplied by 10^digits so that fractional values can be retained in the integer value.
+    /// Negative numbers indicate that the integer values returned by <see cref="CurrentValue"/>, <see cref="ExpectedMin"/>, and <see cref="ExpectedMax"/> have been divided by 10^-digits so that very large values can be retained.
+    /// Immutable.
     /// </summary>
     short FixedFloatingPointDigits { get; }
     /// <summary>
-    /// The multiplier for the number of fixed floating point digits (1 if not applicable).
+    /// The number used to multiply incoming sample values (or divide <see cref="CurrentValue"/> for display) in order to adjust the integer sample into a floating point number in the specified units (1 if not applicable).
+    /// Equal to 10^<see cref="FixedFloatingPointDigits"/>.
+    /// Immutable.
     /// </summary>
-    long FixedFloatingPointMultiplier { get; }
+    double FixedFloatingPointAdjustment { get; }
     /// <summary>
     /// The types of aggregation that should be used when aggregating samples over time.
+    /// Immutable.
     /// </summary>
     AggregationTypes TemporalAggregationTypes { get; }
     /// <summary>
     /// The types of aggregation that should be used when aggregating samples from different systems.
+    /// Immutable.
     /// </summary>
     AggregationTypes SpatialAggregationTypes { get; }
     /// <summary>
     /// The type of aggregation that should be used when aggregating samples over time and only one aggregation can be kept.
+    /// Immutable.
     /// </summary>
     AggregationTypes PreferredTemporalAggregationType { get; }
     /// <summary>
     /// The type of aggregation that should be used when aggregating samples from different systems and only one aggregation can be kept.
+    /// Immutable.
     /// </summary>
     AggregationTypes PreferredSpatialAggregationType { get; }
     /// <summary>
     /// How missing samples should be handled.
+    /// Immutable.
     /// </summary>
     MissingSampleHandling MissingSampleHandling { get; }
 }

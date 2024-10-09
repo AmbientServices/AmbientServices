@@ -37,7 +37,7 @@ public class TestStatistics
         Assert.AreEqual(10, counter.CurrentValue);
         Assert.AreEqual(null, counter.ExpectedMin);
         Assert.AreEqual(null, counter.ExpectedMax);
-        Assert.AreEqual(1, counter.FixedFloatingPointMultiplier);
+        Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
         Assert.AreEqual(0, counter.FixedFloatingPointDigits);
         IAmbientStatistic sameCounter = AmbientStatistics.GetOrAddStatistic(false, "counter", "counter", "counter test");
         Assert.AreEqual(counter, sameCounter);
@@ -59,7 +59,7 @@ public class TestStatistics
             Assert.AreEqual(3, timeBasedCounter.SetMin(5));
             Assert.AreEqual(null, counter.ExpectedMin);
             Assert.AreEqual(null, counter.ExpectedMax);
-            Assert.AreEqual(1, counter.FixedFloatingPointMultiplier);
+            Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
             Assert.AreEqual(0, counter.FixedFloatingPointDigits);
             timeBasedCounter.SetValue(10);
             Assert.AreEqual(10, timeBasedCounter.CurrentValue);
@@ -80,7 +80,7 @@ public class TestStatistics
         Assert.IsTrue(endTime >= startTime);
         Assert.AreEqual(0, executionTime.ExpectedMin);
         Assert.AreEqual(null, executionTime.ExpectedMax);
-        Assert.AreEqual(1, executionTime.FixedFloatingPointMultiplier);
+        Assert.AreEqual(1.0, executionTime.FixedFloatingPointAdjustment);
         Assert.AreEqual(0, executionTime.FixedFloatingPointDigits);
 
         Assert.IsTrue(AmbientStatistics.RemoveStatistic(counter.Id));
