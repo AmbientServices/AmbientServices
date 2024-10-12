@@ -35,13 +35,14 @@ namespace AmbientServices
         /// <summary>
         /// Adds the specified message to the log.
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="message">An optional message to log.</param>
+        /// <param name="structuredData">An optional structured data to log.</param>
 #if NET5_0_OR_GREATER
         [UnsupportedOSPlatform("browser")]
 #endif
-        public void Log(string message)
+        public void Log(string? message, object? structuredData = null)
         {
-            TraceBuffer.BufferLine(message);
+            TraceBuffer.BufferLine(DefaultAmbientLogger.DefaultCombineLog(message, structuredData));
         }
         /// <summary>
         /// Asynchronously flushes log entries to the system debug/trace output.

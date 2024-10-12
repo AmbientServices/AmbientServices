@@ -159,7 +159,22 @@ internal static partial class StringExtensions
 #if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         return str.Contains(c, StringComparison.Ordinal);
 #else
-    return str.Contains(c);
+        return str.Contains(c);
+#endif
+    }
+    /// <summary>
+    /// Checks if a string contains a character using ordinal comparison.
+    /// </summary>
+    /// <param name="str">The string to search.</param>
+    /// <param name="find">The string to find.</param>
+    /// <param name="replacement">The string to put in in place of <paramref name="find"/>.</param>
+    /// <returns>true if the character is found in the string, false otherwise.</returns>
+    public static string ReplaceOrdinal(this string str, string find, string replacement)
+    {
+#if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        return str.Replace(find, replacement, StringComparison.Ordinal);
+#else
+        return str.Replace(find, replacement);
 #endif
     }
 }

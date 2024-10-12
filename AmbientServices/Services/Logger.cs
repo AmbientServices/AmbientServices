@@ -47,8 +47,9 @@ namespace AmbientServices
         /// <summary>
         /// Logs the specified message.
         /// </summary>
-        /// <param name="message">The message to log.</param>
-        void Log(string message);
+        /// <param name="message">An optional message to log.</param>
+        /// <param name="structuredData">An optional structured data to log.</param>
+        void Log(string? message, object? structuredData = null);
         /// <summary>
         /// Flushes the log messages to the logger service.
         /// </summary>

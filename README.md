@@ -883,7 +883,7 @@ The fully-detailed system identifier would allow the service profile consumer to
 This level of information is usually too-detailed, so the consumer may want to group everything to just the top-level system, in which case, all SQL access, no matter which database or table, and no matter whether the operation was successful, timed out, or threw an exception, would all be grouped into a single profile entry.
 When no other system is executing, the service should set the system identifier to the empty string, which will also be tracked.
 Some systems may allow tracking of CPU time, so that could be another system identifier.
-As of .NET 5, it does not provide any way to track this, so the consumer can assume that the empty string system accounts for any remaining CPU time.
+As of .NET 8, it does not provide any way to track this, so the consumer can assume that the empty string system accounts for any remaining CPU time.
 Of course, this estimate will be wildly incorrect if the service, while running under the empty string system, calls something that blocks execution (such as waiting for a mutex or performing IO), or when the system CPU is high enough that available threads don't get scheduled.
 
 ### Helpers
