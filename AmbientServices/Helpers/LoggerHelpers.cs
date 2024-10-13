@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace AmbientServices;
@@ -19,6 +20,7 @@ namespace AmbientServices;
 public class AmbientLogger
 {
     internal static readonly AmbientService<IAmbientLogger> _AmbientLogger = Ambient.GetService<IAmbientLogger>();
+    internal static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting(nameof(AmbientLogger) + "-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
 
     private readonly string _typeName;
     private readonly bool _useLocalLogger;
@@ -65,57 +67,6 @@ public class AmbientLogger
         return new AmbientFilteredLogger(logger, level, _typeName, null);
     }
     /// <summary>
-    /// Logs the specified warning exception unless it (or the previosly-specified type) is set to be filtered.
-    /// </summary>
-    /// <param name="ex">The <see cref="Exception"/> that occured.</param>
-    /// <param name="prefixMessage">An optional string to be prefixed to the error message.</param>
-    public void Warning(Exception ex, string? prefixMessage = null)
-    {
-#if NET5_0_OR_GREATER
-            ArgumentNullException.ThrowIfNull(ex);
-#else
-        if (ex is null) throw new ArgumentNullException(nameof(ex));
-#endif
-        IAmbientLogger? logger = DynamicLogger;
-        if (logger == null || _logFilter.IsBlocked(AmbientLogLevel.Warning, _typeName, null)) return;
-        string messagePrefix = string.IsNullOrEmpty(prefixMessage) ? "" : prefixMessage + Environment.NewLine;
-        new AmbientFilteredLogger(logger, AmbientLogLevel.Warning, _typeName, null).Log(messagePrefix + ex.ToString());
-    }
-    /// <summary>
-    /// Logs the specified exception unless it (or the previosly-specified type) is set to be filtered.
-    /// </summary>
-    /// <param name="ex">The <see cref="Exception"/> that occured.</param>
-    /// <param name="prefixMessage">An optional string to be prefixed to the error message.</param>
-    public void Error(Exception ex, string? prefixMessage = null)
-    {
-#if NET5_0_OR_GREATER
-            ArgumentNullException.ThrowIfNull(ex);
-#else
-        if (ex is null) throw new ArgumentNullException(nameof(ex));
-#endif
-        IAmbientLogger? logger = DynamicLogger;
-        if (logger == null || _logFilter.IsBlocked(AmbientLogLevel.Error, _typeName, null)) return;
-        string messagePrefix = string.IsNullOrEmpty(prefixMessage) ? "" : prefixMessage + Environment.NewLine;
-        new AmbientFilteredLogger(logger, AmbientLogLevel.Error, _typeName, null).Log(messagePrefix + ex.ToString());
-    }
-    /// <summary>
-    /// Logs the specified critical exception unless it (or the previosly-specified type) is set to be filtered.
-    /// </summary>
-    /// <param name="ex">The <see cref="Exception"/> that occured.</param>
-    /// <param name="prefixMessage">An optional string to be prefixed to the error message.</param>
-    public void Critical(Exception ex, string? prefixMessage = null)
-    {
-#if NET5_0_OR_GREATER
-            ArgumentNullException.ThrowIfNull(ex);
-#else
-        if (ex is null) throw new ArgumentNullException(nameof(ex));
-#endif
-        IAmbientLogger? logger = DynamicLogger;
-        if (logger == null || _logFilter.IsBlocked(AmbientLogLevel.Error, _typeName, null)) return;
-        string messagePrefix = string.IsNullOrEmpty(prefixMessage) ? "" : prefixMessage + Environment.NewLine;
-        new AmbientFilteredLogger(logger, AmbientLogLevel.Error, _typeName, null).Log(messagePrefix + ex.ToString());
-    }
-    /// <summary>
     /// Checks to see if the specified category and level should be filtered.  If not, returns a logger that can be used to log specific data.
     /// </summary>
     /// <param name="categoryName">The optional category name.</param>
@@ -126,6 +77,162 @@ public class AmbientLogger
         IAmbientLogger? logger = DynamicLogger;
         if (logger == null || _logFilter.IsBlocked(level, _typeName, categoryName)) return null;
         return new AmbientFilteredLogger(logger, level, _typeName, categoryName);
+    }
+
+    /// <summary>
+    /// Augments <paramref name="anonymous"/> with standard structured data for an error.  This is useful for logging structured data with an error.
+    /// </summary>
+    /// <param name="ex">The exception to log.</param>
+    /// <param name="anonymous">The anonymous object to convert to a dictionary and add the error information to.</param>
+    /// <returns>The dictionary with the error information added.</returns>
+    public static Dictionary<string, object?> AugmentStructuredDataWithErrorInformation(Exception ex, object anonymous)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(ex);
+        ArgumentNullException.ThrowIfNull(anonymous);
+#else
+        if (ex is null) throw new ArgumentNullException(nameof(ex));
+        if (anonymous is null) throw new ArgumentNullException(nameof(anonymous));
+#endif
+        Dictionary<string, object?> dictionary = AnonymousObjectToDictionary(anonymous);
+        dictionary["ErrorType"] = GetErrorType(ex);
+        dictionary["ErrorMessage"] = ex.Message;
+        dictionary["ErrorStack"] = ex.StackTrace;
+        return dictionary;
+    }
+    /// <summary>
+    /// Logs an exception with standard structured data.
+    /// </summary>
+    /// <param name="logger">The logger to log to.</param
+    /// <param name="errorPrefix">A prefix to add to the log message.</param>
+    /// <param name="anonymous">The anonymous object to convert to a JSON string.</param>
+    /// <param name="ex">An optional <see cref="Exception"/> whose information should be added to the anonymous object before logging.  If null, calls the other logger and ignores the level if it is <see cref="AmbientLogLevel.Error"/.></param>
+    public void Error(Exception ex, string? message = null, AmbientLogLevel level = AmbientLogLevel.Error)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(ex);
+#else
+        if (ex is null) throw new ArgumentNullException(nameof(ex));
+#endif
+        Dictionary<string, object?> dictionary = AugmentStructuredDataWithErrorInformation(ex, new { });
+        if (message != null) dictionary["Message"] = message;
+        Filter(level)?.Log(dictionary);
+    }
+    private const string ExceptionSuffix = "Exception";
+    private static string GetErrorType(Exception error)
+    {
+        string errorType = error.GetType().Name;
+        if (errorType.EndsWith(ExceptionSuffix, StringComparison.Ordinal)) errorType = errorType.Substring(0, errorType.Length - ExceptionSuffix.Length);
+        return errorType;
+    }
+    private static Dictionary<string, object?> AnonymousObjectToDictionary(object anonymous)
+    {
+        var dictionary = new Dictionary<string, object?>();
+        foreach (var property in anonymous.GetType().GetProperties())
+        {
+            dictionary[property.Name] = property.GetValue(anonymous);
+        }
+        return dictionary;
+    }
+
+
+    // deprecated functions
+
+    internal void InnerLog(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
+    {
+        if (!_logFilter.IsBlocked(level, _typeName, category))
+        {
+            if (!string.IsNullOrEmpty(category)) category += ":";
+            message = string.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, _typeName, category, message);
+            DynamicLogger!.Log(message);  // the calling of this method is short-circuited when DynamicLogger is null
+        }
+    }
+    /// <summary>
+    /// Logs the specified message.
+    /// </summary>
+    /// <param name="message">The message to log.</param>
+    /// <param name="category">The (optional) category to attach to the message.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
+    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    public void Log(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
+    {
+        if (DynamicLogger == null) return;
+        InnerLog(message, category, level);
+    }
+    /// <summary>
+    /// Logs the message returned by the delegate.
+    /// </summary>
+    /// <param name="messageLambda">A delegate that creates a message.</param>
+    /// <param name="category">The (optional) category to attach to the message.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
+    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    public void Log(Func<string> messageLambda, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
+    {
+        if (DynamicLogger == null) return;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(messageLambda);
+#else
+        if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
+#endif
+        InnerLog(messageLambda(), category, level);
+    }
+    /// <summary>
+    /// Logs the specified exception.
+    /// </summary>
+    /// <param name="ex">An <see cref="Exception"/> to log.</param>
+    /// <param name="category">The (optional) category to attach to the message.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
+    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    public void Log(Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
+    {
+        if (DynamicLogger == null) return;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(ex);
+#else
+        if (ex is null) throw new ArgumentNullException(nameof(ex));
+#endif
+        InnerLog(ex.ToString(), category, level);
+    }
+    /// <summary>
+    /// Logs the specified message and exception.
+    /// </summary>
+    /// <param name="message">The message to log.</param>
+    /// <param name="ex">An <see cref="Exception"/> to log.  The exception will be appended after the message.</param>
+    /// <param name="category">The (optional) category to attach to the message.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
+    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    public void Log(string message, Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
+    {
+        if (DynamicLogger == null) return;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(ex);
+#else
+        if (ex is null) throw new ArgumentNullException(nameof(ex));
+#endif
+        InnerLog(message + Environment.NewLine + ex.ToString(), category, level);
+    }
+    /// <summary>
+    /// Logs the specified message (returned by a delegate) and exception.
+    /// </summary>
+    /// <param name="messageLambda">A delegate that creates a message.</param>
+    /// <param name="ex">An <see cref="Exception"/> to log.  The exception will be appended after the message.</param>
+    /// <param name="category">The (optional) category to attach to the message.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
+    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    public void Log(Func<string> messageLambda, Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
+    {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(ex);
+#else
+        if (ex is null) throw new ArgumentNullException(nameof(ex));
+#endif
+        if (DynamicLogger == null) return;
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(messageLambda);
+#else
+        if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
+#endif
+        InnerLog(messageLambda() + Environment.NewLine + ex.ToString(), category, level);
     }
 }
 /// <summary>
@@ -156,7 +263,7 @@ public class AmbientFilteredLogger
         _categoryName = string.IsNullOrEmpty(categoryName) ? "" : $"{categoryName}:";
     }
 
-    private void InnerLog(string? message = null, object? structuredData = null)
+    private void InnerLog(object? structuredData = null, string ? message = null)
     {
         // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
         message = string.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, _level, _typeName, _categoryName, message);
@@ -166,7 +273,7 @@ public class AmbientFilteredLogger
     /// Logs the specified log message.
     /// </summary>
     /// <param name="message">The message to log.</param>
-    public void Log(string message)
+    public void LogMessage(string message)
     {
         InnerLog(message);
     }
@@ -174,18 +281,21 @@ public class AmbientFilteredLogger
     /// Logs the specified structured log data.
     /// </summary>
     /// <param name="structuredData">Structured data to log, usually either an anonymous type or a dictionary of name-value pairs to log.</param>
-    public void LogStructured(object structuredData)
+    /// <param name="message">An optional message to log.</param>
+    public void Log(object structuredData, string? message = null)
     {
-        InnerLog(null, structuredData);
+        InnerLog(structuredData, message);
     }
     /// <summary>
-    /// Logs the specified log message and structured log data.
+    /// Logs the specified structured log data, adding the standard data from the specified exception to the structured data in the process.
     /// </summary>
+    /// <param name="structuredData">Structured data to log, usually either an anonymous type or a dictionary of name-value pairs to log.</param>
+    /// <param name="ex">An <see cref="Exception"/> whose data should be added to the log entry.</param>
     /// <param name="message">An optional message to log.</param>
-    /// <param name="structuredData">Optional structured data to log, usually either an anonymous type or a dictionary of name-value pairs to log.</param>
-    public void Log(string? message, object? structuredData)
+    public void Log(object structuredData, Exception ex, string? message = null)
     {
-        InnerLog(message, structuredData);
+        structuredData = AmbientLogger.AugmentStructuredDataWithErrorInformation(ex, structuredData);
+        InnerLog(structuredData, message);
     }
 }
 /// <summary>
