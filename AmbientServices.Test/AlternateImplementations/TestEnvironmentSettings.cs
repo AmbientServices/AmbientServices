@@ -49,11 +49,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EnvironmentSettingsSetGetRawValue()
         {
-            Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetGetRawValue) + "_testValue", "1");
+            string testString = nameof(EnvironmentSettingsSetGetRawValue) + Guid.NewGuid().ToString();
+            Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetGetRawValue) + "_testValue", testString);
             AmbientEnvironmentSettingsSet.Instance.Refresh();
             AmbientEnvironmentSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
             Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetGetRawValue) + "-notfound"));
-            Assert.AreEqual("1", settingsSet.GetRawValue(nameof(EnvironmentSettingsSetGetRawValue) + "_testValue"));
+            Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetGetRawValue) + "_testValue"));
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -61,19 +62,20 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EnvironmentSettingsRefresh()
         {
+            string testString = nameof(EnvironmentSettingsRefresh) + Guid.NewGuid().ToString();
             AmbientEnvironmentSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
-            Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", "1");
+            Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", testString);
             AmbientEnvironmentSettingsSet.Instance.Refresh();
             Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
-            Assert.AreEqual("1", settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
+            Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
             Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", null);
             AmbientEnvironmentSettingsSet.Instance.Refresh();
             Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
             Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
-            Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", "1");
+            Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", testString);
             AmbientEnvironmentSettingsSet.Instance.Refresh();
             Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
-            Assert.AreEqual("1", settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
+            Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -81,11 +83,12 @@ namespace AmbientServices.Test
         [TestMethod]
         public void EnvironmentSettingsSetNullToNull()
         {
+            string testString = nameof(EnvironmentSettingsSetNullToNull) + Guid.NewGuid().ToString();
             AmbientEnvironmentSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
-            Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", "1");
+            Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", testString);
             AmbientEnvironmentSettingsSet.Instance.Refresh();
             Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "-notfound"));
-            Assert.AreEqual("1", settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "_testValue"));
+            Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "_testValue"));
             Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", null);
             AmbientEnvironmentSettingsSet.Instance.Refresh();
             settingsSet.ChangeSetting(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", null);

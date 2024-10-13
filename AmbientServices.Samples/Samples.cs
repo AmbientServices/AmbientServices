@@ -182,7 +182,7 @@ public static class AssemblyLoggingExtensions
     /// <param name="assembly">The assembly that was loaded.</param>
     public static void LogLoaded(this Assembly assembly)
     {
-        Logger.Log("AssemblyLoaded: " + assembly.FullName, "Lifetime", AmbientLogLevel.Trace);
+        Logger.Filter("Lifetime", AmbientLogLevel.Trace)?.Log("AssemblyLoaded: " + assembly.FullName);
     }
     /// <summary>
     /// Logs that there was an assembly load exception.
@@ -192,7 +192,7 @@ public static class AssemblyLoggingExtensions
     /// <param name="operation">The operation that needed the assembly.</param>
     public static void LogLoadException(this AssemblyName assemblyName, Exception ex, string operation)
     {
-        Logger.Log("Error loading assembly " + assemblyName.FullName + " while attempting to perform operation " + operation, ex, "Lifetime");
+        Logger.Error(ex, "Error loading assembly " + assemblyName.FullName + " while attempting to perform operation " + operation);
     }
     /// <summary>
     /// Logs that an assembly was scanned.
@@ -200,7 +200,7 @@ public static class AssemblyLoggingExtensions
     /// <param name="assembly">The <see cref="Assembly"/> that was scanned.</param>
     public static void LogScanned(this Assembly assembly)
     {
-        Logger.Log("Assembly " + assembly.FullName + " scanned", "Scan", AmbientLogLevel.Trace);
+        Logger.Filter("Scan", AmbientLogLevel.Trace)?.Log("Assembly " + assembly.FullName + " scanned");
     }
 }
 /// <summary>
@@ -219,11 +219,11 @@ public static class MyProgram
         {
             try
             {
-                Logger.Log("Starting processing...", "Process", AmbientLogLevel.Debug);
+                Logger.Filter("Process", AmbientLogLevel.Debug)?.Log("Starting processing...");
             }
             catch (Exception ex)
             {
-                Logger.Log(ex, "Process", AmbientLogLevel.Critical);
+                Logger.Critical(ex);
             }
         }
     }

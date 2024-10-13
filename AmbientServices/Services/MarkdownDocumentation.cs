@@ -54,7 +54,7 @@ public class MarkdownDocumentation
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log($"Error processing markdown for member {member.Name}:", ex);
+                        Logger.Error(ex, $"Error processing markdown for member {member.Name}:");
                     }
                 }
                 foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
@@ -70,14 +70,14 @@ public class MarkdownDocumentation
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log($"Error processing markdown for method {method.Name}:", ex);
+                        Logger.Error(ex, $"Error processing markdown for method {method.Name}:");
                     }
                 }
                 _crefToMarkdownDoc.Add(cref, markdownDoc.ToString());
             }
             catch (Exception ex)
             {
-                Logger.Log($"Error processing markdown for type {type.FullName}:", ex);
+                Logger.Error(ex, $"Error processing markdown for type {type.FullName}:");
             }
         }
     }
