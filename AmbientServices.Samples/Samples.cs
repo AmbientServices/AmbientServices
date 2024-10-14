@@ -978,7 +978,6 @@ class SqlAccessor
 /// </summary>
 class ProfileReporter
 {
-    private readonly AmbientBottleneckSurveyorCoordinator _surveyor = new();
     private Dictionary<string, long>? _mostRecentWindowServiceProfile;  // interlocked
     private readonly AmbientServiceProfilerCoordinator _coordinator;
     private readonly IDisposable? _timeWindow;

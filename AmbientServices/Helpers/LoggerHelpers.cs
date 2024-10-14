@@ -127,10 +127,14 @@ public class AmbientLogger
     }
     private static Dictionary<string, object?> AnonymousObjectToDictionary(object anonymous)
     {
-        var dictionary = new Dictionary<string, object?>();
-        foreach (var property in anonymous.GetType().GetProperties())
+        Dictionary<string, object?> dictionary = new();
+        if (anonymous is string) dictionary["Message"] = anonymous;
+        else
         {
-            dictionary[property.Name] = property.GetValue(anonymous);
+            foreach (var property in anonymous.GetType().GetProperties())
+            {
+                dictionary[property.Name] = property.GetValue(anonymous);
+            }
         }
         return dictionary;
     }
@@ -284,7 +288,8 @@ public class AmbientFilteredLogger
     /// <param name="message">An optional message to log.</param>
     public void Log(object structuredData, string? message = null)
     {
-        InnerLog(structuredData, message);
+        if (structuredData is string) InnerLog(new { Message = structuredData }, message);
+        else InnerLog(structuredData, message);
     }
     /// <summary>
     /// Logs the specified structured log data, adding the standard data from the specified exception to the structured data in the process.
