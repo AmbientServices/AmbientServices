@@ -1,8 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace AmbientServices;
+
+/// <summary>
+/// A delegate that can be used to render a simple log message.
+/// </summary>
+/// <param name="utcNow">The timestamp for the log (in UTC), which the renderer may choose to add to the log information or not.</param>
+/// <param name="level">The <see cref="AmbientLogLevel"/> of the log entry.</param>
+/// <param name="structuredData">The structured data to be logged.</param>
+/// <param name="ownerType">The optional name of the type that owns the log source.</param>
+/// <param name="category">The optional log entry category.</param>
+/// <returns>A simple log message to be given to one or more ambient <see cref="IAmbientLogger"/>s.</returns>
+public delegate string LogMessageRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null);
+
+/// <summary>
+/// A delegate that can be used to render log data.
+/// </summary>
+/// <param name="utcNow">The timestamp for the log (in UTC), which the renderer may choose to add to the log information or not.</param>
+/// <param name="level">The <see cref="AmbientLogLevel"/> of the log entry.</param>
+/// <param name="structuredData">The structured data to be logged.</param>
+/// <param name="ownerType">The optional name of the type that owns the log source.</param>
+/// <param name="category">The optional log entry category.</param>
+/// <returns>A structured log entry to be given to one or more ambient <see cref="IAmbientStructuredLogger"/>s.</returns>
+public delegate object LogEntryRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null);
 
 /// <summary>
 /// A type-specific logging class.  The name of the type is prepended to each log message.
@@ -19,15 +45,27 @@ namespace AmbientServices;
 /// </summary>
 public class AmbientLogger
 {
-    internal static readonly AmbientService<IAmbientLogger> _AmbientLogger = Ambient.GetService<IAmbientLogger>();
-    internal static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting(nameof(AmbientLogger) + "-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
+    private static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting(nameof(AmbientLogger) + "-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
+    private static readonly AmbientService<IAmbientLogger> _AmbientSimpleLogger = Ambient.GetService<IAmbientLogger>();
+    private static readonly AmbientService<IAmbientStructuredLogger> _AmbientLogger = Ambient.GetService<IAmbientStructuredLogger>();
+    private static readonly JsonSerializerOptions DefaultSerializer = InitDefaultSerializerOptions();
+    private static JsonSerializerOptions InitDefaultSerializerOptions()
+    {
+        JsonSerializerOptions options = new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+        return options;
+    }
 
     private readonly string _typeName;
     private readonly bool _useLocalLogger;
-    private readonly IAmbientLogger? _logger;
+    private readonly IAmbientLogger? _simpleLogger;
+    private readonly IAmbientStructuredLogger? _logger;
     private readonly AmbientLogFilter _logFilter;
 
-    private IAmbientLogger? DynamicLogger => _useLocalLogger ? _AmbientLogger.Local : _logger;
+    private IAmbientLogger? DynamicSimpleLogger => _useLocalLogger ? _AmbientSimpleLogger.Local : _simpleLogger;
+    private IAmbientStructuredLogger? DynamicLogger => _useLocalLogger ? _AmbientLogger.Local : _logger;
+
+    private LogMessageRenderer? _simpleRenderer;
+    private LogEntryRenderer? _renderer;
 
     /// <summary>
     /// Constructs an AmbientLogger using the ambient logger and ambient settings set.
@@ -43,8 +81,9 @@ public class AmbientLogger
     /// </summary>
     /// <param name="type">The type doing the logging.</param>
     /// <param name="logger">The <see cref="IAmbientLogger"/> to use for the logging.</param>
+    /// <param name="structuredLogger">The <see cref="IAmbientStructuredLogger"/> to use for the logging.</param>
     /// <param name="loggerSettingsSet">A <see cref="IAmbientSettingsSet"/> from which the settings should be queried.</param>
-    public AmbientLogger(Type type, IAmbientLogger? logger, IAmbientSettingsSet? loggerSettingsSet = null)
+    public AmbientLogger(Type type, IAmbientLogger? logger, IAmbientStructuredLogger? structuredLogger, IAmbientSettingsSet? loggerSettingsSet = null)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(type);
@@ -52,8 +91,39 @@ public class AmbientLogger
         if (type is null) throw new ArgumentNullException(nameof(type));
 #endif
         _typeName = type!.Name;
-        _logger = logger;
+        _simpleLogger = logger;
+        _logger = structuredLogger;
         _logFilter = (loggerSettingsSet == null) ? AmbientLogFilter.Default : new AmbientLogFilter(_typeName, loggerSettingsSet);
+    }
+    /// <summary>
+    /// Gets or sets the <see cref="LogMessageRenderer"/> which renders log message strings for <see cref="IAmbientLogger"/>s.
+    /// If null, the default renderer is used.
+    /// </summary>
+    public LogMessageRenderer? MessageRenderer
+    {
+        get
+        {
+            return _simpleRenderer;
+        }
+        set
+        {
+            Interlocked.Exchange(ref _simpleRenderer, value);
+        }
+    }
+    /// <summary>
+    /// Gets or sets the <see cref="LogEntryRenderer"/> which is the last step to alter message and/or structure data before it is sent to the ambient <see cref="IAmbientLogger"/>.
+    /// If null, the default renderer is used.
+    /// </summary>
+    public LogEntryRenderer? Renderer
+    {
+        get
+        {
+            return _renderer;
+        }
+        set
+        {
+            Interlocked.Exchange(ref _renderer, value);
+        }
     }
     /// <summary>
     /// Checks to see if the specified level (with no category) should be filtered.  If not, returns a logger that can be used to log specific data.
@@ -62,9 +132,7 @@ public class AmbientLogger
     /// <returns>An optional <see cref="AmbientFilteredLogger"/>, which can be conditionally called into for logging.  Null if the specified level, the corresponding type, or the null category are being filtered.</returns>
     public AmbientFilteredLogger? Filter(AmbientLogLevel level = AmbientLogLevel.Information)
     {
-        IAmbientLogger? logger = DynamicLogger;
-        if (logger == null || _logFilter.IsBlocked(level, _typeName, null)) return null;
-        return new AmbientFilteredLogger(logger, level, _typeName, null);
+        return Filter(null, level);
     }
     /// <summary>
     /// Checks to see if the specified category and level should be filtered.  If not, returns a logger that can be used to log specific data.
@@ -74,9 +142,10 @@ public class AmbientLogger
     /// <returns>An optional <see cref="AmbientFilteredLogger"/>, which can be conditionally called into for logging.  Null if the specified level, the corresponding type, or the null category are being filtered.</returns>
     public AmbientFilteredLogger? Filter(string? categoryName, AmbientLogLevel level = AmbientLogLevel.Information)
     {
-        IAmbientLogger? logger = DynamicLogger;
-        if (logger == null || _logFilter.IsBlocked(level, _typeName, categoryName)) return null;
-        return new AmbientFilteredLogger(logger, level, _typeName, categoryName);
+        IAmbientLogger? simpleLogger = DynamicSimpleLogger;
+        IAmbientStructuredLogger? logger = DynamicLogger;
+        if ((simpleLogger == null && logger == null) || _logFilter.IsBlocked(level, _typeName, null)) return null;
+        return new AmbientFilteredLogger(this, level, categoryName);
     }
 
     /// <summary>
@@ -103,11 +172,10 @@ public class AmbientLogger
     /// <summary>
     /// Logs an exception with standard structured data.
     /// </summary>
-    /// <param name="logger">The logger to log to.</param
-    /// <param name="errorPrefix">A prefix to add to the log message.</param>
-    /// <param name="anonymous">The anonymous object to convert to a JSON string.</param>
-    /// <param name="ex">An optional <see cref="Exception"/> whose information should be added to the anonymous object before logging.  If null, calls the other logger and ignores the level if it is <see cref="AmbientLogLevel.Error"/.></param>
-    public void Error(Exception ex, string? message = null, AmbientLogLevel level = AmbientLogLevel.Error)
+    /// <param name="ex">The <see cref="Exception"/> that caused the error and whose information should be added to the structured data before logging..</param>
+    /// <param name="contextDescription">A message to identify the context of where the exception occured.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> identifiying the severity of the information.</param>
+    public void Error(Exception ex, string? contextDescription = null, AmbientLogLevel level = AmbientLogLevel.Error)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(ex);
@@ -115,7 +183,7 @@ public class AmbientLogger
         if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
         Dictionary<string, object?> dictionary = AugmentStructuredDataWithErrorInformation(ex, new { });
-        if (message != null) dictionary["Message"] = message;
+        if (contextDescription != null) dictionary["Summary"] = contextDescription;
         Filter(level)?.Log(dictionary);
     }
     private const string ExceptionSuffix = "Exception";
@@ -128,7 +196,7 @@ public class AmbientLogger
     private static Dictionary<string, object?> AnonymousObjectToDictionary(object anonymous)
     {
         Dictionary<string, object?> dictionary = new();
-        if (anonymous is string) dictionary["Message"] = anonymous;
+        if (anonymous is string) dictionary["Summary"] = anonymous;
         else
         {
             foreach (var property in anonymous.GetType().GetProperties())
@@ -139,16 +207,66 @@ public class AmbientLogger
         return dictionary;
     }
 
+    internal void LogFiltered(AmbientLogLevel level, string? categoryName, object structuredData)
+    {
+        IAmbientLogger? simpleLogger = DynamicSimpleLogger;
+        if (simpleLogger != null)
+        {
+            // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
+            LogMessageRenderer renderer = _simpleRenderer ?? DefaultMessageRenderer;
+            string message = renderer(DateTime.UtcNow, level, structuredData, _typeName, categoryName);
+            simpleLogger.Log(message);
+        }
+        IAmbientStructuredLogger? logger = DynamicLogger;
+        if (logger != null)
+        {
+            // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
+            LogEntryRenderer renderer = _renderer ?? DefaultRenderer;
+            structuredData = renderer(DateTime.UtcNow, level, structuredData, _typeName, categoryName);
+            logger.Log(structuredData);
+        }
+    }
+    private static string DefaultMessageRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
+    {
+        string summary;
+        string entry;
+        if (structuredData is string sds)
+        {
+            summary = sds;
+            entry = "";
+        }
+        else
+        {
+            // look for a "Summary" property to use as a summary.  Depending on the serialization, this may or may not end up being redundant
+            PropertyInfo? summaryProperty = structuredData.GetType().GetProperty("Summary", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
+            entry = JsonSerializer.Serialize(structuredData, DefaultSerializer);
+        }
+        string ownerTypePart = string.IsNullOrEmpty(ownerType) ? "" : $":{ownerType}";
+        string entryPart = string.IsNullOrEmpty(entry) ? "" : $"{Environment.NewLine}{entry}";
+        string renderedMessage = $"{utcNow:yyMMdd HHmmss.fff} [{level}{ownerTypePart}] {summary}{entryPart}";
+        return renderedMessage;
+    }
+    private static object DefaultRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
+    {
+        Dictionary<string, object?> dict = AnonymousObjectToDictionary(structuredData);
+        dict["Timestamp"] = utcNow;
+        dict["Level"] = level;
+        if (ownerType != null) dict["OwnerType"] = ownerType;
+        if (category != null) dict["Category"] = category;
+        return dict;
+    }
+
 
     // deprecated functions
 
-    internal void InnerLog(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
+    internal void LogDeprecated(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
     {
         if (!_logFilter.IsBlocked(level, _typeName, category))
         {
             if (!string.IsNullOrEmpty(category)) category += ":";
             message = string.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, _typeName, category, message);
-            DynamicLogger!.Log(message);  // the calling of this method is short-circuited when DynamicLogger is null
+            DynamicSimpleLogger!.Log(message);  // the calling of this method is short-circuited when DynamicLogger is null
         }
     }
     /// <summary>
@@ -160,8 +278,8 @@ public class AmbientLogger
     [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
     {
-        if (DynamicLogger == null) return;
-        InnerLog(message, category, level);
+        if (DynamicSimpleLogger == null) return;
+        LogDeprecated(message, category, level);
     }
     /// <summary>
     /// Logs the message returned by the delegate.
@@ -172,13 +290,13 @@ public class AmbientLogger
     [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(Func<string> messageLambda, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
     {
-        if (DynamicLogger == null) return;
+        if (DynamicSimpleLogger == null) return;
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(messageLambda);
 #else
         if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
 #endif
-        InnerLog(messageLambda(), category, level);
+        LogDeprecated(messageLambda(), category, level);
     }
     /// <summary>
     /// Logs the specified exception.
@@ -189,13 +307,13 @@ public class AmbientLogger
     [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
     {
-        if (DynamicLogger == null) return;
+        if (DynamicSimpleLogger == null) return;
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(ex);
 #else
         if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
-        InnerLog(ex.ToString(), category, level);
+        LogDeprecated(ex.ToString(), category, level);
     }
     /// <summary>
     /// Logs the specified message and exception.
@@ -207,13 +325,13 @@ public class AmbientLogger
     [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(string message, Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
     {
-        if (DynamicLogger == null) return;
+        if (DynamicSimpleLogger == null) return;
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(ex);
 #else
         if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
-        InnerLog(message + Environment.NewLine + ex.ToString(), category, level);
+        LogDeprecated(message + Environment.NewLine + ex.ToString(), category, level);
     }
     /// <summary>
     /// Logs the specified message (returned by a delegate) and exception.
@@ -230,13 +348,13 @@ public class AmbientLogger
 #else
         if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
-        if (DynamicLogger == null) return;
+        if (DynamicSimpleLogger == null) return;
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(messageLambda);
 #else
         if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
 #endif
-        InnerLog(messageLambda() + Environment.NewLine + ex.ToString(), category, level);
+        LogDeprecated(messageLambda() + Environment.NewLine + ex.ToString(), category, level);
     }
 }
 /// <summary>
@@ -245,62 +363,40 @@ public class AmbientLogger
 /// </summary>
 public class AmbientFilteredLogger
 {
-    internal static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting(nameof(AmbientLogger) + "-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
-
-    private readonly IAmbientLogger _logger;
+    private readonly AmbientLogger _logger;
     private readonly AmbientLogLevel _level;
-    private readonly string _typeName;
     private readonly string? _categoryName;
 
     /// <summary>
     /// Constructs an AmbientFilteredLogger for a category that belongs to the specified logger.
     /// </summary>
-    /// <param name="logger">The <see cref="IAmbientLogger"/> the raw log messages should be sent to after being constructed.</param>
+    /// <param name="logger">The <see cref="AmbientLogger"/> that generated this filtered logger.</param>
     /// <param name="level">The <see cref="AmbientLogLevel"/> for the logging.</param>
-    /// <param name="typeName">The name of the type that owns the log messages.</param>
     /// <param name="categoryName">The optional name of the category.</param>
-    internal AmbientFilteredLogger(IAmbientLogger logger, AmbientLogLevel level, string typeName, string? categoryName)
+    internal AmbientFilteredLogger(AmbientLogger logger, AmbientLogLevel level, string? categoryName)
     {
         _logger = logger;
         _level = level;
-        _typeName = typeName;
         _categoryName = string.IsNullOrEmpty(categoryName) ? "" : $"{categoryName}:";
     }
 
-    private void InnerLog(object? structuredData = null, string ? message = null)
-    {
-        // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
-        message = string.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, _level, _typeName, _categoryName, message);
-        _logger.Log(message, structuredData);  // the calling of this method is short-circuited when DynamicLogger is null
-    }
-    /// <summary>
-    /// Logs the specified log message.
-    /// </summary>
-    /// <param name="message">The message to log.</param>
-    public void LogMessage(string message)
-    {
-        InnerLog(message);
-    }
     /// <summary>
     /// Logs the specified structured log data.
     /// </summary>
     /// <param name="structuredData">Structured data to log, usually either an anonymous type or a dictionary of name-value pairs to log.</param>
-    /// <param name="message">An optional message to log.</param>
-    public void Log(object structuredData, string? message = null)
+    public void Log(object structuredData)
     {
-        if (structuredData is string) InnerLog(new { Message = structuredData }, message);
-        else InnerLog(structuredData, message);
+        _logger.LogFiltered(_level, _categoryName, structuredData);
     }
     /// <summary>
     /// Logs the specified structured log data, adding the standard data from the specified exception to the structured data in the process.
     /// </summary>
     /// <param name="structuredData">Structured data to log, usually either an anonymous type or a dictionary of name-value pairs to log.</param>
     /// <param name="ex">An <see cref="Exception"/> whose data should be added to the log entry.</param>
-    /// <param name="message">An optional message to log.</param>
-    public void Log(object structuredData, Exception ex, string? message = null)
+    public void Log(object structuredData, Exception ex)
     {
         structuredData = AmbientLogger.AugmentStructuredDataWithErrorInformation(ex, structuredData);
-        InnerLog(structuredData, message);
+        _logger.LogFiltered(_level, _categoryName, structuredData);
     }
 }
 /// <summary>
@@ -325,9 +421,10 @@ public class AmbientLogger<TOWNER> : AmbientLogger
     /// Constructs an AmbientLogger with the specified logger and settings set.
     /// </summary>
     /// <param name="logger">The <see cref="IAmbientLogger"/> to use for the logging.</param>
+    /// <param name="structuredLogger">An optional <see cref="IAmbientStructuredLogger"/> to use for the logging.</param>
     /// <param name="loggerSettingsSet">A <see cref="IAmbientSettingsSet"/> from which the settings should be queried.</param>
-    public AmbientLogger(IAmbientLogger? logger, IAmbientSettingsSet? loggerSettingsSet = null)
-        : base (typeof(TOWNER), logger, loggerSettingsSet)
+    public AmbientLogger(IAmbientLogger? logger, IAmbientStructuredLogger? structuredLogger = null, IAmbientSettingsSet? loggerSettingsSet = null)
+        : base (typeof(TOWNER), logger, structuredLogger, loggerSettingsSet)
     {
     }
 }

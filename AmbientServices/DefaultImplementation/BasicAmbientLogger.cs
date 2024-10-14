@@ -102,9 +102,8 @@ namespace AmbientServices
         /// <summary>
         /// Buffers the specified message to be asynchronously logged.
         /// </summary>
-        /// <param name="message">An optional message to log.</param>
-        /// <param name="structuredData">An optional structured data to log.</param>
-        public void Log(string? message, object? structuredData = null)
+        /// <param name="message">The message to log.</param>
+        public void Log(string message)
         {
             // which period number within the day are we in right now?
             TimeSpan timeOfDay = AmbientClock.UtcNow.TimeOfDay;
@@ -128,7 +127,7 @@ namespace AmbientServices
                 // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
                 if (!InterlockedUtilities.TryAgainAfterOptomisticMissDelay(attempt++)) break;
             }
-            if (!_disposedValue) _fileBuffers.BufferLine(DefaultAmbientLogger.DefaultCombineLog(message, structuredData));
+            if (!_disposedValue) _fileBuffers.BufferLine(message);
         }
         /// <summary>
         /// Flushes everything that has been previously logged to the appropriate file on disk.

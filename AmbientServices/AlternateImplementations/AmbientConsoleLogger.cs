@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.Serialization.Json;
 
 #if NET5_0_OR_GREATER
 using System.Runtime.Versioning;
@@ -40,13 +39,12 @@ namespace AmbientServices
         /// Adds the specified message to the log.
         /// </summary>
         /// <param name="message">An optional message to log.</param>
-        /// <param name="structuredData">An optional structured data to log.</param>
 #if NET5_0_OR_GREATER
         [UnsupportedOSPlatform("browser")]
 #endif
-        public void Log(string? message, object? structuredData = null)
+        public void Log(string message)
         {
-            ConsoleBuffer.BufferLine(DefaultAmbientLogger.DefaultCombineLog(message, structuredData));
+            ConsoleBuffer.BufferLine(message);
         }
         /// <summary>
         /// Asynchronously flushes log entries to the system console output.

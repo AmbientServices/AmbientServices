@@ -42,7 +42,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(_Test.GlobalReference.Service, _Test.Global);
             IAmbientLogger logger = _Logger.Global;
             Assert.IsNotNull(logger);
-            AmbientLogger<TestAmbientService> serviceBrokerLogger = new(logger);
+            AmbientLogger<TestAmbientService> serviceBrokerLogger = new(logger, null);
             IAmbientProgressService progressTracker = _ProgressService.Global;
             Assert.IsNotNull(progressTracker);
             IAmbientSettingsSet settings = _SettingsSet.Global;

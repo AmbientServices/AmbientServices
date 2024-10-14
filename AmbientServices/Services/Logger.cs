@@ -45,9 +45,23 @@ public interface IAmbientLogger
     /// <summary>
     /// Logs the specified message.
     /// </summary>
-    /// <param name="message">An optional message to log.</param>
-    /// <param name="structuredData">An optional structured data to log.</param>
-    void Log(string? message, object? structuredData = null);
+    /// <param name="message">The message to log.</param>
+    void Log(string message);
+    /// <summary>
+    /// Flushes the log messages to the logger service.
+    /// </summary>
+    ValueTask Flush(CancellationToken cancel = default);
+}
+/// <summary>
+/// An interface that abstracts a structured logging service.
+/// </summary>
+public interface IAmbientStructuredLogger
+{
+    /// <summary>
+    /// Logs the specified structured data, rendering it into whatever format is appropriate.
+    /// </summary>
+    /// <param name="structuredData">Structured data to log, for example an anonymous type or a dictionary with string keys and stringizable objects as entries.</param>
+    void Log(object structuredData);
     /// <summary>
     /// Flushes the log messages to the logger service.
     /// </summary>

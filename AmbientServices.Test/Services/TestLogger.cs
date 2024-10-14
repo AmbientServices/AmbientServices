@@ -16,6 +16,7 @@ namespace AmbientServices.Test
     public class TestLogger
     {
         private static readonly AmbientService<IAmbientLogger> _Logger = Ambient.GetService<IAmbientLogger>(out _Logger);
+        private static readonly AmbientService<IAmbientStructuredLogger> _StructuredLogger = Ambient.GetService<IAmbientStructuredLogger>(out _StructuredLogger);
         private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>(out _SettingsSet);
 
         /// <summary>
@@ -121,13 +122,13 @@ namespace AmbientServices.Test
             logger.Error(new ApplicationException());
             logger.Error(new ApplicationException(), "test message");
             logger.Error(new ApplicationException(), "test message", AmbientLogLevel.Information);
-            logger.Filter()?.Log(new { Error = new ApplicationException() });
+            logger.Filter()?.Log(new { }, new ApplicationException());
             logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException());
-            logger.Filter()?.LogMessage("test message");
-            logger.Filter("category", AmbientLogLevel.Information)?.LogMessage("test message");
-            logger.Filter()?.Log(new { }, new ApplicationException(), "Exception during test");
+            logger.Filter()?.Log(new { Summary = "test message" });
+            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "test message" });
+            logger.Filter()?.Log(new { Summary = "Exception during test" }, new ApplicationException());
             logger.Error(new ApplicationException(), "Exception during test");
-            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException(), "Exception during test");
+            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
             if (_Logger.Global != null) await _Logger.Global.Flush();
         }
         /// <summary>
@@ -154,11 +155,11 @@ namespace AmbientServices.Test
                 logger.Error(new ApplicationException(), "test message", AmbientLogLevel.Information);
                 logger.Filter()?.Log(new { Error = new ApplicationException() });
                 logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException());
-                logger.Filter()?.LogMessage("test message");
-                logger.Filter("category", AmbientLogLevel.Information)?.LogMessage("test message");
-                logger.Filter()?.Log(new { }, new ApplicationException(), "Exception during test");
+                logger.Filter()?.Log(new { Summary = "test message" });
+                logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "test message" });
+                logger.Filter()?.Log(new { Summary = "Exception during test" }, new ApplicationException());
                 logger.Error(new ApplicationException(), "Exception during test");
-                logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException(), "Exception during test");
+                logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
                 if (_Logger.Global != null) await _Logger.Global.Flush();
             }
         }
@@ -185,11 +186,11 @@ namespace AmbientServices.Test
                 logger.Error(new ApplicationException(), "test message", AmbientLogLevel.Information);
                 logger.Filter()?.Log(new { Error = new ApplicationException() });
                 logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException());
-                logger.Filter()?.LogMessage("test message");
-                logger.Filter("category", AmbientLogLevel.Information)?.LogMessage("test message");
-                logger.Filter()?.Log(new { }, new ApplicationException(), "Exception during test");
+                logger.Filter()?.Log(new { Summary = "test message" });
+                logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "test message" });
+                logger.Filter()?.Log(new { Summary = "Exception during test" }, new ApplicationException());
                 logger.Error(new ApplicationException(), "Exception during test");
-                logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException(), "Exception during test");
+                logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
             }
         }
         /// <summary>
@@ -202,7 +203,7 @@ namespace AmbientServices.Test
             settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-LogLevel", AmbientLogLevel.Error.ToString());
             settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-TypeBlock", ".*[Bb]lock.*");
             settingsSet.ChangeSetting(nameof(AmbientLogFilter) + "-CategoryBlock", ".*[Bb]lock.*");
-            AmbientLogger<AllowedLoggerType> logger = new(_Logger.Global, settingsSet);
+            AmbientLogger<AllowedLoggerType> logger = new(_Logger.Global, null, settingsSet);
             logger.Log(new ApplicationException());
             logger.Log(new ApplicationException(), "category", AmbientLogLevel.Information);
             logger.Log("test message");
@@ -222,13 +223,13 @@ namespace AmbientServices.Test
             logger.Filter()?.Log(new { Error = new ApplicationException() });
             logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException());
             logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException());
-            logger.Filter()?.LogMessage("test message");
-            logger.Filter("category", AmbientLogLevel.Information)?.LogMessage("test message");
-            logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.LogMessage("test message");
-            logger.Filter()?.Log(new { }, new ApplicationException(), "Exception during test");
+            logger.Filter()?.Log(new { Summary = "test message" });
+            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "test message" });
+            logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.Log(new { Summary = "test message" });
+            logger.Filter()?.Log(new { Summary = "Exception during test" }, new ApplicationException());
             logger.Error(new ApplicationException(), "Exception during test");
-            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException(), "Exception during test");
-            logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException(), "Exception during test");
+            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
+            logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
             if (_Logger.Global != null) await _Logger.Global.Flush();
         }
         /// <summary>
@@ -266,13 +267,13 @@ namespace AmbientServices.Test
             logger.Filter()?.Log(new { Error = new ApplicationException() });
             logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException());
             logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException());
-            logger.Filter()?.LogMessage("test message");
-            logger.Filter("category", AmbientLogLevel.Information)?.LogMessage("test message");
-            logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.LogMessage("test message");
-            logger.Filter()?.Log(new { }, new ApplicationException(), "Exception during test");
+            logger.Filter()?.Log(new { Summary = "test message" });
+            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "test message" });
+            logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.Log(new { Summary = "test message" });
+            logger.Filter()?.Log(new { Summary = "Exception during test" }, new ApplicationException());
             logger.Error(new ApplicationException(), "Exception during test");
-            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException(), "Exception during test");
-            logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.Log(new { }, new ApplicationException(), "Exception during test");
+            logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
+            logger.Filter("AllowedCategory", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
 
             if (_Logger.Local != null) await _Logger.Local.Flush();
         }
@@ -282,7 +283,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void LoggerArgumentExceptions()
         {
-            AmbientLogger<TestLogger> logger = new(_Logger.Global);
+            AmbientLogger<TestLogger> logger = new(_Logger.Global, null);
             Func<string> nullLambda = null;
             Exception nullException = null;
             Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda!, "category", AmbientLogLevel.Information));
