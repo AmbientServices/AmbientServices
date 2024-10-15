@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -174,7 +175,7 @@ public class AmbientLogger
         if (ex is null) throw new ArgumentNullException(nameof(ex));
         if (anonymous is null) throw new ArgumentNullException(nameof(anonymous));
 #endif
-        Dictionary<string, object?> dictionary = AnonymousObjectToDictionary(anonymous);
+        Dictionary<string, object?> dictionary = StructuredDataToDictionary(anonymous);
         dictionary["ErrorType"] = GetErrorType(ex);
         dictionary["ErrorMessage"] = ex.Message;
         dictionary["ErrorStack"] = ex.StackTrace;
@@ -230,28 +231,40 @@ public class AmbientLogger
         }
     }
     /// <summary>
-    /// Converts a structured data log entry (possibly an anonymous object) into a dictionary.
+    /// Copies the data in a structured data log entry (possibly an anonymous object) into a dictionary.
     /// </summary>
+    /// <param name="dictionary">The dictionary to add the properties and values to.</param>
     /// <param name="structuredData">The structured object.</param>
     /// <returns>The dictionary containing the properties and values in the structured data object.</returns>
-    public static Dictionary<string, object?> AnonymousObjectToDictionary(object structuredData)
+    public static Dictionary<string, object?> CopyStructuredDataToDictionary(Dictionary<string, object?> dictionary, object structuredData)
     {
 #if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(dictionary);
         ArgumentNullException.ThrowIfNull(structuredData);
 #else
+        if (dictionary is null) throw new ArgumentNullException(nameof(dictionary));
         if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
 #endif
-        Dictionary<string, object?> dictionary = new();
         if (structuredData is string) dictionary["Summary"] = structuredData;
         else if (structuredData is Dictionary<string, object?> sdd) return sdd;
         else
         {
             foreach (PropertyInfo property in structuredData.GetType().GetProperties())
             {
-                dictionary[property.Name] = property.GetValue(structuredData);
+                object? propertyValue = property.GetValue(structuredData);
+                dictionary[property.Name] = propertyValue;
             }
         }
         return dictionary;
+    }
+    /// <summary>
+    /// Converts a structured data log entry (possibly an anonymous object) into a dictionary.
+    /// </summary>
+    /// <param name="structuredData">The structured object.</param>
+    /// <returns>The dictionary containing the properties and values in the structured data object.</returns>
+    public static Dictionary<string, object?> StructuredDataToDictionary(object structuredData)
+    {
+        return CopyStructuredDataToDictionary(new(), structuredData);
     }
     /// <summary>
     /// Converts the specified structured data into a simple log message.
@@ -292,7 +305,7 @@ public class AmbientLogger
             // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
             PropertyInfo? summaryProperty = structuredData.GetType().GetProperty("Summary", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
-            Dictionary<string, object?> dict = AnonymousObjectToDictionary(structuredData);
+            Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
             dict.Remove("Summary");
             structuredData = dict;
             structuredEntry = summaryStructuredDelimiter + JsonSerializer.Serialize(structuredData, DefaultSerializer);
@@ -327,7 +340,7 @@ public class AmbientLogger
             // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
             PropertyInfo? summaryProperty = structuredData.GetType().GetProperty("Summary", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
-            Dictionary<string, object?> dict = AnonymousObjectToDictionary(structuredData);
+            Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
             dict.Remove("Summary");
             entry = JsonSerializer.Serialize(dict, DefaultSerializer);
         }
@@ -338,17 +351,19 @@ public class AmbientLogger
     }
     private static object DefaultRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
     {
-        Dictionary<string, object?> dict = AnonymousObjectToDictionary(structuredData);
+        Dictionary<string, object?> dict = new();
         // add in the standard log entries
         dict["Timestamp"] = utcNow;
         dict["Level"] = level;
         if (ownerType != null) dict["OwnerType"] = ownerType;
         if (category != null) dict["Category"] = category;
         // look for additional context-specific data to add to the log entry (request-tracking information, for example)
-        foreach ((string key, object value) in AmbientLogContext.ContextLogPairs)
+        foreach ((string key, object value) in AmbientLogContext.ContextLogPairs.Reverse())
         {
             dict[key] = value;
         }
+        // add in any data from the structuredData object
+        CopyStructuredDataToDictionary(dict, structuredData);
         return dict;
     }
 
