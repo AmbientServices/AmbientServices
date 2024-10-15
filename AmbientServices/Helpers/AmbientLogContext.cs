@@ -29,7 +29,7 @@ public static class AmbientLogContext
     /// <param name="key">The key, which will be used as a property name in the log entries.</param>
     /// <param name="value">The value, which will be used as the value for the property with the key name in the log entries.  The value should be structured log data (a dictionary or an anonymous object), or a string.</param>
     /// <returns>An object that will remove the key-value pair from the stack when it is disposed.</returns>
-    public static IDisposable AddKeyValuePait(string key, object value)
+    public static IDisposable AddKeyValuePair(string key, object value)
     {
         aStack.Value ??= ImmutableStack<LogContextEntry>.Empty;
         return new LogContextLifetime(aStack, key, value);
