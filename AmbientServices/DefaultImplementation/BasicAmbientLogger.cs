@@ -1,5 +1,4 @@
 ﻿using AmbientServices.Utilities;
-using AmbientServices.Extensions;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -13,7 +12,7 @@ namespace AmbientServices
     /// A basic implementation of <see cref="IAmbientLogger"/> that writes log messages to a rotating set of files.
     /// Turn the logger off for maximum performance.
     /// </summary>
-    public class BasicAmbientLogger : IAmbientLogger, IDisposable
+    public class BasicAmbientLogger : IAmbientLogger, IAmbientStructuredLogger, IDisposable
     {
         private readonly string _filePrefix;
         private readonly string _fileExtension;
@@ -57,7 +56,7 @@ namespace AmbientServices
                 }
             }
             fileExtension ??= ".log";
-            if (!fileExtension.StartsWith('.')) fileExtension = "." + fileExtension;
+            if (!fileExtension.StartsWith(".")) fileExtension = "." + fileExtension;
             _filePrefix = filePrefix;
             _fileExtension = fileExtension;
             _rotationPeriodMinutes = rotationPeriodMinutes;
@@ -99,6 +98,20 @@ namespace AmbientServices
         /// Gets the file prefix.
         /// </summary>
         public string FilePrefix => _filePrefix;
+        /// <summary>
+        /// Buffers the specified structured data to be asynchronously logged.
+        /// </summary>
+        /// <param name="structuredData">The structured data object.</param>
+        public void Log(object structuredData)
+        {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(structuredData);
+#else
+        if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
+#endif
+            string message = AmbientLogger.ConvertStructuredDataIntoSimpleMessage(structuredData);
+            Log(message);
+        }
         /// <summary>
         /// Buffers the specified message to be asynchronously logged.
         /// </summary>

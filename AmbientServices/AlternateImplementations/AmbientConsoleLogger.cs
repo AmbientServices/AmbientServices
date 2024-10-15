@@ -21,7 +21,7 @@ namespace AmbientServices
     /// Switch to this logger for better performance, but less persistent log data.
     /// Turn the logger off for maximum performance.
     /// </summary>
-    public class AmbientConsoleLogger : IAmbientLogger
+    public class AmbientConsoleLogger : IAmbientLogger, IAmbientStructuredLogger
     {
         private static readonly AmbientConsoleLogger _Instance = new();
         /// <summary>
@@ -34,6 +34,23 @@ namespace AmbientServices
         /// </summary>
         public AmbientConsoleLogger()
         {
+        }
+        /// <summary>
+        /// Buffers the specified structured data to be asynchronously logged.
+        /// </summary>
+        /// <param name="structuredData">The structured data object.</param>
+#if NET5_0_OR_GREATER
+        [UnsupportedOSPlatform("browser")]
+#endif
+        public void Log(object structuredData)
+        {
+#if NET5_0_OR_GREATER
+            ArgumentNullException.ThrowIfNull(structuredData);
+#else
+        if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
+#endif
+            string message = AmbientLogger.ConvertStructuredDataIntoSimpleMessage(structuredData);
+            Log(message);
         }
         /// <summary>
         /// Adds the specified message to the log.

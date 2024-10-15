@@ -193,28 +193,12 @@ public class AmbientLogger
         if (errorType.EndsWith(ExceptionSuffix, StringComparison.Ordinal)) errorType = errorType.Substring(0, errorType.Length - ExceptionSuffix.Length);
         return errorType;
     }
-    private static Dictionary<string, object?> AnonymousObjectToDictionary(object anonymous)
-    {
-        Dictionary<string, object?> dictionary = new();
-        if (anonymous is string) dictionary["Summary"] = anonymous;
-        else
-        {
-            foreach (var property in anonymous.GetType().GetProperties())
-            {
-                dictionary[property.Name] = property.GetValue(anonymous);
-            }
-        }
-        return dictionary;
-    }
-
     internal void LogFiltered(AmbientLogLevel level, string? categoryName, object structuredData)
     {
         IAmbientLogger? simpleLogger = DynamicSimpleLogger;
         if (simpleLogger != null)
         {
-            // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
-            LogMessageRenderer renderer = _simpleRenderer ?? DefaultMessageRenderer;
-            string message = renderer(DateTime.UtcNow, level, structuredData, _typeName, categoryName);
+            string message = ConvertStructuredDataIntoSimpleMessage(level, categoryName, structuredData);
             simpleLogger.Log(message);
         }
         IAmbientStructuredLogger? logger = DynamicLogger;
@@ -226,8 +210,91 @@ public class AmbientLogger
             logger.Log(structuredData);
         }
     }
-    private static string DefaultMessageRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
+    /// <summary>
+    /// Converts a structured data log entry (possibly an anonymous object) into a dictionary.
+    /// </summary>
+    /// <param name="structuredData">The structured object.</param>
+    /// <returns>The dictionary containing the properties and values in the structured data object.</returns>
+    public static Dictionary<string, object?> AnonymousObjectToDictionary(object structuredData)
     {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(structuredData);
+#else
+        if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
+#endif
+        Dictionary<string, object?> dictionary = new();
+        if (structuredData is string) dictionary["Summary"] = structuredData;
+        else
+        {
+            foreach (PropertyInfo property in structuredData.GetType().GetProperties())
+            {
+                dictionary[property.Name] = property.GetValue(structuredData);
+            }
+        }
+        return dictionary;
+    }
+    /// <summary>
+    /// Converts the specified structured data into a simple log message.
+    /// </summary>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> in case the renderer needs it.</param>
+    /// <param name="categoryName">The optional name of the category.</param>
+    /// <param name="structuredData">The structured data object.</param>
+    /// <returns>The simple log message</returns>
+    public string ConvertStructuredDataIntoSimpleMessage(AmbientLogLevel level, string? categoryName, object structuredData)
+    {
+        // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
+        LogMessageRenderer renderer = _simpleRenderer ?? DefaultMessageRenderer;
+        string message = renderer(DateTime.UtcNow, level, structuredData, _typeName, categoryName);
+        return message;
+    }
+    /// <summary>
+    /// Renders the structured data into a simple log entry.
+    /// </summary>
+    /// <param name="structuredData">The structured data (often an anonymous object).</param>
+    /// <param name="summaryStructuredDelimiter">The delimiter to use between the summary data and the structured data.</param>
+    /// <returns>The simple log entry string.</returns>
+    public static string ConvertStructuredDataIntoSimpleMessage(object structuredData, string summaryStructuredDelimiter = "|")
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(structuredData);
+#else
+        if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
+#endif
+        string summary;
+        string structuredEntry;
+        if (structuredData is string sds)
+        {
+            summary = sds;
+            structuredEntry = "";
+        }
+        else
+        {
+            // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
+            PropertyInfo? summaryProperty = structuredData.GetType().GetProperty("Summary", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
+            Dictionary<string, object?> dict = AnonymousObjectToDictionary(structuredData);
+            dict.Remove("Summary");
+            structuredData = dict;
+            structuredEntry = summaryStructuredDelimiter + JsonSerializer.Serialize(structuredData, DefaultSerializer);
+        }
+        return summary + structuredEntry;
+    }
+    /// <summary>
+    /// Renders a simple log message from the specified structured data.
+    /// </summary>
+    /// <param name="utcNow">The timestamp for the log (in UTC), which the renderer may choose to add to the log information or not.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> of the log entry.</param>
+    /// <param name="structuredData">The structured data to be logged.</param>
+    /// <param name="ownerType">The optional name of the type that owns the log source.</param>
+    /// <param name="category">The optional log entry category.</param>
+    /// <returns>The rendered message.</returns>
+    public static string DefaultMessageRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(structuredData);
+#else
+        if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
+#endif
         string summary;
         string entry;
         if (structuredData is string sds)
@@ -237,10 +304,12 @@ public class AmbientLogger
         }
         else
         {
-            // look for a "Summary" property to use as a summary.  Depending on the serialization, this may or may not end up being redundant
+            // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
             PropertyInfo? summaryProperty = structuredData.GetType().GetProperty("Summary", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
-            entry = JsonSerializer.Serialize(structuredData, DefaultSerializer);
+            Dictionary<string, object?> dict = AnonymousObjectToDictionary(structuredData);
+            dict.Remove("Summary");
+            entry = JsonSerializer.Serialize(dict, DefaultSerializer);
         }
         string ownerTypePart = string.IsNullOrEmpty(ownerType) ? "" : $":{ownerType}";
         string entryPart = string.IsNullOrEmpty(entry) ? "" : $"{Environment.NewLine}{entry}";
