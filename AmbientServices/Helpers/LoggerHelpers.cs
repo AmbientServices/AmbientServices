@@ -224,6 +224,7 @@ public class AmbientLogger
 #endif
         Dictionary<string, object?> dictionary = new();
         if (structuredData is string) dictionary["Summary"] = structuredData;
+        else if (structuredData is Dictionary<string, object?> sdd) return sdd;
         else
         {
             foreach (PropertyInfo property in structuredData.GetType().GetProperties())

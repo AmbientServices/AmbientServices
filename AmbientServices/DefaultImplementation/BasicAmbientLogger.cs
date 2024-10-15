@@ -56,7 +56,7 @@ namespace AmbientServices
                 }
             }
             fileExtension ??= ".log";
-            if (!fileExtension.StartsWith(".")) fileExtension = "." + fileExtension;
+            if (fileExtension.Length > 0 && fileExtension[0] != '.') fileExtension = "." + fileExtension;
             _filePrefix = filePrefix;
             _fileExtension = fileExtension;
             _rotationPeriodMinutes = rotationPeriodMinutes;
