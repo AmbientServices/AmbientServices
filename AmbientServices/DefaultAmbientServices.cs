@@ -106,7 +106,7 @@ namespace AmbientServices
                     }
                 }
             }
-            System.Diagnostics.Trace.WriteLine($"Loading Ambient Types From {String.Join(",", checkedAssemblies.Select(a => a.FullName))}");
+            System.Diagnostics.Trace.WriteLine($"Loading Ambient Types From {string.Join(",", checkedAssemblies.Select(a => a.FullName))}");
         }
         /// <summary>
         /// Adds the default implementation for the specified interface type.

@@ -182,7 +182,7 @@ public static class MyProgram
     /// </summary>
     public static void Process()
     {
-        using BasicAmbientLogger bl = new();
+        using AmbientFileLogger bl = new();
         using (new ScopedLocalServiceOverride<IAmbientLogger>(bl))
         {
             try

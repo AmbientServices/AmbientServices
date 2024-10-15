@@ -1,11 +1,8 @@
-﻿using AmbientServices;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+
+#pragma warning disable CS0618
 
 namespace AmbientServices.Test
 {
@@ -15,9 +12,9 @@ namespace AmbientServices.Test
     [TestClass]
     public class TestLogger
     {
-        private static readonly AmbientService<IAmbientLogger> _Logger = Ambient.GetService<IAmbientLogger>(out _Logger);
-        private static readonly AmbientService<IAmbientStructuredLogger> _StructuredLogger = Ambient.GetService<IAmbientStructuredLogger>(out _StructuredLogger);
-        private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>(out _SettingsSet);
+        private static readonly AmbientService<IAmbientLogger> _Logger = Ambient.GetService(out _Logger);
+        private static readonly AmbientService<IAmbientStructuredLogger> _StructuredLogger = Ambient.GetService(out _StructuredLogger);
+        private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService(out _SettingsSet);
 
         /// <summary>
         /// Performs tests on <see cref="IAmbientLogger"/>.
@@ -137,7 +134,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public async Task LoggerBasic()
         {
-            using BasicAmbientLogger bl = new();
+            using AmbientFileLogger bl = new();
             using (new ScopedLocalServiceOverride<IAmbientLogger>(bl))
             {
                 AmbientLogger logger = new(typeof(TestLogger));

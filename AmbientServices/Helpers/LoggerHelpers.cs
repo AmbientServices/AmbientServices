@@ -320,10 +320,16 @@ public class AmbientLogger
     private static object DefaultRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
     {
         Dictionary<string, object?> dict = AnonymousObjectToDictionary(structuredData);
+        // add in the standard log entries
         dict["Timestamp"] = utcNow;
         dict["Level"] = level;
         if (ownerType != null) dict["OwnerType"] = ownerType;
         if (category != null) dict["Category"] = category;
+        // look for additional context-specific data to add to the log entry (request-tracking information, for example)
+        foreach ((string key, object value) in AmbientLogContext.ContextLogPairs)
+        {
+            dict[key] = value;
+        }
         return dict;
     }
 
