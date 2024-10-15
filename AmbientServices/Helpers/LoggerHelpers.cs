@@ -242,8 +242,9 @@ public class AmbientLogger
     /// </summary>
     /// <param name="dictionary">The dictionary to add the properties and values to.</param>
     /// <param name="structuredData">The structured object.</param>
+    /// <param name="logNullValues">Whether to log null values or not.</param>
     /// <returns>The dictionary containing the properties and values in the structured data object.</returns>
-    public static Dictionary<string, object?> CopyStructuredDataToDictionary(Dictionary<string, object?> dictionary, object structuredData)
+    public static Dictionary<string, object?> CopyStructuredDataToDictionary(Dictionary<string, object?> dictionary, object structuredData, bool logNullValues = false)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(dictionary);
@@ -259,7 +260,7 @@ public class AmbientLogger
             foreach (PropertyInfo property in structuredData.GetType().GetProperties())
             {
                 object? propertyValue = property.GetValue(structuredData);
-                dictionary[property.Name] = propertyValue;
+                if (logNullValues || propertyValue != null) dictionary[property.Name] = propertyValue;
             }
         }
         return dictionary;
