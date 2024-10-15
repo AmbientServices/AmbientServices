@@ -26,18 +26,32 @@ public static class AmbientLogContext
     /// <summary>
     /// Puts the key-value pair into the context so that that key-value pair will be added to every log entry called from this async context until the returned object is disposed.
     /// </summary>
-    /// <param name="key">The key, which will be used as a property name in the log entries.</param>
-    /// <param name="value">The value, which will be used as the value for the property with the key name in the log entries.  The value should be structured log data (a dictionary or an anonymous object), or a string.</param>
+    /// <param name="entry">The <see cref="LogContextEntry"/> whose key-value pair will be added to all log entries during the scope.</param>
     /// <returns>An object that will remove the key-value pair from the stack when it is disposed.</returns>
-    public static IDisposable AddKeyValuePair(string key, object value)
+    public static IDisposable AddKeyValuePair(LogContextEntry entry)
     {
         aStack.Value ??= ImmutableStack<LogContextEntry>.Empty;
-        return new LogContextLifetime(aStack, key, value);
+        return new LogContextLifetime(aStack, entry);
+    }
+    /// <summary>
+    /// Puts the key-value pair into the context so that that key-value pair will be added to every log entry called from this async context until the returned object is disposed.
+    /// </summary>
+    /// <param name="entries">An enumeration of <see cref="LogContextEntry"/> records containing key-value pairs to add to the log context.</param>
+    /// <returns>An object that will remove all of the key-value pairs from the stack when it is disposed.</returns>
+    public static IDisposable AddKeyValuePairs(IEnumerable<LogContextEntry> entries)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(entries);
+#else
+        if (entries is null) throw new ArgumentNullException(nameof(entries));
+#endif
+        aStack.Value ??= ImmutableStack<LogContextEntry>.Empty;
+        return new LogContextLifetime(aStack, entries);
     }
     /// <summary>
     /// Gets all the key-value pairs in the current context.
     /// </summary>
-    public static IEnumerable<(string Key, object Value)> ContextLogPairs => (aStack.Value ?? ImmutableStack<LogContextEntry>.Empty).Select(e => (e.Key, e.Value));
+    public static IEnumerable<LogContextEntry> ContextLogPairs => aStack.Value ?? ImmutableStack<LogContextEntry>.Empty;
 }
 
 /// <summary>
@@ -48,11 +62,20 @@ class LogContextLifetime : IDisposable
     private readonly ImmutableStack<LogContextEntry> _previousValue;
     private readonly AsyncLocal<ImmutableStack<LogContextEntry>> _asyncLocal;
 
-    public LogContextLifetime(AsyncLocal<ImmutableStack<LogContextEntry>> stack, string key, object value)
+    public LogContextLifetime(AsyncLocal<ImmutableStack<LogContextEntry>> stack, LogContextEntry entry)
     {
         _asyncLocal = stack;
         _previousValue = stack.Value ?? ImmutableStack<LogContextEntry>.Empty;
-        ImmutableStack<LogContextEntry> newValue = _previousValue.Push(new(key, value));
+        ImmutableStack<LogContextEntry> newValue = _previousValue.Push(entry);
+        stack.Value = newValue;
+    }
+
+    public LogContextLifetime(AsyncLocal<ImmutableStack<LogContextEntry>> stack, IEnumerable<LogContextEntry> entries)
+    {
+        _asyncLocal = stack;
+        _previousValue = stack.Value ?? ImmutableStack<LogContextEntry>.Empty;
+        ImmutableStack<LogContextEntry> newValue = _previousValue;
+        foreach (LogContextEntry entry in entries) newValue = newValue.Push(entry);
         stack.Value = newValue;
     }
 
@@ -67,4 +90,4 @@ class LogContextLifetime : IDisposable
 /// </summary>
 /// <param name="Key">The name for the context entry.</param>
 /// <param name="Value">The value for the context entry.</param>
-record struct LogContextEntry(string Key, object Value);
+public record struct LogContextEntry(string Key, object Value);
