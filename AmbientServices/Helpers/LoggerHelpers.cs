@@ -31,6 +31,17 @@ public delegate string LogMessageRenderer(DateTime utcNow, AmbientLogLevel level
 public delegate object LogEntryRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null);
 
 /// <summary>
+/// An interface that can be implemented by <see cref="Exception"/> classes that provides exception-specific information that should be added to log entries for the errors related to that exception.
+/// </summary>
+public interface IExceptionLogInformation
+{
+    /// <summary>
+    /// Gets an enumeration of special key-value pairs that should be added to the log entry.
+    /// </summary>
+    IEnumerable<(string Key, object Value)> LogInformation { get; }
+}
+
+/// <summary>
 /// A type-specific logging class.  The name of the type is prepended to each log message.
 /// When the log target requires I/O (as it usually will), the log messages should be buffered asynchronously so that only the flush has to wait for I/O.
 /// While this isn't the most basic logging interface, using it can be as simple as just passing in a string, or as detailed as needed with anonymous structured objects.  
@@ -154,7 +165,7 @@ public class AmbientLogger
     /// <param name="ex">The exception to log.</param>
     /// <param name="anonymous">The anonymous object to convert to a dictionary and add the error information to.</param>
     /// <returns>The dictionary with the error information added.</returns>
-    public static Dictionary<string, object?> AugmentStructuredDataWithErrorInformation(Exception ex, object anonymous)
+    public static Dictionary<string, object?> AugmentStructuredDataWithExceptionInformation(Exception ex, object anonymous)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(ex);
@@ -167,6 +178,14 @@ public class AmbientLogger
         dictionary["ErrorType"] = GetErrorType(ex);
         dictionary["ErrorMessage"] = ex.Message;
         dictionary["ErrorStack"] = ex.StackTrace;
+        if (ex is IExceptionLogInformation exli)
+        {
+            // loop through key-value pairs explicitly exposed by the exception for the purpose of logging
+            foreach ((string key, object value) in exli.LogInformation)
+            {
+                dictionary[key] = value;
+            }
+        }
         return dictionary;
     }
     /// <summary>
@@ -182,7 +201,7 @@ public class AmbientLogger
 #else
         if (ex is null) throw new ArgumentNullException(nameof(ex));
 #endif
-        Dictionary<string, object?> dictionary = AugmentStructuredDataWithErrorInformation(ex, new { });
+        Dictionary<string, object?> dictionary = AugmentStructuredDataWithExceptionInformation(ex, new { });
         if (contextDescription != null) dictionary["Summary"] = contextDescription;
         Filter(level)?.Log(dictionary);
     }
@@ -471,7 +490,7 @@ public class AmbientFilteredLogger
     /// <param name="ex">An <see cref="Exception"/> whose data should be added to the log entry.</param>
     public void Log(object structuredData, Exception ex)
     {
-        structuredData = AmbientLogger.AugmentStructuredDataWithErrorInformation(ex, structuredData);
+        structuredData = AmbientLogger.AugmentStructuredDataWithExceptionInformation(ex, structuredData);
         _logger.LogFiltered(_level, _categoryName, structuredData);
     }
 }
@@ -526,11 +545,11 @@ internal class AmbientLogFilter
     internal AmbientLogFilter(string name, IAmbientSettingsSet? settingsSet)
     {
         _name = name;
-        _logLevelSetting = AmbientSettings.GetSetting<AmbientLogLevel>(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-LogLevel", "The AmbientLogLevel above which events should not be logged.  The default value is AmbientLogLevel.Information.", AmbientLogLevel.Information, s => (AmbientLogLevel)Enum.Parse(typeof(AmbientLogLevel), s));
-        _typeAllowSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-TypeAllow", "A regular expression indicating which logger owner types should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all types.", null, s => new Regex(s, RegexOptions.Compiled));
-        _typeBlockSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-TypeBlock", "A regular expression indicating which logger owner types should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no types.", null, s => new Regex(s, RegexOptions.Compiled));
-        _categoryAllowSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", "A regular expression indicating which categories should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all categories.", null, s => new Regex(s, RegexOptions.Compiled));
-        _categoryBlockSetting = AmbientSettings.GetSetting<Regex?>(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", "A regular expression indicating which categories should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no categories.", null, s => new Regex(s, RegexOptions.Compiled));
+        _logLevelSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-LogLevel", "The AmbientLogLevel above which events should not be logged.  The default value is AmbientLogLevel.Information.", AmbientLogLevel.Information, s => (AmbientLogLevel)Enum.Parse(typeof(AmbientLogLevel), s));
+        _typeAllowSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-TypeAllow", "A regular expression indicating which logger owner types should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all types.", null, s => new Regex(s, RegexOptions.Compiled));
+        _typeBlockSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-TypeBlock", "A regular expression indicating which logger owner types should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no types.", null, s => new Regex(s, RegexOptions.Compiled));
+        _categoryAllowSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", "A regular expression indicating which categories should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all categories.", null, s => new Regex(s, RegexOptions.Compiled));
+        _categoryBlockSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", "A regular expression indicating which categories should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no categories.", null, s => new Regex(s, RegexOptions.Compiled));
     }
     internal string Name => _name;
     internal AmbientLogLevel LogLevel => _logLevelSetting.Value;
