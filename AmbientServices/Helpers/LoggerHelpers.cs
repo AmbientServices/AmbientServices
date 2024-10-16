@@ -352,7 +352,7 @@ public class AmbientLogger
     {
         Dictionary<string, object?> dict = new();
         // add in the standard log entry properties
-        CopyStructuredDataToDictionary(dict, new StandardRequestLogInfo(utcNow, level, ownerType, category));
+        CopyStructuredDataToDictionary(dict, new StandardRequestLogInfo(utcNow, level));
         // look for additional context-specific data to add to the log entry (request-tracking information, for example)
         foreach ((string key, object value) in AmbientLogContext.ContextLogPairs.Reverse())
         {
@@ -594,7 +594,7 @@ internal class AmbientLogFilter
         return false;
     }
 }
-record struct StandardRequestLogInfo(DateTime Timestamp, AmbientLogLevel Level, string? OwnerType, string? Category);
+record struct StandardRequestLogInfo(DateTime Timestamp, AmbientLogLevel Level);
 record struct ErrorLogInfo(string ErrorType, string ErrorMessage, string? ErrorStackTrace);
 record struct LogSummaryInfo(string? Summary);
 
