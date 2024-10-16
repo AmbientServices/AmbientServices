@@ -169,13 +169,29 @@ public class AmbientLogger
     public static Dictionary<string, object?> AugmentStructuredDataWithExceptionInformation(Exception ex, object anonymous)
     {
 #if NET5_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(ex);
         ArgumentNullException.ThrowIfNull(anonymous);
 #else
-        if (ex is null) throw new ArgumentNullException(nameof(ex));
         if (anonymous is null) throw new ArgumentNullException(nameof(anonymous));
 #endif
         Dictionary<string, object?> dictionary = StructuredDataToDictionary(anonymous);
+        AddExceptionInformationToDictionary(dictionary, ex);
+        return dictionary;
+    }
+    /// <summary>
+    /// Augments <paramref name="dictionary"/> with standard structured data for an error.  This is useful for logging structured data with an error.
+    /// </summary>
+    /// <param name="dictionary">The dictionary to add the properties and values to.</param>
+    /// <param name="ex">The exception to log.</param>
+    /// <returns>The dictionary with the error information added.</returns>
+    public static void AddExceptionInformationToDictionary(Dictionary<string, object?> dictionary, Exception ex)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(ex);
+        ArgumentNullException.ThrowIfNull(dictionary);
+#else
+        if (ex is null) throw new ArgumentNullException(nameof(ex));
+        if (dictionary is null) throw new ArgumentNullException(nameof(dictionary));
+#endif
         CopyStructuredDataToDictionary(dictionary, new ErrorLogInfo(GetErrorType(ex), ex.Message, ex.StackTrace));
         if (ex is IExceptionLogInformation exli)
         {
@@ -185,7 +201,6 @@ public class AmbientLogger
                 dictionary[key] = value;
             }
         }
-        return dictionary;
     }
     /// <summary>
     /// Logs an exception with standard structured data.
