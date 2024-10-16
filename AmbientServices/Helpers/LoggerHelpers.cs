@@ -307,7 +307,7 @@ public class AmbientLogger
             Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
             dict.Remove(nameof(LogSummaryInfo.Summary));
             structuredData = dict;
-            structuredEntry = summaryStructuredDelimiter + JsonSerializer.Serialize(structuredData, DefaultSerializer);
+            structuredEntry = (string.IsNullOrEmpty(summary) ? "" : summaryStructuredDelimiter) + JsonSerializer.Serialize(structuredData, DefaultSerializer);
         }
         return summary + structuredEntry;
     }
