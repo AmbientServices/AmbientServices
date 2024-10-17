@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -322,7 +323,7 @@ public class AmbientLogger
             Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
             dict.Remove(nameof(LogSummaryInfo.Summary));
             structuredData = dict;
-            structuredEntry = (string.IsNullOrEmpty(summary) ? "" : summaryStructuredDelimiter) + JsonSerializer.Serialize(structuredData, DefaultSerializer);
+            structuredEntry = (string.IsNullOrEmpty(summary) ? "" : summaryStructuredDelimiter) + JsonSerialize(structuredData);
         }
         return summary + structuredEntry;
     }
@@ -356,12 +357,59 @@ public class AmbientLogger
             summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
             Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
             dict.Remove(nameof(LogSummaryInfo.Summary));
-            entry = JsonSerializer.Serialize(dict, DefaultSerializer);
+            entry = JsonSerialize(dict);
         }
         string ownerTypePart = string.IsNullOrEmpty(ownerType) ? "" : $":{ownerType}";
         string entryPart = string.IsNullOrEmpty(entry) ? "" : $"{Environment.NewLine}{entry}";
         string renderedMessage = $"{utcNow:yyMMdd HHmmss.fff} [{level}{ownerTypePart}] {summary}{entryPart}";
         return renderedMessage;
+    }
+    private static string JsonSerialize(object structuredData)
+    {
+        try
+        {
+            return JsonSerializer.Serialize(structuredData, DefaultSerializer);
+        }
+        catch (Exception ex)
+        {
+            Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
+            StringBuilder sb = new();
+            sb.Append($"{{\"{nameof(ex)}\":");
+            string jsonEncodedMessage = JsonSerializer.Serialize(ex.Message, DefaultSerializer);
+            sb.Append(jsonEncodedMessage);
+            try
+            {
+                foreach (KeyValuePair<string, object?> kvp in dict)
+                {
+                    string jsonEncodedKeyName = JsonSerializer.Serialize(kvp.Key, DefaultSerializer);
+                    string jsonEncodedValue;
+                    try
+                    {
+                        jsonEncodedValue = (kvp.Value != null) ? JsonSerialize(kvp.Value) : "";
+                    }
+                    catch (Exception valueEx)
+                    {
+                        if (valueEx is TargetInvocationException tie && tie.InnerException != null) valueEx = tie.InnerException;
+                        jsonEncodedValue = JsonSerializer.Serialize(valueEx.Message, DefaultSerializer);
+                    }
+                    sb.Append(',');
+                    sb.Append(jsonEncodedKeyName);
+                    sb.Append(':');
+                    sb.Append(jsonEncodedValue);
+                }
+            } 
+            catch (Exception fallbackEx)
+            {
+                if (fallbackEx is TargetInvocationException tie && tie.InnerException != null) fallbackEx = tie.InnerException;
+                sb.Append(',');
+                sb.Append(nameof(fallbackEx));
+                sb.Append(':');
+                jsonEncodedMessage = JsonSerializer.Serialize(fallbackEx.Message, DefaultSerializer);
+                sb.Append(jsonEncodedMessage);
+            }
+            sb.Append('}');
+            return sb.ToString();
+        }
     }
     private static object DefaultRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
     {

@@ -1,5 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 
 #pragma warning disable CS0618
@@ -157,6 +159,42 @@ namespace AmbientServices.Test
                 logger.Filter()?.Log(new { Summary = "Exception during test" }, new ApplicationException());
                 logger.Error(new ApplicationException(), "Exception during test");
                 logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
+                if (_Logger.Global != null) await _Logger.Global.Flush();
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientLogger"/>.
+        /// </summary>
+        [TestMethod]
+        public async Task LoggerStructured()
+        {
+            using AmbientFileLogger bl = new();
+            using (new ScopedLocalServiceOverride<IAmbientStructuredLogger>(bl))
+            {
+                AmbientLogger logger = new(typeof(TestLogger));
+                Dictionary<string, object?> outer = new();
+                Dictionary<string, object?> inner = new();
+                inner["test"] = "value";
+                outer["inner"] = inner;
+                logger.Filter()?.Log(new { Structured = outer });
+                if (_Logger.Global != null) await _Logger.Global.Flush();
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientLogger"/>.
+        /// </summary>
+        [TestMethod]
+        public async Task LoggerStructuredError()
+        {
+            using AmbientFileLogger bl = new();
+            using (new ScopedLocalServiceOverride<IAmbientStructuredLogger>(bl))
+            {
+                AmbientLogger logger = new(typeof(TestLogger));
+                Dictionary<string, object?> outer = new();
+                Dictionary<string, object?> inner = new();
+                inner["test"] = IPAddress.None;     // there is no standard JsonSerialization for IPAddress, so this should throw an exception and be handled specially
+                outer["inner"] = inner;
+                logger.Filter()?.Log(new { Structured = outer });
                 if (_Logger.Global != null) await _Logger.Global.Flush();
             }
         }
