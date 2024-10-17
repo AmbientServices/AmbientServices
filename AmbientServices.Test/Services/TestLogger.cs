@@ -163,6 +163,28 @@ namespace AmbientServices.Test
             }
         }
         /// <summary>
+        /// Performs tests on <see cref="IAmbientStructuredLogger"/>.
+        /// </summary>
+        [TestMethod]
+        public async Task LoggerStructured()
+        {
+            using AmbientFileLogger bl = new();
+            using (new ScopedLocalServiceOverride<IAmbientStructuredLogger>(bl))
+            {
+                AmbientLogger logger = new(typeof(TestLogger));
+                Dictionary<string, object?> inner = new();
+                inner["test"] = DateTime.UtcNow;
+                Dictionary<string, object?> outer = new();
+                inner["test"] = inner;
+                logger.Filter()?.Log(new { Structured = outer });
+                logger.Filter()?.Log("Testing unstructured as structured");
+                bl.Log("direct log");
+                bl.Log((object)"direct log");
+                bl.Log(new { Structured = outer });
+                if (_Logger.Global != null) await _Logger.Global.Flush();
+            }
+        }
+        /// <summary>
         /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]

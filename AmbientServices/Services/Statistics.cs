@@ -26,6 +26,7 @@ public interface IAmbientStatistics
     /// Adds or updates a statistic with the specified identifier, description, and properties.
     /// </summary>
     /// <param name="timeBased">Whether or not this statistic is a time-based statistic.</param>
+    /// <param name="type">The <see cref="AmbientStatisicType"/> for the statistic.</param>
     /// <param name="id">A dash-delimited identifier for the statistic.</param>
     /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
     /// <param name="description">A human-readable description for the statistic.</param>
@@ -41,12 +42,12 @@ public interface IAmbientStatistics
     /// <param name="preferredSpatialAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated across systems.</param>
     /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
     /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
-    IAmbientStatistic GetOrAddStatistic(bool timeBased, string id, string name, string description, bool replaceIfAlreadyExists = false, string? units = null
+    IAmbientStatistic GetOrAddStatistic(bool timeBased, AmbientStatisicType type, string id, string name, string description, bool replaceIfAlreadyExists = false, string? units = null
         , long initialValue = 0, long? minimumValue = null, long? maximumValue = null, short fixedFlotingPointDigits = 0
-        , AggregationTypes temporalAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
-        , AggregationTypes spatialAggregationTypes = AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
-        , AggregationTypes preferredTemporalAggregationType = AggregationTypes.Average
-        , AggregationTypes preferredSpatialAggregationType = AggregationTypes.Average
+        , AggregationTypes temporalAggregationTypes = AggregationTypes.None
+        , AggregationTypes spatialAggregationTypes = AggregationTypes.None
+        , AggregationTypes preferredTemporalAggregationType = AggregationTypes.None
+        , AggregationTypes preferredSpatialAggregationType = AggregationTypes.None
         , MissingSampleHandling missingSampleHandling = MissingSampleHandling.LinearEstimation
         );
     /// <summary>
@@ -59,17 +60,47 @@ public interface IAmbientStatistics
     bool RemoveStatistic(string id);
 }
 /// <summary>
+/// An enumeration of the types of statistics that can be collected.
+/// </summary>
+public enum AmbientStatisicType
+{
+    /// <summary>
+    /// A raw statistic is one that is not cumulative, that usually uses <see cref="IAmbientStatistic.SetValue"/> for updates.
+    /// </summary>
+    Raw,
+    /// <summary>
+    /// A cumulative statistic is one that is added to over time, using <see cref="IAmbientStatistic.Increment"/> or <see cref="IAmbientStatistic.Add"/> for updates.
+    /// </summary>
+    Cumulative,
+    /// <summary>
+    /// A min statistic is one that always uses <see cref="IAmbientStatistic.SetMin"/> for updates.
+    /// </summary>
+    Min,
+    /// <summary>
+    /// A min statistic is one that always uses <see cref="IAmbientStatistic.SetMax"/> for updates.
+    /// </summary>
+    Max,
+}
+/// <summary>
 /// An enumeration of ways to aggregate statistic data.
 /// </summary>
 [Flags]
 public enum AggregationTypes
 {
     /// <summary>
-    /// The aggregation should sum the values.  Any statistics that use <see cref="IAmbientStatistic.Increment"/> or <see cref="IAmbientStatistic.Add"/> should probably use this type of aggregation.
+    /// Since not aggregating doesn't ever make sense, we use this as the default value to do aggregation based on the <see cref="AmbientStatisicType"/>.
+    /// See remarks for details about temporal and spatial aggregation defaults for each type.
     /// </summary>
+    /// <remarks>
+    /// For <see cref="AmbientStatisicType.Raw"/>, temporal aggregation is <see cref="Average"/> and spatial aggregation is <see cref="Average"/>.
+    /// For <see cref="AmbientStatisicType.Cumulative"/>, temporal aggregation is <see cref="MostRecent"/> and spatial aggregation is <see cref="Average"/>.
+    /// For <see cref="AmbientStatisicType.Min"/>, temporal aggregation is <see cref="Min"/> and spatial aggregation is <see cref="Min"/>.
+    /// For <see cref="AmbientStatisicType.Max"/>, temporal aggregation is <see cref="Max"/> and spatial aggregation is <see cref="Max"/>.
+    /// </remarks>
     None = 0,
     /// <summary>
-    /// The aggregation should sum the values.  Any statistics that use <see cref="IAmbientStatistic.Increment"/> or <see cref="IAmbientStatistic.Add"/> should probably use this type of aggregation.
+    /// The aggregation should sum the values.  This type of aggregation would be useful for statistics that count items or an amount of processing but doesn't count cumulatively.
+    /// Such statistics are not recommended unless the available graphing system can't display the change in time for a cumulative counter.
     /// </summary>
     Sum = 1,
     /// <summary>
@@ -85,7 +116,8 @@ public enum AggregationTypes
     /// </summary>
     Max = 8,
     /// <summary>
-    /// The aggregation should take the most recent value.  Statistics that use <see cref="IAmbientStatistic.SetValue"/> might use this type of aggregation.
+    /// The aggregation should take the most recent value.  Statistics that use <see cref="IAmbientStatistic.SetValue"/>, <see cref="IAmbientStatistic.Increment"/> or <see cref="IAmbientStatistic.Add"/> might use this type of aggregation.
+    /// For spatial aggregation, this would only be useful if every system is reporting some value from a shared external system.
     /// </summary>
     MostRecent = 16,
 }
@@ -127,6 +159,10 @@ public interface IAmbientStatisticReader
     /// Time-based statistics can be converted into seconds by dividing by <see cref="System.Diagnostics.Stopwatch.Frequency"/>.
     /// </summary>
     bool IsTimeBased { get; }
+    /// <summary>
+    /// Gets the <see cref="AmbientStatisicType"/> for the statistic.  Immutable.
+    /// </summary>
+    AmbientStatisicType StatisicType { get; }
     /// <summary>
     /// Gets the identifier for the statistic.
     /// The identifier should be a dash-delimited path identifying the data.  Immutable.
@@ -266,7 +302,7 @@ public static class IAmbientStatisticsExtensions
         statistic.SetValue((long)(Math.Pow(10, statistic.FixedFloatingPointDigits) * newValue));
     }
     /// <summary>
-    /// Uses the preferred aggregation type to aggregate the samples.
+    /// Uses the preferred aggregation type to aggregate samples from a time range.
     /// </summary>
     /// <param name="reader">The reader to use to aggregate the samples.</param>
     /// <param name="samples">An enumeration of samples to aggregate.</param>
@@ -274,7 +310,10 @@ public static class IAmbientStatisticsExtensions
     public static long? PreferredTemporalAggregation(this IAmbientStatisticReader reader, IEnumerable<long?> samples)
     {
         if (reader == null) throw new ArgumentNullException(nameof(reader));
-        return reader.PreferredTemporalAggregationType switch {
+        AggregationTypes types = reader.PreferredTemporalAggregationType;
+        if (types == AggregationTypes.None) types = DefaultTemporalAggregation(reader.StatisicType);
+        return types switch
+        {
             AggregationTypes.Average => (long?)samples.Average(),
             AggregationTypes.Min => samples.Min() ?? 0,
             AggregationTypes.Max => samples.Max() ?? 0,
@@ -282,6 +321,59 @@ public static class IAmbientStatisticsExtensions
             _ => samples.Sum() ?? 0,
         };
     }
+    /// <summary>
+    /// Uses the preferred aggregation type to aggregate samples from different systems.
+    /// </summary>
+    /// <param name="reader">The reader to use to aggregate the samples.</param>
+    /// <param name="samples">An enumeration of samples to aggregate.</param>
+    /// <returns>The preferred temporally aggregated sample.</returns>
+    public static long? PreferredSpatialAggregation(this IAmbientStatisticReader reader, IEnumerable<long?> samples)
+    {
+        if (reader == null) throw new ArgumentNullException(nameof(reader));
+        AggregationTypes types = reader.PreferredSpatialAggregationType;
+        if (types == AggregationTypes.None) types = DefaultSpatialAggregation(reader.StatisicType);
+        return types switch
+        {
+            AggregationTypes.Average => (long?)samples.Average(),
+            AggregationTypes.Min => samples.Min() ?? 0,
+            AggregationTypes.Max => samples.Max() ?? 0,
+            AggregationTypes.MostRecent => samples.LastOrDefault() ?? 0,
+            _ => samples.Sum() ?? 0,
+        };
+    }
+    /// <summary>
+    /// Gets the default temporal (over time) aggregation type for the specified statistic type.
+    /// </summary>
+    /// <param name="statisicType">The <see cref="AmbientStatisicType"/> for the statistic.</param>
+    /// <returns>The default <see cref="AggregationTypes"/> for aggregating samples for specified statistic over time.</returns>
+    public static AggregationTypes DefaultTemporalAggregation(AmbientStatisicType statisicType)
+    {
+        return statisicType switch
+        {
+            AmbientStatisicType.Raw => AggregationTypes.Average,
+            AmbientStatisicType.Cumulative => AggregationTypes.MostRecent,
+            AmbientStatisicType.Min => AggregationTypes.Min,
+            AmbientStatisicType.Max => AggregationTypes.Max,
+            _ => AggregationTypes.Average,
+        };
+    }
+    /// <summary>
+    /// Gets the default spatial (cross-system) aggregation type for the specified statistic type.
+    /// </summary>
+    /// <param name="statisicType">The <see cref="AmbientStatisicType"/> for the statistic.</param>
+    /// <returns>The default <see cref="AggregationTypes"/> for aggregating samples for specified statistic across systems.</returns>
+    public static AggregationTypes DefaultSpatialAggregation(AmbientStatisicType statisicType)
+    {
+        return statisicType switch
+        {
+            AmbientStatisicType.Raw => AggregationTypes.Average,
+            AmbientStatisicType.Cumulative => AggregationTypes.Average,
+            AmbientStatisicType.Min => AggregationTypes.Min,
+            AmbientStatisicType.Max => AggregationTypes.Max,
+            _ => AggregationTypes.Average,
+        };
+    }
+
     private interface IMissingSampleExtrapolator
     {
         long LeadingSampleExtrapolation(long firstNonNullSample, long secondNonNullSample, int samplesBetweenNonNullSamples, int indexBeforeAllNonNullValues);
