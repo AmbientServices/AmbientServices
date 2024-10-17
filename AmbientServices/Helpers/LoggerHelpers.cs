@@ -390,7 +390,7 @@ public class AmbientLogger
                     catch (Exception valueEx)
                     {
                         if (valueEx is TargetInvocationException tie && tie.InnerException != null) valueEx = tie.InnerException;
-                        jsonEncodedValue = JsonSerializer.Serialize(valueEx.Message, DefaultSerializer);
+                        jsonEncodedValue = JsonSerializer.Serialize(kvp.Value?.ToString() + "--" + valueEx.Message, DefaultSerializer);
                     }
                     sb.Append(',');
                     sb.Append(jsonEncodedKeyName);
