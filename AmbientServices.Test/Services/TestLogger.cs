@@ -212,7 +212,7 @@ namespace AmbientServices.Test
             using (new ScopedLocalServiceOverride<IAmbientStructuredLogger>(bl))
             {
                 AmbientLogger logger = new(typeof(TestLogger));
-                logger.Error(new ExpectedException("This exception is expected for this test!"), nameof(LoggerException));
+                logger.Error(new ExpectedException(nameof(LoggerException)), nameof(LoggerException));
                 if (_Logger.Global != null) await _Logger.Global.Flush();
             }
         }

@@ -362,9 +362,14 @@ public class AmbientLogger
         else if (structuredData is Dictionary<string, object?> sd)
         {
             // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
-            sd.TryGetValue(nameof(LogSummaryInfo.Summary), out object? summaryValue);
-            summary = summaryValue?.ToString() ?? "";
-            sd.Remove(nameof(LogSummaryInfo.Summary));
+            if (sd.TryGetValue(nameof(LogSummaryInfo.Summary), out object? summaryValue))
+            {
+                // make a copy so we don't alter the original
+                sd = new(sd);
+                summary = summaryValue?.ToString() ?? "";
+                sd.Remove(nameof(LogSummaryInfo.Summary));
+            }
+            else summary = "";
             entry = JsonSerialize(sd);
         }
         else
