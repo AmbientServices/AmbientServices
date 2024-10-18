@@ -350,6 +350,14 @@ public class AmbientLogger
             summary = sds;
             entry = "";
         }
+        else if (structuredData is Dictionary<string, object?> sd)
+        {
+            // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
+            sd.TryGetValue(nameof(LogSummaryInfo.Summary), out object? summaryValue);
+            summary = summaryValue?.ToString() ?? "";
+            sd.Remove(nameof(LogSummaryInfo.Summary));
+            entry = JsonSerialize(sd);
+        }
         else
         {
             // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
@@ -413,9 +421,8 @@ public class AmbientLogger
     }
     private static object DefaultRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
     {
-        Dictionary<string, object?> dict = new();
         // add in the standard log entry properties (just level for now--we assume that ownerType and category are just for filtering rules, and that a structured logger doesn't need timestamps)
-        CopyStructuredDataToDictionary(dict, new StandardRequestLogInfo(level));
+        Dictionary<string, object?> dict = StructuredDataToDictionary(new StandardRequestLogInfo(level));
         // look for additional context-specific data to add to the log entry (request-tracking information, for example)
         foreach ((string key, object value) in AmbientLogContext.ContextLogPairs.Reverse())
         {
