@@ -269,8 +269,17 @@ public class AmbientLogger
         if (dictionary is null) throw new ArgumentNullException(nameof(dictionary));
         if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
 #endif
-        if (structuredData is string sds) CopyStructuredDataToDictionary(dictionary, new LogSummaryInfo(sds));
-        else if (structuredData is Dictionary<string, object?> sdd) return sdd;
+        if (structuredData is string sds)
+        {
+            CopyStructuredDataToDictionary(dictionary, new LogSummaryInfo(sds));
+        }
+        else if (structuredData is Dictionary<string, object?> sdd)
+        {
+            foreach (KeyValuePair<string, object?> kvp in sdd)
+            {
+                dictionary[kvp.Key] = kvp.Value;
+            }
+        }
         else
         {
             foreach (PropertyInfo property in structuredData.GetType().GetProperties())

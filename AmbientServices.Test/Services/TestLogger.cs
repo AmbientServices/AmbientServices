@@ -206,6 +206,20 @@ namespace AmbientServices.Test
         /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
+        public async Task LoggerException()
+        {
+            using AmbientFileLogger bl = new();
+            using (new ScopedLocalServiceOverride<IAmbientStructuredLogger>(bl))
+            {
+                AmbientLogger logger = new(typeof(TestLogger));
+                logger.Error(new ExpectedException("This exception is expected for this test!"), nameof(LoggerException));
+                if (_Logger.Global != null) await _Logger.Global.Flush();
+            }
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientLogger"/>.
+        /// </summary>
+        [TestMethod]
         public void LoggerNone()
         {
             using (new ScopedLocalServiceOverride<IAmbientLogger>(null))
