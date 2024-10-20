@@ -65,6 +65,7 @@ public class AmbientLogger
     private static JsonSerializerOptions InitDefaultSerializerOptions()
     {
         JsonSerializerOptions options = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+        options.Converters.Add(new IPAddressConverter());
         return options;
     }
 
@@ -682,3 +683,37 @@ record struct StandardRequestLogInfo(AmbientLogLevel Level);
 record struct ErrorLogInfo(string ErrorType, string ErrorMessage, string? ErrorStackTrace);
 record struct LogSummaryInfo(string? Summary);
 
+
+/// <summary>
+/// A JsonConverter for System.Net.IPAddress? that allows null values.
+/// </summary>
+public class IPAddressConverter : JsonConverter<System.Net.IPAddress?>
+{
+    /// <summary>
+    /// Reads the JSON representation of the object.
+    /// </summary>
+    /// <param name="reader">The <see cref="Utf8JsonReader"/> to read the object from.</param>
+    /// <param name="typeToConvert">The type to convert.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use to interpret the formatting.</param>
+    /// <returns>The <see cref="System.Net.IPAddress"/> that was deserialized.</returns>
+    public override System.Net.IPAddress? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? ip = reader.GetString();
+        return (ip == null) ? null : System.Net.IPAddress.Parse(ip);
+    }
+    /// <summary>
+    /// Writes the JSON representation of the object.
+    /// </summary>
+    /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write the object into.</param>
+    /// <param name="value">The <see cref="System.Net.IPAddress"/> to write.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use for formatting the data.</param>
+    public override void Write(Utf8JsonWriter writer, System.Net.IPAddress? value, JsonSerializerOptions options)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(writer);
+#else
+        if (writer is null) throw new ArgumentNullException(nameof(writer));
+#endif
+        writer.WriteStringValue(value?.ToString());
+    }
+}

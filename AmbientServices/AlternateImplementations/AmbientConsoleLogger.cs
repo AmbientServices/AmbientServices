@@ -47,7 +47,7 @@ namespace AmbientServices
 #if NET5_0_OR_GREATER
             ArgumentNullException.ThrowIfNull(structuredData);
 #else
-        if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
+            if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
 #endif
             string message = AmbientLogger.ConvertStructuredDataIntoSimpleMessage(structuredData);
             Log(message);
