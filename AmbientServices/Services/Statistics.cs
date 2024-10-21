@@ -65,7 +65,7 @@ public interface IAmbientStatistics
 public enum AmbientStatisicType
 {
     /// <summary>
-    /// A raw statistic is one that is not cumulative, that usually uses <see cref="IAmbientStatistic.SetValue"/> for updates.
+    /// A raw statistic is one that is not cumulative, that usually uses <see cref="IAmbientStatistic.SetValue"/> for updates, but may also use <see cref="IAmbientStatistic.Increment"/> and <see cref="IAmbientStatistic.Decrement"/> to dynamically keep track of a count such as pending operations.
     /// </summary>
     Raw,
     /// <summary>

@@ -230,12 +230,7 @@ public class AmbientLogger
     }
     internal void LogFiltered(AmbientLogLevel level, string? categoryName, object structuredData)
     {
-        IAmbientLogger? simpleLogger = DynamicSimpleLogger;
-        if (simpleLogger != null)
-        {
-            string message = ConvertStructuredDataIntoSimpleMessage(level, categoryName, structuredData);
-            simpleLogger.Log(message);
-        }
+        // prefer the structured logger
         IAmbientStructuredLogger? logger = DynamicLogger;
         if (logger != null)
         {
@@ -243,6 +238,13 @@ public class AmbientLogger
             LogEntryRenderer renderer = _renderer ?? DefaultRenderer;
             structuredData = renderer(DateTime.UtcNow, level, structuredData, _typeName, categoryName);
             logger.Log(structuredData);
+        }
+        // only log to the simple logger if it's not the same instance as the structured logger
+        IAmbientLogger? simpleLogger = DynamicSimpleLogger;
+        if (simpleLogger != null && simpleLogger != logger)
+        {
+            string message = ConvertStructuredDataIntoSimpleMessage(level, categoryName, structuredData);
+            simpleLogger.Log(message);
         }
     }
     /// <summary>
