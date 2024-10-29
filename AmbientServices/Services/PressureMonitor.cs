@@ -74,9 +74,10 @@ public class PressureMonitor : IDisposable
 {
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
     private const int PressureRecalculateFrequencyMilliseconds = 1000;
-    private const short FixedFloatingPointDigits = 8;
-    private static readonly long MaxValue = (long)(1.00f * Math.Pow(10, FixedFloatingPointDigits));
-    private static readonly long NeutralValue = (long)(0.89f * Math.Pow(10, FixedFloatingPointDigits));
+    private const double FixedFloatingPointAdjustment = 100000000;
+    private const long MinRawValue = 0;
+    private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
+    private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);
     private static readonly PressureMonitor _Default = new();
 
     /// <summary>
@@ -85,9 +86,9 @@ public class PressureMonitor : IDisposable
     public static PressureMonitor Default => _Default;
 
     private readonly AmbientCallbackTimer _timer;
-    private readonly IAmbientStatistic? _internalPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(PressureMonitor) + "-Internal", "Internal Pressure", "The pressure level for internal attributes of this system", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
-    private readonly IAmbientStatistic? _externalPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(PressureMonitor) + "-External", "External Pressure", "The pressure level for external systems as seen by this system", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
-    private readonly IAmbientStatistic? _overallPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(PressureMonitor) + "-Overall", "Overall Pressure", "The overall pressure level for this system", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
+    private readonly IAmbientStatistic? _internalPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(PressureMonitor) + "-Internal", "Internal Pressure", "The pressure level for internal attributes of this system", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
+    private readonly IAmbientStatistic? _externalPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(PressureMonitor) + "-External", "External Pressure", "The pressure level for external systems as seen by this system", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
+    private readonly IAmbientStatistic? _overallPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(PressureMonitor) + "-Overall", "Overall Pressure", "The overall pressure level for this system", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
 
     private float _internalPressure;
     private float _externalPressure;

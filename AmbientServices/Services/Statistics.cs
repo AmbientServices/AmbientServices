@@ -27,27 +27,53 @@ public interface IAmbientStatistics
     /// <returns>A <see cref="IAmbientStatisticReader"/> the caller can use to read the statistic, or null if there is no statistic with the specified ID.</returns>
     IAmbientStatisticReader? ReadStatistic(string id);
     /// <summary>
-    /// Adds or updates a statistic with the specified identifier, description, and properties.
+    /// Adds or updates a time-based statistic with the specified identifier, description, and properties.
+    /// Time-based statistics are always in seconds.
     /// </summary>
-    /// <param name="timeBased">Whether or not this statistic is a time-based statistic.</param>
     /// <param name="type">The <see cref="AmbientStatisicType"/> for the statistic.</param>
     /// <param name="id">A dash-delimited identifier for the statistic.</param>
     /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
     /// <param name="description">A human-readable description for the statistic.</param>
     /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
-    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <paramref name="fixedFlotingPointDigits"/>).</param>
     /// <param name="initialValue">The initial value for the statistic, if it is created.</param>
     /// <param name="minimumValue">An optional value indicating the minimum possible value, if applicable.</param>
     /// <param name="maximumValue">An optional value indicating the maximum possible value, if applicable.</param>
-    /// <param name="fixedFlotingPointDigits">An optional value indicating how many digits past the decimal are always included in the sample value.</param>
     /// <param name="temporalAggregationTypes">A set of <see cref="AggregationTypes"/> indicating how this statistic should be aggregated over time.</param>
     /// <param name="spatialAggregationTypes">A set of <see cref="AggregationTypes"/> indicating how this statistic should be aggregated across systems.</param>
     /// <param name="preferredTemporalAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated over time.</param>
     /// <param name="preferredSpatialAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated across systems.</param>
     /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
     /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
-    IAmbientStatistic GetOrAddStatistic(bool timeBased, AmbientStatisicType type, string id, string name, string description, bool replaceIfAlreadyExists = false, string? units = null
-        , long initialValue = 0, long? minimumValue = null, long? maximumValue = null, short fixedFlotingPointDigits = 0
+    IAmbientStatistic GetOrAddTimeBasedStatistic(AmbientStatisicType type, string id, string name, string description, bool replaceIfAlreadyExists = false
+        , long initialValue = 0, long? minimumValue = null, long? maximumValue = null
+        , AggregationTypes temporalAggregationTypes = AggregationTypes.None
+        , AggregationTypes spatialAggregationTypes = AggregationTypes.None
+        , AggregationTypes preferredTemporalAggregationType = AggregationTypes.None
+        , AggregationTypes preferredSpatialAggregationType = AggregationTypes.None
+        , MissingSampleHandling missingSampleHandling = MissingSampleHandling.LinearEstimation
+        );
+    /// <summary>
+    /// Adds or updates a statistic with the specified identifier, description, and properties.
+    /// </summary>
+    /// <param name="type">The <see cref="AmbientStatisicType"/> for the statistic.</param>
+    /// <param name="id">A dash-delimited identifier for the statistic.</param>
+    /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
+    /// <param name="description">A human-readable description for the statistic.</param>
+    /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
+    /// <param name="initialValue">The initial value for the statistic, if it is created.</param>
+    /// <param name="minimumValue">An optional value indicating the minimum possible value, if applicable.</param>
+    /// <param name="maximumValue">An optional value indicating the maximum possible value, if applicable.</param>
+    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <paramref name="fixedFloatingPointAdjustment"/>).  Lower-cased, not an abbreviation.</param>
+    /// <param name="fixedFloatingPointAdjustment">An optional value to divide raw samples by to get a floating-point value.  Defaults to 1.0.</param>
+    /// <param name="temporalAggregationTypes">A set of <see cref="AggregationTypes"/> indicating how this statistic should be aggregated over time.</param>
+    /// <param name="spatialAggregationTypes">A set of <see cref="AggregationTypes"/> indicating how this statistic should be aggregated across systems.</param>
+    /// <param name="preferredTemporalAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated over time.</param>
+    /// <param name="preferredSpatialAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated across systems.</param>
+    /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
+    /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
+    IAmbientStatistic GetOrAddStatistic(AmbientStatisicType type, string id, string name, string description, bool replaceIfAlreadyExists = false
+        , long initialValue = 0, long? minimumValue = null, long? maximumValue = null
+        , string? units = null, double fixedFloatingPointAdjustment = 1.0
         , AggregationTypes temporalAggregationTypes = AggregationTypes.None
         , AggregationTypes spatialAggregationTypes = AggregationTypes.None
         , AggregationTypes preferredTemporalAggregationType = AggregationTypes.None
@@ -69,7 +95,7 @@ public interface IAmbientStatistics
     /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
     /// <param name="description">A human-readable description for the statistic.</param>
     /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
-    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> for both the numerator and denominator).</param>
+    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> for both the numerator and denominator).  Lower-cased, not an abbreviation.</param>
     /// <param name="numeratorStatistic">The ID of the numerator statistic.  The constant 1 will be used if null.</param>
     /// <param name="numeratorDelta">Whether or not the numerator should be the difference over time.</param>
     /// <param name="denominatorStatistic">The ID of the denominator statistic.  The constant 1 will be used if null.</param>
@@ -91,19 +117,19 @@ public interface IAmbientStatistics
 public enum AmbientStatisicType
 {
     /// <summary>
-    /// A raw statistic is one that is not cumulative, that usually uses <see cref="IAmbientStatistic.SetValue"/> for updates, but may also use <see cref="IAmbientStatistic.Increment"/> and <see cref="IAmbientStatistic.Decrement"/> to dynamically keep track of a count such as pending operations.
+    /// A raw statistic is one that is not cumulative, that usually uses <see cref="IAmbientStatistic.SetRawValue"/> for updates, but may also use <see cref="IAmbientStatistic.IncrementRaw"/> and <see cref="IAmbientStatistic.DecrementRaw"/> to dynamically keep track of a count such as pending operations.
     /// </summary>
     Raw,
     /// <summary>
-    /// A cumulative statistic is one that is added to over time, using <see cref="IAmbientStatistic.Increment"/> or <see cref="IAmbientStatistic.Add"/> for updates.
+    /// A cumulative statistic is one that is added to over time, using <see cref="IAmbientStatistic.IncrementRaw"/> or <see cref="IAmbientStatistic.AddRaw"/> for updates.
     /// </summary>
     Cumulative,
     /// <summary>
-    /// A min statistic is one that always uses <see cref="IAmbientStatistic.SetMin"/> for updates.
+    /// A min statistic is one that always uses <see cref="IAmbientStatistic.SetRawMin"/> for updates.
     /// </summary>
     Min,
     /// <summary>
-    /// A min statistic is one that always uses <see cref="IAmbientStatistic.SetMax"/> for updates.
+    /// A min statistic is one that always uses <see cref="IAmbientStatistic.SetRawMax"/> for updates.
     /// </summary>
     Max,
 }
@@ -130,19 +156,19 @@ public enum AggregationTypes
     /// </summary>
     Sum = 1,
     /// <summary>
-    /// The aggregation should average the values.  Statistics that use <see cref="IAmbientStatistic.SetValue"/> might use this type of aggregation.
+    /// The aggregation should average the values.  Statistics that use <see cref="IAmbientStatistic.SetRawValue"/> might use this type of aggregation.
     /// </summary>
     Average = 2,
     /// <summary>
-    /// The aggregation should take the least of the values.  Statistics that use <see cref="IAmbientStatistic.SetMin"/> would likely use this type of aggregation.
+    /// The aggregation should take the least of the values.  Statistics that use <see cref="IAmbientStatistic.SetRawMin"/> would likely use this type of aggregation.
     /// </summary>
     Min = 4,
     /// <summary>
-    /// The aggregation should take the greatest of the values.  Statistics that use <see cref="IAmbientStatistic.SetMax"/> would likely use this type of aggregation.
+    /// The aggregation should take the greatest of the values.  Statistics that use <see cref="IAmbientStatistic.SetRawMax"/> would likely use this type of aggregation.
     /// </summary>
     Max = 8,
     /// <summary>
-    /// The aggregation should take the most recent value.  Statistics that use <see cref="IAmbientStatistic.SetValue"/>, <see cref="IAmbientStatistic.Increment"/> or <see cref="IAmbientStatistic.Add"/> might use this type of aggregation.
+    /// The aggregation should take the most recent value.  Statistics that use <see cref="IAmbientStatistic.SetRawValue"/>, <see cref="IAmbientStatistic.IncrementRaw"/> or <see cref="IAmbientStatistic.AddRaw"/> might use this type of aggregation.
     /// For spatial aggregation, this would only be useful if every system is reporting some value from a shared external system.
     /// </summary>
     MostRecent = 16,
@@ -180,12 +206,6 @@ public enum MissingSampleHandling
 public interface IAmbientStatisticReader
 {
     /// <summary>
-    /// Gets whether or not the statistic is a time-based statistic.  Immutable.
-    /// Has no effect on the internal implementation.
-    /// Time-based statistics can be converted into seconds by dividing by <see cref="System.Diagnostics.Stopwatch.Frequency"/>.
-    /// </summary>
-    bool IsTimeBased { get; }
-    /// <summary>
     /// Gets the <see cref="AmbientStatisicType"/> for the statistic.  Immutable.
     /// </summary>
     AmbientStatisicType StatisicType { get; }
@@ -205,31 +225,23 @@ public interface IAmbientStatisticReader
     /// <summary>
     /// Gets the current statistic sample value.  Thread-safe, possibly interlocked.
     /// </summary>
-    long CurrentValue { get; }
+    long CurrentValueRaw { get; }
     /// <summary>
     /// The expected maximum value, if any.  Null if there is no expected maximum.  Immutable.
     /// </summary>
-    long? ExpectedMin { get; }
+    long? ExpectedMinRaw { get; }
     /// <summary>
     /// The expected minimum value, if any.  Null if there is no expected minimum.  Immutable.
     /// </summary>
-    long? ExpectedMax { get; }
+    long? ExpectedMaxRaw { get; }
     /// <summary>
     /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  Assumes that the numbers in the axis have already been divided by the FixedFloatingPointMultiplier.  Immutable.
     /// If not specified and a time-based statistic, the units (after dividing by FixedFloatingPointMultiplier) are assumed to be seconds.
     /// Immutable.
     /// </summary>
-    string? Units { get; }
+    string? AdjustedUnits { get; }
     /// <summary>
-    /// The number of fixed floating point digits (zero if not applicable).
-    /// Positive numbers indicate that the integer values returned by <see cref="CurrentValue"/>, <see cref="ExpectedMin"/>, and <see cref="ExpectedMax"/> have been multiplied by 10^digits so that fractional values can be retained in the integer value.
-    /// Negative numbers indicate that the integer values returned by <see cref="CurrentValue"/>, <see cref="ExpectedMin"/>, and <see cref="ExpectedMax"/> have been divided by 10^-digits so that very large values can be retained.
-    /// Immutable.
-    /// </summary>
-    short FixedFloatingPointDigits { get; }
-    /// <summary>
-    /// The number used to multiply incoming sample values (or divide <see cref="CurrentValue"/> for display) in order to adjust the integer sample into a floating point number in the specified units (1 if not applicable).
-    /// Equal to 10^<see cref="FixedFloatingPointDigits"/>.
+    /// The number used to divide <see cref="CurrentValueRaw"/> to adjust the integer sample into a floating point number in the specified units (1 if not applicable).
     /// Immutable.
     /// </summary>
     double FixedFloatingPointAdjustment { get; }
@@ -267,38 +279,38 @@ public interface IAmbientStatisticReader
 public interface IAmbientStatistic : IAmbientStatisticReader, IDisposable
 {
     /// <summary>
-    /// Increments the statistic sample value.  Thread-safe, possibly interlocked.
+    /// Increments the raw statistic sample value.  This value is not adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/>.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <returns>The incremented sample value.</returns>
-    long Increment();
+    long IncrementRaw();
     /// <summary>
-    /// Decrements the statistic sample value.  Thread-safe, possibly interlocked.
+    /// Decrements the raw statistic sample value.  This value is not adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/>.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <returns>The decremented sample value.</returns>
-    long Decrement();
+    long DecrementRaw();
     /// <summary>
-    /// Adds to the statistic sample value.  Thread-safe, possibly interlocked.
+    /// Adds to the raw statistic sample value.  This value is not adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/>.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="addend">The amount to add to the statistic sample value.</param>
     /// <returns>The new sample value.</returns>
-    long Add(long addend);
+    long AddRaw(long addend);
     /// <summary>
-    /// Sets the statistic sample value.  Thread-safe, possibly interlocked.
+    /// Sets the raw integer statistic sample value.  This value is not adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/>.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="newValue">The new value to use.</param>
-    void SetValue(long newValue);
+    void SetRawValue(long newValue);
     /// <summary>
-    /// Sets the statistic sample value.  Thread-safe, possibly interlocked.
+    /// Sets the raw statistic sample minimum value.  This value is not adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/>.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="newPossibleMinValue">A value which will be the new sample value if it is smaller than the current sample value.</param>
     /// <returns>The new sample value.</returns>
-    long SetMin(long newPossibleMinValue);
+    long SetRawMin(long newPossibleMinValue);
     /// <summary>
-    /// Sets the statistic sample value.  Thread-safe, possibly interlocked.
+    /// Sets the raw statistic sample maximum value.  This value is not adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/>.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="newPossibleMaxValue">A value which will be the new sample value if it is larger than the current sample value.</param>
     /// <returns>The new sample value.</returns>
-    long SetMax(long newPossibleMaxValue);
+    long SetRawMax(long newPossibleMaxValue);
 }
 /// <summary>
 /// An interface that indicates that a useful statistic exists that is the ratio of two other statistics or the change over time of those statistics.
@@ -314,7 +326,7 @@ public interface IAmbientRatioStatistic : IDisposable
     /// <summary>
     /// Gets the ID of the numerator statistic.  Use the constant 1 (and ignore <see cref="NumeratorDelta"/>) if null.  Immutable.
     /// </summary>
-    string? NumeratorStatistic { get; }
+    string? NumeratorStatisticId { get; }
     /// <summary>
     /// The numerator should be the change in the numerator statistic over time rather than the raw value.  Immutable.
     /// </summary>
@@ -322,7 +334,7 @@ public interface IAmbientRatioStatistic : IDisposable
     /// <summary>
     /// Gets the ID of the denominator statistic, often the built-in "ExecutionTime" statistic.  Use 1 (and ignore <see cref="NumeratorDelta"/>) if null.  Immutable.
     /// </summary>
-    string? DenominatorStatistic { get; }
+    string? DenominatorStatisticId { get; }
     /// <summary>
     /// The denominator should be the change in the numerator statistic over time rather than the raw value.  Immutable.
     /// </summary>
@@ -335,24 +347,34 @@ public interface IAmbientRatioStatistic : IDisposable
 public static class IAmbientStatisticsExtensions
 {
     /// <summary>
-    /// Sets the statistic sample value.  Thread-safe, possibly interlocked.
+    /// Sets the statistic sample value, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
+    /// </summary>
+    /// <param name="statistic">The <see cref="IAmbientStatistic"/> whose value should be set.</param>
+    /// <param name="newValue">The new value to use.</param>
+    public static void SetValue(this IAmbientStatistic statistic, long newValue)
+    {
+        if (statistic == null) throw new ArgumentNullException(nameof(statistic));
+        statistic.SetRawValue((long)(newValue / statistic.FixedFloatingPointAdjustment));
+    }
+    /// <summary>
+    /// Sets the statistic sample value, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="statistic">The <see cref="IAmbientStatistic"/> whose value should be set.</param>
     /// <param name="newValue">The new value to use.</param>
     public static void SetValue(this IAmbientStatistic statistic, float newValue)
     {
         if (statistic == null) throw new ArgumentNullException(nameof(statistic));
-        statistic.SetValue((long)(Math.Pow(10, statistic.FixedFloatingPointDigits) * newValue));
+        statistic.SetRawValue((long)(newValue / statistic.FixedFloatingPointAdjustment));
     }
     /// <summary>
-    /// Sets the statistic sample value.  Thread-safe, possibly interlocked.
+    /// Sets the statistic sample value, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="statistic">The <see cref="IAmbientStatistic"/> whose value should be set.</param>
     /// <param name="newValue">The new value to use.</param>
     public static void SetValue(this IAmbientStatistic statistic, double newValue)
     {
         if (statistic == null) throw new ArgumentNullException(nameof(statistic));
-        statistic.SetValue((long)(Math.Pow(10, statistic.FixedFloatingPointDigits) * newValue));
+        statistic.SetRawValue((long)(newValue / statistic.FixedFloatingPointAdjustment));
     }
     /// <summary>
     /// Uses the preferred aggregation type to aggregate samples from a time range.

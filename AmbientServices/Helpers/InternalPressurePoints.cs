@@ -12,11 +12,12 @@ namespace AmbientServices;
 /// </summary>
 public sealed class CpuPressurePoint : IPressurePoint
 {
-    private const short FixedFloatingPointDigits = 8;
-    private static readonly long MaxValue = (long)(1.00f * Math.Pow(10, FixedFloatingPointDigits));
-    private static readonly long NeutralValue = (long)(0.89f * Math.Pow(10, FixedFloatingPointDigits));
+    private const double FixedFloatingPointAdjustment = 100000000;
+    private const long MinRawValue = 0;
+    private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
+    private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
-    private readonly IAmbientStatistic? _cpuPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(CpuPressurePoint), "CPU Pressure", "A measure of the CPU pressure level indicating the proportion of the CPU that was used, between 0 and 1", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
+    private readonly IAmbientStatistic? _cpuPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(CpuPressurePoint), "CPU Pressure", "A measure of the CPU pressure level indicating the proportion of the CPU that was used, between 0 and 1", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
 
 #if NET5_0_OR_GREATER
     private readonly float _neutralValue;
@@ -75,21 +76,22 @@ public sealed class CpuPressurePoint : IPressurePoint
 #endif
 public sealed class ThreadPoolPressurePoint : IPressurePoint
 {
-    private const short FixedFloatingPointDigits = 8;
-    private static readonly long MaxValue = (long)(1.00f * Math.Pow(10, FixedFloatingPointDigits));
-    private static readonly long NeutralValue = (long)(0.89f * Math.Pow(10, FixedFloatingPointDigits));
+    private const double FixedFloatingPointAdjustment = 100000000;
+    private const long MinRawValue = 0;
+    private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
+    private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);
 
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
-    private readonly IAmbientStatistic? _threadPoolPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-Overall", "ThreadPool Pressure", "The overall thread pool pressure", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
-    private readonly IAmbientStatistic? _processThreadPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-ProcessThreads", "Process Thread Pressure", "The process thread pressure level", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
+    private readonly IAmbientStatistic? _threadPoolPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-Overall", "ThreadPool Pressure", "The overall thread pool pressure", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
+    private readonly IAmbientStatistic? _processThreadPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-ProcessThreads", "Process Thread Pressure", "The process thread pressure level", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
 
     private readonly int _maxPoolThreads;
     private readonly int _maxProcessThreads;
-    private readonly IAmbientStatistic? _workerPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-Workers", "Worker Pressure", "The pressure due to the number of thread pool worker threads", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
-    private readonly IAmbientStatistic? _completionPortPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-CompletionPorts", "Completion Port Pressure", "The pressure due to the number of thread pool completion port threads", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
-    private readonly IAmbientStatistic? _totalThreadPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-TotalThreads", "Total Thread Pressure", "The pressure due to the number of thread pool total threads", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
+    private readonly IAmbientStatistic? _workerPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-Workers", "Worker Pressure", "The pressure due to the number of thread pool worker threads", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
+    private readonly IAmbientStatistic? _completionPortPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-CompletionPorts", "Completion Port Pressure", "The pressure due to the number of thread pool completion port threads", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
+    private readonly IAmbientStatistic? _totalThreadPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-TotalThreads", "Total Thread Pressure", "The pressure due to the number of thread pool total threads", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
 #if NETCOREAPP1_0_OR_GREATER
-    private readonly IAmbientStatistic? _threadCountChangePressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-ThreadCountChange", "Thread Creation Pressure", "The pressure due to new threads starting", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
+    private readonly IAmbientStatistic? _threadCountChangePressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(ThreadPoolPressurePoint) + "-ThreadCountChange", "Thread Creation Pressure", "The pressure due to new threads starting", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent);
     private readonly int _maxBufferedThreadPoolActions;
     private readonly int _maxThreadsPerSecond;
     private int _previousSampleThreadCount;
@@ -192,27 +194,28 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
 #endif
 public sealed class MemoryPressurePoint : IPressurePoint
 {
-    private static readonly int[] SkewedProportions = new int[] {
-         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,     // 9% = 0% pressure
-         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,     // 19% = 1% pressure
-         2,  2,  2,  2,  2,  3,  3,  3,  3,  3,     // 29% = 3% pressure
-         4,  4,  4,  4,  5,  5,  5,  5,  6,  6,     // 39% = 6% pressure
-         6,  6,  7,  7,  7,  8,  8,  8,  9,  9,     // 49% = 9% pressure
-        10, 10, 11, 11, 12, 12, 13, 13, 14, 14,     // 59% = 14% pressure
-        15, 16, 17, 18, 19, 20, 21, 22, 23, 24,     // 69% = 24% pressure
-        25, 26, 27, 28, 29, 30, 31, 32, 33, 34,     // 79% = 34% pressure
-        36, 38, 40, 42, 44, 46, 48, 50, 52, 64,     // 89% = 64% pressure
-        67, 70, 73, 76, 79, 82, 86, 90, 94, 98,     // 99% = 98% pressure
+    private static readonly int[] SkewedProportions = new int[] {                   // a more smooth function would look something like this (called a logistic function):
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,     // 9% = 0% pressure             // skewed = 1 / (1 + e^(-steepness * (linear - focus)))
+         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,     // 19% = 1% pressure            // where steepness adjusts the steepness of the slope of the curve leading from low values (near zero) to high values (near 1)
+         2,  2,  2,  2,  2,  3,  3,  3,  3,  3,     // 29% = 3% pressure            // and focus is where the curve crosses 0.5 (the inflection point)
+         4,  4,  4,  4,  5,  5,  5,  5,  6,  6,     // 39% = 6% pressure            // 
+         6,  6,  7,  7,  7,  8,  8,  8,  9,  9,     // 49% = 9% pressure            // 
+        10, 10, 11, 11, 12, 12, 13, 13, 14, 14,     // 59% = 14% pressure           // 
+        15, 16, 17, 18, 19, 20, 21, 22, 23, 24,     // 69% = 24% pressure           // 
+        25, 26, 27, 28, 29, 30, 31, 32, 33, 34,     // 79% = 34% pressure           // 
+        36, 38, 40, 42, 44, 46, 48, 50, 52, 64,     // 89% = 64% pressure           // 
+        67, 70, 73, 76, 79, 82, 86, 90, 94, 98,     // 99% = 98% pressure           // 
     };
-    private const short FixedFloatingPointDigits = 8;
-    private static readonly long MaxValue = (long)(1.00f * Math.Pow(10, FixedFloatingPointDigits));
-    private static readonly long NeutralValue = (long)(0.89f * Math.Pow(10, FixedFloatingPointDigits));
+    private const double FixedFloatingPointAdjustment = 100000000;
+    private const long MinRawValue = 0;
+    private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
+    private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
-    private readonly IAmbientStatistic? _memoryPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(MemoryPressurePoint) + "-Overall", "Memory Pressure", "The pressure due to memory used", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
+    private readonly IAmbientStatistic? _memoryPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(MemoryPressurePoint) + "-Overall", "Memory Pressure", "The pressure due to memory used", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
 
 #if NETCOREAPP1_0_OR_GREATER
-    private readonly IAmbientStatistic? _memoryLoadPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(MemoryPressurePoint) + "-MemoryLoad", "Memory Load", "The pressure due to memory load", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
-    private readonly IAmbientStatistic? _workingSetPressure = AmbientStatistics.Local?.GetOrAddStatistic(false, AmbientStatisicType.Raw, nameof(MemoryPressurePoint) + "-WorkingSet", "Working Set", "The pressure due to the working set", false, "p", NeutralValue, 0, MaxValue, FixedFloatingPointDigits, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
+    private readonly IAmbientStatistic? _memoryLoadPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(MemoryPressurePoint) + "-MemoryLoad", "Memory Load", "The pressure due to memory load", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
+    private readonly IAmbientStatistic? _workingSetPressure = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(MemoryPressurePoint) + "-WorkingSet", "Working Set", "The pressure due to the working set", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);
     /// <summary>
     /// Constructs a pressure point that measures memory pressure.
     /// </summary>

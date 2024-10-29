@@ -11,6 +11,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Diagnostics;
+
 #if NET5_0_OR_GREATER
 using System.Net.Http;
 #else
@@ -627,12 +629,12 @@ public class RequestType
     public RequestType(string typeName)
     {
         IAmbientStatistics? ambientStatistics = AmbientStatistics.Local;
-        _pendingRequests = ambientStatistics?.GetOrAddStatistic(false, AmbientStatisicType.Raw, typeName + "-RequestsPending", "Pending Requests", "The number of requests currently executing", false, "", 0, null, null, 0);
-        _totalRequests = ambientStatistics?.GetOrAddStatistic(false, AmbientStatisicType.Cumulative, typeName + "-TotalRequests", "Total Requests", "The total number of requests that have finished executing", false, "", 0, null, null, 0);
-        _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(true, AmbientStatisicType.Cumulative, typeName + "-TotalProcessingTime", "Total Processing Time", "The total time spent processing requests (only includes completed requests)", false, "seconds", 0, null, null, 0);
-        _retries = ambientStatistics?.GetOrAddStatistic(false, AmbientStatisicType.Cumulative, typeName + "-Retries", "Retries", "The total number of retries", false, "", 0, null, null, 0);
-        _failures = ambientStatistics?.GetOrAddStatistic(false, AmbientStatisicType.Cumulative, typeName + "-Failures", "Failures", "The total number of failures", false, "", 0, null, null, 0);
-        _timeouts = ambientStatistics?.GetOrAddStatistic(false, AmbientStatisicType.Cumulative, typeName + "-Timeouts", "Timeouts", "The total number of timeouts", false, "", 0, null, null, 0);
+        _pendingRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Raw, typeName + "-RequestsPending", "Pending Requests", "The number of requests currently executing", false, 0, null, null, "", 1.0);
+        _totalRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-TotalRequests", "Total Requests", "The total number of requests that have finished executing", false, 0, null, null, "", 1.0);
+        _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-TotalProcessingTime", "Total Processing Time", "The total time spent processing requests (only includes completed requests)", false, 0, null, null, "seconds", Stopwatch.Frequency);
+        _retries = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Retries", "Retries", "The total number of retries", false, 0, null, null, "", 1.0);
+        _failures = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Failures", "Failures", "The total number of failures", false, 0, null, null, "", 1.0);
+        _timeouts = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Timeouts", "Timeouts", "The total number of timeouts", false, 0, null, null, "", 1.0);
     }
     /// <summary>
     /// Tracks a request by creating a <see cref="RequestTracker"/> which automatically counts the request and times its duration and allows the caller to report failures, timeouts, and retries.
@@ -680,7 +682,7 @@ public class RequestTracker : IDisposable
     {
         _requestType = requestType;
         _stopwatch = new AmbientStopwatch(true);
-        requestType.PendingRequests?.Increment();
+        requestType.PendingRequests?.IncrementRaw();
     }
 
     /// <summary>
@@ -688,21 +690,21 @@ public class RequestTracker : IDisposable
     /// </summary>
     public void ReportFailure()
     {
-        _requestType.Failures?.Increment();
+        _requestType.Failures?.IncrementRaw();
     }
     /// <summary>
     /// Reports a timeout during the processing of the request.
     /// </summary>
     public void ReportTimeout()
     {
-        _requestType.Timeouts?.Increment();
+        _requestType.Timeouts?.IncrementRaw();
     }
     /// <summary>
     /// Reports a retry during the processing of the request.
     /// </summary>
     public void ReportRetry()
     {
-        _requestType.Retries?.Increment();
+        _requestType.Retries?.IncrementRaw();
     }
 
     protected virtual void Dispose(bool disposing)
@@ -711,9 +713,9 @@ public class RequestTracker : IDisposable
         {
             if (disposing)
             {
-                _requestType.PendingRequests?.Add(-1);
-                _requestType.TotalRequests?.Increment();
-                _requestType.TotalProcessingTime?.Add(_stopwatch.ElapsedTicks);
+                _requestType.PendingRequests?.AddRaw(-1);
+                _requestType.TotalRequests?.IncrementRaw();
+                _requestType.TotalProcessingTime?.AddRaw(_stopwatch.ElapsedTicks);
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -756,7 +758,7 @@ public static class StatisticsReporter
         {
             writer.WriteStartElement("statistic");
             writer.WriteAttributeString("id", statistic.Id);
-            writer.WriteAttributeString("value", statistic.CurrentValue.ToString());
+            writer.WriteAttributeString("value", statistic.CurrentValueRaw.ToString());
             writer.WriteEndElement();
         }
         writer.WriteEndElement();

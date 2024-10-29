@@ -19,69 +19,64 @@ public class TestStatistics
         Assert.IsNotNull(AmbientStatistics);
 
         double timeUnitsPerSecond = Stopwatch.Frequency;
-        long startTime = AmbientStatistics.Statistics["ExecutionTime"].CurrentValue;
+        long startTime = AmbientStatistics.Statistics["ExecutionTime"].CurrentValueRaw;
 
-        IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(false, AmbientStatisicType.Raw, "counter", "counter", "counter test");
-        Assert.AreEqual(1, counter.Increment());
-        Assert.AreEqual(3, counter.Add(2));
-        Assert.AreEqual(2, counter.Decrement());
+        IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "counter", "counter", "counter test");
+        Assert.AreEqual(1, counter.IncrementRaw());
+        Assert.AreEqual(3, counter.AddRaw(2));
+        Assert.AreEqual(2, counter.DecrementRaw());
         Assert.AreEqual("counter", counter.Id);
         Assert.AreEqual("counter test", counter.Description);
-        Assert.AreEqual(false, counter.IsTimeBased);
-        Assert.AreEqual(5, counter.SetMax(5));
-        Assert.AreEqual(5, counter.SetMax(3));
-        Assert.AreEqual(3, counter.SetMin(3));
-        Assert.AreEqual(3, counter.SetMin(5));
+        Assert.AreEqual(5, counter.SetRawMax(5));
+        Assert.AreEqual(5, counter.SetRawMax(3));
+        Assert.AreEqual(3, counter.SetRawMin(3));
+        Assert.AreEqual(3, counter.SetRawMin(5));
         counter.SetValue(10.0f);
         counter.SetValue(10.0);
-        Assert.AreEqual(10, counter.CurrentValue);
-        Assert.AreEqual(null, counter.ExpectedMin);
-        Assert.AreEqual(null, counter.ExpectedMax);
+        Assert.AreEqual(10, counter.CurrentValueRaw);
+        Assert.AreEqual(null, counter.ExpectedMinRaw);
+        Assert.AreEqual(null, counter.ExpectedMaxRaw);
         Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
-        Assert.AreEqual(0, counter.FixedFloatingPointDigits);
-        IAmbientStatistic sameCounter = AmbientStatistics.GetOrAddStatistic(false, AmbientStatisicType.Max, "counter", "counter", "counter test");
+        IAmbientStatistic sameCounter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Max, "counter", "counter", "counter test");
         Assert.AreEqual(counter, sameCounter);
-        IAmbientStatistic replacedCounter = AmbientStatistics.GetOrAddStatistic(false, AmbientStatisicType.Raw, "counter", "counter", "counter test", true);
+        IAmbientStatistic replacedCounter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "counter", "counter", "counter test", true);
         Assert.AreNotEqual(counter, replacedCounter);
 
-        IAmbientStatistic timeBasedCounter = AmbientStatistics.GetOrAddStatistic(true, AmbientStatisicType.Raw, "time-based", "time-based", "time-based test");
+        IAmbientStatistic timeBasedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Raw, "time-based", "time-based", "time-based test");
         using ((IDisposable)timeBasedCounter)
         {
-            Assert.AreEqual(1, timeBasedCounter.Increment());
-            Assert.AreEqual(3, timeBasedCounter.Add(2));
-            Assert.AreEqual(2, timeBasedCounter.Decrement());
+            Assert.AreEqual(1, timeBasedCounter.IncrementRaw());
+            Assert.AreEqual(3, timeBasedCounter.AddRaw(2));
+            Assert.AreEqual(2, timeBasedCounter.DecrementRaw());
             Assert.AreEqual("time-based", timeBasedCounter.Id);
             Assert.AreEqual("time-based test", timeBasedCounter.Description);
-            Assert.AreEqual(true, timeBasedCounter.IsTimeBased);
-            Assert.AreEqual(5, timeBasedCounter.SetMax(5));
-            Assert.AreEqual(5, timeBasedCounter.SetMax(3));
-            Assert.AreEqual(3, timeBasedCounter.SetMin(3));
-            Assert.AreEqual(3, timeBasedCounter.SetMin(5));
-            Assert.AreEqual(null, counter.ExpectedMin);
-            Assert.AreEqual(null, counter.ExpectedMax);
+            Assert.AreEqual(5, timeBasedCounter.SetRawMax(5));
+            Assert.AreEqual(5, timeBasedCounter.SetRawMax(3));
+            Assert.AreEqual(3, timeBasedCounter.SetRawMin(3));
+            Assert.AreEqual(3, timeBasedCounter.SetRawMin(5));
+            Assert.AreEqual(null, counter.ExpectedMinRaw);
+            Assert.AreEqual(null, counter.ExpectedMaxRaw);
             Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
-            Assert.AreEqual(0, counter.FixedFloatingPointDigits);
-            timeBasedCounter.SetValue(10);
-            Assert.AreEqual(10, timeBasedCounter.CurrentValue);
-            sameCounter = AmbientStatistics.GetOrAddStatistic(true, AmbientStatisicType.Cumulative, "time-based", "time-based", "time-based test");
+            timeBasedCounter.SetRawValue(10);
+            Assert.AreEqual(10, timeBasedCounter.CurrentValueRaw);
+            sameCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Cumulative, "time-based", "time-based", "time-based test");
             Assert.AreEqual(timeBasedCounter, sameCounter);
-            using (replacedCounter = AmbientStatistics.GetOrAddStatistic(true, AmbientStatisicType.Cumulative, "time-based", "time-based", "time-based test", true))
+            using (replacedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Cumulative, "time-based", "time-based", "time-based test", true))
             {
                 Assert.AreNotEqual(timeBasedCounter, replacedCounter);
             }
 
-            using IAmbientStatistic unreplacedCounter = AmbientStatistics.GetOrAddStatistic(true, AmbientStatisicType.Cumulative, "time-based-2", "time-based-2", "time-based-2 test", false);
+            using IAmbientStatistic unreplacedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Cumulative, "time-based-2", "time-based-2", "time-based-2 test", false);
             Assert.AreNotEqual(unreplacedCounter, replacedCounter);
         }
 
         IAmbientStatisticReader executionTime = AmbientStatistics.Statistics["ExecutionTime"];
-        long endTime = executionTime.CurrentValue;
-        replacedCounter.SetValue(endTime - startTime);
+        long endTime = executionTime.CurrentValueRaw;
+        replacedCounter.SetRawValue(endTime - startTime);
         Assert.IsTrue(endTime >= startTime);
-        Assert.AreEqual(0, executionTime.ExpectedMin);
-        Assert.AreEqual(null, executionTime.ExpectedMax);
+        Assert.AreEqual(0, executionTime.ExpectedMinRaw);
+        Assert.AreEqual(null, executionTime.ExpectedMaxRaw);
         Assert.AreEqual(1.0, executionTime.FixedFloatingPointAdjustment);
-        Assert.AreEqual(0, executionTime.FixedFloatingPointDigits);
 
         Assert.IsTrue(AmbientStatistics.RemoveStatistic(counter.Id));
     }
@@ -95,8 +90,8 @@ public class TestStatistics
     public void AmbientPerformanceMetricsRunTime()
     {
         IAmbientStatisticReader runTime = AmbientStatistics.Statistics["ExecutionTime"];
-        Assert.IsTrue(runTime.IsTimeBased);
         Assert.IsTrue(runTime.Description.Contains(" ticks "));
+        Assert.IsTrue(runTime.AdjustedUnits.Equals("ticks"));
 
         Assert.AreEqual(runTime, AmbientStatistics.ReadStatistic("ExecutionTime"));
 
@@ -111,8 +106,8 @@ public class TestStatistics
         Assert.AreEqual(AggregationTypes.MostRecent, runTime.PreferredTemporalAggregationType);
         Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max, runTime.SpatialAggregationTypes);
         Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, runTime.TemporalAggregationTypes);
-        IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(false, AmbientStatisicType.Min, nameof(AmbientPerformanceMetricsProperties), nameof(AmbientPerformanceMetricsProperties) + " Test", nameof(AmbientPerformanceMetricsProperties), true, null
-            , 0, null, null, 0
+        IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Min, nameof(AmbientPerformanceMetricsProperties), nameof(AmbientPerformanceMetricsProperties) + " Test", nameof(AmbientPerformanceMetricsProperties), true
+            , 0, null, null, null, 1.0
             , AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
             , AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.Sum
             , AggregationTypes.MostRecent, AggregationTypes.MostRecent, MissingSampleHandling.ExponentialEstimation);
@@ -130,7 +125,7 @@ public class TestStatistics
             // is this one readonly?
             if (kvp.Value is not IAmbientStatistic)
             {
-                Assert.ThrowsException<InvalidOperationException>(() => AmbientStatistics.GetOrAddStatistic(true, AmbientStatisicType.Raw, kvp.Key, kvp.Key, "", false));
+                Assert.ThrowsException<InvalidOperationException>(() => AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Raw, kvp.Key, kvp.Key, "", false));
                 break;
             }
         }
@@ -141,7 +136,7 @@ public class TestStatistics
         long?[] samples;
 
         samples = MissingSampleHandling.Skip.HandleMissingSamples(new long?[] { null, null, null, null, null }).ToArray();
-        AssertArraysEqualByValue(samples, new long?[] { });
+        AssertArraysEqualByValue(samples, Array.Empty<long?>());
         samples = MissingSampleHandling.Skip.HandleMissingSamples(new long?[] { null, 10, null, null, null }).ToArray();
         AssertArraysEqualByValue(samples, new long?[] { 10 });
         samples = MissingSampleHandling.Skip.HandleMissingSamples(new long?[] { null, 10, null, 20, null }).ToArray();
@@ -208,7 +203,7 @@ public class TestStatistics
     [TestMethod]
     public void AmbientRatioStatistics()
     {
-        using IAmbientStatistic requests = AmbientStatistics.GetOrAddStatistic(false, AmbientStatisicType.Raw, "requests", "requests", "total requests");
+        using IAmbientStatistic requests = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "requests", "requests", "total requests");
         IAmbientStatisticReader executionTime = AmbientStatistics.Statistics["ExecutionTime"];
         using IAmbientRatioStatistic requestsPerSecond = AmbientStatistics.GetOrAddRatioStatistic("requestsPerSecond", "requestsPerSecond", "requests per second", false, "/s", requests.Id, true, executionTime.Id, true);
     }
