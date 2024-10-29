@@ -183,12 +183,27 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
 
 /// <summary>
 /// A <see cref="IPressurePoint"/> implementation that measures local system memory pressure.
+/// Memory usage is not directly proportional to memory pressure, 
+/// because significant memory is always in use even when nothing is happening,
+/// so this pressure point uses a skewed scale to better represent the pressure.
 /// </summary>
 #if NET5_0_OR_GREATER
 [UnsupportedOSPlatform("browser")]
 #endif
 public sealed class MemoryPressurePoint : IPressurePoint
 {
+    private static readonly int[] SkewedProportions = new int[] {
+         0,  0,  0,  0,  0,  0,  0,  0,  0,  0,     // 9% = 0% pressure
+         1,  1,  1,  1,  1,  1,  1,  1,  1,  1,     // 19% = 1% pressure
+         2,  2,  2,  2,  2,  3,  3,  3,  3,  3,     // 29% = 3% pressure
+         4,  4,  4,  4,  5,  5,  5,  5,  6,  6,     // 39% = 6% pressure
+         6,  6,  7,  7,  7,  8,  8,  8,  9,  9,     // 49% = 9% pressure
+        10, 10, 11, 11, 12, 12, 13, 13, 14, 14,     // 59% = 14% pressure
+        15, 16, 17, 18, 19, 20, 21, 22, 23, 24,     // 69% = 24% pressure
+        25, 26, 27, 28, 29, 30, 31, 32, 33, 34,     // 79% = 34% pressure
+        36, 38, 40, 42, 44, 46, 48, 50, 52, 64,     // 89% = 64% pressure
+        67, 70, 73, 76, 79, 82, 86, 90, 94, 98,     // 99% = 98% pressure
+    };
     private const short FixedFloatingPointDigits = 8;
     private static readonly long MaxValue = (long)(1.00f * Math.Pow(10, FixedFloatingPointDigits));
     private static readonly long NeutralValue = (long)(0.89f * Math.Pow(10, FixedFloatingPointDigits));
@@ -247,15 +262,33 @@ public sealed class MemoryPressurePoint : IPressurePoint
 #if NET5_0_OR_GREATER
             }
 #endif
-            float memoryPressure = Math.Max(loadMemoryPressure, workingSetMemoryPressure);
+            float linearPressure = Math.Max(loadMemoryPressure, workingSetMemoryPressure);
+            int linearPressureOffset = (int)(linearPressure * 100);
+            float memoryPressure = LinearPressureToMemoryPressure(linearPressure);
             _memoryPressure?.SetValue(memoryPressure);
             return memoryPressure;
 #else
             long totalBytes = GC.GetTotalMemory(false);
-            float memoryPressure = (totalBytes * 1.0f) / _maxBytesAllowed;
+            float linearPressure = (totalBytes * 1.0f) / _maxBytesAllowed;
+            float memoryPressure = LinearPressureToMemoryPressure(linearPressure);
             _memoryPressure?.SetValue(memoryPressure);
             return memoryPressure;
 #endif
         }
+    }
+    internal static float LinearPressureToMemoryPressure(float linearPressure)
+    {
+        if (linearPressure <= 0.0f) return 0.0f;
+        if (linearPressure  > 1.1f) return 1.0f;
+        if (linearPressure > 0.99f) return 0.99f + 0.01f * (linearPressure - 0.99f) / 0.11f;
+        int linearPressureOffset = (int)(linearPressure * 100);
+        float memoryPressure = (SkewedPressure(linearPressureOffset) + (SkewedPressure(linearPressureOffset + 1) - SkewedPressure(linearPressureOffset)) * (linearPressure * 100.0f - linearPressureOffset)) / 100.0f;
+        return memoryPressure;
+    }
+    private static int SkewedPressure(int linearPressureOffset)
+    {
+        if (linearPressureOffset <= 0) return 0;
+        if (linearPressureOffset >= 100) return 100;
+        return SkewedProportions[linearPressureOffset];
     }
 }

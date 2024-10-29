@@ -47,7 +47,7 @@ public class TestPressureMonitor
         Assert.IsTrue(0.0f <= overallPressure);
         Assert.IsTrue(overallPressure <= 1.0f);
 
-        PressureMonitor defaultMonitor = AmbientServices.PressureMonitor.Default;
+        PressureMonitor defaultMonitor = PressureMonitor.Default;
     }
     [TestMethod]
     public void PressureMonitorNoStats()
@@ -86,12 +86,38 @@ public class TestPressureMonitor
         Assert.IsTrue(0.0f <= overallPressure);
         Assert.IsTrue(overallPressure <= 1.0f);
 
-        PressureMonitor defaultMonitor = AmbientServices.PressureMonitor.Default;
+        PressureMonitor defaultMonitor = PressureMonitor.Default;
     }
     [TestMethod]
     public void PressureMonitorError()
     {
         Assert.ThrowsException<ArgumentNullException>(() => PressureMonitor.Max((IEnumerable<float>)null!));
+    }
+    [TestMethod]
+    public void LinearPressureToMemoryPressure()
+    {
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(-1)    <= 0.0f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0)     <= 0.0f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0)     >= 0.0f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.10f)  < 0.10f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.50f) <= 0.10f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.75f) <= 0.50f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.95f)  < 1.00f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(1.00f) <= 1.00f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(1.01f) <= 1.00f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(1.1f) <= 1.00f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(1.5f) <= 1.00f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(100f) <= 1.00f);
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.0f)  >= MemoryPressurePoint.LinearPressureToMemoryPressure(-0.1f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.10f)  > MemoryPressurePoint.LinearPressureToMemoryPressure( 0.0f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.50f)  > MemoryPressurePoint.LinearPressureToMemoryPressure( 0.10f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.75f)  > MemoryPressurePoint.LinearPressureToMemoryPressure( 0.50f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.95f)  > MemoryPressurePoint.LinearPressureToMemoryPressure( 0.75f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.99f)  > MemoryPressurePoint.LinearPressureToMemoryPressure( 0.95f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.999f) > MemoryPressurePoint.LinearPressureToMemoryPressure( 0.99f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(0.9999f)> MemoryPressurePoint.LinearPressureToMemoryPressure( 0.999f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(1.00f)  > MemoryPressurePoint.LinearPressureToMemoryPressure( 0.9999f));
+        Assert.IsTrue(MemoryPressurePoint.LinearPressureToMemoryPressure(1.01f) >= MemoryPressurePoint.LinearPressureToMemoryPressure( 1.00f));
     }
     class TestExternalPressurePoint : IPressurePoint
     {
