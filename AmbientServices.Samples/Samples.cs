@@ -18,14 +18,14 @@ using System.Net;
 #endif
 
 /*
-    * 
-    * 
-    * Note that the samples are in a separate assembly because the test assembly has special access to internal classes and functions.
-    * We need to be sure that none of the sample code uses that special access.
-    * 
-    * 
-    * 
-    * */
+* 
+* 
+* Note that the samples are in a separate assembly because the test assembly has special access to internal classes and functions.
+* We need to be sure that none of the sample code uses that special access.
+* 
+* 
+* 
+* */
 /// <summary>
 /// A simple class representing a user for the sample.
 /// </summary>

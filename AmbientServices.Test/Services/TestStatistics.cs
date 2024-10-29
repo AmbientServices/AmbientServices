@@ -205,4 +205,11 @@ public class TestStatistics
     {
         Assert.IsTrue(a.SequenceEqual(b));
     }
+    [TestMethod]
+    public void AmbientRatioStatistics()
+    {
+        using IAmbientStatistic requests = AmbientStatistics.GetOrAddStatistic(false, AmbientStatisicType.Raw, "requests", "requests", "total requests");
+        IAmbientStatisticReader executionTime = AmbientStatistics.Statistics["ExecutionTime"];
+        using IAmbientRatioStatistic requestsPerSecond = AmbientStatistics.GetOrAddRatioStatistic("requestsPerSecond", "requestsPerSecond", "requests per second", false, "/s", requests.Id, true, executionTime.Id, true);
+    }
 }

@@ -10,15 +10,17 @@ internal class BasicAmbientStatistics : IAmbientStatistics
 {
     private readonly ProcessExecutionTimeStatistic _executionTime;
     private readonly ConcurrentDictionary<string, IAmbientStatisticReader> _statistics = new();
+    private readonly ConcurrentDictionary<string, IAmbientRatioStatistic> _ratioStatistics = new();
 
     public BasicAmbientStatistics()
     {
         _executionTime = new ProcessExecutionTimeStatistic();
-        _statistics = new ConcurrentDictionary<string, IAmbientStatisticReader>();
         _statistics.GetOrAdd(_executionTime.Id, _executionTime);
     }
 
     public IDictionary<string, IAmbientStatisticReader> Statistics => _statistics;
+
+    public IDictionary<string, IAmbientRatioStatistic> RatioStatistics => _ratioStatistics;
 
     public IAmbientStatisticReader? ReadStatistic(string id)
     {
@@ -49,11 +51,35 @@ internal class BasicAmbientStatistics : IAmbientStatistics
         }
         return statistic;
     }
-
     public bool RemoveStatistic(string id)
     {
         if (id == _executionTime.Id) return false;
         return _statistics.TryRemove(id, out _);
+    }
+    public IAmbientRatioStatistic GetOrAddRatioStatistic(string id, string name, string description, bool replaceIfAlreadyExists = false, string? units = null
+        , string? numeratorStatistic = null, bool numeratorDelta = true
+        , string? denominatorStatistic = null, bool denominatorDelta = true
+        )
+    {
+        IAmbientRatioStatistic? statistic;
+        if (replaceIfAlreadyExists)
+        {
+            statistic = new RatioStatistic(() => _ratioStatistics.TryRemove(id, out _), id, name, description, units
+                , numeratorStatistic, numeratorDelta, denominatorStatistic, denominatorDelta);
+            _ratioStatistics.AddOrUpdate(id, statistic, (k, v) => statistic);
+        }
+        else
+        {
+            statistic = new RatioStatistic(() => _ratioStatistics.TryRemove(id, out _), id, name, description, units
+                , numeratorStatistic, numeratorDelta, denominatorStatistic, denominatorDelta);
+            statistic = _ratioStatistics.GetOrAdd(id, statistic);
+            if (statistic == null) throw new InvalidOperationException("The specified ratio statistic identifier is already in us!");
+        }
+        return statistic;
+    }
+    public bool RemoveRatioStatistic(string id)
+    {
+        return _ratioStatistics.TryRemove(id, out _);
     }
 }
 
@@ -203,4 +229,53 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
     public AggregationTypes PreferredSpatialAggregationType => AggregationTypes.Average;
 
     public MissingSampleHandling MissingSampleHandling => MissingSampleHandling.LinearEstimation;
+}
+
+internal class RatioStatistic : IAmbientRatioStatistic
+{
+    private readonly Action _removeRegistration;
+    private readonly string _id;
+    private readonly string _name;
+    private readonly string _description;
+    private readonly string? _units;
+    private readonly string? _numeratorStatistic;
+    private readonly bool _numeratorDelta;
+    private readonly string? _denominatorStatistic;
+    private readonly bool _denominatorDelta;
+
+    public RatioStatistic(Action removeRegistration, string id, string name, string description, string? units = null
+        , string? numeratorStatistic = null, bool numeratorDelta = true
+        , string? denominatorStatistic = null, bool denominatorDelta = true
+        )
+    {
+        _removeRegistration = removeRegistration;
+        _id = id;
+        _name = name;
+        _description = description;
+        _units = units;
+        _numeratorStatistic = numeratorStatistic;
+        _numeratorDelta = numeratorDelta;
+        _denominatorStatistic = denominatorStatistic;
+        _denominatorDelta = denominatorDelta;
+    }
+    public string Id => _id;
+
+    public string Name => _name;
+
+    public string Description => _description;
+
+    public string? Units => _units;
+
+    public string? NumeratorStatistic => _numeratorStatistic;
+
+    public bool NumeratorDelta => _numeratorDelta;
+
+    public string? DenominatorStatistic => _denominatorStatistic;
+
+    public bool DenominatorDelta => _denominatorDelta;
+
+    public void Dispose()
+    {
+        _removeRegistration();
+    }
 }

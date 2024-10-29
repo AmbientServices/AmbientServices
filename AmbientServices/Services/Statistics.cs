@@ -18,6 +18,10 @@ public interface IAmbientStatistics
     /// </summary>
     IDictionary<string, IAmbientStatisticReader> Statistics { get; }
     /// <summary>
+    /// Gets a <see cref="IDictionary{TKey, TValue}"/> with all the ratio statistics.
+    /// </summary>
+    IDictionary<string, IAmbientRatioStatistic> RatioStatistics { get; }
+    /// <summary>
     /// Finds the specified statistic.
     /// </summary>
     /// <returns>A <see cref="IAmbientStatisticReader"/> the caller can use to read the statistic, or null if there is no statistic with the specified ID.</returns>
@@ -58,6 +62,28 @@ public interface IAmbientStatistics
     /// Note that the ExecutionTime statistic cannot be removed and will return false from this function.
     /// </remarks>
     bool RemoveStatistic(string id);
+    /// <summary>
+    /// Adds or updates a ratio statistic with the specified identifier, description, and statistics.
+    /// </summary>
+    /// <param name="id">A dash-delimited identifier for the statistic.</param>
+    /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
+    /// <param name="description">A human-readable description for the statistic.</param>
+    /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
+    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> for both the numerator and denominator).</param>
+    /// <param name="numeratorStatistic">The ID of the numerator statistic.  The constant 1 will be used if null.</param>
+    /// <param name="numeratorDelta">Whether or not the numerator should be the difference over time.</param>
+    /// <param name="denominatorStatistic">The ID of the denominator statistic.  The constant 1 will be used if null.</param>
+    /// <param name="denominatorDelta">Whether or not the denominator should be the difference over time.</param>
+    /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
+    IAmbientRatioStatistic GetOrAddRatioStatistic(string id, string name, string description, bool replaceIfAlreadyExists = false, string? units = null
+        , string? numeratorStatistic = null, bool numeratorDelta = true
+        , string? denominatorStatistic = null, bool denominatorDelta = true
+        );
+    /// <summary>
+    /// Removes the specified ratio statistic if it exists.
+    /// </summary>
+    /// <returns>Whether or not the ratio statistic was successfully removed.</returns>
+    bool RemoveRatioStatistic(string id);
 }
 /// <summary>
 /// An enumeration of the types of statistics that can be collected.
@@ -274,7 +300,34 @@ public interface IAmbientStatistic : IAmbientStatisticReader, IDisposable
     /// <returns>The new sample value.</returns>
     long SetMax(long newPossibleMaxValue);
 }
-
+/// <summary>
+/// An interface that indicates that a useful statistic exists that is the ratio of two other statistics or the change over time of those statistics.
+/// These statistics should not be recorded independently, but should be recorded as a ratio of the two specified statistics, and can be applied after spatial and/or temporal aggregation.
+/// Using ratio statistics instead of computing the ratio on the server prevents the need to send the raw data to the client, and avoids issues often caused by servers spinning up or down throwing off statistics.
+/// For example, if a statistic for the average request processing time is computed on the server, aggregating that ratio across servers results in the server spinning up or down and handling a tiny fraction of requests to have the same weight as all the requests handled by fully-engaged servers.
+/// Using ratio statistics to compute the ratios on the aggregated raw data weights all the requests equally, whereas using computing the average time on each server weights requests on servers processing only a few requests more heavily.
+/// Implementations are disposable, but should not throw exceptions if methods are called after disposal.
+/// Disposability is meant to stop reporting results.
+/// </summary>
+public interface IAmbientRatioStatistic : IDisposable
+{
+    /// <summary>
+    /// Gets the ID of the numerator statistic.  Use the constant 1 (and ignore <see cref="NumeratorDelta"/>) if null.  Immutable.
+    /// </summary>
+    string? NumeratorStatistic { get; }
+    /// <summary>
+    /// The numerator should be the change in the numerator statistic over time rather than the raw value.  Immutable.
+    /// </summary>
+    bool NumeratorDelta { get; }
+    /// <summary>
+    /// Gets the ID of the denominator statistic, often the built-in "ExecutionTime" statistic.  Use 1 (and ignore <see cref="NumeratorDelta"/>) if null.  Immutable.
+    /// </summary>
+    string? DenominatorStatistic { get; }
+    /// <summary>
+    /// The denominator should be the change in the numerator statistic over time rather than the raw value.  Immutable.
+    /// </summary>
+    bool DenominatorDelta { get; }
+}
 
 /// <summary>
 /// A class that contains extension methods for various statistics interfaces that add functions to aggregate statistic samples.
