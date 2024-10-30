@@ -76,7 +76,7 @@ public class TestStatistics
         Assert.IsTrue(endTime >= startTime);
         Assert.AreEqual(0, executionTime.ExpectedMinimumRawValue);
         Assert.AreEqual(null, executionTime.ExpectedMaximumRawValue);
-        Assert.AreEqual(1.0, executionTime.FixedFloatingPointAdjustment);
+        Assert.AreEqual(Stopwatch.Frequency, executionTime.FixedFloatingPointAdjustment);
 
         Assert.IsTrue(AmbientStatistics.RemoveStatistic(counter.Id));
     }
