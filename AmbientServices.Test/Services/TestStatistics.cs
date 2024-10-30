@@ -19,7 +19,7 @@ public class TestStatistics
         Assert.IsNotNull(AmbientStatistics);
 
         double timeUnitsPerSecond = Stopwatch.Frequency;
-        long startTime = AmbientStatistics.Statistics["ExecutionTime"].CurrentRawValue;
+        long startTime = _AmbientStatistics.Global?.ExecutionTime.CurrentRawValue ?? 0;
 
         IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "counter", "counter", "counter test");
         Assert.AreEqual(1, counter.IncrementRaw());
@@ -121,6 +121,7 @@ public class TestStatistics
     [TestMethod]
     public void AmbientPerformanceMetricsException()
     {
+        using IAmbientStatistic stat = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(AmbientPerformanceMetricsException), "exception", "exception test");
         foreach (KeyValuePair<string, IAmbientStatisticReader> kvp in AmbientStatistics.Statistics)
         {
             // is this one readonly?
@@ -204,8 +205,14 @@ public class TestStatistics
     [TestMethod]
     public void AmbientRatioStatistics()
     {
-        using IAmbientStatistic requests = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "requests", "requests", "total requests");
+        using IAmbientStatistic requests = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "total_requests", "Total Requests", "The total number of requests");
         IAmbientStatisticReader executionTime = AmbientStatistics.Statistics["ExecutionTime"];
-        using IAmbientRatioStatistic requestsPerSecond = AmbientStatistics.GetOrAddRatioStatistic("requestsPerSecond", "requestsPerSecond", "requests per second", false, "/s", requests.Id, true, executionTime.Id, true);
+        using IAmbientRatioStatistic requestsPerSecond1 = AmbientStatistics.GetOrAddRatioStatistic("requestsPerSecond1", "requestsPerSecond", "requests per second", false, "r/s", requests.Id, true, executionTime.Id, true);
+        using IAmbientRatioStatistic requestsPerSecond2 = AmbientStatistics.GetOrAddRatioStatistic("requestsPerSecond2", "requestsPerSecond", "requests per second", false, null, requests.Id, true, executionTime.Id, true);
+        {
+            using IAmbientRatioStatistic requestsPerSecond3 = AmbientStatistics.GetOrAddRatioStatistic("requests", "requests", "requests", true, null, requests.Id, true, null, true);
+        }
+        IAmbientRatioStatistic stat = AmbientStatistics.RatioStatistics["requestsPerSecond1"];
+        Assert.AreEqual(stat, requestsPerSecond1);
     }
 }

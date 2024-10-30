@@ -29,6 +29,7 @@ public static class AmbientStackTrace
 
     /// <summary>
     /// Reset the async-local stack just in case this context has been recycled and something was left in it.
+    /// Note that the baseline string is registered on the new stack, but notification is not sent to <paramref name="subscriber"/> until the first call to <see cref="Trace"/>.
     /// </summary>
     /// <param name="subscriber">A <see cref="IStackTraceUpdateSink"/> that will receive notifications of updates to the stack trace information.</param>
     /// <param name="baseline">The baseline string.</param>

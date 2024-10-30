@@ -134,6 +134,15 @@ namespace AmbientServices.Test
         /// Performs tests on <see cref="IAmbientLogger"/>.
         /// </summary>
         [TestMethod]
+        public void LoggerStructuredConsole()
+        {
+            AmbientConsoleLogger console = new();
+            console.Log(new { Message = "this is a test" });
+        }
+        /// <summary>
+        /// Performs tests on <see cref="IAmbientLogger"/>.
+        /// </summary>
+        [TestMethod]
         public async Task LoggerBasic()
         {
             using AmbientFileLogger bl = new();
@@ -352,4 +361,5 @@ namespace AmbientServices.Test
         }
     }
     class AllowedLoggerType { }
+
 }

@@ -18,16 +18,13 @@ internal class BasicAmbientStatistics : IAmbientStatistics
     private readonly ConcurrentDictionary<string, IAmbientStatisticReader> _statistics = new();
     private readonly ConcurrentDictionary<string, IAmbientRatioStatistic> _ratioStatistics = new();
 
-    /// <summary>
-    /// Gets the built-in execution time statistic.
-    /// </summary>
-    public IAmbientStatisticReader ExecutionTime => _executionTime;
-
     public BasicAmbientStatistics()
     {
         _executionTime = new ProcessExecutionTimeStatistic(this);
         _statistics.GetOrAdd(_executionTime.Id, _executionTime);
     }
+
+    public IAmbientStatisticReader ExecutionTime => _executionTime;
 
     public IDictionary<string, IAmbientStatisticReader> Statistics => _statistics;
 
@@ -70,17 +67,9 @@ internal class BasicAmbientStatistics : IAmbientStatistics
         , MissingSampleHandling missingSampleHandling = MissingSampleHandling.LinearEstimation
         )
     {
-        IAmbientStatistic? statistic = new Statistic(this, () => _statistics.TryRemove(id, out _), type, id, name, description, initialRawValue, minimumExpectedRawValue, maximumExpectedRawValue, temporalAggregationTypes, spatialAggregationTypes, preferredTemporalAggregationType, preferredSpatialAggregationType, missingSampleHandling);
-        if (replaceIfAlreadyExists)
-        {
-            _statistics.AddOrUpdate(id, statistic, (k, v) => statistic);
-        }
-        else
-        {
-            statistic = _statistics.GetOrAdd(id, statistic) as IAmbientStatistic;   // this *could* return something that is only an IAmbientStatisticReader!
-            if (statistic == null) throw new InvalidOperationException("The specified statistic identifier is already in use by a read-only statistic!");
-        }
-        return statistic;
+        return GetOrAddStatistic(type, id, name, description, replaceIfAlreadyExists, initialRawValue, minimumExpectedRawValue, maximumExpectedRawValue, 
+            "seconds", Stopwatch.Frequency, 
+            temporalAggregationTypes, spatialAggregationTypes, preferredTemporalAggregationType, preferredSpatialAggregationType, missingSampleHandling);
     }
     public bool RemoveStatistic(string id)
     {
@@ -116,7 +105,6 @@ internal class BasicAmbientStatistics : IAmbientStatistics
         else
         {
             statistic = _ratioStatistics.GetOrAdd(id, statistic);
-            if (statistic == null) throw new InvalidOperationException("The specified ratio statistic identifier is already in us!");
         }
         return statistic;
     }
@@ -137,32 +125,6 @@ internal class Statistic : IAmbientStatistic
     private readonly string? _units;
     private long _currentValue;    // interlocked
 
-    public Statistic(IAmbientStatistics statisticsSet, Action removeRegistration, AmbientStatisicType type, string id, string name, string description
-        , long initialRawValue = 0, long? expectedMinRawValue = null, long? expectedMaxRawValue = null
-        , AggregationTypes temporalAggregationTypes = AggregationTypes.None
-        , AggregationTypes spatialAggregationTypes = AggregationTypes.None
-        , AggregationTypes preferredTemporalAggregationType = AggregationTypes.MostRecent
-        , AggregationTypes preferredSpatialAggregationType = AggregationTypes.Average
-        , MissingSampleHandling missingSampleHandling = MissingSampleHandling.LinearEstimation
-        )
-    {
-        _statisticsSet = statisticsSet;
-        _removeRegistration = removeRegistration;
-        _type = type;
-        _id = id;
-        _name = name;
-        _description = description;
-        _units = "seconds";
-        _currentValue = initialRawValue;
-        ExpectedMinimumRawValue = expectedMinRawValue;
-        ExpectedMaximumRawValue = expectedMaxRawValue;
-        FixedFloatingPointAdjustment = Stopwatch.Frequency;
-        TemporalAggregationTypes = temporalAggregationTypes == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultTemporalAggregation(type) : temporalAggregationTypes;
-        SpatialAggregationTypes = spatialAggregationTypes == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultSpatialAggregation(type) : spatialAggregationTypes;
-        PreferredTemporalAggregationType = preferredTemporalAggregationType == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultTemporalAggregation(type) : preferredTemporalAggregationType;
-        PreferredSpatialAggregationType = preferredSpatialAggregationType == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultSpatialAggregation(type) : preferredSpatialAggregationType;
-        MissingSampleHandling = missingSampleHandling;
-    }
     public Statistic(IAmbientStatistics statisticsSet, Action removeRegistration, AmbientStatisicType type, string id, string name, string description
         , long initialRawValue = 0, long? expectedMinRawValue = null, long? expectedMaxRawValue = null
         , string? units = null, double fixedFloatingPointAdjustment = 1.0
@@ -293,7 +255,7 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
     public MissingSampleHandling MissingSampleHandling => MissingSampleHandling.LinearEstimation;
 }
 
-internal class RatioStatistic : IAmbientRatioStatistic
+internal sealed class RatioStatistic : IAmbientRatioStatistic
 {
     private readonly IAmbientStatistics _statisticsSet;
     private readonly Action _removeRegistration;
