@@ -280,7 +280,7 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 
     public long? ExpectedMaximumRawValue => null;
 
-    public double FixedFloatingPointAdjustment => 1.0;
+    public double FixedFloatingPointAdjustment => Stopwatch.Frequency;
 
     public AggregationTypes TemporalAggregationTypes => AggregationTypes.MostRecent | AggregationTypes.Min | AggregationTypes.Max;
 
