@@ -95,12 +95,12 @@ public interface IAmbientStatistics
     /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
     /// <param name="description">A human-readable description for the statistic.</param>
     /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
-    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> for both the numerator and denominator).  Lower-cased, not an abbreviation.</param>
+    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> for both the numerator and denominator).  Lower-cased, not an abbreviation.  If not specified, will be derived from the numerator and denominator units.</param>
     /// <param name="numeratorStatistic">The ID of the numerator statistic.  The constant 1 will be used if null.</param>
     /// <param name="numeratorDelta">Whether or not the numerator should be the difference over time.</param>
     /// <param name="denominatorStatistic">The ID of the denominator statistic.  The constant 1 will be used if null.</param>
     /// <param name="denominatorDelta">Whether or not the denominator should be the difference over time.</param>
-    /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
+    /// <returns>An <see cref="IAmbientRatioStatistic"/> the caller can use to access the ratio statistic data.</returns>
     IAmbientRatioStatistic GetOrAddRatioStatistic(string id, string name, string description, bool replaceIfAlreadyExists = false, string? units = null
         , string? numeratorStatistic = null, bool numeratorDelta = true
         , string? denominatorStatistic = null, bool denominatorDelta = true
@@ -206,6 +206,10 @@ public enum MissingSampleHandling
 public interface IAmbientStatisticReader
 {
     /// <summary>
+    /// Gets the <see cref="IAmbientStatistics"/> this statistic belongs to.
+    /// </summary>
+    IAmbientStatistics StatisticsSet { get; }
+    /// <summary>
     /// Gets the <see cref="AmbientStatisicType"/> for the statistic.  Immutable.
     /// </summary>
     AmbientStatisicType StatisicType { get; }
@@ -215,11 +219,11 @@ public interface IAmbientStatisticReader
     /// </summary>
     string Id { get; }
     /// <summary>
-    /// Gets a human-readable name, presumbly for the chart title.  Immutable.
+    /// Gets a human-readable name, presumbly for the chart title.  Should describe the adjusted values, not the raw values.  Immutable.
     /// </summary>
     string Name { get; }
     /// <summary>
-    /// Gets a human-readable description of this statistic.  Immutable.
+    /// Gets a human-readable description of this statistic.  Should describe the adjusted values, not the raw values.  Immutable.
     /// </summary>
     string Description { get; }
     /// <summary>
@@ -235,13 +239,13 @@ public interface IAmbientStatisticReader
     /// </summary>
     long? ExpectedMaxRaw { get; }
     /// <summary>
-    /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  Assumes that the numbers in the axis have already been divided by the FixedFloatingPointMultiplier.  Immutable.
-    /// If not specified and a time-based statistic, the units (after dividing by FixedFloatingPointMultiplier) are assumed to be seconds.
+    /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  
+    /// Assumes that the numbers in the axis have already been divided by <see cref="FixedFloatingPointAdjustment"/>.  Immutable.
     /// Immutable.
     /// </summary>
     string? AdjustedUnits { get; }
     /// <summary>
-    /// The number used to divide <see cref="CurrentValueRaw"/> to adjust the integer sample into a floating point number in the specified units (1 if not applicable).
+    /// The number used to divide <see cref="CurrentValueRaw"/> to adjust the integer sample into a floating point number in the specified units (1.0 if not applicable).
     /// Immutable.
     /// </summary>
     double FixedFloatingPointAdjustment { get; }
@@ -323,6 +327,10 @@ public interface IAmbientStatistic : IAmbientStatisticReader, IDisposable
 /// </summary>
 public interface IAmbientRatioStatistic : IDisposable
 {
+    /// <summary>
+    /// Gets the <see cref="IAmbientStatistics"/> this statistic belongs to.
+    /// </summary>
+    IAmbientStatistics StatisticsSet { get; }
     /// <summary>
     /// Gets the ID of the numerator statistic.  Use the constant 1 (and ignore <see cref="NumeratorDelta"/>) if null.  Immutable.
     /// </summary>

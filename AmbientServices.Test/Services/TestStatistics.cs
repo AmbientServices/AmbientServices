@@ -90,8 +90,8 @@ public class TestStatistics
     public void AmbientPerformanceMetricsRunTime()
     {
         IAmbientStatisticReader runTime = AmbientStatistics.Statistics["ExecutionTime"];
-        Assert.IsTrue(runTime.Description.Contains(" ticks "));
-        Assert.IsTrue(runTime.AdjustedUnits.Equals("ticks"));
+        Assert.IsTrue(runTime.Description.Contains(" seconds "));
+        Assert.IsTrue(runTime.AdjustedUnits.Equals("seconds"));
 
         Assert.AreEqual(runTime, AmbientStatistics.ReadStatistic("ExecutionTime"));
 
