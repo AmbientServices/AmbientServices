@@ -154,8 +154,8 @@ internal class Statistic : IAmbientStatistic
         _description = description;
         _units = "seconds";
         _currentValue = initialRawValue;
-        ExpectedMinRaw = expectedMinRawValue;
-        ExpectedMaxRaw = expectedMaxRawValue;
+        ExpectedMinimumRawValue = expectedMinRawValue;
+        ExpectedMaximumRawValue = expectedMaxRawValue;
         FixedFloatingPointAdjustment = Stopwatch.Frequency;
         TemporalAggregationTypes = temporalAggregationTypes == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultTemporalAggregation(type) : temporalAggregationTypes;
         SpatialAggregationTypes = spatialAggregationTypes == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultSpatialAggregation(type) : spatialAggregationTypes;
@@ -181,8 +181,8 @@ internal class Statistic : IAmbientStatistic
         _description = description;
         _units = units;
         _currentValue = initialRawValue;
-        ExpectedMinRaw = expectedMinRawValue;
-        ExpectedMaxRaw = expectedMaxRawValue;
+        ExpectedMinimumRawValue = expectedMinRawValue;
+        ExpectedMaximumRawValue = expectedMaxRawValue;
         FixedFloatingPointAdjustment = fixedFloatingPointAdjustment;
         TemporalAggregationTypes = temporalAggregationTypes == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultTemporalAggregation(type) : temporalAggregationTypes;
         SpatialAggregationTypes = spatialAggregationTypes == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultSpatialAggregation(type) : spatialAggregationTypes;
@@ -203,11 +203,11 @@ internal class Statistic : IAmbientStatistic
 
     public string? AdjustedUnits => _units;
 
-    public long CurrentValueRaw => _currentValue;
+    public long CurrentRawValue => _currentValue;
 
-    public long? ExpectedMinRaw { get; private set; }
+    public long? ExpectedMinimumRawValue { get; private set; }
 
-    public long? ExpectedMaxRaw { get; private set; }
+    public long? ExpectedMaximumRawValue { get; private set; }
 
     public double FixedFloatingPointAdjustment { get; private set;}
 
@@ -274,11 +274,11 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 
     public string? AdjustedUnits => "seconds";
 
-    public long CurrentValueRaw => AmbientClock.Ticks - _startTime;
+    public long CurrentRawValue => AmbientClock.Ticks - _startTime;
 
-    public long? ExpectedMinRaw => 0;
+    public long? ExpectedMinimumRawValue => 0;
 
-    public long? ExpectedMaxRaw => null;
+    public long? ExpectedMaximumRawValue => null;
 
     public double FixedFloatingPointAdjustment => 1.0;
 

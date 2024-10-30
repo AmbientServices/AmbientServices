@@ -758,7 +758,7 @@ public static class StatisticsReporter
         {
             writer.WriteStartElement("statistic");
             writer.WriteAttributeString("id", statistic.Id);
-            writer.WriteAttributeString("value", statistic.CurrentValueRaw.ToString());
+            writer.WriteAttributeString("value", statistic.CurrentRawValue.ToString());
             writer.WriteEndElement();
         }
         writer.WriteEndElement();

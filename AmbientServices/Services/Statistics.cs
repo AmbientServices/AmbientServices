@@ -229,15 +229,15 @@ public interface IAmbientStatisticReader
     /// <summary>
     /// Gets the current statistic sample value.  Thread-safe, possibly interlocked.
     /// </summary>
-    long CurrentValueRaw { get; }
-    /// <summary>
-    /// The expected maximum value, if any.  Null if there is no expected maximum.  Immutable.
-    /// </summary>
-    long? ExpectedMinRaw { get; }
+    long CurrentRawValue { get; }
     /// <summary>
     /// The expected minimum value, if any.  Null if there is no expected minimum.  Immutable.
     /// </summary>
-    long? ExpectedMaxRaw { get; }
+    long? ExpectedMinimumRawValue { get; }
+    /// <summary>
+    /// The expected maximum value, if any.  Null if there is no expected maximum.  Immutable.
+    /// </summary>
+    long? ExpectedMaximumRawValue { get; }
     /// <summary>
     /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  
     /// Assumes that the numbers in the axis have already been divided by <see cref="FixedFloatingPointAdjustment"/>.  Immutable.
@@ -245,7 +245,7 @@ public interface IAmbientStatisticReader
     /// </summary>
     string? AdjustedUnits { get; }
     /// <summary>
-    /// The number used to divide <see cref="CurrentValueRaw"/> to adjust the integer sample into a floating point number in the specified units (1.0 if not applicable).
+    /// The number used to divide <see cref="CurrentRawValue"/> to adjust the integer sample into a floating point number in the specified units (1.0 if not applicable).
     /// Immutable.
     /// </summary>
     double FixedFloatingPointAdjustment { get; }

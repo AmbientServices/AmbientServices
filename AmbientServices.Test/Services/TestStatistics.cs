@@ -19,7 +19,7 @@ public class TestStatistics
         Assert.IsNotNull(AmbientStatistics);
 
         double timeUnitsPerSecond = Stopwatch.Frequency;
-        long startTime = AmbientStatistics.Statistics["ExecutionTime"].CurrentValueRaw;
+        long startTime = AmbientStatistics.Statistics["ExecutionTime"].CurrentRawValue;
 
         IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "counter", "counter", "counter test");
         Assert.AreEqual(1, counter.IncrementRaw());
@@ -33,9 +33,9 @@ public class TestStatistics
         Assert.AreEqual(3, counter.SetRawMin(5));
         counter.SetValue(10.0f);
         counter.SetValue(10.0);
-        Assert.AreEqual(10, counter.CurrentValueRaw);
-        Assert.AreEqual(null, counter.ExpectedMinRaw);
-        Assert.AreEqual(null, counter.ExpectedMaxRaw);
+        Assert.AreEqual(10, counter.CurrentRawValue);
+        Assert.AreEqual(null, counter.ExpectedMinimumRawValue);
+        Assert.AreEqual(null, counter.ExpectedMaximumRawValue);
         Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
         IAmbientStatistic sameCounter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Max, "counter", "counter", "counter test");
         Assert.AreEqual(counter, sameCounter);
@@ -54,11 +54,11 @@ public class TestStatistics
             Assert.AreEqual(5, timeBasedCounter.SetRawMax(3));
             Assert.AreEqual(3, timeBasedCounter.SetRawMin(3));
             Assert.AreEqual(3, timeBasedCounter.SetRawMin(5));
-            Assert.AreEqual(null, counter.ExpectedMinRaw);
-            Assert.AreEqual(null, counter.ExpectedMaxRaw);
+            Assert.AreEqual(null, counter.ExpectedMinimumRawValue);
+            Assert.AreEqual(null, counter.ExpectedMaximumRawValue);
             Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
             timeBasedCounter.SetRawValue(10);
-            Assert.AreEqual(10, timeBasedCounter.CurrentValueRaw);
+            Assert.AreEqual(10, timeBasedCounter.CurrentRawValue);
             sameCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Cumulative, "time-based", "time-based", "time-based test");
             Assert.AreEqual(timeBasedCounter, sameCounter);
             using (replacedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Cumulative, "time-based", "time-based", "time-based test", true))
@@ -71,11 +71,11 @@ public class TestStatistics
         }
 
         IAmbientStatisticReader executionTime = AmbientStatistics.Statistics["ExecutionTime"];
-        long endTime = executionTime.CurrentValueRaw;
+        long endTime = executionTime.CurrentRawValue;
         replacedCounter.SetRawValue(endTime - startTime);
         Assert.IsTrue(endTime >= startTime);
-        Assert.AreEqual(0, executionTime.ExpectedMinRaw);
-        Assert.AreEqual(null, executionTime.ExpectedMaxRaw);
+        Assert.AreEqual(0, executionTime.ExpectedMinimumRawValue);
+        Assert.AreEqual(null, executionTime.ExpectedMaximumRawValue);
         Assert.AreEqual(1.0, executionTime.FixedFloatingPointAdjustment);
 
         Assert.IsTrue(AmbientStatistics.RemoveStatistic(counter.Id));
