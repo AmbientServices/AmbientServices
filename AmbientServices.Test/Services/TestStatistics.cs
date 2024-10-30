@@ -33,6 +33,7 @@ public class TestStatistics
         Assert.AreEqual(3, counter.SetRawMin(5));
         counter.SetValue(10.0f);
         counter.SetValue(10.0);
+        counter.SetValue(10L);
         Assert.AreEqual(10, counter.CurrentRawValue);
         Assert.AreEqual(null, counter.ExpectedMinimumRawValue);
         Assert.AreEqual(null, counter.ExpectedMaximumRawValue);

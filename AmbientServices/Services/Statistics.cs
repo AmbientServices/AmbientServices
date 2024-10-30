@@ -362,7 +362,7 @@ public static class IAmbientStatisticsExtensions
     public static void SetValue(this IAmbientStatistic statistic, long newValue)
     {
         if (statistic == null) throw new ArgumentNullException(nameof(statistic));
-        statistic.SetRawValue((long)(newValue / statistic.FixedFloatingPointAdjustment));
+        statistic.SetRawValue((long)(newValue * statistic.FixedFloatingPointAdjustment));
     }
     /// <summary>
     /// Sets the statistic sample value, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
@@ -372,7 +372,7 @@ public static class IAmbientStatisticsExtensions
     public static void SetValue(this IAmbientStatistic statistic, float newValue)
     {
         if (statistic == null) throw new ArgumentNullException(nameof(statistic));
-        statistic.SetRawValue((long)(newValue / statistic.FixedFloatingPointAdjustment));
+        statistic.SetRawValue((long)(newValue * statistic.FixedFloatingPointAdjustment));
     }
     /// <summary>
     /// Sets the statistic sample value, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
@@ -382,7 +382,7 @@ public static class IAmbientStatisticsExtensions
     public static void SetValue(this IAmbientStatistic statistic, double newValue)
     {
         if (statistic == null) throw new ArgumentNullException(nameof(statistic));
-        statistic.SetRawValue((long)(newValue / statistic.FixedFloatingPointAdjustment));
+        statistic.SetRawValue((long)(newValue * statistic.FixedFloatingPointAdjustment));
     }
     /// <summary>
     /// Uses the preferred aggregation type to aggregate samples from a time range.
