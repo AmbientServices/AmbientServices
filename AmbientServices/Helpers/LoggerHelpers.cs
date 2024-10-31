@@ -66,6 +66,7 @@ public class AmbientLogger
     {
         JsonSerializerOptions options = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
         options.Converters.Add(new IPAddressConverter());
+        options.Converters.Add(new IPAddressConverterFactory());
         return options;
     }
 
@@ -698,6 +699,33 @@ record struct StandardRequestLogInfo(AmbientLogLevel Level);
 record struct ErrorLogInfo(string ErrorType, string ErrorMessage, string? ErrorStackTrace);
 record struct LogSummaryInfo(string? Summary);
 
+/// <summary>
+/// A JsonConverterFactory for System.Net.IPAddress.
+/// </summary>
+public class IPAddressConverterFactory : JsonConverterFactory
+{
+    /// <summary>
+    /// Checks to see if the specified type can be converted.
+    /// </summary>
+    /// <param name="typeToConvert">The type to check.</param>
+    /// <returns>Whether or not the type can be converted.</returns>
+    public override bool CanConvert(Type typeToConvert)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(typeToConvert);
+#else
+        if (typeToConvert is null) throw new ArgumentNullException(nameof(typeToConvert));
+#endif
+        return typeof(System.Net.IPAddress).IsAssignableFrom(typeToConvert);
+    }
+    /// <summary>
+    /// Creates a JsonConverter for the specified type.
+    /// </summary>
+    /// <param name="typeToConvert">The type to convert.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use.</param>
+    /// <returns>The <see cref="JsonConverter"/>.</returns>
+    public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options) => new IPAddressConverter();
+}
 
 /// <summary>
 /// A JsonConverter for System.Net.IPAddress.

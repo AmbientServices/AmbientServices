@@ -122,7 +122,7 @@ internal class Statistic : IAmbientStatistic
     private readonly string _id;
     private readonly string _name;
     private readonly string _description;
-    private readonly string? _units;
+    private readonly string? _adjustedUnits;
     private long _currentValue;    // interlocked
 
     public Statistic(IAmbientStatistics statisticsSet, Action removeRegistration, AmbientStatisicType type, string id, string name, string description
@@ -141,7 +141,7 @@ internal class Statistic : IAmbientStatistic
         _id = id;
         _name = name;
         _description = description;
-        _units = units;
+        _adjustedUnits = units;
         _currentValue = initialRawValue;
         ExpectedMinimumRawValue = expectedMinRawValue;
         ExpectedMaximumRawValue = expectedMaxRawValue;
@@ -163,7 +163,7 @@ internal class Statistic : IAmbientStatistic
 
     public string Description => _description;
 
-    public string? AdjustedUnits => _units;
+    public string? AdjustedUnits => _adjustedUnits;
 
     public long CurrentRawValue => _currentValue;
 
@@ -262,7 +262,7 @@ internal sealed class RatioStatistic : IAmbientRatioStatistic
     private readonly string _id;
     private readonly string _name;
     private readonly string _description;
-    private readonly string? _units;
+    private readonly string? _adjustedUnits;
     private readonly string? _numeratorStatistic;
     private readonly bool _numeratorDelta;
     private readonly string? _denominatorStatistic;
@@ -278,7 +278,7 @@ internal sealed class RatioStatistic : IAmbientRatioStatistic
         _id = id;
         _name = name;
         _description = description;
-        _units = units;
+        _adjustedUnits = units;
         _numeratorStatistic = numeratorStatistic;
         _numeratorDelta = numeratorDelta;
         _denominatorStatistic = denominatorStatistic;
@@ -293,7 +293,7 @@ internal sealed class RatioStatistic : IAmbientRatioStatistic
 
     public string Description => _description;
 
-    public string? Units => _units;
+    public string? AdjustedUnits => _adjustedUnits;
 
     public string? NumeratorStatisticId => _numeratorStatistic;
 

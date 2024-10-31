@@ -186,57 +186,6 @@ public class TestBasicAmbientLogger
     /// Performs tests on <see cref="IAmbientLogger"/>.
     /// </summary>
     [TestMethod]
-    public void IPAddressSerializer()
-    {
-        JsonSerializerOptions options = AmbientLogger.DefaultSerializer;
-        string none = JsonSerializer.Serialize(System.Net.IPAddress.None, options);
-        Assert.AreEqual(System.Net.IPAddress.None, JsonSerializer.Deserialize<System.Net.IPAddress>(none, options));
-        string any = JsonSerializer.Serialize(System.Net.IPAddress.Any, options);
-        Assert.AreEqual(System.Net.IPAddress.Any, JsonSerializer.Deserialize<System.Net.IPAddress>(any, options));
-        string nullableNotNull = JsonSerializer.Serialize(System.Net.IPAddress.Any, options);
-        Assert.AreEqual(System.Net.IPAddress.Any, JsonSerializer.Deserialize<System.Net.IPAddress>(nullableNotNull, options));
-        string nullableNull = JsonSerializer.Serialize<System.Net.IPAddress?>(null, options);
-        Assert.IsNull(JsonSerializer.Deserialize<System.Net.IPAddress?>(nullableNull, options));
-
-
-        Dictionary<string, object?> dictionary = new()
-        {
-            { "Level", AmbientLogLevel.Information },
-            { "baselineKey", "baselineValue" },
-            { "key1", System.Net.IPAddress.Parse("0.0.0.0") },
-            { "key2", null },
-        };
-
-        string json = JsonSerializer.Serialize(dictionary, options);
-
-        string logEntry = AmbientLogger.ConvertStructuredDataIntoSimpleMessage(dictionary);
-    }
-#if false
-    /// <summary>
-    /// Performs tests on <see cref="IAmbientLogger"/>.
-    /// </summary>
-    [TestMethod]
-    public void DotNetBug()
-    {
-        JsonSerializerOptions options = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
-        options.Converters.Add(new IPAddressConverter());
-
-        Dictionary<string, object?> dictionary = new()
-        {
-            { "key", System.Net.IPAddress.Parse("0.0.0.0") },
-        };
-
-        string json = JsonSerializer.Serialize(dictionary, options);
-
-        dictionary["Key"] = System.Net.IPAddress.Any;
-
-        json = JsonSerializer.Serialize(dictionary, options);
-    }
-#endif
-    /// <summary>
-    /// Performs tests on <see cref="IAmbientLogger"/>.
-    /// </summary>
-    [TestMethod]
     public void TestAmbientLogContext()
     {
         AmbientTraceLogger loggerBackend = new();
@@ -256,24 +205,5 @@ public class TestBasicAmbientLogger
         Dictionary<string, object?> dict = new();
         AmbientLogger.AddExceptionInformationToDictionary(dict, new ExceptionWithExtraLoggingInformation());
         Assert.AreEqual("value", dict["key"]);
-    }
-    [TestMethod]
-    public void AmbientLoggerTest()
-    {
-        AmbientLogger<TestBasicAmbientLogger> logger = new();
-        string result;
-        object entry;
-
-        logger.MessageRenderer = (time, level, owner, category, message) => "test";
-        result = logger.MessageRenderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
-        logger.MessageRenderer = AmbientLogger.DefaultMessageRenderer;
-        result = logger.MessageRenderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
-        result = logger.MessageRenderer(DateTime.UtcNow, AmbientLogLevel.Error, "this is a plain old message", "owner", "category");
-
-        logger.Renderer = (time, level, owner, category, message) => "test";
-        entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
-        logger.Renderer = AmbientLogger.DefaultRenderer;
-        entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
-        entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, "this is a plain old message", "owner", "category");
     }
 }

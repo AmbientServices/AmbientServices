@@ -244,7 +244,7 @@ public interface IAmbientStatisticReader
     long? ExpectedMaximumRawValue { get; }
     /// <summary>
     /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  
-    /// Assumes that the numbers in the axis have already been divided by <see cref="FixedFloatingPointAdjustment"/>.  Immutable.
+    /// Assumes that the numbers in the axis have already been divided by <see cref="FixedFloatingPointAdjustment"/>.
     /// Immutable.
     /// </summary>
     string? AdjustedUnits { get; }
@@ -335,6 +335,24 @@ public interface IAmbientRatioStatistic : IDisposable
     /// Gets the <see cref="IAmbientStatistics"/> this statistic belongs to.
     /// </summary>
     IAmbientStatistics StatisticsSet { get; }
+    /// <summary>
+    /// Gets the identifier for the statistic.
+    /// The identifier should be a dash-delimited path identifying the data.  Immutable.
+    /// </summary>
+    string Id { get; }
+    /// <summary>
+    /// Gets a human-readable name, presumbly for the chart title.  Should describe the adjusted values, not the raw values.  Immutable.
+    /// </summary>
+    string Name { get; }
+    /// <summary>
+    /// Gets a human-readable description of this statistic.  Should describe the adjusted values, not the raw values.  Immutable.
+    /// </summary>
+    string Description { get; }
+    /// <summary>
+    /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  
+    /// Immutable.
+    /// </summary>
+    string? AdjustedUnits { get; }
     /// <summary>
     /// Gets the ID of the numerator statistic.  Use the constant 1 (and ignore <see cref="NumeratorDelta"/>) if null.  Immutable.
     /// </summary>

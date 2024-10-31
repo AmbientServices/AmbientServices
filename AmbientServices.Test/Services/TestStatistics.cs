@@ -284,6 +284,15 @@ public class TestStatistics
             using IAmbientRatioStatistic requestsPerSecond3 = AmbientStatistics.GetOrAddRatioStatistic("requests", "requests", "requests", true, null, requests.Id, true, null, true);
         }
         IAmbientRatioStatistic stat = AmbientStatistics.RatioStatistics["requestsPerSecond1"];
-        Assert.AreEqual(stat, requestsPerSecond1);
+        Assert.AreEqual(_AmbientStatistics.Local, stat.StatisticsSet);
+        Assert.AreEqual(requestsPerSecond1, stat);
+        Assert.AreEqual(requests.Id, stat.NumeratorStatisticId);
+        Assert.IsTrue(stat.NumeratorDelta);
+        Assert.AreEqual(executionTime.Id, stat.DenominatorStatisticId);
+        Assert.IsTrue(stat.DenominatorDelta);
+        Assert.AreEqual("r/s", stat.AdjustedUnits);
+        Assert.AreEqual("requestsPerSecond1", stat.Id);
+        Assert.AreEqual("requestsPerSecond", stat.Name);
+        Assert.AreEqual("requests per second", stat.Description);
     }
 }
