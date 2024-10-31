@@ -133,6 +133,77 @@ public class TestStatistics
         }
     }
     [TestMethod]
+    public void PreferredSpatialAggregation()
+    {
+        IAmbientStatistics stats = new BasicAmbientStatistics();
+        using IAmbientStatistic statAverage = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statAverage), nameof(statAverage), $"test {nameof(statAverage)}", preferredSpatialAggregationType: AggregationTypes.Average, preferredTemporalAggregationType: AggregationTypes.Average);
+        using IAmbientStatistic statMin = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMin), nameof(statMin), $"test {nameof(statMin)}", preferredSpatialAggregationType: AggregationTypes.Min, preferredTemporalAggregationType: AggregationTypes.Min);
+        using IAmbientStatistic statMax = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMax), nameof(statMax), $"test {nameof(statMax)}", preferredSpatialAggregationType: AggregationTypes.Max, preferredTemporalAggregationType: AggregationTypes.Max);
+        using IAmbientStatistic statMostRecent = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMostRecent), nameof(statMostRecent), $"test {nameof(statMostRecent)}", preferredSpatialAggregationType: AggregationTypes.MostRecent, preferredTemporalAggregationType: AggregationTypes.MostRecent);
+        using IAmbientStatistic statOther = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statOther), nameof(statOther), $"test {nameof(statOther)}", preferredSpatialAggregationType: AggregationTypes.Sum, preferredTemporalAggregationType: AggregationTypes.Sum);
+        long?[] samples1 = new long?[] { 10, null, 11, 12, 15, 14, 13 };
+
+        Assert.AreEqual(12, statAverage.PreferredSpatialAggregation(samples1));
+        Assert.AreEqual(10, statMin.PreferredSpatialAggregation(samples1));
+        Assert.AreEqual(15, statMax.PreferredSpatialAggregation(samples1));
+        Assert.AreEqual(13, statMostRecent.PreferredSpatialAggregation(samples1));
+        Assert.AreEqual(75, statOther.PreferredSpatialAggregation(samples1));
+
+        long?[] samples2 = new long?[] { null };
+        Assert.IsNull(statAverage.PreferredSpatialAggregationType.Aggregate(samples2));
+        Assert.IsNull(statMin.PreferredSpatialAggregationType.Aggregate(samples2));
+        Assert.IsNull(statMax.PreferredSpatialAggregationType.Aggregate(samples2));
+        Assert.IsNull(statMostRecent.PreferredSpatialAggregationType.Aggregate(samples2));
+        Assert.IsNull(statOther.PreferredSpatialAggregationType.Aggregate(samples2));
+    }
+    [TestMethod]
+    public void PreferredTemporalAggregation()
+    {
+        IAmbientStatistics stats = new BasicAmbientStatistics();
+        using IAmbientStatistic statAverage = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statAverage), nameof(statAverage), $"test {nameof(statAverage)}", preferredSpatialAggregationType: AggregationTypes.Average, preferredTemporalAggregationType: AggregationTypes.Average);
+        using IAmbientStatistic statMin = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMin), nameof(statMin), $"test {nameof(statMin)}", preferredSpatialAggregationType: AggregationTypes.Min, preferredTemporalAggregationType: AggregationTypes.Min);
+        using IAmbientStatistic statMax = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMax), nameof(statMax), $"test {nameof(statMax)}", preferredSpatialAggregationType: AggregationTypes.Max, preferredTemporalAggregationType: AggregationTypes.Max);
+        using IAmbientStatistic statMostRecent = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMostRecent), nameof(statMostRecent), $"test {nameof(statMostRecent)}", preferredSpatialAggregationType: AggregationTypes.MostRecent, preferredTemporalAggregationType: AggregationTypes.MostRecent);
+        using IAmbientStatistic statOther = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statOther), nameof(statOther), $"test {nameof(statOther)}", preferredSpatialAggregationType: AggregationTypes.Sum, preferredTemporalAggregationType: AggregationTypes.Sum);
+        long?[] samples1 = new long?[] { 10, null, 11, 12, 15, 14, 13 };
+
+        Assert.AreEqual(12, statAverage.PreferredTemporalAggregation(samples1));
+        Assert.AreEqual(10, statMin.PreferredTemporalAggregation(samples1));
+        Assert.AreEqual(15, statMax.PreferredTemporalAggregation(samples1));
+        Assert.AreEqual(13, statMostRecent.PreferredTemporalAggregation(samples1));
+        Assert.AreEqual(75, statOther.PreferredTemporalAggregation(samples1));
+
+        long?[] samples2 = new long?[] { null };
+        Assert.IsNull(statAverage.PreferredSpatialAggregationType.Aggregate(samples2));
+        Assert.IsNull(statMin.PreferredSpatialAggregationType.Aggregate(samples2));
+        Assert.IsNull(statMax.PreferredSpatialAggregationType.Aggregate(samples2));
+        Assert.IsNull(statMostRecent.PreferredSpatialAggregationType.Aggregate(samples2));
+        Assert.IsNull(statOther.PreferredSpatialAggregationType.Aggregate(samples2));
+    }
+    [TestMethod]
+    public void NullReferenceExceptions()
+    {
+        IAmbientStatistic nullStat = null!;
+        Assert.ThrowsException<ArgumentNullException>(() => nullStat.SetValue(0L));
+        Assert.ThrowsException<ArgumentNullException>(() => nullStat.SetValue(0f));
+        Assert.ThrowsException<ArgumentNullException>(() => nullStat.SetValue(0.0));
+    }
+    [TestMethod]
+    public void DefaultAggregations()
+    {
+        Assert.AreEqual(AggregationTypes.Average, AmbientStatisicType.Raw.DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.MostRecent, AmbientStatisicType.Cumulative.DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.Min, AmbientStatisicType.Min.DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.Max, AmbientStatisicType.Max.DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.Average, ((AmbientStatisicType)(-1)).DefaultTemporalAggregation());
+
+        Assert.AreEqual(AggregationTypes.Average, AmbientStatisicType.Raw.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Average, AmbientStatisicType.Cumulative.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Min, AmbientStatisicType.Min.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Max, AmbientStatisicType.Max.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Average, ((AmbientStatisicType)(-1)).DefaultSpatialAggregation());
+    }
+    [TestMethod]
     public void StatisticsMissingSamples()
     {
         long?[] samples;

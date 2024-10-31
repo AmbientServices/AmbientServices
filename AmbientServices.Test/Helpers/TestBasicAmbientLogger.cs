@@ -1,7 +1,10 @@
 ﻿using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
@@ -183,10 +186,81 @@ public class TestBasicAmbientLogger
     /// Performs tests on <see cref="IAmbientLogger"/>.
     /// </summary>
     [TestMethod]
+    public void IPAddressSerializer()
+    {
+        JsonSerializerOptions options = AmbientLogger.DefaultSerializer;
+        string none = JsonSerializer.Serialize(System.Net.IPAddress.None, options);
+        Assert.AreEqual(System.Net.IPAddress.None, JsonSerializer.Deserialize< System.Net.IPAddress>(none, options));
+        string any = JsonSerializer.Serialize(System.Net.IPAddress.Any, options);
+        Assert.AreEqual(System.Net.IPAddress.Any, JsonSerializer.Deserialize<System.Net.IPAddress>(any, options));
+        string nullableNotNull = JsonSerializer.Serialize(System.Net.IPAddress.Any, options);
+        Assert.AreEqual(System.Net.IPAddress.Any, JsonSerializer.Deserialize<System.Net.IPAddress>(nullableNotNull, options));
+        string nullableNull = JsonSerializer.Serialize<System.Net.IPAddress?>(null, options);
+        Assert.IsNull(JsonSerializer.Deserialize<System.Net.IPAddress?>(nullableNull, options));
+
+
+        Dictionary<string, object?> dictionary = new()
+        {
+            { "Level", AmbientLogLevel.Information },
+            { "baselineKey", "baselineValue" },
+            { "key1", System.Net.IPAddress.Parse("0.0.0.0") },
+            { "key2", null },
+        };
+
+        string json = JsonSerializer.Serialize(dictionary, options);
+
+        string logEntry = AmbientLogger.ConvertStructuredDataIntoSimpleMessage(dictionary);
+    }
+#if false
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientLogger"/>.
+    /// </summary>
+    [TestMethod]
+    public void DotNetBug()
+    {
+        JsonSerializerOptions options = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+        options.Converters.Add(new IPAddressConverter());
+
+        Dictionary<string, object?> dictionary = new()
+        {
+            { "key", System.Net.IPAddress.Parse("0.0.0.0") },
+        };
+
+        string json = JsonSerializer.Serialize(dictionary, options);
+
+        dictionary["Key"] = System.Net.IPAddress.Any;
+
+        json = JsonSerializer.Serialize(dictionary, options);
+    }
+#endif
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientLogger"/>.
+    /// </summary>
+    [TestMethod]
     public void TestAmbientLogContext()
     {
+        AmbientTraceLogger loggerBackend = new();
+        AmbientLogger logger = new(typeof(TestBasicAmbientLogger), loggerBackend, loggerBackend);
         AmbientLogContext.Reset("baselineKey", "baselineValue");
-        IDisposable kvpScope = AmbientLogContext.AddKeyValuePair(new("key1", "value1"));
-        IDisposable kvpsScope = AmbientLogContext.AddKeyValuePairs(new LogContextEntry[] { new("key2", "value2") });
+        IDisposable kvpScope = AmbientLogContext.AddKeyValuePair(new("key1", System.Net.IPAddress.Any));
+        IDisposable kvpsScope = AmbientLogContext.AddKeyValuePairs(new LogContextEntry[] { new("key2", (System.Net.IPAddress?)null) });
+        logger.Filter()?.Log("test");
+    }
+    [TestMethod]
+    public void AmbientLoggerTest()
+    {
+        AmbientLogger<TestBasicAmbientLogger> logger = new();
+        string result;
+        object entry;
+
+        logger.MessageRenderer = (time, level, owner, category, message) => "test";
+        result = logger.MessageRenderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
+        logger.MessageRenderer = AmbientLogger.DefaultMessageRenderer;
+        result = logger.MessageRenderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
+
+        logger.Renderer = (time, level, owner, category, message) => "test";
+        entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
+        logger.Renderer = AmbientLogger.DefaultRenderer;
+        entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
     }
 }

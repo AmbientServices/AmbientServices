@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Threading;
 
 namespace AmbientServices;
@@ -90,4 +89,4 @@ class LogContextLifetime : IDisposable
 /// </summary>
 /// <param name="Key">The name for the context entry.</param>
 /// <param name="Value">The value for the context entry.</param>
-public record struct LogContextEntry(string Key, object Value);
+public record struct LogContextEntry(string Key, object? Value);

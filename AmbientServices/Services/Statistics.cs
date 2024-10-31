@@ -399,14 +399,7 @@ public static class IAmbientStatisticsExtensions
         if (reader == null) throw new ArgumentNullException(nameof(reader));
         AggregationTypes types = reader.PreferredTemporalAggregationType;
         if (types == AggregationTypes.None) types = DefaultTemporalAggregation(reader.StatisicType);
-        return types switch
-        {
-            AggregationTypes.Average => (long?)samples.Average(),
-            AggregationTypes.Min => samples.Min() ?? 0,
-            AggregationTypes.Max => samples.Max() ?? 0,
-            AggregationTypes.MostRecent => samples.LastOrDefault() ?? 0,
-            _ => samples.Sum() ?? 0,
-        };
+        return types.Aggregate(samples);
     }
     /// <summary>
     /// Uses the preferred aggregation type to aggregate samples from different systems.
@@ -419,13 +412,35 @@ public static class IAmbientStatisticsExtensions
         if (reader == null) throw new ArgumentNullException(nameof(reader));
         AggregationTypes types = reader.PreferredSpatialAggregationType;
         if (types == AggregationTypes.None) types = DefaultSpatialAggregation(reader.StatisicType);
-        return types switch
+        return types.Aggregate(samples);
+    }
+    private static long? Sum(this IEnumerable<long?> source)
+    {
+        long? sum = null;
+        foreach (long? value in source ?? Array.Empty<long?>())
+        {
+            if (value.HasValue)
+            {
+                sum = (sum ?? 0) + value.Value;
+            }
+        }
+        return sum;
+    }
+    /// <summary>
+    /// Uses the specified aggregation type to aggregate samples.
+    /// </summary>
+    /// <param name="type">The <see cref="AggregationTypes"/> to use to aggregate the samples (only one may be set).</param>
+    /// <param name="samples">An enumeration of samples to aggregate.</param>
+    /// <returns>The aggregated sample.</returns>
+    public static long? Aggregate(this AggregationTypes type, IEnumerable<long?> samples)
+    {
+        return type switch
         {
             AggregationTypes.Average => (long?)samples.Average(),
-            AggregationTypes.Min => samples.Min() ?? 0,
-            AggregationTypes.Max => samples.Max() ?? 0,
-            AggregationTypes.MostRecent => samples.LastOrDefault() ?? 0,
-            _ => samples.Sum() ?? 0,
+            AggregationTypes.Min => samples.Min(),
+            AggregationTypes.Max => samples.Max(),
+            AggregationTypes.MostRecent => samples.LastOrDefault(),
+            _ => samples.Sum(),
         };
     }
     /// <summary>
@@ -433,7 +448,7 @@ public static class IAmbientStatisticsExtensions
     /// </summary>
     /// <param name="statisicType">The <see cref="AmbientStatisicType"/> for the statistic.</param>
     /// <returns>The default <see cref="AggregationTypes"/> for aggregating samples for specified statistic over time.</returns>
-    public static AggregationTypes DefaultTemporalAggregation(AmbientStatisicType statisicType)
+    public static AggregationTypes DefaultTemporalAggregation(this AmbientStatisicType statisicType)
     {
         return statisicType switch
         {
@@ -449,7 +464,7 @@ public static class IAmbientStatisticsExtensions
     /// </summary>
     /// <param name="statisicType">The <see cref="AmbientStatisicType"/> for the statistic.</param>
     /// <returns>The default <see cref="AggregationTypes"/> for aggregating samples for specified statistic across systems.</returns>
-    public static AggregationTypes DefaultSpatialAggregation(AmbientStatisicType statisicType)
+    public static AggregationTypes DefaultSpatialAggregation(this AmbientStatisicType statisicType)
     {
         return statisicType switch
         {

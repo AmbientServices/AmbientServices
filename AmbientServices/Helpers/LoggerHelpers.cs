@@ -61,7 +61,7 @@ public class AmbientLogger
     private static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting(nameof(AmbientLogger) + "-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
     private static readonly AmbientService<IAmbientLogger> _AmbientSimpleLogger = Ambient.GetService<IAmbientLogger>();
     private static readonly AmbientService<IAmbientStructuredLogger> _AmbientLogger = Ambient.GetService<IAmbientStructuredLogger>();
-    private static readonly JsonSerializerOptions DefaultSerializer = InitDefaultSerializerOptions();
+    internal static readonly JsonSerializerOptions DefaultSerializer = InitDefaultSerializerOptions();
     private static JsonSerializerOptions InitDefaultSerializerOptions()
     {
         JsonSerializerOptions options = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
@@ -425,23 +425,36 @@ public class AmbientLogger
             } 
             catch (Exception fallbackEx)
             {
-                if (fallbackEx is TargetInvocationException tie && tie.InnerException != null) fallbackEx = tie.InnerException;
-                sb.Append(',');
-                sb.Append(nameof(fallbackEx));
-                sb.Append(':');
-                jsonEncodedMessage = JsonSerializer.Serialize(fallbackEx.Message, DefaultSerializer);
-                sb.Append(jsonEncodedMessage);
+                HandleFallbackException(sb, fallbackEx);
             }
             sb.Append('}');
             return sb.ToString();
         }
     }
-    private static object DefaultRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
+    internal static void HandleFallbackException(StringBuilder sb, Exception fallbackEx)
+    {
+        if (fallbackEx is TargetInvocationException tie && tie.InnerException != null) fallbackEx = tie.InnerException;
+        sb.Append(',');
+        sb.Append(nameof(fallbackEx));
+        sb.Append(':');
+        string jsonEncodedMessage = JsonSerializer.Serialize(fallbackEx.Message, DefaultSerializer);
+        sb.Append(jsonEncodedMessage);
+    }
+    /// <summary>
+    /// The default log object renderer, which renders the log object as a dictionary with the standard properties added.
+    /// </summary>
+    /// <param name="utcNow">The <see cref="DateTime"/> to use as the timestamp for the log entry.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> indicating they type of log entry.</param>
+    /// <param name="structuredData">An object with properties to be logged (usually an anonymous object).</param>
+    /// <param name="ownerType">An optional log entry owner name.</param>
+    /// <param name="category">An optional log category name.</param>
+    /// <returns></returns>
+    public static object DefaultRenderer(DateTime utcNow, AmbientLogLevel level, object structuredData, string? ownerType = null, string? category = null)
     {
         // add in the standard log entry properties (just level for now--we assume that ownerType and category are just for filtering rules, and that a structured logger doesn't need timestamps)
         Dictionary<string, object?> dict = StructuredDataToDictionary(new StandardRequestLogInfo(level));
         // look for additional context-specific data to add to the log entry (request-tracking information, for example)
-        foreach ((string key, object value) in AmbientLogContext.ContextLogPairs.Reverse())
+        foreach ((string key, object? value) in AmbientLogContext.ContextLogPairs.Reverse())
         {
             dict[key] = value;
         }
@@ -687,9 +700,9 @@ record struct LogSummaryInfo(string? Summary);
 
 
 /// <summary>
-/// A JsonConverter for System.Net.IPAddress? that allows null values.
+/// A JsonConverter for System.Net.IPAddress.
 /// </summary>
-public class IPAddressConverter : JsonConverter<System.Net.IPAddress?>
+public class IPAddressConverter : JsonConverter<System.Net.IPAddress>
 {
     /// <summary>
     /// Reads the JSON representation of the object.
@@ -698,10 +711,11 @@ public class IPAddressConverter : JsonConverter<System.Net.IPAddress?>
     /// <param name="typeToConvert">The type to convert.</param>
     /// <param name="options">The <see cref="JsonSerializerOptions"/> to use to interpret the formatting.</param>
     /// <returns>The <see cref="System.Net.IPAddress"/> that was deserialized.</returns>
-    public override System.Net.IPAddress? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override System.Net.IPAddress Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         string? ip = reader.GetString();
-        return (ip == null) ? null : System.Net.IPAddress.Parse(ip);
+        System.Net.IPAddress? ipAddress = (ip == null) ? null : System.Net.IPAddress.Parse(ip);
+        return ipAddress ?? System.Net.IPAddress.None;
     }
     /// <summary>
     /// Writes the JSON representation of the object.
@@ -709,7 +723,7 @@ public class IPAddressConverter : JsonConverter<System.Net.IPAddress?>
     /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write the object into.</param>
     /// <param name="value">The <see cref="System.Net.IPAddress"/> to write.</param>
     /// <param name="options">The <see cref="JsonSerializerOptions"/> to use for formatting the data.</param>
-    public override void Write(Utf8JsonWriter writer, System.Net.IPAddress? value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, System.Net.IPAddress value, JsonSerializerOptions options)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(writer);
