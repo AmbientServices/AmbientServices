@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -390,7 +391,7 @@ public class AmbientLogger
         string renderedMessage = $"{utcNow:yyMMdd HHmmss.fff} [{level}{ownerTypePart}] {summary}{entryPart}";
         return renderedMessage;
     }
-    private static string JsonSerialize(object structuredData)
+    private static string JsonSerialize(object structuredData, Type? containingType = null, int depth = 0)
     {
         try
         {
@@ -398,40 +399,47 @@ public class AmbientLogger
         }
         catch (Exception ex)
         {
-            Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
-            StringBuilder sb = new();
-            sb.Append($"{{\"{nameof(ex)}\":");
-            string jsonEncodedMessage = JsonSerializer.Serialize(ex.Message, DefaultSerializer);
-            sb.Append(jsonEncodedMessage);
-            try
-            {
-                foreach (KeyValuePair<string, object?> kvp in dict)
-                {
-                    string jsonEncodedKeyName = JsonSerializer.Serialize(kvp.Key, DefaultSerializer);
-                    string jsonEncodedValue;
-                    try
-                    {
-                        jsonEncodedValue = (kvp.Value != null) ? JsonSerialize(kvp.Value) : "";
-                    }
-                    catch (Exception valueEx)
-                    {
-                        if (valueEx is TargetInvocationException tie && tie.InnerException != null) valueEx = tie.InnerException;
-                        jsonEncodedValue = JsonSerializer.Serialize(kvp.Value?.ToString() + "--" + valueEx.Message, DefaultSerializer);
-                    }
-                    sb.Append(',');
-                    sb.Append(jsonEncodedKeyName);
-                    sb.Append(':');
-                    sb.Append(jsonEncodedValue);
-                }
-            } 
-            catch (Exception fallbackEx)
-            {
-                HandleFallbackException(sb, fallbackEx);
-            }
-            sb.Append('}');
-            return sb.ToString();
+            if (depth > 32 || structuredData.GetType() == containingType) return $"{containingType?.Name} Recursion Error: {ex.Message}";
+            return (structuredData is CultureInfo) ? HandleUnserializable(new { CultureInfo = structuredData.ToString() }, ex, depth + 1) : HandleUnserializable(structuredData, ex, depth + 1);
         }
     }
+
+    internal static string HandleUnserializable(object structuredData, Exception ex, int depth = 0)
+    {
+        Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
+        StringBuilder sb = new();
+        sb.Append($"{{\"{nameof(ex)}\":");
+        string jsonEncodedMessage = JsonSerializer.Serialize(ex.Message, DefaultSerializer);
+        sb.Append(jsonEncodedMessage);
+        try
+        {
+            foreach (KeyValuePair<string, object?> kvp in dict)
+            {
+                string jsonEncodedKeyName = JsonSerializer.Serialize(kvp.Key, DefaultSerializer);
+                string jsonEncodedValue;
+                try
+                {
+                    jsonEncodedValue = (kvp.Value != null) ? JsonSerialize(kvp.Value, structuredData.GetType(), depth + 1) : "";
+                }
+                catch (Exception valueEx)
+                {
+                    if (valueEx is TargetInvocationException tie && tie.InnerException != null) valueEx = tie.InnerException;
+                    jsonEncodedValue = JsonSerializer.Serialize(kvp.Value?.ToString() + "--" + valueEx.Message, DefaultSerializer);
+                }
+                sb.Append(',');
+                sb.Append(jsonEncodedKeyName);
+                sb.Append(':');
+                sb.Append(jsonEncodedValue);
+            }
+        }
+        catch (Exception fallbackEx)
+        {
+            HandleFallbackException(sb, fallbackEx);
+        }
+        sb.Append('}');
+        return sb.ToString();
+    }
+
     internal static void HandleFallbackException(StringBuilder sb, Exception fallbackEx)
     {
         if (fallbackEx is TargetInvocationException tie && tie.InnerException != null) fallbackEx = tie.InnerException;

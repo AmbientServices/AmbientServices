@@ -449,5 +449,12 @@ public class TestLogger
         Assert.IsTrue(sb.ToString().Length > 0);
         Assert.IsTrue(sb.ToString().Contains(nameof(HandleFallbackException)));
     }
+    [TestMethod]
+    public void HandleUnserializable()
+    {
+        string s;
+        s = AmbientLogger.HandleUnserializable(new { IntPtr = System.IntPtr.Zero }, new ExpectedException(nameof(HandleUnserializable)));
+        s = AmbientLogger.HandleUnserializable(new { Inner = new { Nint = System.IntPtr.Zero } }, new ExpectedException(nameof(HandleUnserializable)));
+    }
 }
 class AllowedLoggerType { }
