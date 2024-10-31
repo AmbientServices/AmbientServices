@@ -190,7 +190,7 @@ public class TestBasicAmbientLogger
     {
         JsonSerializerOptions options = AmbientLogger.DefaultSerializer;
         string none = JsonSerializer.Serialize(System.Net.IPAddress.None, options);
-        Assert.AreEqual(System.Net.IPAddress.None, JsonSerializer.Deserialize< System.Net.IPAddress>(none, options));
+        Assert.AreEqual(System.Net.IPAddress.None, JsonSerializer.Deserialize<System.Net.IPAddress>(none, options));
         string any = JsonSerializer.Serialize(System.Net.IPAddress.Any, options);
         Assert.AreEqual(System.Net.IPAddress.Any, JsonSerializer.Deserialize<System.Net.IPAddress>(any, options));
         string nullableNotNull = JsonSerializer.Serialize(System.Net.IPAddress.Any, options);
@@ -246,6 +246,17 @@ public class TestBasicAmbientLogger
         IDisposable kvpsScope = AmbientLogContext.AddKeyValuePairs(new LogContextEntry[] { new("key2", (System.Net.IPAddress?)null) });
         logger.Filter()?.Log("test");
     }
+    class ExceptionWithExtraLoggingInformation : Exception, IExceptionLogInformation
+    {
+        public IEnumerable<(string Key, object Value)> LogInformation => new (string Key, object Value)[] { ("key", "value") };
+    }
+    [TestMethod]
+    public void AddExceptionInformationToDictionary()
+    {
+        Dictionary<string, object?> dict = new();
+        AmbientLogger.AddExceptionInformationToDictionary(dict, new ExceptionWithExtraLoggingInformation());
+        Assert.AreEqual("value", dict["key"]);
+    }
     [TestMethod]
     public void AmbientLoggerTest()
     {
@@ -257,10 +268,12 @@ public class TestBasicAmbientLogger
         result = logger.MessageRenderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
         logger.MessageRenderer = AmbientLogger.DefaultMessageRenderer;
         result = logger.MessageRenderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
+        result = logger.MessageRenderer(DateTime.UtcNow, AmbientLogLevel.Error, "this is a plain old message", "owner", "category");
 
         logger.Renderer = (time, level, owner, category, message) => "test";
         entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
         logger.Renderer = AmbientLogger.DefaultRenderer;
         entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { System.Net.IPAddress.None }, "owner", "category");
+        entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, "this is a plain old message", "owner", "category");
     }
 }

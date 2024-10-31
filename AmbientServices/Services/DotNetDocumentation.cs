@@ -811,7 +811,7 @@ public class MemberDocumentation
 #endif
 
 /// <summary>
-/// An attribute that causes the API documentation generator to replace the annotated type with the specified type to compensate for custom JSON serializers.
+/// An attribute that causes the documentation generator to replace the annotated type with the specified type to compensate for custom JSON serializers.
 /// </summary>
 [AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class)]
 public sealed class ProxyTypeAttribute : Attribute

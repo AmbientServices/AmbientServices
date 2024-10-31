@@ -702,6 +702,7 @@ record struct LogSummaryInfo(string? Summary);
 /// <summary>
 /// A JsonConverter for System.Net.IPAddress.
 /// </summary>
+[JsonConverter(typeof(System.Net.IPAddress)), ProxyType(typeof(string))]
 public class IPAddressConverter : JsonConverter<System.Net.IPAddress>
 {
     /// <summary>

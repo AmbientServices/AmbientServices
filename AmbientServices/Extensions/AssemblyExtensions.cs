@@ -43,8 +43,7 @@ namespace AmbientServices.Extensions
             //    if ((types?.Length ?? 0) > 0) break;
             //    System.Threading.Thread.Sleep(100);
             //} while (loop++ < 5);
-            if (types != null) return types;
-            return Array.Empty<Type>();
+            return types ?? Array.Empty<Type>();
         }
         /// <summary>
         /// Checks to see if this assembly refers directly to the specified assembly.
