@@ -31,12 +31,13 @@ public class TestDotNetDocumentation
         DotNetDocumentation docs = DotNetDocumentation.Load(typeof(DotNetDocumentation).Assembly);
         TypeDocumentation docsDocs = docs.GetTypeDocumentation(typeof(DotNetDocumentation));
         MethodDocumentation methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetMethodDocumentation)));
+        Assert.IsNotNull(methodDocs);
     }
     [TestMethod]
     public void NullableTypeDocumentation()
     {
-        DotNetDocumentation docs = DotNetDocumentation.Load(typeof(TestDotNetDocumentation).Assembly);
-        MethodInfo mi = typeof(TestDotNetDocumentation).GetMethod("TestNullable");
+        DotNetDocumentation docs = DotNetDocumentation.Load(typeof(AmbientFileLogger).Assembly);
+        MethodInfo mi = typeof(AmbientFileLogger).GetMethod("Flush");
         MethodDocumentation md = docs.GetMethodDocumentation(mi);
         Assert.IsNotNull(md);
     }
@@ -49,7 +50,8 @@ public class TestDotNetDocumentation
     public void ProxyType()
     {
         DotNetDocumentation docs = DotNetDocumentation.Load(typeof(IPAddressConverter).Assembly);
-        TypeDocumentation docsDocs = docs.GetTypeDocumentation(typeof(IPAddress));
+        TypeDocumentation docsDocs = docs.GetTypeDocumentation(typeof(IPAddressConverter));
+        Assert.IsNotNull(docsDocs);
     }
     [TestMethod]
     public void NoDocumentation()
