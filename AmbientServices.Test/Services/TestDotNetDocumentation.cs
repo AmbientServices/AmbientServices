@@ -2,6 +2,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
 
@@ -13,6 +15,16 @@ public class TestDotNetDocumentation
 {
     private static readonly AmbientService<ILateAssignmentTest> _LateAssignmentTest = Ambient.GetService<ILateAssignmentTest>();
 
+    /// <summary>
+    /// Tests docs for nullable parameters.
+    /// </summary>
+    /// <param name="nullableInt">A nullable integer.</param>
+    /// <param name="nullableClass">A nullable class.</param>
+    public ValueTask TestNullable(int? nullableInt, TestDotNetDocumentation? nullableClass)
+    {
+        return ValueTask.CompletedTask;
+    }
+
     [TestMethod]
     public void Documentation()
     {
@@ -23,8 +35,10 @@ public class TestDotNetDocumentation
     [TestMethod]
     public void NullableTypeDocumentation()
     {
-        DotNetDocumentation docs = DotNetDocumentation.Load(typeof(LogContextEntry).Assembly);
-        TypeDocumentation ceDocs = docs.GetTypeDocumentation(typeof(LogContextEntry));
+        DotNetDocumentation docs = DotNetDocumentation.Load(typeof(TestDotNetDocumentation).Assembly);
+        MethodInfo mi = typeof(TestDotNetDocumentation).GetMethod("TestNullable");
+        MethodDocumentation md = docs.GetMethodDocumentation(mi);
+        Assert.IsNotNull(md);
     }
     [TestMethod]
     public void StandardTypes()

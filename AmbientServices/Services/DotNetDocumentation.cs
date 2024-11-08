@@ -109,7 +109,6 @@ public class DotNetDocumentation
         // loop through all the parameters
         for (int i = 0; i < parameters.Length; i++)
         {
-            if (i > 0) ret.Append(", ");
             var parameter = parameters[i];
             if (parameter.ParameterType.IsGenericParameter)
             {
@@ -117,8 +116,9 @@ public class DotNetDocumentation
             }
             else
             {
-                ret.Append(GetHumanReadableTypeName(parameter.ParameterType));
+                ret.Append(GetDocumentationTypeName(parameter.ParameterType));
             }
+            ret.Append(',');
         }
         // replace the last comma with a )
         ret.Replace(',', ')', ret.Length - 1, 1).Replace('&', '@');
@@ -261,6 +261,37 @@ public class DotNetDocumentation
         XPathNavigator? nav = TypeDocumentation(type);
         if (type.FullName == null || nav == null) return null;
         return new TypeDocumentation(GetHumanReadableTypeName(type), GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
+    }
+
+    private static string GetDocumentationTypeName(Type type)
+    {
+        if (type.IsArray)
+        {
+            return $"{GetDocumentationTypeName(type.GetElementType())}[]";
+        }
+        if (type.IsGenericType)
+        {
+            var genericTypeName = type.GetGenericTypeDefinition().FullName;
+            var backtickIndex = genericTypeName.IndexOf('`');
+            if (backtickIndex >= 0)
+            {
+                genericTypeName = genericTypeName.Substring(0, backtickIndex);
+            }
+            var genericArgs = string.Join(",", type.GetGenericArguments().Select(GetDocumentationTypeName));
+            return $"{genericTypeName}{{{genericArgs}}}";
+        }
+        if (type.IsGenericParameter)
+        {
+            return type.FullName;
+        }
+        if (type.DeclaringType != null && type.FullName.Contains('<'))
+        {
+            // Handle compiler-generated types (e.g., async state machines)
+            var declaringTypeName = GetDocumentationTypeName(type.DeclaringType);
+            var simpleName = type.FullName.Split('<')[0];
+            return $"{declaringTypeName}.{simpleName}";
+        }
+        return type.FullName;
     }
 
     private static string GetHumanReadableTypeName(Type type)
