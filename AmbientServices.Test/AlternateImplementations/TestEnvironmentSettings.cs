@@ -175,25 +175,24 @@ public class TestEnvironmentSettings
     public void EnvironmentSettingsGarbageCollection()
     {
         IMutableAmbientSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
-        string testSettingKey = nameof(EnvironmentSettingsGarbageCollection);
+        string testSettingKey = Guid.NewGuid().ToString();
         WeakReference<SettingsSetSetting<string>> wr = FinalizableSetting(testSettingKey, settingsSet);
         GC.Collect();   // this should collect the temporary Setting created in the function below
-        settingsSet.ChangeSetting(testSettingKey, nameof(EnvironmentSettingsGarbageCollection) + "-CauseCollect");  // this should cause the weak proxy to get removed and the instance to be destroyed
-        SettingsSetSetting<string> alive;
-        Assert.IsFalse(wr.TryGetTarget(out alive));
+        settingsSet.ChangeSetting(testSettingKey, $"{testSettingKey}-CauseCollect");  // this should cause the weak proxy to get removed and the instance to be destroyed
+        Assert.IsFalse(wr.TryGetTarget(out SettingsSetSetting<string> alive));
     }
     private WeakReference<SettingsSetSetting<string>> FinalizableSetting(string testSettingKey, IMutableAmbientSettingsSet settingsSet)
     {
         bool valueChanged = false;
         string value = null;
-        SettingsSetSetting<string> temporarySetting = new(settingsSet, testSettingKey, "", s => { valueChanged = true; value = s; return s; }, nameof(EnvironmentSettingsGarbageCollection) + "-InitialValue");
+        SettingsSetSetting<string> temporarySetting = new(settingsSet, testSettingKey, "", s => { valueChanged = true; value = s; return s; }, $"{testSettingKey}-InitialValue");
         WeakReference<SettingsSetSetting<string>> wr = new(temporarySetting);
-        Assert.AreEqual(nameof(EnvironmentSettingsGarbageCollection) + "-InitialValue", value);
+        Assert.AreEqual($"{testSettingKey}-InitialValue", value);
         // change the setting to be sure we are actually hooked into the settings set's notification event
-        settingsSet.ChangeSetting(testSettingKey, nameof(EnvironmentSettingsGarbageCollection) + "-ValueChanged");
-        Assert.AreEqual(nameof(EnvironmentSettingsGarbageCollection) + "-ValueChanged", temporarySetting.Value);
+        settingsSet.ChangeSetting(testSettingKey, $"{testSettingKey}-ValueChanged");
+        Assert.AreEqual($"{testSettingKey}-ValueChanged", temporarySetting.Value);
         Assert.IsTrue(valueChanged);
-        Assert.AreEqual(nameof(EnvironmentSettingsGarbageCollection) + "-ValueChanged", value);
+        Assert.AreEqual($"{testSettingKey}-ValueChanged", value);
         return wr;
     }
     /// <summary>

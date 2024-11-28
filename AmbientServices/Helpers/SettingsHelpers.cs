@@ -409,7 +409,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
             // Coverate note: this loop is nondeterministic when running with multiple threads, so code coverage may not cover these lines, and it's not possible to force this condition
             // try to put in our value--did we win the race?
             if (oldValue == System.Threading.Interlocked.CompareExchange(ref _lastUsedTicks, accessTime, oldValue))
-            { 
+            {
                 // we're done and we were the new max
                 break;
             }
