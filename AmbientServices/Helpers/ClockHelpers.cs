@@ -488,7 +488,7 @@ namespace AmbientServices
     {
 #if NET6_0_OR_GREATER
         private static readonly System.Reflection.ConstructorInfo _ElapsedEventArgsConstructor = typeof(System.Timers.ElapsedEventArgs).GetConstructor(
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public, null,
             new Type[] { typeof(DateTime) }, null)!;    // since we know the type, we know that this constructor will be found
 #else
         private static readonly System.Reflection.ConstructorInfo _ElapsedEventArgsConstructor = typeof(System.Timers.ElapsedEventArgs).GetConstructor(
@@ -509,7 +509,7 @@ namespace AmbientServices
         private struct EventHolder
         {
             public event System.Timers.ElapsedEventHandler Elapsed;
-            public void RaiseElapsed(object sender)
+            public readonly void RaiseElapsed(object sender)
             {
                 DateTime now = AmbientClock.UtcNow;
 #if NET6_0_OR_GREATER

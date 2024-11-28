@@ -73,8 +73,8 @@ public static class ExternalPressurePoints
 public class PressureMonitor : IDisposable
 {
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
-    private const int PressureRecalculateFrequencyMilliseconds = 1000;
-    private const double FixedFloatingPointAdjustment = 100000000;
+    private const int PressureRecalculateFrequencyMilliseconds = 1_000;
+    private const double FixedFloatingPointAdjustment = 100_000_000;
     private const long MinRawValue = 0;
     private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
     private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);

@@ -322,23 +322,8 @@ public class AmbientLogger
 #else
         if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
 #endif
-        string summary;
-        string structuredEntry;
-        if (structuredData is string sds)
-        {
-            summary = sds;
-            structuredEntry = "";
-        }
-        else
-        {
-            // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
-            PropertyInfo? summaryProperty = structuredData.GetType().GetProperty(nameof(LogSummaryInfo.Summary), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
-            Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
-            dict.Remove(nameof(LogSummaryInfo.Summary));
-            structuredData = dict;
-            structuredEntry = (string.IsNullOrEmpty(summary) ? "" : summaryStructuredDelimiter) + JsonSerialize(structuredData);
-        }
+        (string summary, string structured) = RenderStructuredData(structuredData);
+        string structuredEntry = (string.IsNullOrEmpty(summary) ? "" : summaryStructuredDelimiter) + structured;
         return summary + structuredEntry;
     }
     /// <summary>
@@ -357,39 +342,45 @@ public class AmbientLogger
 #else
         if (structuredData is null) throw new ArgumentNullException(nameof(structuredData));
 #endif
+        (string summary, string structured) = RenderStructuredData(structuredData);
+        string ownerTypePart = string.IsNullOrEmpty(ownerType) ? "" : $":{ownerType}";
+        string entryPart = string.IsNullOrEmpty(structured) ? "" : $"{Environment.NewLine}{structured}";
+        string renderedMessage = $"{utcNow:yyMMdd HHmmss.fff} [{level}{ownerTypePart}] {summary}{entryPart}";
+        return renderedMessage;
+    }
+    private static (string Summary, string StructuredJson) RenderStructuredData(object structuredData)
+    {
         string summary;
-        string entry;
+        string structured;
         if (structuredData is string sds)
         {
             summary = sds;
-            entry = "";
-        }
-        else if (structuredData is Dictionary<string, object?> sd)
-        {
-            // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
-            if (sd.TryGetValue(nameof(LogSummaryInfo.Summary), out object? summaryValue))
-            {
-                // make a copy so we don't alter the original
-                sd = new(sd);
-                summary = summaryValue?.ToString() ?? "";
-                sd.Remove(nameof(LogSummaryInfo.Summary));
-            }
-            else summary = "";
-            entry = JsonSerialize(sd);
+            structured = "";
         }
         else
         {
-            // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
-            PropertyInfo? summaryProperty = structuredData.GetType().GetProperty(nameof(LogSummaryInfo.Summary), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
-            Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
-            dict.Remove(nameof(LogSummaryInfo.Summary));
-            entry = JsonSerialize(dict);
+            if (structuredData is Dictionary<string, object?> sd)
+            {
+                // look for a "Summary" entry to use as a summary.  We remove this below so it's not redundant
+                if (sd.TryGetValue(nameof(LogSummaryInfo.Summary), out object? summaryValue))
+                {
+                    // make a copy so we don't alter the original
+                    sd = new(sd);
+                    summary = summaryValue?.ToString() ?? "";
+                }
+                else summary = "";
+            }
+            else
+            {
+                // look for a "Summary" property to use as a summary.  We remove this below so it's not redundant
+                PropertyInfo? summaryProperty = structuredData.GetType().GetProperty(nameof(LogSummaryInfo.Summary), BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                summary = (summaryProperty == null) ? "" : summaryProperty.GetValue(structuredData)?.ToString() ?? "";
+                sd = StructuredDataToDictionary(structuredData);
+            }
+            _ = sd.Remove(nameof(LogSummaryInfo.Summary));
+            structured = JsonSerialize(sd);
         }
-        string ownerTypePart = string.IsNullOrEmpty(ownerType) ? "" : $":{ownerType}";
-        string entryPart = string.IsNullOrEmpty(entry) ? "" : $"{Environment.NewLine}{entry}";
-        string renderedMessage = $"{utcNow:yyMMdd HHmmss.fff} [{level}{ownerTypePart}] {summary}{entryPart}";
-        return renderedMessage;
+        return (summary, structured);
     }
     private static string JsonSerialize(object structuredData, Type? containingType = null, int depth = 0)
     {
@@ -408,9 +399,9 @@ public class AmbientLogger
     {
         Dictionary<string, object?> dict = StructuredDataToDictionary(structuredData);
         StringBuilder sb = new();
-        sb.Append($"{{\"{nameof(ex)}\":");
+        _ = sb.Append($"{{\"{nameof(ex)}\":");
         string jsonEncodedMessage = JsonSerializer.Serialize(ex.Message, DefaultSerializer);
-        sb.Append(jsonEncodedMessage);
+        _ = sb.Append(jsonEncodedMessage);
         try
         {
             foreach (KeyValuePair<string, object?> kvp in dict)
@@ -426,17 +417,17 @@ public class AmbientLogger
                     if (valueEx is TargetInvocationException tie && tie.InnerException != null) valueEx = tie.InnerException;
                     jsonEncodedValue = JsonSerializer.Serialize(kvp.Value?.ToString() + "--" + valueEx.Message, DefaultSerializer);
                 }
-                sb.Append(',');
-                sb.Append(jsonEncodedKeyName);
-                sb.Append(':');
-                sb.Append(jsonEncodedValue);
+                _ = sb.Append(',');
+                _ = sb.Append(jsonEncodedKeyName);
+                _ = sb.Append(':');
+                _ = sb.Append(jsonEncodedValue);
             }
         }
         catch (Exception fallbackEx)
         {
             HandleFallbackException(sb, fallbackEx);
         }
-        sb.Append('}');
+        _ = sb.Append('}');
         return sb.ToString();
     }
 

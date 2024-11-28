@@ -12,7 +12,7 @@ namespace AmbientServices;
 /// </summary>
 public sealed class CpuPressurePoint : IPressurePoint
 {
-    private const double FixedFloatingPointAdjustment = 100000000;
+    private const double FixedFloatingPointAdjustment = 100_000_000;
     private const long MinRawValue = 0;
     private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
     private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);
@@ -76,7 +76,7 @@ public sealed class CpuPressurePoint : IPressurePoint
 #endif
 public sealed class ThreadPoolPressurePoint : IPressurePoint
 {
-    private const double FixedFloatingPointAdjustment = 100000000;
+    private const double FixedFloatingPointAdjustment = 100_000_000;
     private const long MinRawValue = 0;
     private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
     private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);
@@ -206,7 +206,7 @@ public sealed class MemoryPressurePoint : IPressurePoint
         36, 38, 40, 42, 44, 46, 48, 50, 52, 64,     // 89% = 64% pressure           // 
         67, 70, 73, 76, 79, 82, 86, 90, 94, 98,     // 99% = 98% pressure           // 
     };
-    private const double FixedFloatingPointAdjustment = 100000000;
+    private const double FixedFloatingPointAdjustment = 100_000_000;
     private const long MinRawValue = 0;
     private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
     private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);
