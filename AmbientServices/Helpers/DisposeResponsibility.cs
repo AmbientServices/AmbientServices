@@ -2,26 +2,18 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 using System.Threading.Tasks;
+#endif
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP || NET5_0_OR_GREATER
+using System.Runtime.CompilerServices;
+#endif
 
 namespace AmbientServices;
 
-/// <summary>
-/// A static class that contains utility functions applicable across all <see cref="DisposeResponsibility{T}"/> types.
-/// For example, it allows you to query <see cref="DisposeResponsibility{T}"/> instances to see how many outstanding disposals remain for each unique construction call stack.
-/// </summary>
-public static class DisposeResponsibility
-{
-    /// <summary>
-    /// Gets an enumeration of all pending disposals tracked by instances of <see cref="DisposeResponsibility{T}"/>, 
-    /// with the path that created them and the number of instances created through that path that have not yet been disposed.
-    /// Entries are returned in descending order of the number of pending disposals.
-    /// </summary>
-    public static IEnumerable<(string Stack, int Count)> AllPendingDisposals => PendingDispose.AllPendingDisposals;
-}
 
 /// <summary>
-/// An interface that abstracts an object that contains an <see cref="IDisposable"/> and allows transfer of the disposal responsibility between isntances (and the stack).
+/// An interface that abstracts an object that contains an <see cref="IDisposable"/> and allows transfer of the disposal responsibility between instances (and the stack).
 /// Instances should ALWAYS be disposed.
 /// </summary>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
@@ -29,7 +21,7 @@ public interface IDisposeResponsibility<out T> : IDisposable
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
     , IAsyncDisposable
 #endif
-    where T : class, IDisposable
+    where T : class
 {
     /// <summary>
     /// The contained disposable object.  Throws an <see cref="ObjectDisposedException"/> if the object is no longer contained.
@@ -59,26 +51,41 @@ internal interface IShirkResponsibility
 
 /// <summary>
 /// A class that wraps a contained <see cref="IDisposable"/> and allows transfer of the disposal responsibility between objects (and the stack).
-/// Ensures that 
+/// Failure to dispose of this object will result in a finalizer that will notify you that the contained object was not disposed.
 /// Also starts tracking the need for object disposal as returned by <see cref="DisposeResponsibility.AllPendingDisposals"/>.
 /// Instances of this class contained in another instance should only be contained in objects that are disposable and should ALWAYS be disposed.
+/// DO NOT use this for static objects or objects that are not disposable.
 /// Instances of this class on the stack should ALWAYS be in a using statement.  The responsibility to dispose may be transferred out to another instance using <see cref="TransferResponsibilityToCaller"/> passed into a constructor, by calling <see cref="TransferResponsibilityFrom(IDisposeResponsibility{T})"/> on another instance and passing in this instance, or by returning an instance to a caller, but each instance of this class should always be disposed to prevent leaks.
 /// </summary>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
 public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirkResponsibility
-    where T : class, IDisposable
+    where T : class
 {
     private string _stackOnCreation;
-    private T? _contained;
+    private WeakReference<T>? _contained;
 
     /// <summary>
     /// The contained disposable object.  Throws an <see cref="ObjectDisposedException"/> if the object is no longer contained.
     /// </summary>
-    public T Contained => (_contained == null) ? throw new ObjectDisposedException("The contained disposable object is no longer owned by this responsibility object!") : _contained;
+    public T Contained
+    {
+        get
+        {
+            if (_contained?.TryGetTarget(out T contained) != true || contained == null) throw new ObjectDisposedException("The contained disposable object is no longer owned by this responsibility object!");
+            return contained;
+        }
+    }
     /// <summary>
     /// The contained disposable object, or null if no disposable is contained.
     /// </summary>
-    public T? NullableContained => _contained;
+    public T? NullableContained
+    {
+        get
+        {
+            if (_contained?.TryGetTarget(out T? contained) != true) throw new ObjectDisposedException("The contained disposable object has already been disposed!");
+            return contained;
+        }
+    }
     /// <summary>
     /// Returns whether or not this instance contains a disposable and therefore still has responsibility for disposing it.
     /// </summary>
@@ -88,15 +95,15 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// </summary>
     public string StackOnCreation => _stackOnCreation;
 
-#if DEBUG
     /// <summary>
-    /// DEBUG MODE ONLY: Finalizes the object and ensures that the contained object was disposed.
+    /// DEBUG MODE ONLY: Finalizes the object and ensures that the contained object was disposed as expected.
     /// </summary>
     ~DisposeResponsibility()
     {
-        System.Diagnostics.Debug.Assert(_contained == null, $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.");
+        string notice = $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.";
+        if (System.Diagnostics.Debugger.IsAttached) System.Diagnostics.Trace.Assert(_contained == null, notice);
+        else System.Diagnostics.Trace.WriteLine(notice);
     }
-#endif
 
     /// <summary>
     /// Constructs an empty dispose responsibility object which can later take responsibility for disposing a specified disposable object.
@@ -112,8 +119,14 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// <param name="stackOnCreation">The creation stack to associated with <paramref name="contained"/>.</param>
     public DisposeResponsibility(T? contained, string? stackOnCreation = null)
     {
-        _contained = contained;
-        _stackOnCreation = (contained != null) ? PendingDispose.OnConstruct(stackOnCreation, 1024) : "";
+        _contained = (contained == null) ? null : new(contained);
+        _stackOnCreation = (contained != null) ?
+#if DEBUG
+            PendingDispose.OnConstruct(stackOnCreation, 1024)
+#else
+            (stackOnCreation ?? new System.Diagnostics.StackTrace(1).ToString())
+#endif
+            : "";
     }
     /// <summary>
     /// Constructs a dispose responsibility object that takes responsibility from the specified responsibility object.
@@ -124,13 +137,62 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(other);
 #else
-            if (other == null) throw new ArgumentNullException(nameof(other));
+        if (other == null) throw new ArgumentNullException(nameof(other));
 #endif
         if (other is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
         _stackOnCreation = other.StackOnCreation;
-        _contained = other.Contained;
+        _contained = new(other.Contained);
         isr.ShirkResponsibility();
     }
+
+    private static void DisposeContained(T contained)
+    {
+        if (contained == null) return;
+
+        if (contained is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+        else if (contained is IAsyncDisposable asyncDisposable)
+        {
+            asyncDisposable.DisposeAsync().AsTask().Wait();
+        }
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP || NET5_0_OR_GREATER
+        else if (contained is ITuple tuple)
+        {
+            for (int i = 0; i < tuple.Length; i++)
+            {
+                if (tuple[i] is IDisposable d) d.Dispose();
+            }
+        }
+#endif
+    }
+
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER  // this is just to exclude this function when it is not used--the contents could work fine in any version
+    private static async ValueTask DisposeContainedAsync(T contained)
+    {
+        if (contained == null) return;
+
+        if (contained is IAsyncDisposable asyncDisposable)
+        {
+            await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+        }
+        else if (contained is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP || NET5_0_OR_GREATER
+        else if (contained is ITuple tuple)
+        {
+            for (int i = 0; i < tuple.Length; i++)
+            {
+                if (tuple[i] is IAsyncDisposable ad) await ad.DisposeAsync().ConfigureAwait(false);
+                else if (tuple[i] is IDisposable d) d.Dispose();
+            }
+        }
+#endif
+    }
+#endif
 
     /// <summary>
     /// Disposes of this instance by disposing of the contained instance.
@@ -139,8 +201,10 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     {
         if (_contained is not null)
         {
+#if DEBUG
             PendingDispose.OnDispose(_stackOnCreation);
-            Contained.Dispose();
+#endif
+            if (_contained.TryGetTarget(out T? contained)) DisposeContained(contained);
             GC.SuppressFinalize(this);
             _contained = null;
         }
@@ -153,15 +217,19 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     {
         if (_contained is IAsyncDisposable ad)
         {
+#if DEBUG
             PendingDispose.OnDispose(_stackOnCreation);
+#endif
             await ad.DisposeAsync().ConfigureAwait(false);
             GC.SuppressFinalize(this);
             _contained = null;
         }
         else if (_contained is not null)
         {
+#if DEBUG
             PendingDispose.OnDispose(_stackOnCreation);
-            _contained.Dispose();
+#endif
+            if (_contained.TryGetTarget(out T? contained)) await DisposeContainedAsync(contained).ConfigureAwait(false);
             GC.SuppressFinalize(this);
             _contained = null;
         }
@@ -176,8 +244,13 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     public void AssumeResponsibility(T? newDisposable, string? stackOnCreation = null)
     {
         Dispose();
-        _contained = newDisposable;
-        _stackOnCreation = PendingDispose.OnConstruct(stackOnCreation, 1024);
+        _contained = (newDisposable == null) ? null : new(newDisposable);
+        _stackOnCreation =
+#if DEBUG
+        PendingDispose.OnConstruct(stackOnCreation, 1024);
+#else
+        (stackOnCreation ?? new System.Diagnostics.StackTrace(1).ToString());
+#endif
         GC.ReRegisterForFinalize(this);
     }
     /// <summary>
@@ -193,7 +266,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #endif
         if (sourceOwnership is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
         Dispose();
-        _contained = sourceOwnership.NullableContained;
+        _contained = (sourceOwnership.NullableContained == null) ? null : new(sourceOwnership.NullableContained);
         _stackOnCreation = sourceOwnership.StackOnCreation;
         GC.ReRegisterForFinalize(this);
         isr.ShirkResponsibility();
@@ -226,6 +299,20 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     }
 }
 
+#if DEBUG
+/// <summary>
+/// A static class that contains utility functions applicable across all <see cref="DisposeResponsibility{T}"/> types.
+/// For example, it allows you to query <see cref="DisposeResponsibility{T}"/> instances to see how many outstanding disposals remain for each unique construction call stack.
+/// </summary>
+public static class DisposeResponsibility
+{
+    /// <summary>
+    /// Gets an enumeration of all pending disposals tracked by instances of <see cref="DisposeResponsibility{T}"/>, 
+    /// with the path that created them and the number of instances created through that path that have not yet been disposed.
+    /// Entries are returned in descending order of the number of pending disposals.
+    /// </summary>
+    public static IEnumerable<(string Stack, int Count)> AllPendingDisposals => PendingDispose.AllPendingDisposals;
+}
 class PendingDispose
 {
     private static readonly ConcurrentDictionary<string, PendingDispose> _PendingDisposals = new();
@@ -257,3 +344,4 @@ class PendingDispose
     }
     public static IEnumerable<(string Stack, int Count)> AllPendingDisposals => _PendingDisposals.OrderByDescending(p => p.Value._count).Select(p => (p.Key, p.Value._count));
 }
+#endif
