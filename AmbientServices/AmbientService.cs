@@ -10,7 +10,6 @@ namespace AmbientServices
     /// </summary>
     public class InitializationErrorEventArgs : EventArgs 
     {
-        private readonly Exception _exception;
 
         /// <summary>
         /// Constructs an InitializationErrorEventArgs from the specified exception.
@@ -18,12 +17,12 @@ namespace AmbientServices
         /// <param name="ex">The <see cref="Exception"/> that caused the initialization error.</param>
         public InitializationErrorEventArgs(Exception ex)
         {
-            _exception = ex;
+            Exception = ex;
         }
         /// <summary>
         /// The <see cref="Exception"/> that caused the initialization error.
         /// </summary>
-        public Exception Exception => _exception;
+        public Exception Exception { get; }
     }
     /// <summary>
     /// A static class that provides access to <see cref="AmbientService{T}"/>s.
@@ -90,23 +89,18 @@ namespace AmbientServices
 #endif
         T> where T : class
     {
-        private static readonly AmbientService<T> _Instance = new();
         /// <summary>
         /// Gets the <see cref="AmbientService{T}"/> for the service indicated by the type.
         /// </summary>
-        internal static AmbientService<T> Instance => _Instance;
+        internal static AmbientService<T> Instance { get; } = new();
         /// <summary>
         /// The singleton call-context-local service reference (non-singleton reference can be used for unit testing).
         /// </summary>
         private readonly AsyncLocal<LocalServiceReference<T>?> _localReference = new();
-        /// <summary>
-        /// The global service reference.
-        /// </summary>
-        private readonly GlobalServiceReference<T> _globalReference = new();
 
 
         // this is only internal instead of private so that we can diagnose issues in test cases
-        internal GlobalServiceReference<T> GlobalReference => _globalReference;
+        internal GlobalServiceReference<T> GlobalReference { get; } = new();
 
         /// <summary>
         /// Gets the <see cref="LocalServiceReference{T}"/> for the service indicated by the type.
@@ -146,11 +140,11 @@ namespace AmbientServices
         {
             get
             {
-                return _globalReference.Service;
+                return GlobalReference.Service;
             }
             set
             {
-                _globalReference.Service = value;
+                GlobalReference.Service = value;
             }
         }
         /// <summary>
@@ -180,7 +174,7 @@ namespace AmbientServices
         {
             get
             {
-                return (LocalReference.RawOverride ?? _globalReference.Service) as T;
+                return (LocalReference.RawOverride ?? GlobalReference.Service) as T;
             }
             set
             {
@@ -205,11 +199,11 @@ namespace AmbientServices
         {
             add
             {
-                _globalReference.ServiceChanged += value;
+                GlobalReference.ServiceChanged += value;
             }
             remove
             {
-                _globalReference.ServiceChanged -= value;
+                GlobalReference.ServiceChanged -= value;
             }
         }
     }
@@ -230,27 +224,24 @@ namespace AmbientServices
     {
         private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
 
-        private readonly T? _oldGlobalService;
-        private readonly T? _oldLocalServiceOverride;
-
         /// <summary>
         /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
         /// </summary>
         /// <param name="temporaryLocalService">The service to temporarily use in this call context.</param>
         public ScopedLocalServiceOverride(T? temporaryLocalService)
         {
-            _oldGlobalService = _Reference.Global;
-            _oldLocalServiceOverride = _Reference.Override;
+            OldGlobal = _Reference.Global;
+            OldOverride = _Reference.Override;
             _Reference.Local = temporaryLocalService;
         }
         /// <summary>
         /// Gets the old local override in case it is needed by the overriding implementation.
         /// </summary>
-        public T? OldOverride => _oldLocalServiceOverride;
+        public T? OldOverride { get; }
         /// <summary>
         /// Gets the old global implementation in case it is needed by the overriding implementation.
         /// </summary>
-        public T? OldGlobal => _oldGlobalService;
+        public T? OldGlobal { get; }
 
         #region IDisposable Support
         private bool _disposed; // To detect redundant calls
@@ -261,7 +252,7 @@ namespace AmbientServices
             {
                 if (disposing)
                 {
-                    _Reference.Override = _oldLocalServiceOverride;
+                    _Reference.Override = OldOverride;
                 }
                 _disposed = true;
             }
@@ -397,26 +388,11 @@ namespace AmbientServices
         /// </summary>
         internal static readonly object SuppressedImplementation = new();
 
-        /// <summary>
-        /// The call-context-local override.
-        /// </summary>
-        private object? _localOverride;
-
         internal LocalServiceReference()
         {
-            _localOverride = null;
+            RawOverride = null;
         }
-        internal object? RawOverride
-        {
-            get
-            {
-                return _localOverride;
-            }
-            set
-            {
-                _localOverride = value;
-            }
-        }
+        internal object? RawOverride { get; set; }
         /// <summary>
         /// Sets the implementation.
         /// If set to null, suppresses the default implementation (so that the getter returns null).
@@ -431,7 +407,7 @@ namespace AmbientServices
             //}
             set
             {
-                _localOverride = value ?? SuppressedImplementation;
+                RawOverride = value ?? SuppressedImplementation;
             }
         }
     }

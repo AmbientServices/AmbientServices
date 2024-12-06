@@ -144,7 +144,6 @@ internal class ScopedBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBo
 {
     private readonly CallContextAccessNotificationDistributor? _callContextDistributor;
     private readonly IAmbientBottleneckDetector? _bottleneckDetector;
-    private readonly string _scopeName;
     private readonly Regex? _allow;
     private readonly Regex? _block;
     private readonly Dictionary<string, AmbientBottleneckAccessor> _bottleneckAccesses;
@@ -152,7 +151,7 @@ internal class ScopedBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBo
 
     public ScopedBottleneckSurveyor(string? scopeName, CallContextAccessNotificationDistributor? callContextDistributor, Regex? allow, Regex? block)
     {
-        _scopeName = scopeName ?? "";
+        ScopeName = scopeName ?? "";
         _allow = allow;
         _block = block;
         _bottleneckAccesses = new Dictionary<string, AmbientBottleneckAccessor>();
@@ -165,7 +164,7 @@ internal class ScopedBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBo
 
     public ScopedBottleneckSurveyor(string? scopeName, IAmbientBottleneckDetector? bottleneckDetector, Regex? allow, Regex? block)
     {
-        _scopeName = scopeName ?? "";
+        ScopeName = scopeName ?? "";
         _allow = allow;
         _block = block;
         _bottleneckAccesses = new Dictionary<string, AmbientBottleneckAccessor>();
@@ -176,7 +175,7 @@ internal class ScopedBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBo
         }
     }
 
-    public string ScopeName => _scopeName;
+    public string ScopeName { get; }
 
     public AmbientBottleneckAccessor? MostUtilizedBottleneck => _bottleneckAccesses.Values.Max();
 
@@ -324,7 +323,6 @@ internal class TimeWindowSurveyManager : IAmbientBottleneckExitNotificationSink,
 }
 internal class TimeWindowBottleneckSurvey : IAmbientBottleneckExitNotificationSink, IAmbientBottleneckSurvey
 {
-    private readonly string _scopeName;
     private readonly Regex? _allow;
     private readonly Regex? _block;
     private readonly long _windowStartStopwatchTicks;
@@ -334,7 +332,7 @@ internal class TimeWindowBottleneckSurvey : IAmbientBottleneckExitNotificationSi
     public TimeWindowBottleneckSurvey(Regex? allow, Regex? block, long stopwatchTicks, TimeSpan windowSize)
     {
         string windowName = WindowScope.WindowId(AmbientClock.UtcNow, windowSize);
-        _scopeName = "TimeWindow " + windowName + "(" + WindowScope.WindowSize(windowSize) + ")";
+        ScopeName = "TimeWindow " + windowName + "(" + WindowScope.WindowSize(windowSize) + ")";
         _allow = allow;
         _block = block;
         _windowStartStopwatchTicks = stopwatchTicks;
@@ -342,7 +340,7 @@ internal class TimeWindowBottleneckSurvey : IAmbientBottleneckExitNotificationSi
         _startAccessCountAndLimitUsage = new ConcurrentDictionary<string, (long, double)>();
     }
 
-    public string ScopeName => _scopeName;
+    public string ScopeName { get; }
 
     public AmbientBottleneckAccessor? MostUtilizedBottleneck => _metrics.Values.Max();
 
@@ -413,7 +411,6 @@ internal class TimeWindowBottleneckSurvey : IAmbientBottleneckExitNotificationSi
 internal class ProcessBottleneckSurveyor : IAmbientBottleneckExitNotificationSink, IAmbientBottleneckSurveyor
 {
     private readonly IAmbientBottleneckDetector? _bottleneckDetector;
-    private readonly string _scopeName;
     private readonly Regex? _allow;
     private readonly Regex? _block;
     private readonly ConcurrentDictionary<string, AmbientBottleneckAccessor> _metrics;
@@ -422,7 +419,7 @@ internal class ProcessBottleneckSurveyor : IAmbientBottleneckExitNotificationSin
     public ProcessBottleneckSurveyor(string? processScopeName, IAmbientBottleneckDetector? bottleneckDetector, Regex? allow, Regex? block)
     {
         System.Diagnostics.Process process = Process.GetCurrentProcess();
-        _scopeName = (string.IsNullOrEmpty(processScopeName) ? FormattableString.Invariant($"Process {process.ProcessName} ({process.Id})") : processScopeName)!;
+        ScopeName = (string.IsNullOrEmpty(processScopeName) ? FormattableString.Invariant($"Process {process.ProcessName} ({process.Id})") : processScopeName)!;
         _allow = allow;
         _block = block;
         _metrics = new ConcurrentDictionary<string, AmbientBottleneckAccessor>();
@@ -433,7 +430,7 @@ internal class ProcessBottleneckSurveyor : IAmbientBottleneckExitNotificationSin
         }
     }
 
-    public string ScopeName => _scopeName;
+    public string ScopeName { get; }
 
     public AmbientBottleneckAccessor? MostUtilizedBottleneck => _metrics.Values.Max();
 
@@ -586,7 +583,6 @@ internal class ThreadAccessDistributor : IAmbientBottleneckExitNotificationSink
 internal class ThreadBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBottleneckExitNotificationSink
 {
     private readonly ThreadAccessDistributor _threadDistributor;
-    private readonly string _scopeName;
     private readonly Regex? _allow;
     private readonly Regex? _block;
     private readonly Dictionary<string, AmbientBottleneckAccessor> _metrics;
@@ -594,7 +590,7 @@ internal class ThreadBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBo
 
     public ThreadBottleneckSurveyor(string? scopeName, ThreadAccessDistributor threadDistributor, Regex? allow, Regex? block)
     {
-        _scopeName = (string.IsNullOrEmpty(scopeName) ? (string.IsNullOrEmpty(Thread.CurrentThread.Name) ? $"Thread {Environment.CurrentManagedThreadId}" : Thread.CurrentThread.Name) : scopeName)!;
+        ScopeName = (string.IsNullOrEmpty(scopeName) ? (string.IsNullOrEmpty(Thread.CurrentThread.Name) ? $"Thread {Environment.CurrentManagedThreadId}" : Thread.CurrentThread.Name) : scopeName)!;
         _allow = allow;
         _block = block;
         _metrics = new Dictionary<string, AmbientBottleneckAccessor>();
@@ -602,7 +598,7 @@ internal class ThreadBottleneckSurveyor : IAmbientBottleneckSurveyor, IAmbientBo
         threadDistributor.RegisterAccessNotificationSink(this);
     }
 
-    public string ScopeName => _scopeName;
+    public string ScopeName { get; }
 
     public AmbientBottleneckAccessor? MostUtilizedBottleneck => _metrics.Values.Max();
 

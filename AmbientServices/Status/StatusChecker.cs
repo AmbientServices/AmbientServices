@@ -15,7 +15,6 @@ namespace AmbientServices
     /// </summary>
     public abstract class StatusChecker : IDisposable
     {
-        private readonly string _targetSystem;
         private readonly StatusResultsTracker _resultsTracker;
         private bool _disposedValue;
 
@@ -32,14 +31,14 @@ namespace AmbientServices
         /// </remarks>
         internal protected StatusChecker(string targetSystem)
         {
-            _targetSystem = targetSystem;
+            TargetSystem = targetSystem;
             _resultsTracker = new StatusResultsTracker(StatusResults.GetPendingResults(null, targetSystem));
         }
 
         /// <summary>
         /// Gets the name of the target system.
         /// </summary>
-        public string TargetSystem => _targetSystem;
+        public string TargetSystem { get; }
         /// <summary>
         /// Gets the latest status results.
         /// </summary>
@@ -74,7 +73,7 @@ namespace AmbientServices
         {
             if (newResults != null)
             {
-                if (!string.Equals(_targetSystem, newResults.TargetSystem, StringComparison.Ordinal)) throw new ArgumentException("The target system for the specified status results and must match the this StatusChecker's target system!", nameof(newResults));
+                if (!string.Equals(TargetSystem, newResults.TargetSystem, StringComparison.Ordinal)) throw new ArgumentException("The target system for the specified status results and must match the this StatusChecker's target system!", nameof(newResults));
                 Status.Logger.Filter("Results", newResults.Report?.Alert?.Rating < StatusRating.Okay ? AmbientLogLevel.Warning : AmbientLogLevel.Verbose)?.Log(new { TargetSystem = newResults.TargetSystemDisplayName, newResults.Report?.Alert });
                 _resultsTracker.SetLatestResults(newResults);
             }

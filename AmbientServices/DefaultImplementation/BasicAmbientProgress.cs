@@ -88,16 +88,13 @@ internal class BasicAmbientProgress : IAmbientProgressService
 internal class Progress : IAmbientProgress, IDisposable
 {
     private readonly BasicAmbientProgress _tracker;
-    private readonly IAmbientProgress? _parentProgress;
     private readonly string _prefix;
-    private AmbientCancellationTokenSource _cancelSource;       // Note that this should never be null
     private bool _inheritedCancelSource;                        // if we inherited the cancel source, there is no need to dispose of it, as the parent progress is the owner
     private bool _ownCancelSource;
     private readonly float _startPortion;
     private readonly float _portionPart;
     private float _portionComplete;
     private string _currentItem;
-    private bool _disposed;
 
     public Progress(BasicAmbientProgress progress)
          : this (progress, null, 0.0f, 1.0f, null, false)
@@ -111,7 +108,7 @@ internal class Progress : IAmbientProgress, IDisposable
         if (startPortion < 0.0 || startPortion > 1.0) throw new ArgumentOutOfRangeException(nameof(startPortion), "The start portion must be between 0.0 and 1.0, inclusive!");
         if (portionPart < 0.0 || portionPart > 1.0) throw new ArgumentOutOfRangeException(nameof(portionPart), "The portion part must be between 0.0 and 1.0, inclusive!");
         if (startPortion + portionPart > 1.0) throw new ArgumentOutOfRangeException(nameof(portionPart), "The sum of the start portion and portion part must be 1.0 or less!");
-        _parentProgress = parentProgress;
+        Parent = parentProgress;
         _startPortion = startPortion;
         _portionPart = portionPart;
         if (_inheritedCancelSource = inheritCancellationSource) // note that this is an ASSIGNMENT in addition to a test
@@ -119,18 +116,18 @@ internal class Progress : IAmbientProgress, IDisposable
             AmbientCancellationTokenSource? parentCancellationSource = parentProgress?.CancellationTokenSource;
             if (parentCancellationSource != null)
             {
-                _cancelSource = parentCancellationSource;
+                CancellationTokenSource = parentCancellationSource;
                 _ownCancelSource = true;
             }
             else
             {
-                _cancelSource = new AmbientCancellationTokenSource();
+                CancellationTokenSource = new AmbientCancellationTokenSource();
                 _ownCancelSource = true;
             }
         }
         else
         {
-            _cancelSource = new AmbientCancellationTokenSource();
+            CancellationTokenSource = new AmbientCancellationTokenSource();
             _ownCancelSource = true;
         }
         progressService.PushSubProgress(this);
@@ -140,26 +137,26 @@ internal class Progress : IAmbientProgress, IDisposable
     {
         AmbientCancellationTokenSource cancelSource = new(timeout);
         // dispose of any previously-held cancellation token source and swap in the new one
-        if (!_ownCancelSource) _cancelSource.Dispose();
+        if (!_ownCancelSource) CancellationTokenSource.Dispose();
         _inheritedCancelSource = false;
         _ownCancelSource = true;
-        _cancelSource = cancelSource;
+        CancellationTokenSource = cancelSource;
     }
     public void ResetCancellation(CancellationTokenSource? cancellationTokenSource = null)
     {
         AmbientCancellationTokenSource? cancelSource = (cancellationTokenSource == null) ? new AmbientCancellationTokenSource(null) :  new AmbientCancellationTokenSource(cancellationTokenSource);
         // dispose of any previously-held cancellation token source and swap in the new one
-        if (!_ownCancelSource) _cancelSource.Dispose();
+        if (!_ownCancelSource) CancellationTokenSource.Dispose();
         _inheritedCancelSource = false;
         _ownCancelSource = true;
-        _cancelSource = cancelSource;
+        CancellationTokenSource = cancelSource;
     }
     public void ThrowIfCancelled()
     {
-        _cancelSource.Token.ThrowIfCancellationRequested();
+        CancellationTokenSource.Token.ThrowIfCancellationRequested();
     }
-    public CancellationToken CancellationToken => _cancelSource.Token;
-    public AmbientCancellationTokenSource CancellationTokenSource => _cancelSource;
+    public CancellationToken CancellationToken => CancellationTokenSource.Token;
+    public AmbientCancellationTokenSource CancellationTokenSource { get; private set; }
     public float PortionComplete => _portionComplete;
     public string ItemCurrentlyBeingProcessed => _currentItem;
     public void Update(float portionComplete, string? itemCurrentlyBeingProcessed = null)
@@ -168,8 +165,8 @@ internal class Progress : IAmbientProgress, IDisposable
         Interlocked.Exchange(ref _portionComplete, portionComplete);
         if (itemCurrentlyBeingProcessed != null) Interlocked.Exchange(ref _currentItem, itemCurrentlyBeingProcessed);
         // have we been canceled?
-        if ((!_inheritedCancelSource || _parentProgress == null) && _cancelSource.IsCancellationRequested) _cancelSource.Token.ThrowIfCancellationRequested();
-        _parentProgress?.Update(_startPortion + _portionPart * portionComplete, _prefix + itemCurrentlyBeingProcessed ?? "");
+        if ((!_inheritedCancelSource || Parent == null) && CancellationTokenSource.IsCancellationRequested) CancellationTokenSource.Token.ThrowIfCancellationRequested();
+        Parent?.Update(_startPortion + _portionPart * portionComplete, _prefix + itemCurrentlyBeingProcessed ?? "");
     }
     public IDisposable TrackPart(float startPortion, float portionPart, string? prefix = null, bool inheritCancellationTokenSource = false)
     {
@@ -180,7 +177,7 @@ internal class Progress : IAmbientProgress, IDisposable
     }
     public void Dispose()
     {
-        if (!_disposed)
+        if (!Disposed)
         {
             try
             {
@@ -189,12 +186,12 @@ internal class Progress : IAmbientProgress, IDisposable
             }
             catch (OperationCanceledException) { }  // ignore these in Dispose!
             _tracker.PopSubProgress(this);
-            _disposed = true;   // mark that we're disposed to help us make some kind of attempt to recover from progress stack corruptions above
+            Disposed = true;   // mark that we're disposed to help us make some kind of attempt to recover from progress stack corruptions above
 
             // only dispose of the cancel source if we own it
-            if (!_ownCancelSource) _cancelSource.Dispose();   // note that this will cancel any associated tokens!
+            if (!_ownCancelSource) CancellationTokenSource.Dispose();   // note that this will cancel any associated tokens!
         }
     }
-    internal bool Disposed => _disposed;
-    internal IAmbientProgress? Parent => _parentProgress;
+    internal bool Disposed { get; private set; }
+    internal IAmbientProgress? Parent { get; }
 }

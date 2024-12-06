@@ -380,7 +380,6 @@ namespace AmbientServices.Test
         private readonly IAmbientSettingsSet _fallbackSettings;
         private readonly ConcurrentDictionary<string, string> _overrideRawSettings;
         private readonly ConcurrentDictionary<string, object> _overrideTypedSettings;
-        private readonly string _name;
 
         public AmbientSettingsOverride(Dictionary<string, string> overrideSettings, string name, IAmbientSettingsSet fallback = null, AmbientService<IAmbientSettingsSet> settings = null)
         {
@@ -391,7 +390,7 @@ namespace AmbientServices.Test
                 IAmbientSettingInfo ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
                 if (ps != null) _overrideTypedSettings[key] = ps.Convert(this, overrideSettings[key]);
             }
-            _name = name;
+            SetName = name;
             _fallbackSettings = fallback ?? settings?.Local;
             _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<AmbientSettingsOverride, object, IAmbientSettingInfo>(
                     this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
@@ -408,7 +407,7 @@ namespace AmbientServices.Test
             }
         }
 
-        public string SetName => _name;
+        public string SetName { get; }
 
         public bool ChangeSetting(string key, string value)
         {

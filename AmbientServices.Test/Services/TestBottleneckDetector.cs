@@ -765,11 +765,7 @@ namespace AmbientServices.Test
     class Collector : IDisposable
     {
         private readonly AmbientBottleneckSurveyorCoordinator _collectorManager;
-        private readonly IAmbientBottleneckSurveyor _processAnalyzer;
-        private readonly IAmbientBottleneckSurveyor _threadAnalyzer;
-        private readonly IAmbientBottleneckSurveyor _scopeAnalyzer;
         private readonly IDisposable _timeWindowAnalyzer;
-        private readonly ConcurrentDictionary<string, IAmbientBottleneckSurvey> _analyses;
         private readonly IDisposable _clock;
         private readonly ScopedLocalServiceOverride<IAmbientBottleneckDetector> _override;
         private bool _disposedValue;
@@ -779,24 +775,24 @@ namespace AmbientServices.Test
             _clock = AmbientClock.Pause();
             _override = new ScopedLocalServiceOverride<IAmbientBottleneckDetector>(new BasicAmbientBottleneckDetector());
             _collectorManager = new AmbientBottleneckSurveyorCoordinator();
-            _analyses = new ConcurrentDictionary<string, IAmbientBottleneckSurvey>();
-            _processAnalyzer = _collectorManager.CreateProcessSurveyor(scopeName, overrideAllowRegex, overrideBlockRegex);
-            _threadAnalyzer = _collectorManager.CreateThreadSurveyor(scopeName, overrideAllowRegex, overrideBlockRegex);
-            _scopeAnalyzer = (scopeName == null) ? _collectorManager.CreateCallContextSurveyor() : _collectorManager.CreateCallContextSurveyor(scopeName, overrideAllowRegex, overrideBlockRegex);
+            Analyses = new ConcurrentDictionary<string, IAmbientBottleneckSurvey>();
+            ProcessAnalyzer = _collectorManager.CreateProcessSurveyor(scopeName, overrideAllowRegex, overrideBlockRegex);
+            ThreadAnalyzer = _collectorManager.CreateThreadSurveyor(scopeName, overrideAllowRegex, overrideBlockRegex);
+            ScopeAnalyzer = (scopeName == null) ? _collectorManager.CreateCallContextSurveyor() : _collectorManager.CreateCallContextSurveyor(scopeName, overrideAllowRegex, overrideBlockRegex);
             _timeWindowAnalyzer = _collectorManager.CreateTimeWindowSurveyor(TimeSpan.FromMilliseconds(77), CollectAnalyses, overrideAllowRegex, overrideBlockRegex);
         }
 
         private Task CollectAnalyses(IAmbientBottleneckSurvey analysis)
         {
-            Assert.IsTrue(_analyses.TryAdd(analysis.ScopeName, analysis));
+            Assert.IsTrue(Analyses.TryAdd(analysis.ScopeName, analysis));
             return Task.CompletedTask;
         }
 
-        public IAmbientBottleneckSurveyor ProcessAnalyzer => _processAnalyzer;
-        public IAmbientBottleneckSurveyor ThreadAnalyzer => _threadAnalyzer;
-        public IAmbientBottleneckSurveyor ScopeAnalyzer => _scopeAnalyzer;
+        public IAmbientBottleneckSurveyor ProcessAnalyzer { get; }
+        public IAmbientBottleneckSurveyor ThreadAnalyzer { get; }
+        public IAmbientBottleneckSurveyor ScopeAnalyzer { get; }
         public TimeWindowBottleneckSurvey TimeWindowAnalyzer => (TimeWindowBottleneckSurvey)_timeWindowAnalyzer;
-        public ConcurrentDictionary<string, IAmbientBottleneckSurvey> Analyses => _analyses;
+        public ConcurrentDictionary<string, IAmbientBottleneckSurvey> Analyses { get; }
 
         protected virtual void Dispose(bool disposing)
         {
@@ -808,12 +804,12 @@ namespace AmbientServices.Test
                     // double-dispose everything to make sure that doesn't crash
                     _timeWindowAnalyzer.Dispose();
                     _timeWindowAnalyzer.Dispose();
-                    _scopeAnalyzer.Dispose();
-                    _scopeAnalyzer.Dispose();
-                    _threadAnalyzer.Dispose();
-                    _threadAnalyzer.Dispose();
-                    _processAnalyzer.Dispose();
-                    _processAnalyzer.Dispose();
+                    ScopeAnalyzer.Dispose();
+                    ScopeAnalyzer.Dispose();
+                    ThreadAnalyzer.Dispose();
+                    ThreadAnalyzer.Dispose();
+                    ProcessAnalyzer.Dispose();
+                    ProcessAnalyzer.Dispose();
                     _collectorManager.Dispose();
                     _collectorManager.Dispose();
                     _override.Dispose();

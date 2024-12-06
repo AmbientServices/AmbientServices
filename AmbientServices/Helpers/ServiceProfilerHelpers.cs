@@ -165,26 +165,23 @@ The regular expression will attempt to match the system identifier, with the val
     /// </summary>
     public class AmbientServiceProfilerAccumulator
     {
-        private readonly string _group;
-        private readonly long _executionCount;           // interlocked
-        private readonly long _totalStopwatchTicksUsed;  // interlocked
 
         /// <summary>
         /// Gets the group the accumulator is for.
         /// </summary>
-        public string Group => _group;
+        public string Group { get; }
         /// <summary>
         /// Gest the number of times systems in this group were executed.
         /// </summary>
-        public long ExecutionCount => _executionCount;
+        public long ExecutionCount { get; }
         /// <summary>
         /// Gets the total number of stopwatch ticks used by this system group.
         /// </summary>
-        public long TotalStopwatchTicksUsed => _totalStopwatchTicksUsed;
+        public long TotalStopwatchTicksUsed { get; }
         /// <summary>
         /// Gets the amount of time used by this system group.
         /// </summary>
-        public TimeSpan TimeUsed => new(TimeSpanUtilities.StopwatchTicksToTimeSpanTicks(_totalStopwatchTicksUsed));
+        public TimeSpan TimeUsed => new(TimeSpanUtilities.StopwatchTicksToTimeSpanTicks(TotalStopwatchTicksUsed));
 
         /// <summary>
         /// Constructs a AmbientServiceProfileAccumulator for the specified system.
@@ -194,9 +191,9 @@ The regular expression will attempt to match the system identifier, with the val
         /// <param name="executionCount">The initial execution count.  Defaults to one.</param>
         public AmbientServiceProfilerAccumulator(string group, long totalStopwatchTicksUsed, long executionCount = 1)
         {
-            _group = group;
-            _executionCount = executionCount;
-            _totalStopwatchTicksUsed = totalStopwatchTicksUsed;
+            Group = group;
+            ExecutionCount = executionCount;
+            TotalStopwatchTicksUsed = totalStopwatchTicksUsed;
         }
     }
 }

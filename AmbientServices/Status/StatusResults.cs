@@ -47,24 +47,22 @@ namespace AmbientServices
     /// </summary>
     public sealed class StatusProperty
     {
-        private readonly string _name;
-        private readonly string _value;
 
         /// <summary>
         /// The name of the status node property.  If the name begins with an underscore, the value contains sensitive information that should not be shared publicly, such as a user or machine name, or a network address.
         /// </summary>
-        public string Name => _name;
+        public string Name { get; }
         /// <summary>
         /// The value of the status node property.
         /// </summary>
-        public string Value => _value;
+        public string Value { get; }
 
         /// <summary>
         /// Constructs a <see cref="StatusProperty"/> with the specified name and value.
         /// </summary>
         /// <param name="name">The name of the property.</param>
         /// <param name="value">The value of the property.</param>
-        public StatusProperty(string name, string value) { _name = name; _value = value; }
+        public StatusProperty(string name, string value) { Name = name; Value = value; }
         /// <summary>
         /// Creates a <see cref="StatusProperty"/> with the specified name and value.
         /// </summary>
@@ -77,7 +75,7 @@ namespace AmbientServices
         /// <returns>A string representation of this object.</returns>
         public override string ToString()
         {
-            return _name + "=" + _value;
+            return Name + "=" + Value;
         }
     }
     /// <summary>
@@ -88,25 +86,19 @@ namespace AmbientServices
 #if RAWRATINGS
         private const string DebugRatingFloatFormat = "0.00";
 #endif
-        private readonly string? _sourceSystem;
-        private readonly string _targetSystem;
-        private readonly DateTime _time;
-        private readonly int _relativeDetailLevel;
         private readonly ImmutableArray<StatusProperty> _properties;
-        private readonly StatusNatureOfSystem _natureOfSystem;
         private readonly ImmutableArray<StatusResults> _children;
-        private readonly StatusAuditReport? _report;
 
         private StatusResults(string? sourceSystem, string targetSystem)
         {
-            _sourceSystem = sourceSystem;
-            _targetSystem = targetSystem;
-            _time = AmbientClock.UtcNow;
-            _relativeDetailLevel = 0;
-            _natureOfSystem = StatusNatureOfSystem.Leaf;
+            SourceSystem = sourceSystem;
+            TargetSystem = targetSystem;
+            Time = AmbientClock.UtcNow;
+            RelativeDetailLevel = 0;
+            NatureOfSystem = StatusNatureOfSystem.Leaf;
             _properties = ImmutableArray<StatusProperty>.Empty;
             _children = ImmutableArray<StatusResults>.Empty;
-            _report = StatusAuditReport.Pending;
+            Report = StatusAuditReport.Pending;
         }
         /// <summary>
         /// Gets a <see cref="StatusResults"/> that indicates that the results for the specified source and target are pending.
@@ -163,13 +155,13 @@ namespace AmbientServices
         /// <param name="children">An enumeration of <see cref="StatusResults"/> for child nodes in the status tree.</param>
         public StatusResults(string? sourceSystem, string? targetSystem, DateTime time, int relativeDetailLevel, IEnumerable<StatusProperty> properties, StatusNatureOfSystem natureOfSystem, IEnumerable<StatusResults> children)
         {
-            _sourceSystem = sourceSystem;
-            _targetSystem = targetSystem ?? "";
-            _time = time;
-            _relativeDetailLevel = relativeDetailLevel;
+            SourceSystem = sourceSystem;
+            TargetSystem = targetSystem ?? "";
+            Time = time;
+            RelativeDetailLevel = relativeDetailLevel;
             _properties = ImmutableArrayUtilities.FromEnumerable(properties);
-            _report = null;
-            _natureOfSystem = natureOfSystem;
+            Report = null;
+            NatureOfSystem = natureOfSystem;
             _children = ImmutableArrayUtilities.FromEnumerable(children);
         }
         /// <summary>
@@ -183,13 +175,13 @@ namespace AmbientServices
         /// <param name="report">An optional <see cref="StatusAuditReport"/> containing the results of the most recent audit in case this is an auditable node.</param>
         public StatusResults(string? sourceSystem, string targetSystem, DateTime time, int relativeDetailLevel, IEnumerable<StatusProperty> properties, StatusAuditReport? report = null)
         {
-            _sourceSystem = sourceSystem;
-            _targetSystem = targetSystem;
-            _time = time;
-            _relativeDetailLevel = relativeDetailLevel;
+            SourceSystem = sourceSystem;
+            TargetSystem = targetSystem;
+            Time = time;
+            RelativeDetailLevel = relativeDetailLevel;
             _properties = ImmutableArrayUtilities.FromEnumerable(properties);
-            _report = report;
-            _natureOfSystem = StatusNatureOfSystem.Leaf;
+            Report = report;
+            NatureOfSystem = StatusNatureOfSystem.Leaf;
             _children = ImmutableArray<StatusResults>.Empty;
         }
         /// <summary>
@@ -200,14 +192,14 @@ namespace AmbientServices
         /// <param name="children">An enumeration of <see cref="StatusResults"/> for child nodes in the status tree.</param>
         public StatusResults(string? sourceSystem, string targetSystem, IEnumerable<StatusResults> children)
         {
-            _sourceSystem = sourceSystem;
-            _targetSystem = targetSystem;
-            _time = AmbientClock.UtcNow;
-            _relativeDetailLevel = 0;
+            SourceSystem = sourceSystem;
+            TargetSystem = targetSystem;
+            Time = AmbientClock.UtcNow;
+            RelativeDetailLevel = 0;
             _properties = ImmutableArray<StatusProperty>.Empty;
-            _natureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+            NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
             _children = ImmutableArrayUtilities.FromEnumerable(children);
-            _report = null;
+            Report = null;
         }
 
         /// <summary>
@@ -216,12 +208,12 @@ namespace AmbientServices
         /// When specified, all parent and ancestor source system identifiers are overridden and ignored.
         /// For summarization purposes, source system names for the same system should match exactly no matter what path the status data flowed through.
         /// </summary>
-        public string? SourceSystem => _sourceSystem;
+        public string? SourceSystem { get; }
         /// <summary>
         /// A string indicating which system performed the audit.
         /// "Localhost" when <see cref="SourceSystem"/> is null.
         /// </summary>
-        public string SourceSystemDisplayName => SourceDisplayName(_sourceSystem);
+        public string SourceSystemDisplayName => SourceDisplayName(SourceSystem);
         /// <summary>
         /// A string indicating which backend system, subsystem, or feature the results were gathered about.  
         /// If the string does not begin with a slash, the target system is a non-shared subsystem of the target system that is identified by the parent node (and possibly ancestor nodes).
@@ -233,24 +225,24 @@ namespace AmbientServices
         /// For example, the local disk system should be identified with something like "LocalDisk" (no leading slash) because it's a subsystem that is different from other local disk systems.
         /// A shared database system should be identified with something like "/Database" (with a leading slash) because it's not unique to the local system.
         /// </remarks>
-        public string TargetSystem => _targetSystem;
+        public string TargetSystem { get; }
         /// <summary>
         /// A string indicating which backend system, subsystem, or feature the results were gathered about.  
         /// If <see cref="TargetSystem"/> is "/", this will be "Overall".
         /// If <see cref="TargetSystem"/> is null or empty, this will be "Unknown Target".
         /// </summary>
-        public string TargetSystemDisplayName => TargetDisplayName(_targetSystem);
+        public string TargetSystemDisplayName => TargetDisplayName(TargetSystem);
         /// <summary>
         /// A <see cref="DateTime"/> indicating when the information was gathered (which may or may not be periodically audited and updated).
         /// </summary>
-        public DateTime Time => _time;
+        public DateTime Time { get; }
         /// <summary>
         /// The relative detail level of the properties of this node.  
         /// Usually zero, indicating that these properties are at the same level of detail as the parent node's properties; 
         /// or one, indicating that the properties here provide just slightly more detail than the parent node's properties.
         /// May be used to filter properties at deeper level status nodes, but may be overridden by status ratings (any nodes with poor status ratings will have properties included anyway).
         /// </summary>
-        public int RelativeDetailLevel => _relativeDetailLevel;
+        public int RelativeDetailLevel { get; }
         /// <summary>
         /// An enumeration of <see cref="StatusProperty"/> key-value pairs containing detailed information about the system.
         /// </summary>
@@ -258,7 +250,7 @@ namespace AmbientServices
         /// <summary>
         /// A <see cref="StatusNatureOfSystem"/> indicating the nature of the system represented by these results for the purposes of audit result aggregation and inferring failure tolerance.
         /// </summary>
-        public StatusNatureOfSystem NatureOfSystem => _natureOfSystem;
+        public StatusNatureOfSystem NatureOfSystem { get; }
         /// <summary>
         /// An enumeration of <see cref="StatusResults"/> from child nodes which may or may not be aggregatable, depending on if they are auditable.
         /// StatusResults may have either children or a report, but never both.
@@ -271,7 +263,7 @@ namespace AmbientServices
         /// Set to the special <see cref="StatusAuditReport.Pending"/> value if the first audit is still pending, 
         /// StatusResults may have either children or a report, but never both.
         /// </summary>
-        public StatusAuditReport? Report => _report;
+        public StatusAuditReport? Report { get; }
 
         private static string SourceDisplayName(string? source) { return source ?? "Localhost"; }
         private static string TargetDisplayName(string? target) { return (target == "/") ? "Overall" : (string.IsNullOrEmpty(target) ? "Unknown Target" : target!); }   // string.IsNullOrEmpty ensures response is not null
@@ -378,19 +370,19 @@ namespace AmbientServices
         public override string ToString()
         {
             StringBuilder output = new();
-            if (_sourceSystem != null)
+            if (SourceSystem != null)
             {
-                output.Append(SourceDisplayName(_sourceSystem));
+                output.Append(SourceDisplayName(SourceSystem));
                 output.Append("->");
             }
-            if (!string.IsNullOrEmpty(_targetSystem))
+            if (!string.IsNullOrEmpty(TargetSystem))
             {
-                output.Append(TargetDisplayName(_targetSystem));
+                output.Append(TargetDisplayName(TargetSystem));
                 output.Append(':');
             }
-            if (_report != null)
+            if (Report != null)
             {
-                output.Append(_report.ToString());
+                output.Append(Report.ToString());
             }
             return output.ToString();
         }

@@ -23,7 +23,6 @@ namespace AmbientServices
     [AttributeUsage(AttributeTargets.Class)]
     public sealed class DefaultAmbientServiceAttribute : Attribute
     {
-        private readonly IReadOnlyList<Type>? _registrationInterfaces;
 
         /// <summary>
         /// Constructs a DefaultAmbientServiceAttribute.
@@ -39,7 +38,7 @@ namespace AmbientServices
         public DefaultAmbientServiceAttribute(Type registrationInterface)
 #pragma warning restore CA1019
         {
-            _registrationInterfaces = ImmutableArray<Type>.Empty.Add(registrationInterface);
+            RegistrationInterfaces = ImmutableArray<Type>.Empty.Add(registrationInterface);
         }
         /// <summary>
         /// Constructs a DefaultAmbientServiceAttribute that is limited to the listed interfaces, even if other interfaces are directly implemented.
@@ -47,13 +46,13 @@ namespace AmbientServices
         /// <param name="registrationInterfaces">A params array of interface types to use for the registration instead of all the interfaces implemented by the class.</param>
         public DefaultAmbientServiceAttribute(params Type[] registrationInterfaces)
         {
-            _registrationInterfaces = ImmutableArray<Type>.Empty.AddRange(registrationInterfaces);
+            RegistrationInterfaces = ImmutableArray<Type>.Empty.AddRange(registrationInterfaces);
         }
         /// <summary>
         /// Gets the interface types indicating which services are implemented by the class the attribute is applied to.  
         /// If null, all interfaces that are directly implemented by the class should be used.
         /// </summary>
-        public IReadOnlyList<Type>? RegistrationInterfaces => _registrationInterfaces;
+        public IReadOnlyList<Type>? RegistrationInterfaces { get; }
     }
 
     /// <summary>

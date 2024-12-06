@@ -354,7 +354,6 @@ namespace AmbientServices
         private readonly IAmbientClock? _clock;
         private long _accumulatedTicks;
         private long _resumeTicks;
-        private bool _running;
 
         /// <summary>
         /// Returns a newly constructed <see cref="AmbientStopwatch"/> that has been started.
@@ -383,7 +382,7 @@ namespace AmbientServices
         {
             _clock = clock;
             _resumeTicks = Ticks;
-            _running = run;
+            IsRunning = run;
         }
         /// <summary>
         /// Gets a timestamp number that may be used to determine how many ticks have elapsed between calls.
@@ -416,7 +415,7 @@ namespace AmbientServices
         /// Arithmetic wraparound is technically possible, though in practice, at least on Windows, this should not happen unless the stopwatch has run for at least 100 years (50 years before it goes negative).
         /// In most cases, time spans measured in years should use <see cref="DateTime"/> instead of stopwatches.
         /// </remarks>
-        public long ElapsedTicks => _running ? (Ticks - _resumeTicks + _accumulatedTicks) : _accumulatedTicks;
+        public long ElapsedTicks => IsRunning ? (Ticks - _resumeTicks + _accumulatedTicks) : _accumulatedTicks;
         /// <summary>
         /// Gets a <see cref="TimeSpan"/> representing the number of ticks elapsed.  Based entirely on <see cref="ElapsedTicks"/> and the (system-constant) resolution of the clock.
         /// </summary>
@@ -428,7 +427,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets whether or not the stopwatch is currently running.
         /// </summary>
-        public bool IsRunning => _running;
+        public bool IsRunning { get; private set; }
 
         /// <summary>
         /// Stops the stopwatch so that it temporarily stops accumulating time.  While paused, <see cref="ElapsedTicks"/> will return the same value.
@@ -436,10 +435,10 @@ namespace AmbientServices
         public void Stop()
         {
             // pause--was it *not* paused before?
-            if (_running)
+            if (IsRunning)
             {
                 long ticksAccumulated = Ticks - _resumeTicks;
-                _running = false;
+                IsRunning = false;
                 _accumulatedTicks = ticksAccumulated;
             }
         }
@@ -450,10 +449,10 @@ namespace AmbientServices
         public void Start()
         {
             // start--was it *not* started before?
-            if (!_running)
+            if (!IsRunning)
             {
                 long resumeTicks = Ticks;
-                _running = true;
+                IsRunning = true;
                 _resumeTicks = resumeTicks;
             }
         }
@@ -465,7 +464,7 @@ namespace AmbientServices
         {
             _accumulatedTicks = 0;
             _resumeTicks = Ticks;
-            _running = true;
+            IsRunning = true;
         }
         /// <summary>
         /// Stops the stopwatch and resets the elapsed time to zero.

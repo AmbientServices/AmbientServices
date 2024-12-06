@@ -28,8 +28,6 @@ namespace AmbientServices.Utilities
     /// <typeparam name="T"></typeparam>
     internal static class EnumMax<T> where T : Enum
     {
-        private static readonly T _Max = Init();
-
         private static T Init()
         {
             Array a = Enum.GetValues(typeof(T))!;   // I don't think it's possible to have a System.Enum for which Enum.GetValues returns null
@@ -37,6 +35,6 @@ namespace AmbientServices.Utilities
                 ? default!                          // apparently the compiler isn't smart enough to know that even though System.Enum is a class, any derived types are value types
                 : a.Cast<T>().Max()!;
         }
-        public static T Max => _Max;
+        public static T Max { get; } = Init();
     }
 }

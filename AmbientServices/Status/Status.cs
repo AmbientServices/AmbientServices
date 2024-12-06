@@ -15,14 +15,12 @@ namespace AmbientServices
     {
         internal const string DefaultSource = "LOCALHOST";
         internal const string DefaultTarget = "Unknown Target";
-
-        private static readonly Status _DefaultInstance = new(true);
         internal static readonly AmbientLogger<Status> Logger = new();
         /// <summary>
         /// Gets the base instance that contains the overall status and is initialized with all checkers and auditors with public empty constructors.  
         /// Note that even the default instance must be started by calling <see cref="Start"/> before checks and audits will occur, and that does not happen automatically.
         /// </summary>
-        public static Status DefaultInstance => _DefaultInstance;
+        public static Status DefaultInstance { get; } = new(true);
 
         private readonly bool _loadAllCheckers;
         private readonly ConcurrentHashSet<StatusChecker> _checkers = new();

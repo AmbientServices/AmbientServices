@@ -16,13 +16,11 @@ public class TestAmbientStackTrace
 {
     class Subscriber : IStackTraceUpdateSink
     {
-        private ImmutableStack<string> _stackTrace = ImmutableStack<string>.Empty;
-
-        public ImmutableStack<string> StackTrace => _stackTrace;
+        public ImmutableStack<string> StackTrace { get; private set; } = ImmutableStack<string>.Empty;
 
         public void OnStackTraceUpdated(ImmutableStack<string> stackTrace)
         {
-            _stackTrace = stackTrace;
+            StackTrace = stackTrace;
         }
     }
     [TestMethod]

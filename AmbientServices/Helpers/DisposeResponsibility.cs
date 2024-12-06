@@ -11,7 +11,6 @@ using System.Runtime.CompilerServices;
 
 namespace AmbientServices;
 
-
 /// <summary>
 /// An interface that abstracts an object that contains an <see cref="IDisposable"/> and allows transfer of the disposal responsibility between instances (and the stack).
 /// Instances should ALWAYS be disposed.
@@ -21,7 +20,6 @@ public interface IDisposeResponsibility<out T> : IDisposable
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
     , IAsyncDisposable
 #endif
-    where T : class
 {
     /// <summary>
     /// The contained disposable object.  Throws an <see cref="ObjectDisposedException"/> if the object is no longer contained.
@@ -59,10 +57,9 @@ internal interface IShirkResponsibility
 /// </summary>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
 public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirkResponsibility
-    where T : class
 {
     private string _stackOnCreation;
-    private WeakReference<T>? _contained;
+    private T? _contained;
 
     /// <summary>
     /// The contained disposable object.  Throws an <see cref="ObjectDisposedException"/> if the object is no longer contained.
@@ -71,8 +68,8 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     {
         get
         {
-            if (_contained?.TryGetTarget(out T contained) != true || contained == null) throw new ObjectDisposedException("The contained disposable object is no longer owned by this responsibility object!");
-            return contained;
+            if (_contained == null) throw new ObjectDisposedException("The contained disposable object is no longer owned by this responsibility object!");
+            return _contained;
         }
     }
     /// <summary>
@@ -82,8 +79,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     {
         get
         {
-            if (_contained?.TryGetTarget(out T? contained) != true) throw new ObjectDisposedException("The contained disposable object has already been disposed!");
-            return contained;
+            return _contained;
         }
     }
     /// <summary>
@@ -96,7 +92,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     public string StackOnCreation => _stackOnCreation;
 
     /// <summary>
-    /// DEBUG MODE ONLY: Finalizes the object and ensures that the contained object was disposed as expected.
+    /// Finalizes the object and ensures that the contained object was disposed as expected.
     /// </summary>
     ~DisposeResponsibility()
     {
@@ -119,7 +115,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// <param name="stackOnCreation">The creation stack to associated with <paramref name="contained"/>.</param>
     public DisposeResponsibility(T? contained, string? stackOnCreation = null)
     {
-        _contained = (contained == null) ? null : new(contained);
+        _contained = contained;
         _stackOnCreation = (contained != null) ?
 #if DEBUG
             PendingDispose.OnConstruct(stackOnCreation, 1024)
@@ -141,7 +137,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #endif
         if (other is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
         _stackOnCreation = other.StackOnCreation;
-        _contained = new(other.Contained);
+        _contained = other.Contained;
         isr.ShirkResponsibility();
     }
 
@@ -204,9 +200,9 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #if DEBUG
             PendingDispose.OnDispose(_stackOnCreation);
 #endif
-            if (_contained.TryGetTarget(out T? contained)) DisposeContained(contained);
+            DisposeContained(_contained);
             GC.SuppressFinalize(this);
-            _contained = null;
+            _contained = default;
         }
     }
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -222,16 +218,16 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #endif
             await ad.DisposeAsync().ConfigureAwait(false);
             GC.SuppressFinalize(this);
-            _contained = null;
+            _contained = default;
         }
         else if (_contained is not null)
         {
 #if DEBUG
             PendingDispose.OnDispose(_stackOnCreation);
 #endif
-            if (_contained.TryGetTarget(out T? contained)) await DisposeContainedAsync(contained).ConfigureAwait(false);
+            await DisposeContainedAsync(_contained).ConfigureAwait(false);
             GC.SuppressFinalize(this);
-            _contained = null;
+            _contained = default;
         }
         // else no need to dispse synchronously or asynchronously
     }
@@ -244,7 +240,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     public void AssumeResponsibility(T? newDisposable, string? stackOnCreation = null)
     {
         Dispose();
-        _contained = (newDisposable == null) ? null : new(newDisposable);
+        _contained = newDisposable;
         _stackOnCreation =
 #if DEBUG
         PendingDispose.OnConstruct(stackOnCreation, 1024);
@@ -266,7 +262,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #endif
         if (sourceOwnership is not IShirkResponsibility isr) throw new NotImplementedException("Unable to transfer responsibility from instances that don't support IShirkResponsibility!");
         Dispose();
-        _contained = (sourceOwnership.NullableContained == null) ? null : new(sourceOwnership.NullableContained);
+        _contained = sourceOwnership.NullableContained;
         _stackOnCreation = sourceOwnership.StackOnCreation;
         GC.ReRegisterForFinalize(this);
         isr.ShirkResponsibility();
@@ -276,7 +272,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// </summary>
     void IShirkResponsibility.ShirkResponsibility()
     {
-        _contained = null;
+        _contained = default;
         _stackOnCreation = "";
     }
     /// <summary>

@@ -14,8 +14,6 @@ public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
     /// The set name of the default settings set.
     /// </summary>
     public const string DefaultSetName = "Default";
-
-    private readonly string _name;
     private readonly LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object?, IAmbientSettingInfo> _weakSettingRegistered;
     private readonly ConcurrentDictionary<string, string> _rawValues;
     private readonly ConcurrentDictionary<string, object> _typedValues;
@@ -33,7 +31,7 @@ public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
     /// <param name="name">The name of the set.</param>
     public BasicAmbientSettingsSet(string name)
     {
-        _name = name;
+        SetName = name;
         _rawValues = new ConcurrentDictionary<string, string>();
         _typedValues = new ConcurrentDictionary<string, object>();
         _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object?, IAmbientSettingInfo>(
@@ -47,7 +45,7 @@ public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
     /// <param name="values">A set of name-value pairs to use for the initial values for the set.</param>
     public BasicAmbientSettingsSet(string name, IDictionary<string, string> values)
     {
-        _name = name;
+        SetName = name;
         _rawValues = new ConcurrentDictionary<string, string>(values);
         _typedValues = new ConcurrentDictionary<string, object>();
         if (values != null)
@@ -77,7 +75,7 @@ public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
     /// <summary>
     /// Gets the name of the settings set so that a settings consumer can know where a changed setting value came from.
     /// </summary>
-    public string SetName => _name;
+    public string SetName { get; }
     /// <summary>
     /// Gets the current raw (string) value for the specified key, or null if the setting is not set.
     /// </summary>
@@ -134,6 +132,6 @@ public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
     /// <returns></returns>
     public override string ToString()
     {
-        return "Settings: " + _name;
+        return "Settings: " + SetName;
     }
 }

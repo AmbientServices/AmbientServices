@@ -12,21 +12,14 @@ namespace AmbientServices
     /// </summary>
     public sealed class StatusAuditAlert : IEquatable<StatusAuditAlert>
     {
-        private static readonly StatusAuditAlert _Empty = new();
-        private static readonly StatusAuditAlert _None = new(StatusRating.Okay, "NoAlert", "No Alerts", "There are no alerts.");
         /// <summary>
         /// An empty <see cref="StatusAuditAlert"/> in case they need to be compared.
         /// </summary>
-        public static StatusAuditAlert Empty => _Empty;
+        public static StatusAuditAlert Empty { get; } = new();
         /// <summary>
         /// A <see cref="StatusAuditAlert"/> for when no alert was reported.
         /// </summary>
-        public static StatusAuditAlert None => _None;
-
-        private readonly float _rating;
-        private readonly string _auditAlertCode;
-        private readonly string _terse;
-        private readonly string _details;
+        public static StatusAuditAlert None { get; } = new(StatusRating.Okay, "NoAlert", "No Alerts", "There are no alerts.");
 
         /// <summary>
         /// Gets a short string containing a code for this condition, or empty string if the report should not be collated by status code.
@@ -34,33 +27,33 @@ namespace AmbientServices
         /// Some examples might be, Timeout, Configuration, BadRequest, AccessDenied, ProgramError, NotFound, or MirrorBroken.
         /// This string should never contain any sensitive details.
         /// </summary>
-        public string AuditAlertCode => _auditAlertCode;
+        public string AuditAlertCode { get; }
         /// <summary>
         /// A status rating indicating the overall state of the system represented by the report.
         /// </summary>
-        public float Rating => _rating;
+        public float Rating { get; }
         /// <summary>
         /// Gets a short message indicating that there is a suboptimal status (one that would be appropriate for SMS or a mobile alert dialog).  
         /// The message must not contain any line breaks or markup so that it can be sent in a text message.
         /// This message must not contain any sensitive details.
         /// </summary>
-        public string Terse => _terse;
+        public string Terse { get; }
         /// <summary>
         /// Gets a detailed message indicating the cause of a suboptimal status (one that would be appropriate for email, web, or mobile display).  
         /// The message should use the same format as documentation details.
         /// If authorization was not granted, and the error might contain sensitive details, the message may have been replaced by an error identifier which will need to be looked up in the error logs by an authorized user.
         /// </summary>
-        public string Details => _details;
+        public string Details { get; }
 
         /// <summary>
         /// Constructs an empty <see cref="StatusAuditAlert"/>.
         /// </summary>
         private StatusAuditAlert()
         {
-            _rating = StatusRating.Okay;
-            _auditAlertCode = "OkayCode";
-            _terse = "ok";
-            _details = "The system is functioning normally.";
+            Rating = StatusRating.Okay;
+            AuditAlertCode = "OkayCode";
+            Terse = "ok";
+            Details = "The system is functioning normally.";
         }
         /// <summary>
         /// Constructs a <see cref="StatusAuditAlert"/> with the specified values.
@@ -71,10 +64,10 @@ namespace AmbientServices
         /// <param name="details">The details alert message.</param>
         public StatusAuditAlert(float rating, string auditAlertCode, string terse, string details)
         {
-            _rating = rating;
-            _auditAlertCode = auditAlertCode ?? throw new ArgumentNullException(nameof(auditAlertCode));
-            _terse = terse ?? throw new ArgumentNullException(nameof(terse));
-            _details = details ?? throw new ArgumentNullException(nameof(details));
+            Rating = rating;
+            AuditAlertCode = auditAlertCode ?? throw new ArgumentNullException(nameof(auditAlertCode));
+            Terse = terse ?? throw new ArgumentNullException(nameof(terse));
+            Details = details ?? throw new ArgumentNullException(nameof(details));
         }
 
         /// <summary>
@@ -83,7 +76,7 @@ namespace AmbientServices
         /// <returns>The 32-bit hash code for this object.</returns>
         public override int GetHashCode()
         {
-            return _rating.GetHashCode() ^ _auditAlertCode.GetHashCode(StringComparison.Ordinal);
+            return Rating.GetHashCode() ^ AuditAlertCode.GetHashCode(StringComparison.Ordinal);
         }
         /// <summary>
         /// Checks to see if this <see cref="StatusAuditAlert"/> is logically equal to another one.
@@ -104,7 +97,7 @@ namespace AmbientServices
         public bool Equals(StatusAuditAlert? other)
         {
             if (other is null) return false;
-            return _rating.Equals(other._rating) && string.Equals(_auditAlertCode, other._auditAlertCode, StringComparison.OrdinalIgnoreCase);
+            return Rating.Equals(other.Rating) && string.Equals(AuditAlertCode, other.AuditAlertCode, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -135,7 +128,7 @@ namespace AmbientServices
         /// <returns>A string representation of the instance.</returns>
         public override string ToString()
         {
-            return $"{_rating}({_auditAlertCode}): {_terse}({_details})";
+            return $"{Rating}({AuditAlertCode}): {Terse}({Details})";
         }
     }
     /// <summary>
@@ -150,38 +143,33 @@ namespace AmbientServices
         /// </summary>
         public static readonly StatusAuditReport Pending = new();
 
-        private readonly DateTime _auditStartTime;
-        private readonly TimeSpan _auditDuration;
-        private readonly DateTime? _nextAuditTime;
-        private readonly StatusAuditAlert? _alert;
-
         /// <summary>
         /// Gets the time when the audit of the target system started.
         /// </summary>
-        public DateTime AuditStartTime => _auditStartTime;
+        public DateTime AuditStartTime { get; }
         /// <summary>
         /// Gets the time when the audit occurred.
         /// </summary>
-        public TimeSpan AuditDuration => _auditDuration;
+        public TimeSpan AuditDuration { get; }
         /// <summary>
         /// Gets the time when the system should be reaudited (if any).
         /// </summary>
-        public DateTime? NextAuditTime => _nextAuditTime;
+        public DateTime? NextAuditTime { get; }
         /// <summary>
         /// Gets the <see cref="StatusAuditAlert"/> for this audit, if any.
         /// No <see cref="StatusAuditAlert"/> implies that there were no issues, which should default to <see cref="StatusRating.Okay"/>.
         /// </summary>
-        public StatusAuditAlert? Alert => _alert;
+        public StatusAuditAlert? Alert { get; }
 
         /// <summary>
         /// Constructs the "Pending" <see cref="StatusAuditReport"/>.
         /// </summary>
         private StatusAuditReport()
         {
-            _auditStartTime = AmbientClock.UtcNow;
-            _auditDuration = TimeSpan.FromTicks(0);
-            _nextAuditTime = AmbientClock.UtcNow;
-            _alert = new StatusAuditAlert(StatusRating.Pending, "Pending", "Pending", "The first audit has not run yet!");
+            AuditStartTime = AmbientClock.UtcNow;
+            AuditDuration = TimeSpan.FromTicks(0);
+            NextAuditTime = AmbientClock.UtcNow;
+            Alert = new StatusAuditAlert(StatusRating.Pending, "Pending", "Pending", "The first audit has not run yet!");
         }
         /// <summary>
         /// Constructs a <see cref="StatusAuditReport"/> with the specified values.
@@ -192,10 +180,10 @@ namespace AmbientServices
         /// <param name="alert">A <see cref="StatusAuditAlert"/> if the audit includes an alert, if any</param>
         public StatusAuditReport(DateTime auditStartTime, TimeSpan auditDuration, DateTime? nextAuditTime = null, StatusAuditAlert? alert = null)
         {
-            _auditStartTime = auditStartTime;
-            _auditDuration = auditDuration;
-            _nextAuditTime = nextAuditTime;
-            _alert = alert;
+            AuditStartTime = auditStartTime;
+            AuditDuration = auditDuration;
+            NextAuditTime = nextAuditTime;
+            Alert = alert;
         }
 
         /// <summary>
@@ -206,15 +194,15 @@ namespace AmbientServices
         {
             StringBuilder output = new();
             output.Append('@');
-            output.Append(_auditStartTime.ToShortTimeString().Replace(" ", "", StringComparison.Ordinal));
-            if (_alert != null)
+            output.Append(AuditStartTime.ToShortTimeString().Replace(" ", "", StringComparison.Ordinal));
+            if (Alert != null)
             {
                 output.Append(':');
-                output.Append(StatusRating.GetRangeName(_alert.Rating));
-                if (!string.IsNullOrEmpty(_alert.Terse))
+                output.Append(StatusRating.GetRangeName(Alert.Rating));
+                if (!string.IsNullOrEmpty(Alert.Terse))
                 {
                     output.Append('(');
-                    output.Append(_alert.Terse);
+                    output.Append(Alert.Terse);
                     output.Append(')');
                 }
             }
@@ -226,7 +214,7 @@ namespace AmbientServices
         /// <returns>The 32-bit hash code for this object.</returns>
         public override int GetHashCode()
         {
-            return _alert?.GetHashCode() ?? 0;
+            return Alert?.GetHashCode() ?? 0;
         }
         /// <summary>
         /// Checks to see if this <see cref="StatusAuditReport"/> is logically equal to another one.
@@ -247,7 +235,7 @@ namespace AmbientServices
         public bool Equals(StatusAuditReport? other)
         {
             if (other is null) return false;
-            return Equals(_alert, other._alert);
+            return Equals(Alert, other.Alert);
         }
 
         /// <summary>
@@ -280,7 +268,6 @@ namespace AmbientServices
     public abstract class StatusAuditor : StatusChecker
     {
         private readonly StatusResults _shutdownInProgress;     // may be returned if results are requested during shutdown
-        private readonly Status? _status;
         private readonly TimeSpan _baselineAuditFrequency;
         private readonly AmbientEventTimer _initialAuditTimer;    // only used until the initial audit happens, then disposed
         private readonly AmbientEventTimer _auditTimer;
@@ -307,7 +294,7 @@ namespace AmbientServices
         internal protected StatusAuditor(string targetSystem, TimeSpan baselineAuditFrequency, Status? status)
             : base(targetSystem)
         {
-            _status = status;
+            Owner = status;
             _baselineAuditFrequency = baselineAuditFrequency;
 
             _frequencyTicks = baselineAuditFrequency.Ticks;
@@ -349,7 +336,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets the <see cref="Status"/> that owns this auditor, if there is one.
         /// </summary>
-        public Status? Owner => _status;
+        public Status? Owner { get; }
 
         internal void ScheduleInitialAudit()
         {

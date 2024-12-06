@@ -17,7 +17,6 @@ namespace AmbientServices.Utilities
         private static readonly double StopwatchToTimeSpanRatio;
         private static readonly long BaselineStopwatchTimestamp;
         private static readonly long BaselineDateTimeTicks;
-        private static readonly long _TimeSpanStopwatchConversionLeastCommonMultiple;
 #pragma warning disable CA1810  // it should be faster in this case to do it this way because the values depend on each other
         static TimeSpanUtilities()
 #pragma warning restore CA1810
@@ -39,7 +38,7 @@ namespace AmbientServices.Utilities
             BaselineDateTimeTicks = DateTime.UtcNow.Ticks;
             // make sure that nobody else gets times before these
             System.Threading.Thread.MemoryBarrier();
-            _TimeSpanStopwatchConversionLeastCommonMultiple = TimeSpanToStopwatchMultiplier * TimeSpanToStopwatchDivisor;
+            TimeSpanStopwatchConversionLeastCommonMultiple = TimeSpanToStopwatchMultiplier * TimeSpanToStopwatchDivisor;
         }
         internal static ulong GCD(ulong a, ulong b)
         {
@@ -52,7 +51,7 @@ namespace AmbientServices.Utilities
         /// <summary>
         /// Gets the smallest number of ticks than can be successfully roundtripped between stopwatch ticks and timespan ticks without any loss of accuracy.
         /// </summary>
-        internal static long TimeSpanStopwatchConversionLeastCommonMultiple => _TimeSpanStopwatchConversionLeastCommonMultiple;
+        internal static long TimeSpanStopwatchConversionLeastCommonMultiple { get; private set; }
         /// <summary>
         /// Converts <see cref="TimeSpan"/> ticks to <see cref="System.Diagnostics.Stopwatch"/> ticks as accurately as possible using integer conversion if possible without overflow, or <see cref="double"/> multipliation if not.
         /// </summary>

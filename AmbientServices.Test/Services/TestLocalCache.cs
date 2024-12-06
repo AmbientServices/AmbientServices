@@ -450,14 +450,13 @@ namespace AmbientServices.Test
     class DisposableCacheEntry : IDisposable, IAsyncDisposable
     {
         private readonly int _key;
-        private bool disposedValue;
 
         public DisposableCacheEntry(int key)
         {
             _key = key;
         }
 
-        public bool Disposed => disposedValue;
+        public bool Disposed { get; private set; }
 
         public override int GetHashCode()
         {
@@ -471,7 +470,7 @@ namespace AmbientServices.Test
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!Disposed)
             {
                 if (disposing)
                 {
@@ -480,7 +479,7 @@ namespace AmbientServices.Test
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
                 // TODO: set large fields to null
-                disposedValue = true;
+                Disposed = true;
             }
         }
 

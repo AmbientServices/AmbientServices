@@ -23,11 +23,10 @@ namespace AmbientServices
     /// </summary>
     public class AmbientConsoleLogger : IAmbientLogger, IAmbientStructuredLogger
     {
-        private static readonly AmbientConsoleLogger _Instance = new();
         /// <summary>
         /// Gets the default instance of the ambient console logger.
         /// </summary>
-        public static AmbientConsoleLogger Instance => _Instance;
+        public static AmbientConsoleLogger Instance { get; } = new();
 
         /// <summary>
         /// Constructs an ambient console logger, and implementation of <see cref="IAmbientLogger"/> that outputs log data to the system console output.

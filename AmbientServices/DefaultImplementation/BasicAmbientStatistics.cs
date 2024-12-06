@@ -116,13 +116,7 @@ internal class BasicAmbientStatistics : IAmbientStatistics
 
 internal class Statistic : IAmbientStatistic
 {
-    private readonly IAmbientStatistics _statisticsSet;
     private readonly Action _removeRegistration;
-    private readonly AmbientStatisicType _type;
-    private readonly string _id;
-    private readonly string _name;
-    private readonly string _description;
-    private readonly string? _adjustedUnits;
     private long _currentValue;    // interlocked
 
     public Statistic(IAmbientStatistics statisticsSet, Action removeRegistration, AmbientStatisicType type, string id, string name, string description
@@ -135,13 +129,13 @@ internal class Statistic : IAmbientStatistic
         , MissingSampleHandling missingSampleHandling = MissingSampleHandling.LinearEstimation
         )
     {
-        _statisticsSet = statisticsSet;
+        StatisticsSet = statisticsSet;
         _removeRegistration = removeRegistration;
-        _type = type;
-        _id = id;
-        _name = name;
-        _description = description;
-        _adjustedUnits = units;
+        StatisicType = type;
+        Id = id;
+        Name = name;
+        Description = description;
+        AdjustedUnits = units;
         _currentValue = initialRawValue;
         ExpectedMinimumRawValue = expectedMinRawValue;
         ExpectedMaximumRawValue = expectedMaxRawValue;
@@ -153,17 +147,17 @@ internal class Statistic : IAmbientStatistic
         MissingSampleHandling = missingSampleHandling;
     }
 
-    public IAmbientStatistics StatisticsSet => _statisticsSet;
+    public IAmbientStatistics StatisticsSet { get; }
 
-    public AmbientStatisicType StatisicType => _type;
+    public AmbientStatisicType StatisicType { get; }
 
-    public string Id => _id;
+    public string Id { get; }
 
-    public string Name => _name;
+    public string Name { get; }
 
-    public string Description => _description;
+    public string Description { get; }
 
-    public string? AdjustedUnits => _adjustedUnits;
+    public string? AdjustedUnits { get; }
 
     public long CurrentRawValue => _currentValue;
 
@@ -215,16 +209,15 @@ internal class Statistic : IAmbientStatistic
 
 internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 {
-    private readonly IAmbientStatistics _statisticsSet;
     private readonly long _startTime;
 
     public ProcessExecutionTimeStatistic(IAmbientStatistics statisticsSet)
     {
-        _statisticsSet = statisticsSet;
+        StatisticsSet = statisticsSet;
         _startTime = AmbientClock.Ticks;
     }
 
-    public IAmbientStatistics StatisticsSet => _statisticsSet;
+    public IAmbientStatistics StatisticsSet { get; }
 
     public AmbientStatisicType StatisicType => AmbientStatisicType.Cumulative;
 
@@ -257,51 +250,43 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 
 internal sealed class RatioStatistic : IAmbientRatioStatistic
 {
-    private readonly IAmbientStatistics _statisticsSet;
     private readonly Action _removeRegistration;
-    private readonly string _id;
-    private readonly string _name;
-    private readonly string _description;
-    private readonly string? _adjustedUnits;
     private readonly string? _numeratorStatistic;
-    private readonly bool _numeratorDelta;
-    private readonly string? _denominatorStatistic;
-    private readonly bool _denominatorDelta;
 
     public RatioStatistic(IAmbientStatistics statisticsSet, Action removeRegistration, string id, string name, string description, string? units = null
         , string? numeratorStatistic = null, bool numeratorDelta = true
         , string? denominatorStatistic = null, bool denominatorDelta = true
         )
     {
-        _statisticsSet = statisticsSet;
+        StatisticsSet = statisticsSet;
         _removeRegistration = removeRegistration;
-        _id = id;
-        _name = name;
-        _description = description;
-        _adjustedUnits = units;
+        Id = id;
+        Name = name;
+        Description = description;
+        AdjustedUnits = units;
         _numeratorStatistic = numeratorStatistic;
-        _numeratorDelta = numeratorDelta;
-        _denominatorStatistic = denominatorStatistic;
-        _denominatorDelta = denominatorDelta;
+        NumeratorDelta = numeratorDelta;
+        DenominatorStatisticId = denominatorStatistic;
+        DenominatorDelta = denominatorDelta;
     }
 
-    public IAmbientStatistics StatisticsSet => _statisticsSet;
+    public IAmbientStatistics StatisticsSet { get; }
 
-    public string Id => _id;
+    public string Id { get; }
 
-    public string Name => _name;
+    public string Name { get; }
 
-    public string Description => _description;
+    public string Description { get; }
 
-    public string? AdjustedUnits => _adjustedUnits;
+    public string? AdjustedUnits { get; }
 
     public string? NumeratorStatisticId => _numeratorStatistic;
 
-    public bool NumeratorDelta => _numeratorDelta;
+    public bool NumeratorDelta { get; }
 
-    public string? DenominatorStatisticId => _denominatorStatistic;
+    public string? DenominatorStatisticId { get; }
 
-    public bool DenominatorDelta => _denominatorDelta;
+    public bool DenominatorDelta { get; }
 
     public void Dispose()
     {

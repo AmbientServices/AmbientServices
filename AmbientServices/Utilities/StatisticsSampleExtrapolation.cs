@@ -16,8 +16,7 @@ public static class MissingSampleHandlingExtensions
     }
     private class LinearExtrapolator : IMissingSampleExtrapolator
     {
-        private static readonly LinearExtrapolator _Instance = new();
-        public static LinearExtrapolator Instance => _Instance;
+        public static LinearExtrapolator Instance { get; } = new();
 
         public long LeadingSampleExtrapolation(long firstNonNullSample, long secondNonNullSample, int samplesBetweenNonNullSamples, int indexBeforeAllNonNullValues)
         {
@@ -34,8 +33,7 @@ public static class MissingSampleHandlingExtensions
     }
     private class ExponentialExtrapolator : IMissingSampleExtrapolator
     {
-        private static readonly ExponentialExtrapolator _Instance = new();
-        public static ExponentialExtrapolator Instance => _Instance;
+        public static ExponentialExtrapolator Instance { get; } = new();
 
         public long LeadingSampleExtrapolation(long lowSample, long highSample, int samplesBetweenNonNullSamples, int indexBeforeAllNonNullValues)
         {
@@ -52,8 +50,7 @@ public static class MissingSampleHandlingExtensions
     }
     private class LogarithmicExtrapolator : IMissingSampleExtrapolator
     {
-        private static readonly LogarithmicExtrapolator _Instance = new();
-        public static LogarithmicExtrapolator Instance => _Instance;
+        public static LogarithmicExtrapolator Instance { get; } = new();
 
         public long LeadingSampleExtrapolation(long lowSample, long highSample, int samplesBetweenNonNullSamples, int indexBeforeAllNonNullValues)
         {

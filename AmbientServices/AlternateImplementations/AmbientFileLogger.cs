@@ -14,7 +14,6 @@ namespace AmbientServices;
 /// </summary>
 public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisposable
 {
-    private readonly string _filePrefix;
     private readonly string _fileExtension;
     private readonly int _rotationPeriodMinutes;
     private readonly RotatingFileBuffer _fileBuffers;
@@ -57,7 +56,7 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
         }
         fileExtension ??= ".log";
         if (fileExtension.Length > 0 && fileExtension[0] != '.') fileExtension = "." + fileExtension;
-        _filePrefix = filePrefix;
+        FilePrefix = filePrefix;
         _fileExtension = fileExtension;
         _rotationPeriodMinutes = rotationPeriodMinutes;
         // which period number within the day are we in right now?
@@ -97,7 +96,7 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
     /// <summary>
     /// Gets the file prefix.
     /// </summary>
-    public string FilePrefix => _filePrefix;
+    public string FilePrefix { get; }
     /// <summary>
     /// Buffers the specified structured data to be asynchronously logged.
     /// </summary>
@@ -170,7 +169,7 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
         _periodNumber = GetPeriodNumber(dateTime);
         // use that for the starting suffix
         string suffix = PeriodString(_periodNumber) + _fileExtension;
-        return _filePrefix + suffix;
+        return FilePrefix + suffix;
     }
     /// <summary>
     /// Attempts to delete all log files using the specified file prefix.

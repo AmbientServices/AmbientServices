@@ -48,15 +48,14 @@ internal class BasicAmbientServiceProfiler : IAmbientServiceProfiler
 /// </summary>
 internal struct CallContextActiveSystemData
 {
-    private readonly string _group;
     /// <summary>
     /// The currently-active system or system group identifier.
     /// </summary>
-    public string Group => string.IsNullOrEmpty(_group) ? "" : _group;
+    public string Group => string.IsNullOrEmpty(RawGroup) ? "" : RawGroup;
     /// <summary>
     /// The currently-active system or system group identifier (null if this struct is default).
     /// </summary>
-    internal string RawGroup => _group;
+    internal string RawGroup { get; }
     /// <summary>
     /// The stopwatch timestamp when this system or group became active.
     /// Based on <see cref="AmbientClock.Ticks"/>.
@@ -69,7 +68,7 @@ internal struct CallContextActiveSystemData
     /// <param name="system">The identifier for the active system (or system group).</param>
     public CallContextActiveSystemData(string? system)
     {
-        _group = system ?? "";
+        RawGroup = system ?? "";
         StartStopwatchTimestamp = AmbientClock.Ticks;
     }
     /// <summary>
@@ -79,7 +78,7 @@ internal struct CallContextActiveSystemData
     /// <param name="startStopwatchTimestamp">The start timestamp, which presumably originated from a previous get of <see cref="AmbientClock.Ticks"/>.</param>
     public CallContextActiveSystemData(string? system, long startStopwatchTimestamp)
     {
-        _group = system ?? "";
+        RawGroup = system ?? "";
         StartStopwatchTimestamp = startStopwatchTimestamp;
     }
 }
@@ -90,21 +89,20 @@ internal struct CallContextActiveSystemData
 internal class ProcessOrSingleTimeWindowServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
 {
     private readonly IAmbientServiceProfiler _profiler;
-    private readonly string _scopeName;
     private readonly Regex? _systemToGroupTransform;
     private readonly AsyncLocal<object> _callContextKey;
     private readonly ConcurrentDictionary<string, AmbientServiceProfilerAccumulator> _accumulatorsByGroup;
     private readonly ConcurrentDictionary<object, CallContextActiveSystemData> _activeGroupByCallContext;
     private bool _disposedValue;
 
-    public string ScopeName => _scopeName;
+    public string ScopeName { get; }
 
     public IEnumerable<AmbientServiceProfilerAccumulator> ProfilerStatistics => _accumulatorsByGroup.Values;
 
     public ProcessOrSingleTimeWindowServiceProfiler(IAmbientServiceProfiler metrics, string scopeName, Regex? systemGroupTransform)
     {
         _profiler = metrics;
-        _scopeName = scopeName;
+        ScopeName = scopeName;
         _systemToGroupTransform = systemGroupTransform;
         _accumulatorsByGroup = new ConcurrentDictionary<string, AmbientServiceProfilerAccumulator>();
         _activeGroupByCallContext = new ConcurrentDictionary<object, CallContextActiveSystemData>();
@@ -246,13 +244,12 @@ internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServ
 {
     private readonly ScopeOnSystemSwitchedDistributor _distributor;
     private readonly Regex? _systemGroupTransform;
-    private readonly string _scopeName;
     private readonly Dictionary<string, ValueTuple<long, long>> _stopwatchTicksUsedByGroup;
     private string _currentGroup;
     private long _currentGroupStartStopwatchTicks;
     private bool _disposedValue;
 
-    public string ScopeName => _scopeName;
+    public string ScopeName { get; }
 
     public IEnumerable<AmbientServiceProfilerAccumulator> ProfilerStatistics
     {
@@ -288,7 +285,7 @@ internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServ
     {
         _distributor = distributor;
         _systemGroupTransform = systemGroupTransform;
-        _scopeName = scopeName;
+        ScopeName = scopeName;
         _stopwatchTicksUsedByGroup = new Dictionary<string, (long, long)>();
         _currentGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, startSystem);
         _currentGroupStartStopwatchTicks = AmbientClock.Ticks;

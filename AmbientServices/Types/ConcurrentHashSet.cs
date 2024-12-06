@@ -13,7 +13,6 @@ public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, 
 #pragma warning restore CA1710
     where T : notnull // ConcurrentDictionary<,> requires this
 {
-    private readonly IEqualityComparer<T> _comparer;
     private readonly ConcurrentDictionary<T, byte> _dict;
     /// <summary>
     /// Constructs an empty ConcurrentHashSet.
@@ -37,7 +36,7 @@ public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, 
     public ConcurrentHashSet(IEqualityComparer<T> comparer)
     {
         _dict = new ConcurrentDictionary<T, byte>(comparer);
-        _comparer = comparer;
+        Comparer = comparer;
     }
     /// <summary>
     /// Constructs a ConcurrentHashSet with the specified item comparer and the specified items in it.
@@ -47,7 +46,7 @@ public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, 
     public ConcurrentHashSet(IEnumerable<T> collection, IEqualityComparer<T> comparer)
     {
         _dict = new ConcurrentDictionary<T, byte>(collection.Select(a => new KeyValuePair<T, byte>(a, 0)), comparer);
-        _comparer = comparer;
+        Comparer = comparer;
     }
     //protected ConcurrentHashSet(SerializationInfo info, StreamingScope scope)
     //{
@@ -55,7 +54,7 @@ public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, 
     /// <summary>
     /// Gets the item comparer used for this set.
     /// </summary>
-    public IEqualityComparer<T> Comparer => _comparer;
+    public IEqualityComparer<T> Comparer { get; }
     /// <summary>
     /// Gets the number of items currently in this set.
     /// </summary>

@@ -83,23 +83,21 @@ namespace AmbientServices
     public sealed class AmbientBottleneckAccessor : IComparable<AmbientBottleneckAccessor>, IDisposable
     {
         private readonly BasicAmbientBottleneckDetector _owner;
-        private readonly AmbientBottleneck _bottleneck;
-        private readonly long _accessBeginStopwatchTimestamp;
         private long _accessEndStopwatchTimestamp;  // interlocked, long.MaxValue until the access finishes
         private long _accessCount;                  // interlocked, zero until the access finishes
         private double _limitUsed;                  // interlocked, zero until set by Dispose, SetUsage or AddUsage
         private double _utilization;                // interlocked, zero until set by Dispose, SetUsage or AddUsage
 
-        internal long AccessBeginStopwatchTimestamp => _accessBeginStopwatchTimestamp;
+        internal long AccessBeginStopwatchTimestamp { get; }
         internal long AccessEndStopwatchTimestamp => _accessEndStopwatchTimestamp;
         /// <summary>
         /// Gets the <see cref="AmbientBottleneck"/> for the bottleneck.
         /// </summary>
-        public AmbientBottleneck Bottleneck => _bottleneck;
+        public AmbientBottleneck Bottleneck { get; }
         /// <summary>
         /// Gets the beginning of the time range for the access.
         /// </summary>
-        public DateTime AccessBegin => new(TimeSpanUtilities.StopwatchTimestampToDateTime(_accessBeginStopwatchTimestamp));
+        public DateTime AccessBegin => new(TimeSpanUtilities.StopwatchTimestampToDateTime(AccessBeginStopwatchTimestamp));
         /// <summary>
         /// Gets the end of the time range for the access, if the access is finished.
         /// </summary>
@@ -123,7 +121,7 @@ namespace AmbientServices
         /// <summary>
         /// Gets number of stopwatch ticks between the beginning and end of the access.
         /// </summary>
-        public long AccessDurationStopwatchTicks => ((_accessEndStopwatchTimestamp >= long.MaxValue) ? AmbientClock.Ticks : _accessEndStopwatchTimestamp) - _accessBeginStopwatchTimestamp;
+        public long AccessDurationStopwatchTicks => ((_accessEndStopwatchTimestamp >= long.MaxValue) ? AmbientClock.Ticks : _accessEndStopwatchTimestamp) - AccessBeginStopwatchTimestamp;
 
         /// <summary>
         /// Constructs a single-access AmbientBottleneckAccessRecord for the specified bottleneck with access starting at the specified timestamp.
@@ -131,8 +129,8 @@ namespace AmbientServices
         internal AmbientBottleneckAccessor(BasicAmbientBottleneckDetector owner, AmbientBottleneck bottleneck, long accessBeginStopwatchTimestamp)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            _bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
-            _accessBeginStopwatchTimestamp = accessBeginStopwatchTimestamp;
+            Bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
+            AccessBeginStopwatchTimestamp = accessBeginStopwatchTimestamp;
             _accessEndStopwatchTimestamp = long.MaxValue;
         }
         /// <summary>
@@ -141,8 +139,8 @@ namespace AmbientServices
         internal AmbientBottleneckAccessor(BasicAmbientBottleneckDetector owner, AmbientBottleneck bottleneck, long accessBeginStopwatchTimestamp, long accessEndStopwatchTimestamp, long accessCount, double limitUsed)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            _bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
-            _accessBeginStopwatchTimestamp = accessBeginStopwatchTimestamp;
+            Bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
+            AccessBeginStopwatchTimestamp = accessBeginStopwatchTimestamp;
             _accessEndStopwatchTimestamp = accessEndStopwatchTimestamp;
             _accessCount = accessCount;
             _limitUsed = limitUsed;
@@ -157,8 +155,8 @@ namespace AmbientServices
         internal AmbientBottleneckAccessor(BasicAmbientBottleneckDetector owner, AmbientBottleneck bottleneck, DateTime accessBegin)
         {
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-            _bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
-            _accessBeginStopwatchTimestamp = TimeSpanUtilities.DateTimeToStopwatchTimestamp(accessBegin.Ticks);
+            Bottleneck = bottleneck ?? throw new ArgumentNullException(nameof(bottleneck));
+            AccessBeginStopwatchTimestamp = TimeSpanUtilities.DateTimeToStopwatchTimestamp(accessBegin.Ticks);
             _accessEndStopwatchTimestamp = long.MaxValue;
         }
 
@@ -169,7 +167,7 @@ namespace AmbientServices
         /// <param name="limitUsed">The amount towards the associated limit that has been used.</param>
         public void SetUsage(long accessCount, double limitUsed)
         {
-            if (_bottleneck.Automatic) throw new InvalidOperationException("SetUsage cannot be used on Automatic bottlenecks!");
+            if (Bottleneck.Automatic) throw new InvalidOperationException("SetUsage cannot be used on Automatic bottlenecks!");
             System.Threading.Interlocked.Exchange(ref _accessCount, accessCount);
             System.Threading.Interlocked.Exchange(ref _limitUsed, limitUsed);
             UpdateUtilization();
@@ -182,7 +180,7 @@ namespace AmbientServices
         /// <param name="additionalLimitUsed">The additional amount towards the associated limit that has been used.</param>
         public void AddUsage(long additionalAccessCount, double additionalLimitUsed)
         {
-            if (_bottleneck.Automatic) throw new InvalidOperationException("SetUsage cannot be used on Automatic bottlenecks!");
+            if (Bottleneck.Automatic) throw new InvalidOperationException("SetUsage cannot be used on Automatic bottlenecks!");
             System.Threading.Interlocked.Add(ref _accessCount, additionalAccessCount);
             InterlockedUtilities.TryOptomisticAdd(ref _limitUsed, additionalLimitUsed);
             UpdateUtilization();
@@ -190,7 +188,7 @@ namespace AmbientServices
 
         private void UpdateUtilization()
         {
-            System.Threading.Interlocked.Exchange(ref _utilization, ComputeUtilization(_bottleneck.UtilizationAlgorithm, _accessEndStopwatchTimestamp - _accessBeginStopwatchTimestamp, _limitUsed, _bottleneck.Limit, _bottleneck.LimitPeriod));
+            System.Threading.Interlocked.Exchange(ref _utilization, ComputeUtilization(Bottleneck.UtilizationAlgorithm, _accessEndStopwatchTimestamp - AccessBeginStopwatchTimestamp, _limitUsed, Bottleneck.Limit, Bottleneck.LimitPeriod));
         }
 
         private static double ComputeUtilization(AmbientBottleneckUtilizationAlgorithm limitType, long totalStopwatchTicks, double limitUsed, double? limit, TimeSpan? limitPeriod)
@@ -212,10 +210,10 @@ namespace AmbientServices
         public void Dispose()
         {
             System.Threading.Interlocked.Exchange(ref _accessEndStopwatchTimestamp, AmbientClock.Ticks);
-            if (_bottleneck.Automatic && _accessCount == 0)
+            if (Bottleneck.Automatic && _accessCount == 0)
             {
                 System.Threading.Interlocked.Exchange(ref _accessCount, 1);
-                System.Threading.Interlocked.Exchange(ref _limitUsed, _accessEndStopwatchTimestamp - _accessBeginStopwatchTimestamp);
+                System.Threading.Interlocked.Exchange(ref _limitUsed, _accessEndStopwatchTimestamp - AccessBeginStopwatchTimestamp);
             }
             UpdateUtilization();
             _owner.LeaveBottleneck(this);
@@ -226,11 +224,11 @@ namespace AmbientServices
         {
             long accessCount;
             double limitUsedSoFar;
-            if (_bottleneck.Automatic)
+            if (Bottleneck.Automatic)
             {
                 accessCount = _accessCount;
                 limitUsedSoFar = ((_accessEndStopwatchTimestamp >= long.MaxValue) ? splitStopwatchTicks : _accessEndStopwatchTimestamp)
-                    - _accessBeginStopwatchTimestamp - windowStartLimitUsage;
+                    - AccessBeginStopwatchTimestamp - windowStartLimitUsage;
             }
             else
             {
@@ -238,31 +236,31 @@ namespace AmbientServices
                 limitUsedSoFar = _limitUsed - windowStartLimitUsage;
             }
             // the old part will be the usage that has occurred since the last window started and will be clipped to the old window
-            AmbientBottleneckAccessor oldPart = new( _owner, _bottleneck, 
-                Math.Max(_accessBeginStopwatchTimestamp, oldWindowBeginStopwatchTicks), splitStopwatchTicks,
+            AmbientBottleneckAccessor oldPart = new( _owner, Bottleneck, 
+                Math.Max(AccessBeginStopwatchTimestamp, oldWindowBeginStopwatchTicks), splitStopwatchTicks,
                 accessCount, limitUsedSoFar);
             // is this entry *not* still open?  // the entry is *not* still open, but it could have span multiple windows earlier, so while we're not going to copy it forward to this window, we are going to adjust values to represent usage within that window
             if (_accessEndStopwatchTimestamp < long.MaxValue) return (oldPart, null);
             // else the new part will exist, and it will use the fork time as the start
-            AmbientBottleneckAccessor newPart = new(_owner, _bottleneck, splitStopwatchTicks, splitStopwatchTicks, 0, 0);
+            AmbientBottleneckAccessor newPart = new(_owner, Bottleneck, splitStopwatchTicks, splitStopwatchTicks, 0, 0);
             return (oldPart, newPart);
         }
         internal AmbientBottleneckAccessor Combine(AmbientBottleneckAccessor that)
         {
-            if (_bottleneck != that._bottleneck) throw new ArgumentException("The bottlenecks must be the same in order to combine!", nameof(that));
-            return Combine(that._accessBeginStopwatchTimestamp, that._accessEndStopwatchTimestamp, that._accessCount, that._limitUsed);
+            if (Bottleneck != that.Bottleneck) throw new ArgumentException("The bottlenecks must be the same in order to combine!", nameof(that));
+            return Combine(that.AccessBeginStopwatchTimestamp, that._accessEndStopwatchTimestamp, that._accessCount, that._limitUsed);
         }
         internal AmbientBottleneckAccessor Combine(long accessBeginTicks, long accessEndTicks, long accessCount, double limitUsed)
         {
-            long beginTicks = Math.Min(_accessBeginStopwatchTimestamp, accessBeginTicks);
+            long beginTicks = Math.Min(AccessBeginStopwatchTimestamp, accessBeginTicks);
             long endTicks = Math.Max(_accessEndStopwatchTimestamp, accessEndTicks);
             double sumLimitUsed = _limitUsed + limitUsed;
             // if the access hasn't finished, compute everthing as if it finished right now
             long totalStopwatchTicks = (endTicks >= long.MaxValue) ? (AmbientClock.Ticks - beginTicks) : (endTicks - beginTicks);
             if (totalStopwatchTicks == 0) totalStopwatchTicks = 1;    // make sure total ticks is not zero to avoid a divide by zero exception (note that we allow negative values--they shouldn't be possible for time, but we have a test case that at least makes sure they don't crash)
             double limitProportionUsed = // if the usage is equal to the limit and the range is equal to the period, 1.0 should be the result
-                ComputeUtilization(_bottleneck.UtilizationAlgorithm, totalStopwatchTicks, sumLimitUsed, _bottleneck.Limit, _bottleneck.LimitPeriod);
-            return new AmbientBottleneckAccessor(_owner, _bottleneck, beginTicks)
+                ComputeUtilization(Bottleneck.UtilizationAlgorithm, totalStopwatchTicks, sumLimitUsed, Bottleneck.Limit, Bottleneck.LimitPeriod);
+            return new AmbientBottleneckAccessor(_owner, Bottleneck, beginTicks)
             {
                 _accessEndStopwatchTimestamp = endTicks,
                 _accessCount = accessCount,
@@ -294,7 +292,7 @@ namespace AmbientServices
         {
             if (ReferenceEquals(this, obj)) return true;
             if (obj is not AmbientBottleneckAccessor that) return false;
-            return _bottleneck.Equals(that._bottleneck) && _accessBeginStopwatchTimestamp.Equals(that._accessBeginStopwatchTimestamp) && _accessEndStopwatchTimestamp.Equals(that._accessEndStopwatchTimestamp);
+            return Bottleneck.Equals(that.Bottleneck) && AccessBeginStopwatchTimestamp.Equals(that.AccessBeginStopwatchTimestamp) && _accessEndStopwatchTimestamp.Equals(that._accessEndStopwatchTimestamp);
         }
         /// <summary>
         /// Gets a 32-bit hash code for the value of this object.
@@ -302,7 +300,7 @@ namespace AmbientServices
         /// <returns>A 32-bit hash code for the value of this object.</returns>
         public override int GetHashCode()
         {
-            return _bottleneck.GetHashCode() ^ _accessBeginStopwatchTimestamp.GetHashCode() ^ _accessEndStopwatchTimestamp.GetHashCode();
+            return Bottleneck.GetHashCode() ^ AccessBeginStopwatchTimestamp.GetHashCode() ^ _accessEndStopwatchTimestamp.GetHashCode();
         }
 
         /// <summary>

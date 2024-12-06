@@ -97,7 +97,7 @@ public class DotNetDocumentation
     /// Gets an enumeration of the public <see cref="Type"/>s in the corresponding assembly, which should be documented.
     /// </summary>
     public IEnumerable<Type> PublicTypes => _types;
-    private static string BuildParameterList(ParameterInfo[] parameters)
+    private static string BuildDisambiguatingParameterList(ParameterInfo[] parameters)
     {
         // when there are NO parameters, we output empty string (not "()")
         if (parameters == null || parameters.Length == 0)
@@ -109,6 +109,7 @@ public class DotNetDocumentation
         // loop through all the parameters
         for (int i = 0; i < parameters.Length; i++)
         {
+            if (i > 0) ret.Append(", ");
             var parameter = parameters[i];
             if (parameter.ParameterType.IsGenericParameter)
             {
@@ -116,12 +117,12 @@ public class DotNetDocumentation
             }
             else
             {
-                ret.Append(GetDocumentationTypeName(parameter.ParameterType));
+                ret.Append(parameter.ParameterType.FullName);
             }
-            ret.Append(',');
         }
-        // replace the last comma with a )
-        ret.Replace(',', ')', ret.Length - 1, 1).Replace('&', '@');
+        // replace & with @
+        ret.Replace('&', '@');
+        ret.Append(')');
         // return the string we built
         return ret.ToString();
     }
@@ -134,7 +135,7 @@ public class DotNetDocumentation
     private XPathNavigator? MethodDocumentation(MethodInfo method)
     {
         if (method.DeclaringType?.FullName == null) return null;
-        string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Method}:{method.DeclaringType.FullName.Replace('+', '.') + "." + method.Name}{BuildParameterList(method.GetParameters())}\"]";
+        string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Method}:{method.DeclaringType.FullName.Replace('+', '.') + "." + method.Name}{BuildDisambiguatingParameterList(method.GetParameters())}\"]";
         return _documentRoot.SelectSingleNode(nodePath);
     }
     private XPathNavigator? PropertyDocumentation(PropertyInfo property)
@@ -261,37 +262,6 @@ public class DotNetDocumentation
         XPathNavigator? nav = TypeDocumentation(type);
         if (type.FullName == null || nav == null) return null;
         return new TypeDocumentation(GetHumanReadableTypeName(type), GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
-    }
-
-    private static string GetDocumentationTypeName(Type type)
-    {
-        if (type.IsArray)
-        {
-            return $"{GetDocumentationTypeName(type.GetElementType())}[]";
-        }
-        if (type.IsGenericType)
-        {
-            var genericTypeName = type.GetGenericTypeDefinition().FullName;
-            var backtickIndex = genericTypeName.IndexOf('`');
-            if (backtickIndex >= 0)
-            {
-                genericTypeName = genericTypeName.Substring(0, backtickIndex);
-            }
-            var genericArgs = string.Join(",", type.GetGenericArguments().Select(GetDocumentationTypeName));
-            return $"{genericTypeName}{{{genericArgs}}}";
-        }
-        if (type.IsGenericParameter)
-        {
-            return type.FullName;
-        }
-        if (type.DeclaringType != null && type.FullName.Contains('<'))
-        {
-            // Handle compiler-generated types (e.g., async state machines)
-            var declaringTypeName = GetDocumentationTypeName(type.DeclaringType);
-            var simpleName = type.FullName.Split('<')[0];
-            return $"{declaringTypeName}.{simpleName}";
-        }
-        return type.FullName;
     }
 
     private static string GetHumanReadableTypeName(Type type)
@@ -847,19 +817,18 @@ public class MemberDocumentation
 [AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class)]
 public sealed class ProxyTypeAttribute : Attribute
 {
-    private readonly Type _type;
     /// <summary>
     /// Constructs a JSON proxy type attribute which overrides one type with another when documenting APIs, to compensate for custom JSON serializers.
     /// </summary>
     /// <param name="type">The <see cref="Type"/> to replace the type this attribute is applied to with.</param>
     public ProxyTypeAttribute(Type type)
     {
-        _type = type;
+        Type = type;
     }
     /// <summary>
     /// Gets the <see cref="Type"/> to replace the annotated type with when documenting APIs.
     /// </summary>
-    public Type Type => _type;
+    public Type Type { get; }
 }
 
 /// <summary>

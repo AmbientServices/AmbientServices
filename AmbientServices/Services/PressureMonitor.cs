@@ -78,12 +78,11 @@ public class PressureMonitor : IDisposable
     private const long MinRawValue = 0;
     private const long MaxRawValue = (long)(1.00f * FixedFloatingPointAdjustment);
     private const long NeutralRawValue = (long)(0.89f * FixedFloatingPointAdjustment);
-    private static readonly PressureMonitor _Default = new();
 
     /// <summary>
     /// Gets the default system pressure monitor.
     /// </summary>
-    public static PressureMonitor Default => _Default;
+    public static PressureMonitor Default { get; } = new();
 
     private readonly AmbientCallbackTimer _timer;
     private readonly IAmbientStatistic? _internalPressureStat = AmbientStatistics.Local?.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(PressureMonitor) + "-Internal", "Internal Pressure", "The pressure level for internal attributes of this system", false, NeutralRawValue, MinRawValue, MaxRawValue, "p", FixedFloatingPointAdjustment, AggregationTypes.Average | AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, AggregationTypes.Average | AggregationTypes.Sum | AggregationTypes.Min | AggregationTypes.Max);

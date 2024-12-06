@@ -439,18 +439,17 @@ class BufferPool
 
     class SizedBufferRecycler
     {
-        private readonly int _bufferBytes;
         private readonly ConcurrentBag<byte[]> _bag;
 
         public SizedBufferRecycler(int bufferBytes)
         {
-            _bufferBytes = bufferBytes;
+            BufferBytes = bufferBytes;
             _bag = new ConcurrentBag<byte[]>();
         }
-        public int BufferBytes => _bufferBytes;
+        public int BufferBytes { get; }
         public byte[] GetBuffer(int bytes)
         {
-            if (bytes < _bufferBytes)
+            if (bytes < BufferBytes)
             {
                 byte[]? buffer;
                 if (_bag.TryTake(out buffer))
@@ -458,11 +457,11 @@ class BufferPool
                     return buffer;
                 }
             }
-            return new byte[Math.Max(bytes, _bufferBytes)];
+            return new byte[Math.Max(bytes, BufferBytes)];
         }
         public void Recycle(byte[] buffer)
         {
-            if (buffer.Length == _bufferBytes && _bag.Count * _bufferBytes < MaxTotalBufferBytes.Value)
+            if (buffer.Length == BufferBytes && _bag.Count * BufferBytes < MaxTotalBufferBytes.Value)
             {
                 _bag.Add(buffer);
             }
@@ -718,13 +717,6 @@ public class RequestType
 {
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();
 
-    private readonly IAmbientStatistic? _pendingRequests;
-    private readonly IAmbientStatistic? _totalRequests;
-    private readonly IAmbientStatistic? _totalProcessingTime;
-    private readonly IAmbientStatistic? _retries;
-    private readonly IAmbientStatistic? _failures;
-    private readonly IAmbientStatistic? _timeouts;
-
     /// <summary>
     /// Constructs a RequestType with the specified type name.
     /// </summary>
@@ -732,12 +724,12 @@ public class RequestType
     public RequestType(string typeName)
     {
         IAmbientStatistics? ambientStatistics = AmbientStatistics.Local;
-        _pendingRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Raw, typeName + "-RequestsPending", "Pending Requests", "The number of requests currently executing", false, 0, null, null, "", 1.0);
-        _totalRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-TotalRequests", "Total Requests", "The total number of requests that have finished executing", false, 0, null, null, "", 1.0);
-        _totalProcessingTime = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-TotalProcessingTime", "Total Processing Time", "The total time spent processing requests (only includes completed requests)", false, 0, null, null, "seconds", Stopwatch.Frequency);
-        _retries = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Retries", "Retries", "The total number of retries", false, 0, null, null, "", 1.0);
-        _failures = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Failures", "Failures", "The total number of failures", false, 0, null, null, "", 1.0);
-        _timeouts = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Timeouts", "Timeouts", "The total number of timeouts", false, 0, null, null, "", 1.0);
+        PendingRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Raw, typeName + "-RequestsPending", "Pending Requests", "The number of requests currently executing", false, 0, null, null, "", 1.0);
+        TotalRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-TotalRequests", "Total Requests", "The total number of requests that have finished executing", false, 0, null, null, "", 1.0);
+        TotalProcessingTime = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-TotalProcessingTime", "Total Processing Time", "The total time spent processing requests (only includes completed requests)", false, 0, null, null, "seconds", Stopwatch.Frequency);
+        Retries = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Retries", "Retries", "The total number of retries", false, 0, null, null, "", 1.0);
+        Failures = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Failures", "Failures", "The total number of failures", false, 0, null, null, "", 1.0);
+        Timeouts = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Timeouts", "Timeouts", "The total number of timeouts", false, 0, null, null, "", 1.0);
     }
     /// <summary>
     /// Tracks a request by creating a <see cref="RequestTracker"/> which automatically counts the request and times its duration and allows the caller to report failures, timeouts, and retries.
@@ -750,27 +742,27 @@ public class RequestType
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the number of pending requests.
     /// </summary>
-    public IAmbientStatistic? PendingRequests => _pendingRequests;
+    public IAmbientStatistic? PendingRequests { get; }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of requests.
     /// </summary>
-    public IAmbientStatistic? TotalRequests => _totalRequests;
+    public IAmbientStatistic? TotalRequests { get; }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total processing time.
     /// </summary>
-    public IAmbientStatistic? TotalProcessingTime => _totalProcessingTime;
+    public IAmbientStatistic? TotalProcessingTime { get; }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of retries.
     /// </summary>
-    public IAmbientStatistic? Retries => _retries;
+    public IAmbientStatistic? Retries { get; }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of failures.
     /// </summary>
-    public IAmbientStatistic? Failures => _failures;
+    public IAmbientStatistic? Failures { get; }
     /// <summary>
     /// Gets the <see cref="IAmbientStatistic"/> that tracks the total number of timeouts.
     /// </summary>
-    public IAmbientStatistic? Timeouts => _timeouts;
+    public IAmbientStatistic? Timeouts { get; }
 }
 /// <summary>
 /// A request tracking object.

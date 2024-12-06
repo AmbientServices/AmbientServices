@@ -636,13 +636,11 @@ public class AmbientLogger<TOWNER> : AmbientLogger
 }
 internal class AmbientLogFilter
 {
-    private static readonly AmbientLogFilter _Default = new("Default");
     /// <summary>
     /// Gets the default log filter.
     /// </summary>
-    public static AmbientLogFilter Default => _Default;
+    public static AmbientLogFilter Default { get; } = new("Default");
 
-    private readonly string _name;
     private readonly IAmbientSetting<AmbientLogLevel> _logLevelSetting;
     private readonly IAmbientSetting<Regex?> _typeAllowSetting;
     private readonly IAmbientSetting<Regex?> _typeBlockSetting;
@@ -655,14 +653,14 @@ internal class AmbientLogFilter
     }
     internal AmbientLogFilter(string name, IAmbientSettingsSet? settingsSet)
     {
-        _name = name;
+        Name = name;
         _logLevelSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-LogLevel", "The AmbientLogLevel above which events should not be logged.  The default value is AmbientLogLevel.Information.", AmbientLogLevel.Information, s => (AmbientLogLevel)Enum.Parse(typeof(AmbientLogLevel), s));
         _typeAllowSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-TypeAllow", "A regular expression indicating which logger owner types should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all types.", null, s => new Regex(s, RegexOptions.Compiled));
         _typeBlockSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-TypeBlock", "A regular expression indicating which logger owner types should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no types.", null, s => new Regex(s, RegexOptions.Compiled));
         _categoryAllowSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", "A regular expression indicating which categories should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all categories.", null, s => new Regex(s, RegexOptions.Compiled));
         _categoryBlockSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryBlock", "A regular expression indicating which categories should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no categories.", null, s => new Regex(s, RegexOptions.Compiled));
     }
-    internal string Name => _name;
+    internal string Name { get; }
     internal AmbientLogLevel LogLevel => _logLevelSetting.Value;
 
     internal bool IsTypeBlocked(string typeName)

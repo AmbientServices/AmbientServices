@@ -150,11 +150,10 @@ public interface IAmbientSettingInfo
 /// </summary>
 public class SettingsRegistry
 {
-    private static readonly SettingsRegistry _DefaultRegistry = new();
     /// <summary>
     /// Gets the default registry.
     /// </summary>
-    public static SettingsRegistry DefaultRegistry => _DefaultRegistry;
+    public static SettingsRegistry DefaultRegistry { get; } = new();
 
 
     private readonly ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new();
@@ -270,11 +269,10 @@ internal class SettingsSetSettingValue<T>
 /// </summary>
 public class DefaultSettingsSet : IAmbientSettingsSet
 {
-    private static readonly DefaultSettingsSet _Instance = new();
     /// <summary>
     /// Gets the singleton instance of <see cref="DefaultSettingsSet"/>.
     /// </summary>
-    public static DefaultSettingsSet Instance => _Instance;
+    public static DefaultSettingsSet Instance { get; } = new();
 
     private DefaultSettingsSet()
     {
@@ -306,11 +304,6 @@ public class DefaultSettingsSet : IAmbientSettingsSet
 internal class SettingInfo<T> : IAmbientSettingInfo 
 {
     protected static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
-
-    private readonly string _key;
-    private readonly string _description;
-    private readonly string _defaultValueString;
-    private readonly T _defaultValue;
     private readonly Func<string, T> _convert;
     private long _lastUsedTicks = DateTime.MinValue.Ticks;       // interlocked
     private SettingsSetSettingValue<T>? _globalSetAndValue;      // interlocked
@@ -322,11 +315,11 @@ internal class SettingInfo<T> : IAmbientSettingInfo
             if (typeof(T) != typeof(string)) throw new ArgumentNullException(nameof(convert));
             convert = s => ((T)(object)s)!; // this should be okay because we've just tested the type above and we only get here it T is string and since the input to convert is non-null, the output will be too!
         }
-        _key = key;
-        _description = description;
+        Key = key;
+        Description = description;
         _convert = convert;
-        _defaultValue = defaultValue;
-        _defaultValueString = defaultValue?.ToString() ?? "";
+        DefaultValue = defaultValue;
+        DefaultValueString = defaultValue?.ToString() ?? "";
         SettingsRegistry.DefaultRegistry.Register(this);
     }
 
@@ -337,22 +330,22 @@ internal class SettingInfo<T> : IAmbientSettingInfo
             if (typeof(T) != typeof(string)) throw new ArgumentNullException(nameof(convert));
             convert = s => (T)(object)s;
         }
-        _key = key;
-        _description = description;
+        Key = key;
+        Description = description;
         _convert = convert;
-        _defaultValueString = defaultValue;
-        _defaultValue = convert(defaultValue);
+        DefaultValueString = defaultValue;
+        DefaultValue = convert(defaultValue);
         SettingsRegistry.DefaultRegistry.Register(this);
     }
 
     /// <summary>
     /// Gets the setting key.
     /// </summary>
-    public string Key => _key;
+    public string Key { get; }
     /// <summary>
     /// Gets a description of the setting.
     /// </summary>
-    public string Description => _description;
+    public string Description { get; }
     /// <summary>
     /// Gets the last time the setting's value was retrieved.
     /// </summary>
@@ -360,15 +353,15 @@ internal class SettingInfo<T> : IAmbientSettingInfo
     /// <summary>
     /// Gets the default value for the setting.
     /// </summary>
-    public string DefaultValueString => _defaultValueString;
+    public string DefaultValueString { get; }
     /// <summary>
     /// Gets the typed default value.
     /// </summary>
-    public T DefaultValue => _defaultValue;
+    public T DefaultValue { get; }
     /// <summary>
     /// Gets the untyped default value.
     /// </summary>
-    object? IAmbientSettingInfo.DefaultValue => _defaultValue;
+    object? IAmbientSettingInfo.DefaultValue => DefaultValue;
 
     /// <summary>
     /// Converts the specified value for the specified settings set.
@@ -387,7 +380,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
         catch
 #pragma warning restore CA1031 
         {
-            ret = _defaultValue;
+            ret = DefaultValue;
         }
         // is this settings set the one for this setting or is it the global settings set?
         if (settingsSet == _SettingsSet.Global)
@@ -426,7 +419,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
         get
         {
             UpdateLastUsed();
-            return (_globalSetAndValue != null) ? _globalSetAndValue.Value : _defaultValue;
+            return (_globalSetAndValue != null) ? _globalSetAndValue.Value : DefaultValue;
         }
     }
     /// <summary>
@@ -437,7 +430,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
         get
         {
             UpdateLastUsed();
-            return _globalSetAndValue ?? new SettingsSetSettingValue<T>(_defaultValue, DefaultSettingsSet.Instance);
+            return _globalSetAndValue ?? new SettingsSetSettingValue<T>(DefaultValue, DefaultSettingsSet.Instance);
         }
     }
 }
