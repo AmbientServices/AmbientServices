@@ -282,7 +282,7 @@ namespace AmbientServices
         private static T CreateInstance()
         {
             ConstructorInfo ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)
-                ?? throw new InvalidOperationException("Classes with [DefaultAmbientService] attributes applied type must have a default constructor!");
+                ?? throw new InvalidOperationException($"Classes with [DefaultAmbientService] attributes applied type must have a default constructor.  {typeof(T).Name} does not have a default constructor!");
             return (T)ci.Invoke(Array.Empty<object>());
         }
         public static T GetImplementation() { return _ImplementationSingleton; }

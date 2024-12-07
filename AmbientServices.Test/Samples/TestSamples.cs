@@ -239,7 +239,7 @@ namespace AmbientServices.Test.Samples
     {
         private static readonly AmbientService<IAmbientCallStack> _AmbientCallStack = Ambient.GetService<IAmbientCallStack>();
 
-        private static readonly IAmbientCallStack _CallStack = _AmbientCallStack.Global;
+        private static readonly IAmbientCallStack _CallStack = _AmbientCallStack.Global ?? new BasicAmbientCallStack();    // it's rare but sometimes this seems to return null at the moment, so I'm adding in the fallback here
         public static void OuterFunc()
         {
 //            BasicAmbientCallStack test = new();   // note that this didn't seem to have any effect on the occasional issue below

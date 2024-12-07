@@ -78,7 +78,7 @@ namespace AmbientServices.Test
             _Test.GlobalChanged -= globalChanged;
         }
         [TestMethod]
-        public void NonInterfaceType()
+        public void NonInterfaceTypeAndNoDefaultConstructor()
         {
             Exception? ex = null;
             void EventHandler(object? sender, InitializationErrorEventArgs e)
@@ -90,6 +90,20 @@ namespace AmbientServices.Test
             {
                 AmbientService<DefaultTest> defaultTest = Ambient.GetService<DefaultTest>();
                 Assert.IsInstanceOfType(ex, typeof(ArgumentException), ex?.ToString() ?? "Exception is null!");
+            }
+            finally
+            {
+                Ambient.InitializationError -= EventHandler;
+            }
+
+            // JRI: Note that this was previously a separate test, but since the InitializationError event is static,
+            // when both tests ran at the same time, the errors occasionally got switched.
+            // Running them serially solves that problem.
+            Ambient.InitializationError += EventHandler;
+            try
+            {
+                Ambient.GetService<INoDefaultConstructor>();
+                Assert.IsInstanceOfType(ex, typeof(TargetInvocationException));
             }
             finally
             {
@@ -171,25 +185,6 @@ namespace AmbientServices.Test
             Assert.IsInstanceOfType(_LocalTest.Global, typeof(LocalTest3));
             Assert.IsInstanceOfType(_LocalTest.Local, typeof(LocalTest3));
             Assert.AreEqual(_LocalTest.Global, _LocalTest.Local);
-        }
-        [TestMethod]
-        public void NoDefaultConstructor()
-        {
-            Exception? ex = null;
-            void EventHandler(object? sender, InitializationErrorEventArgs e)
-            {
-                ex = e.Exception;
-            }
-            Ambient.InitializationError += EventHandler;
-            try
-            {
-                Ambient.GetService<INoDefaultConstructor>();
-                Assert.IsInstanceOfType(ex, typeof(TargetInvocationException));
-            }
-            finally
-            {
-                Ambient.InitializationError -= EventHandler;
-            }
         }
     }
 
