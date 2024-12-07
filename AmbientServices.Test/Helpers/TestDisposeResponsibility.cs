@@ -75,10 +75,11 @@ public class TestDisposeResponsibility
 #pragma warning restore CA2000
 #endif
         }
-        {
 #pragma warning disable CA2000
+        Derived toBeDisposed = new();
+        {
             using (DisposeResponsibility<Derived> owner = new(new Derived())) { }
-            using DisposeResponsibility<Derived> firstOwner = new(new Derived());
+            using DisposeResponsibility<Derived> firstOwner = new(toBeDisposed);
 #pragma warning restore CA2000
 #if DEBUG
             Assert.AreEqual(1, DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum());
@@ -107,12 +108,15 @@ public class TestDisposeResponsibility
             Assert.IsFalse(secondOwner.ContainsDisposable);
             Assert.IsFalse(thirdOwner.ContainsDisposable);
             Assert.IsTrue(fourthOwner.ContainsDisposable);
+
+            Assert.IsFalse(toBeDisposed.Disposed);
         }
+        Assert.IsTrue(toBeDisposed.Disposed);
         {
             using DisposeResponsibility<Derived> disposeResponsibility = Subfunction();
         }
     }
-    private DisposeResponsibility<Derived> Subfunction()
+    private static DisposeResponsibility<Derived> Subfunction()
     {
 #pragma warning disable CA2000
         using DisposeResponsibility<Derived> owner = new(new Derived());
@@ -124,6 +128,7 @@ public class TestDisposeResponsibility
 
 abstract class Base : IDisposable
 {
+    public bool Disposed { get; protected set; }
     abstract public void Dispose();
 }
 
@@ -134,5 +139,6 @@ class Derived : Base
     }
     public override void Dispose()
     {
+        Disposed = true;
     }
 }
