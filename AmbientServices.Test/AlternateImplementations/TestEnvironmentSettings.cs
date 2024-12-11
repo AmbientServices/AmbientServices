@@ -67,7 +67,7 @@ public class TestEnvironmentSettings
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", null);
         AmbientEnvironmentSettingsSet.Instance.Refresh();
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
+        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));      // this one is failing occasionally on the GitHub build machine
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", testString);
         AmbientEnvironmentSettingsSet.Instance.Refresh();
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));

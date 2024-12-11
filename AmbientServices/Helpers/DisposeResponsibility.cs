@@ -58,6 +58,8 @@ internal interface IShirkResponsibility
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
 public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirkResponsibility
 {
+    private static readonly AmbientLogger<DisposeResponsibility<T>> Logger = new();
+
     private string _stackOnCreation;
     private T? _contained;
 
@@ -99,6 +101,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
         string notice = $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.";
         if (System.Diagnostics.Debugger.IsAttached) System.Diagnostics.Trace.Assert(_contained == null, notice);
         else System.Diagnostics.Trace.WriteLine(notice);
+        Logger.Filter(AmbientLogLevel.Warning)?.Log(notice);
     }
 
     /// <summary>
