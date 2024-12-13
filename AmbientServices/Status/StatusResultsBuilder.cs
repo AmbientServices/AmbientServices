@@ -148,22 +148,11 @@ namespace AmbientServices
         {
             get
             {
-
-/* Unmerged change from project 'AmbientServices (netstandard2.0)'
-Before:
-                TimeSpan duration = (_auditDuration == null) ? (AmbientClock.UtcNow - _auditStartTime) : _auditDuration.Value;
-                StatusAuditReport? report = _worstAlert is null ? null : new StatusAuditReport(_auditStartTime, duration, _nextAuditTime, _worstAlert);
-                return (report == null)
-After:
-                TimeSpan duration = (_auditDuration == null) ? (AmbientClock.UtcNow - AuditStartTime) : _auditDuration.Value;
-                StatusAuditReport? report = WorstAlert is null ? null : new StatusAuditReport(AuditStartTime, duration, _nextAuditTime, WorstAlert);
-                return (report == null)
-*/
                 TimeSpan duration = (AuditDuration == null) ? (AmbientClock.UtcNow - AuditStartTime) : AuditDuration.Value;
                 StatusAuditReport? report = WorstAlert is null ? null : new StatusAuditReport(AuditStartTime, duration, NextAuditTime, WorstAlert);
                 return (report == null)
-                    ? new StatusResults(SourceSystem, TargetSystem, AuditStartTime, RelativeDetailLevel, _properties, NatureOfSystem, _children.Select(c => c.FinalResults))
-                    : new StatusResults(SourceSystem, TargetSystem, AuditStartTime, RelativeDetailLevel, _properties, report);
+                    ? new StatusResults(SourceSystem, TargetSystem ?? "", AuditStartTime, RelativeDetailLevel, _properties, NatureOfSystem, _children.Select(c => c.FinalResults))
+                    : new StatusResults(SourceSystem, TargetSystem ?? "", AuditStartTime, RelativeDetailLevel, _properties, report);
             }
         }
         /// <summary>

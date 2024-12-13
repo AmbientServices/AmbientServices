@@ -1,9 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Drawing.Text;
-using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 
 namespace AmbientServices.Test
 {

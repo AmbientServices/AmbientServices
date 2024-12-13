@@ -1,6 +1,7 @@
 ﻿using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
 
@@ -21,7 +22,7 @@ public class TestEnvironmentSettings
     public void EnvironmentSettingInt()
     {
         // use a local override so we don't interfere with other tests
-        AmbientEnvironmentSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        AmbientEnvironmentSettingsSet settingsSet = new();
         using ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settingsSet);
         AmbientSetting<int> setting1 = new(nameof(EnvironmentSettingInt) + "-int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
         Assert.AreEqual(0, setting1.Value);
@@ -45,10 +46,10 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetGetRawValue()
     {
+        AmbientEnvironmentSettingsSet settingsSet = new();
         string testString = nameof(EnvironmentSettingsSetGetRawValue) + Guid.NewGuid().ToString();
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetGetRawValue) + "_testValue", testString);
-        AmbientEnvironmentSettingsSet.Instance.Refresh();
-        AmbientEnvironmentSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        settingsSet.Refresh();
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetGetRawValue) + "-notfound"));
         Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetGetRawValue) + "_testValue"));
     }
@@ -59,17 +60,19 @@ public class TestEnvironmentSettings
     public void EnvironmentSettingsRefresh()
     {
         string testString = nameof(EnvironmentSettingsRefresh) + Guid.NewGuid().ToString();
-        AmbientEnvironmentSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        AmbientEnvironmentSettingsSet settingsSet = new();
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", testString);
-        AmbientEnvironmentSettingsSet.Instance.Refresh();
+        settingsSet.Refresh();
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
         Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", null);
-        AmbientEnvironmentSettingsSet.Instance.Refresh();
+        Assert.IsNull(Environment.GetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue"));
+        settingsSet.Refresh();
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));      // this one is failing occasionally on the GitHub build machine
+// The following line seems to fail frequently with: Assert.AreEqual failed. Expected:<(null)>. Actual:<EnvironmentSettingsRefresh687fdfa2-0d32-46ab-be96-f06af6866048>.
+        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", testString);
-        AmbientEnvironmentSettingsSet.Instance.Refresh();
+        settingsSet.Refresh();
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
         Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
     }
@@ -80,13 +83,13 @@ public class TestEnvironmentSettings
     public void EnvironmentSettingsSetNullToNull()
     {
         string testString = nameof(EnvironmentSettingsSetNullToNull) + Guid.NewGuid().ToString();
-        AmbientEnvironmentSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        AmbientEnvironmentSettingsSet settingsSet = new();
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", testString);
-        AmbientEnvironmentSettingsSet.Instance.Refresh();
+        settingsSet.Refresh();
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "-notfound"));
         Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "_testValue"));
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", null);
-        AmbientEnvironmentSettingsSet.Instance.Refresh();
+        settingsSet.Refresh();
         settingsSet.ChangeSetting(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", null);
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "-notfound"));
         Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "_testValue"));
@@ -97,7 +100,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetSettingChangeNotification()
     {
-        IMutableAmbientSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingChangeNotification);
         string initialValue = "initialValue";
         string notificationNewValue = "";
@@ -114,7 +117,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetSettingChangeNoNotification()
     {
-        IMutableAmbientSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingChangeNoNotification);
         string initialValue = "initialValue";
         SettingsSetSetting<string> testSetting = new(settingsSet, testSettingKey, "", s => s, initialValue);
@@ -129,7 +132,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetSettingNullConvert()
     {
-        IMutableAmbientSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingNullConvert);
         string initialValue = "initialValue";
         string secondValue = "change1";
@@ -138,9 +141,14 @@ public class TestEnvironmentSettings
         settingsSet.ChangeSetting(testSettingKey, secondValue);
         Assert.AreEqual(secondValue, testSetting.Value);
         settingsSet.ChangeSetting(testSettingKey, initialValue);
-        Assert.AreEqual(initialValue, testSetting.Value);
+        Assert.AreEqual(initialValue, settingsSet.GetTypedValue(testSettingKey));// somehow this fails sometimes
+        Assert.IsTrue(true);
+        Assert.IsTrue(true);
+        Assert.IsTrue(true);
+        Assert.AreEqual(initialValue, testSetting.Value);       // somehow this fails even when the above doesn't
         testSetting = new SettingsSetSetting<string>(settingsSet, testSettingKey, "", initialValue, null);
-        Assert.AreEqual(initialValue, testSetting.Value);
+        Assert.AreEqual(initialValue, settingsSet.GetTypedValue(testSettingKey));// somehow this fails sometimes--not sure how this can fail, especially when the same check above succeeded
+        Assert.AreEqual(initialValue, testSetting.Value);       // somehow this fails sometimes
         settingsSet.ChangeSetting(testSettingKey, secondValue);
         Assert.AreEqual(secondValue, testSetting.Value);
         settingsSet.ChangeSetting(testSettingKey, initialValue);
@@ -152,7 +160,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetSettingNonStringNullConvert()
     {
-        IMutableAmbientSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingNonStringNullConvert);
         Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", null, "1"));
         Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", 1, null));
@@ -164,7 +172,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingMisc()
     {
-        IMutableAmbientSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         Assert.IsTrue(settingsSet!.ToString()!.Contains("Environment"));
         Assert.AreEqual("Environment", settingsSet.SetName);
     }
@@ -174,7 +182,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsGarbageCollection()
     {
-        IMutableAmbientSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = Guid.NewGuid().ToString();
         WeakReference<SettingsSetSetting<string>> wr = FinalizableSetting(testSettingKey, settingsSet);
         GC.Collect();   // this should collect the temporary Setting created in the function below
@@ -190,7 +198,7 @@ public class TestEnvironmentSettings
         Assert.AreEqual($"{testSettingKey}-InitialValue", value);
         // change the setting to be sure we are actually hooked into the settings set's notification event
         settingsSet.ChangeSetting(testSettingKey, $"{testSettingKey}-ValueChanged");
-        Assert.AreEqual($"{testSettingKey}-ValueChanged", temporarySetting.Value);
+        Assert.AreEqual($"{testSettingKey}-ValueChanged", temporarySetting.Value);      // this one occasionally fails saying the value is still the initial value
         Assert.IsTrue(valueChanged);
         Assert.AreEqual($"{testSettingKey}-ValueChanged", value);
         return wr;
@@ -201,7 +209,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingLocalValueChangeNotification()
     {
-        AmbientEnvironmentSettingsSet settingsSet = AmbientEnvironmentSettingsSet.Instance;
+        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         using (new ScopedLocalServiceOverride<IMutableAmbientSettingsSet>(settingsSet))
         using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
         {
