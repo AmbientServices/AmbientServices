@@ -1154,6 +1154,67 @@ The default implementation uses thread-safe lock-free instances.
 In order to effectively users must strike a balance between conservative estimates of bottleneck saturation vs. having only inaccurate top bottlenecks in summaries.
 
 
+## DisposeResponsibility
+The `DisposeResponsibility` generic class provides runtime detection of improper use of IDisposable instances.  
+The disposable pattern in C# has one glaring problem: there is often nothing in a function signature to indicate that the return value is disposable.
+In addition, it's syntactically extremely clumsy to return tuples where one or more of the contained items are disposable.
+Wrapping the output from the function in a `DisposeResponsibility` is not only a more visible indicator that the result needs disposal, but it will also notify callers if the instance is not disposed of properly.
+`DisposeResponsibility` will automatically look inside tuples for disposables and dispose any or all of those items as needed.
+For functions that return disposable instances where the caller is expected to dispose of the instance (as would usually be the case), switching to return a `DisposeResponsibility` instance will cause an assertion failure if running under the debugger and a log message and a trace message if not running under the debugger.
+The notification will include the stack trace indicating where the disposable instance was created, so that the developer can determine why the instance wasn't disposed.
+In most cases the disposable instance should be disposed of using a `using` block in the scope where the call is made, but sometimes the instances are returned higher up the stack, or stored inside another object for later disposal.
+`DisposeResponsibility` ensures that responsibility for disposing of the instance is not lost.  
+The responsibility can be transferred to another caller or scope, but won't be lost unintentionally as often is the case without it.
+Someday, it would be nice if C# incorporated this kind of explicit dispose responsibilty tracking and transfer into the language, as it could greatly improve the readability and performance, and could eliminate all numerous false positive code analysis warnings.
+
+### Sample
+[//]: # (DisposeResponsibilitySample)
+```csharp
+/// <summary>
+/// A static class that contains utilities for managing files.
+/// </summary>
+public static class FileManager
+{
+    /// <summary>
+    /// Opens two related files at the same time.
+    /// </summary>
+    /// <param name="filePath1">The full path to the first file to be opened.</param>
+    /// <param name="filePath2">The full path to the second file to be opened.</param>
+    public static DisposeResponsibility<(Stream Stream1, Stream Stream2)> OpenRelatedFiles(string filePath1, string filePath2)
+    {
+#pragma warning disable CA2000 // Dispose objects before losing scope: this style warning is painfully wrong in this case
+        FileStream stream1 = new(filePath1, FileMode.Open, FileAccess.Read);
+        FileStream stream2;
+        try
+        {
+            stream2 = new(filePath2, FileMode.Open, FileAccess.Read);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        }
+        catch 
+        {
+            stream1.Dispose();
+            throw;
+        }
+        return new((stream1, stream2));
+    }
+}
+
+public class DisposeResponsibilityUsage
+{
+    public static void Sample()
+    {
+        using DisposeResponsibility<(Stream Stream1, Stream Stream2)> files = FileManager.OpenRelatedFiles("file1.txt", "file2.txt");
+#pragma warning disable CA2000 // Dispose objects before losing scope: this style warning is painfully wrong in this case
+        StreamReader reader1 = new(files.Contained.Stream1);
+        string s1 = reader1.ReadToEnd();
+        StreamReader reader2 = new(files.Contained.Stream2);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        string s2 = reader1.ReadToEnd();
+    }
+}
+```
+
+
 ## Status
 The `Status` classes enable systems with automated background backend dependency status testing and aggregation of test results to generate concise status summary reports across backend systems and across server farms.
 Some backend systems contain static status information which is gathered by a class that inherits from the abstract `StatusChecker` class, others need to be tested periodically.
@@ -1281,8 +1342,10 @@ class DiskAuditor
                             using (FileStream fs = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
                                 byte[] b = new byte[1];
-                                await fs.ReadAsync(b, 0, 1, cancel);
-                                await fs.FlushAsync();
+#pragma warning disable CA2022
+                                await fs.ReadAsync(b.AsMemory(0, 1), cancel);
+#pragma warning restore CA2022
+                                await fs.FlushAsync(cancel);
                             }
                             readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                             readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
@@ -1317,8 +1380,10 @@ class DiskAuditor
                     {
                         using FileStream fs = new(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096);
                         byte[] b = new byte[1];
-                        await fs.WriteAsync(b, 0, 1);
-                        await fs.FlushAsync();
+#pragma warning disable CA2022
+                        await fs.WriteAsync(b.AsMemory(0, 1), cancel);
+#pragma warning restore CA2022
+                        await fs.FlushAsync(cancel);
                         writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                         writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
                     }
@@ -1332,8 +1397,10 @@ class DiskAuditor
                         using (FileStream fs = new(targetPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         {
                             byte[] b = new byte[1];
-                            await fs.ReadAsync(b, 0, 1, cancel);
-                            await fs.FlushAsync();
+#pragma warning disable CA2022
+                            await fs.ReadAsync(b.AsMemory(0, 1), cancel);
+#pragma warning restore CA2022
+                            await fs.FlushAsync(cancel);
                         }
                         readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                         readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");

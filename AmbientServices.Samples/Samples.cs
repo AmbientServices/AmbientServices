@@ -12,6 +12,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Diagnostics;
+using System.ComponentModel;
+
 
 #if NET5_0_OR_GREATER
 using System.Net.Http;
@@ -1007,6 +1009,57 @@ class ProfileReporter
 
 
 
+#region DisposeResponsibilitySample
+/// <summary>
+/// A static class that contains utilities for managing files.
+/// </summary>
+public static class FileManager
+{
+    /// <summary>
+    /// Opens two related files at the same time.
+    /// </summary>
+    /// <param name="filePath1">The full path to the first file to be opened.</param>
+    /// <param name="filePath2">The full path to the second file to be opened.</param>
+    public static DisposeResponsibility<(Stream Stream1, Stream Stream2)> OpenRelatedFiles(string filePath1, string filePath2)
+    {
+#pragma warning disable CA2000 // Dispose objects before losing scope: this style warning is painfully wrong in this case
+        FileStream stream1 = new(filePath1, FileMode.Open, FileAccess.Read);
+        FileStream stream2;
+        try
+        {
+            stream2 = new(filePath2, FileMode.Open, FileAccess.Read);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        }
+        catch 
+        {
+            stream1.Dispose();
+            throw;
+        }
+        return new((stream1, stream2));
+    }
+}
+
+public class DisposeResponsibilityUsage
+{
+    public static void Sample()
+    {
+        using DisposeResponsibility<(Stream Stream1, Stream Stream2)> files = FileManager.OpenRelatedFiles("file1.txt", "file2.txt");
+#pragma warning disable CA2000 // Dispose objects before losing scope: this style warning is painfully wrong in this case
+        StreamReader reader1 = new(files.Contained.Stream1);
+        string s1 = reader1.ReadToEnd();
+        StreamReader reader2 = new(files.Contained.Stream2);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+        string s2 = reader1.ReadToEnd();
+    }
+}
+#endregion
+
+
+
+
+
+
+
 
 #region StatusSample
 /// <summary>
@@ -1063,8 +1116,10 @@ class DiskAuditor
                             using (FileStream fs = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
                                 byte[] b = new byte[1];
-                                await fs.ReadAsync(b, 0, 1, cancel);
-                                await fs.FlushAsync();
+#pragma warning disable CA2022
+                                await fs.ReadAsync(b.AsMemory(0, 1), cancel);
+#pragma warning restore CA2022
+                                await fs.FlushAsync(cancel);
                             }
                             readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                             readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
@@ -1099,8 +1154,10 @@ class DiskAuditor
                     {
                         using FileStream fs = new(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096);
                         byte[] b = new byte[1];
-                        await fs.WriteAsync(b, 0, 1);
-                        await fs.FlushAsync();
+#pragma warning disable CA2022
+                        await fs.WriteAsync(b.AsMemory(0, 1), cancel);
+#pragma warning restore CA2022
+                        await fs.FlushAsync(cancel);
                         writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                         writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
                     }
@@ -1114,8 +1171,10 @@ class DiskAuditor
                         using (FileStream fs = new(targetPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                         {
                             byte[] b = new byte[1];
-                            await fs.ReadAsync(b, 0, 1, cancel);
-                            await fs.FlushAsync();
+#pragma warning disable CA2022
+                            await fs.ReadAsync(b.AsMemory(0, 1), cancel);
+#pragma warning restore CA2022
+                            await fs.FlushAsync(cancel);
                         }
                         readBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
                         readBuilder.AddOkay("Ok", "Success", "The read operation succeeded.");
