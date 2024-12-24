@@ -1,4 +1,5 @@
 ﻿using AmbientServices;
+using AmbientServices.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using System.Net;
@@ -32,6 +33,36 @@ public class TestDotNetDocumentation
         TypeDocumentation docsDocs = docs.GetTypeDocumentation(typeof(DotNetDocumentation));
         MethodDocumentation methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetMethodDocumentation)));
         Assert.IsNotNull(methodDocs);
+        methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetFieldDocumentation)));
+        Assert.IsNotNull(methodDocs);
+        methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetTypeDocumentation)));
+        Assert.IsNotNull(methodDocs);
+        methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetNullableTypeDocumentation)));
+        Assert.IsNotNull(methodDocs);
+        methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetMemberDocumentation)));
+        Assert.IsNotNull(methodDocs);
+        methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetTypeOrProxy)));
+        Assert.IsNotNull(methodDocs);
+        methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.Load), new System.Type[] { typeof(System.Type) }));
+        Assert.IsNotNull(methodDocs);
+        methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.Load), new System.Type[] { typeof(Assembly) }));
+        Assert.IsNotNull(methodDocs);
+        foreach (MethodInfo mi in typeof(AmbientFilteredLogger).GetMethods(BindingFlags.Public))
+        {
+            methodDocs = docs.GetMethodDocumentation(mi);
+            Assert.IsNotNull(methodDocs);
+        }
+        foreach (MethodInfo mi in typeof(SI).GetMethods(BindingFlags.Public))
+        {
+            methodDocs = docs.GetMethodDocumentation(mi);
+            Assert.IsNotNull(methodDocs);
+        }
+        foreach (MethodInfo mi in typeof(AmbientCache<>).GetMethods(BindingFlags.Public))
+        {
+            methodDocs = docs.GetMethodDocumentation(mi);
+            Assert.IsNotNull(methodDocs);
+        }
+
     }
     [TestMethod]
     public void NullableTypeDocumentation()

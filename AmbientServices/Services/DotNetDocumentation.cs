@@ -50,6 +50,16 @@ public class DotNetDocumentation
     /// <summary>
     /// Loads the documentation for the specified assembly.
     /// </summary>
+    /// <param name="type">The <see cref="Type"/> to load documentation for.</param>
+    /// <returns>A <see cref="DotNetDocumentation"/> object that can be used to access the documentation for the specified type.</returns>
+    public static DotNetDocumentation Load(Type type)
+    {
+        if (type == null) throw new ArgumentNullException(nameof(type));
+        return Load(type.Assembly);
+    }
+    /// <summary>
+    /// Loads the documentation for the specified assembly.
+    /// </summary>
     /// <param name="assembly">The assembly to load documentation for.</param>
     /// <returns>A <see cref="DotNetDocumentation"/> object that can be used to access the documentation for the specified assembly.</returns>
     public static DotNetDocumentation Load(Assembly assembly)
@@ -109,7 +119,7 @@ public class DotNetDocumentation
         // loop through all the parameters
         for (int i = 0; i < parameters.Length; i++)
         {
-            if (i > 0) ret.Append(", ");
+            if (i > 0) ret.Append(',');
             var parameter = parameters[i];
             if (parameter.ParameterType.IsGenericParameter)
             {
