@@ -234,18 +234,24 @@ public class AmbientLogger
     {
         // prefer the structured logger
         IAmbientStructuredLogger? logger = DynamicLogger;
+        IAmbientLogger? simpleLogger = DynamicSimpleLogger;
+        LogEntryRenderer entryRenderer = _renderer ?? DefaultRenderer;
+        LogMessageRenderer messageRenderer = _simpleRenderer ?? DefaultMessageRenderer;
+        LogFiltered(logger, entryRenderer, messageRenderer, simpleLogger, _typeName, level, categoryName, structuredData);
+    }
+    internal static void LogFiltered(IAmbientStructuredLogger? logger, LogEntryRenderer entryRenderer, LogMessageRenderer messageRenderer, IAmbientLogger? simpleLogger, string typeName, AmbientLogLevel level, string? categoryName, object structuredData)
+    {
+        // prefer the structured logger
         if (logger != null)
         {
             // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
-            LogEntryRenderer renderer = _renderer ?? DefaultRenderer;
-            structuredData = renderer(DateTime.UtcNow, level, structuredData, _typeName, categoryName);
+            structuredData = entryRenderer(DateTime.UtcNow, level, structuredData, typeName, categoryName);
             logger.Log(structuredData);
         }
         // only log to the simple logger if it's not the same instance as the structured logger
-        IAmbientLogger? simpleLogger = DynamicSimpleLogger;
         if (simpleLogger != null && (simpleLogger is not IAmbientStructuredLogger sl || sl != logger))
         {
-            string message = ConvertStructuredDataIntoSimpleMessage(level, categoryName, structuredData);
+            string message = ConvertStructuredDataIntoSimpleMessage(messageRenderer, typeName, level, categoryName, structuredData);
             simpleLogger.Log(message);
         }
     }
@@ -306,7 +312,12 @@ public class AmbientLogger
     {
         // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
         LogMessageRenderer renderer = _simpleRenderer ?? DefaultMessageRenderer;
-        string message = renderer(DateTime.UtcNow, level, structuredData, _typeName, categoryName);
+        return ConvertStructuredDataIntoSimpleMessage(renderer, _typeName, level, categoryName, structuredData);
+    }
+    private static string ConvertStructuredDataIntoSimpleMessage(LogMessageRenderer renderer, string typeName, AmbientLogLevel level, string? categoryName, object structuredData)
+    {
+        // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
+        string message = renderer(DateTime.UtcNow, level, structuredData, typeName, categoryName);
         return message;
     }
     /// <summary>
