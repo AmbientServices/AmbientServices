@@ -243,7 +243,7 @@ public class AmbientLogger
         }
         // only log to the simple logger if it's not the same instance as the structured logger
         IAmbientLogger? simpleLogger = DynamicSimpleLogger;
-        if (simpleLogger != null && simpleLogger != logger)
+        if (simpleLogger != null && (simpleLogger is not IAmbientStructuredLogger sl || sl != logger))
         {
             string message = ConvertStructuredDataIntoSimpleMessage(level, categoryName, structuredData);
             simpleLogger.Log(message);
