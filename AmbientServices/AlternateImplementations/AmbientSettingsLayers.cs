@@ -40,7 +40,7 @@ public class AmbientSettingsLayers : IMutableAmbientSettingsSet
     /// If the last (highest priority) set is not mutable, a mutable set will be added so that all settings can be mutated.
     /// </summary>
     /// <param name="sets">An enumeration of settings sets to add, with the last one being the highest priority, hiding same-named settings in previous sets.  null values are ignored.</param>
-    public AmbientSettingsLayers(params IAmbientSettingsSet[] sets) : this((IEnumerable<IAmbientSettingsSet>)sets)
+    public AmbientSettingsLayers(params IAmbientSettingsSet?[] sets) : this((IEnumerable<IAmbientSettingsSet?>)sets)
     {
     }
 
