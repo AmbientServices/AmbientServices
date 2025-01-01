@@ -1,14 +1,5 @@
-﻿using AmbientServices;
-using AmbientServices.Utilities;
-using AmbientServices.Extensions;
+﻿using AmbientServices.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
 

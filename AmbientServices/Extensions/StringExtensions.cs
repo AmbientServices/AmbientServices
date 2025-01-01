@@ -9,7 +9,7 @@ namespace AmbientServices.Extensions;
 /// <summary>
 /// A static partial class that extends <see cref="string"/>.
 /// </summary>
-internal static partial class StringExtensions
+public static partial class StringExtensions
 {
     private static readonly System.Text.RegularExpressions.Regex DigitSequenceRegex = new(@"\d+", System.Text.RegularExpressions.RegexOptions.Compiled);
     private static readonly System.Text.RegularExpressions.Regex CommaSeparatedDigits = new(@"(?<csn>\d+(?:,\d+)+)", System.Text.RegularExpressions.RegexOptions.Compiled);

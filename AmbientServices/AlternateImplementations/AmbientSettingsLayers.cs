@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AmbientServices.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,11 +24,11 @@ public class AmbientSettingsLayers : IMutableAmbientSettingsSet
     /// Create a settings layer with a specified set of settings sets.
     /// If the last (highest priority) set is not mutable, a mutable set will be added so that all settings can be mutated.
     /// </summary>
-    /// <param name="sets">An enumeration of settings sets to add, with the last one being the highest priority, hiding same-named settings in any previous sets.</param>
-    public AmbientSettingsLayers(IEnumerable<IAmbientSettingsSet> sets)
+    /// <param name="sets">An enumeration of settings sets to add, with the last one being the highest priority, hiding same-named settings in any previous sets.  null values are ignored.</param>
+    public AmbientSettingsLayers(IEnumerable<IAmbientSettingsSet?> sets)
     {
         if (sets == null) throw new ArgumentNullException(nameof(sets));
-        _setsInLowPriorityOrder.AddRange(sets);
+        _setsInLowPriorityOrder.AddRange(sets.WhereNotNull());
         // if the last set is not mutable, add a mutable set at the top level
         if (_setsInLowPriorityOrder[_setsInLowPriorityOrder.Count-1] is not IMutableAmbientSettingsSet)
         {
@@ -38,7 +39,7 @@ public class AmbientSettingsLayers : IMutableAmbientSettingsSet
     /// Create a settings layer with a specified set of settings sets.
     /// If the last (highest priority) set is not mutable, a mutable set will be added so that all settings can be mutated.
     /// </summary>
-    /// <param name="sets">An enumeration of settings sets to add, with the last one being the highest priority, hiding same-named settings in previous sets.</param>
+    /// <param name="sets">An enumeration of settings sets to add, with the last one being the highest priority, hiding same-named settings in previous sets.  null values are ignored.</param>
     public AmbientSettingsLayers(params IAmbientSettingsSet[] sets) : this((IEnumerable<IAmbientSettingsSet>)sets)
     {
     }
@@ -46,7 +47,7 @@ public class AmbientSettingsLayers : IMutableAmbientSettingsSet
     /// <summary>
     /// Gets the name of the set of settings so that a settings consumer can know where a changed setting value came from.
     /// </summary>
-    public string SetName => $"Layers:{string.Join(",", _setsInLowPriorityOrder.Select(s => s.SetName))}";
+    public string SetName => $"Layers[{string.Join(",", _setsInLowPriorityOrder.Select(s => s.SetName))}]";
     /// <summary>
     /// Changes the specified setting.
     /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.
