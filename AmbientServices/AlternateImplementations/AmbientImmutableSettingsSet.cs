@@ -5,7 +5,6 @@ namespace AmbientServices;
 /// <summary>
 /// A settings set implementation that contains settings that are assigned at construction and cannot be changed.
 /// </summary>
-[DefaultAmbientService(typeof(IAmbientSettingsSet))]
 public class AmbientImmutableSettingsSet : IAmbientSettingsSet
 {
     /// <summary>

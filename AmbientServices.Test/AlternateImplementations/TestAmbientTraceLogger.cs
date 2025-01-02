@@ -33,6 +33,7 @@ public class TestAmbientTraceLogger
             LogEntryRenderer entryRenderer = AmbientLogger.DefaultRenderer;
             LogMessageRenderer messageRenderer = AmbientLogger.DefaultMessageRenderer;
             AmbientLogger.LogFiltered(logger, entryRenderer, messageRenderer, logger, typeof(TestAmbientTraceLogger).Name, AmbientLogLevel.Information, null, new { Action= "test1" });
+            AmbientLogger.LogFiltered(logger, entryRenderer, messageRenderer, logger, typeof(TestAmbientTraceLogger).Name, AmbientLogLevel.Information, null, "test2");
             await logger.Flush();
         }
     }
