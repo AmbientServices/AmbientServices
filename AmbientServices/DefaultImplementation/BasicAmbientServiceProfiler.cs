@@ -86,7 +86,7 @@ internal struct CallContextActiveSystemData
 /// <summary>
 /// A class that tracks service profile statistics across multiple call contexts in a process or a single time window.
 /// </summary>
-internal class ProcessOrSingleTimeWindowServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
+internal class ProcessOrSingleTimeWindowServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink, IDisposable
 {
     private readonly IAmbientServiceProfiler _profiler;
     private readonly Regex? _systemToGroupTransform;
@@ -240,7 +240,7 @@ internal class ScopeOnSystemSwitchedDistributor : IAmbientServiceProfilerNotific
 /// <summary>
 /// A class that tracks service profile statistics for a specific call context.
 /// </summary>
-internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink
+internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink, IDisposable
 {
     private readonly ScopeOnSystemSwitchedDistributor _distributor;
     private readonly Regex? _systemGroupTransform;
