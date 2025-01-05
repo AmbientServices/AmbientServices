@@ -98,10 +98,14 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// </summary>
     ~DisposeResponsibility()
     {
-        string notice = $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.";
-        if (System.Diagnostics.Debugger.IsAttached) System.Diagnostics.Trace.Assert(_contained == null, notice);
-        else System.Diagnostics.Trace.WriteLine(notice);
-        Logger.Filter(AmbientLogLevel.Warning)?.Log(notice);
+        // notify any subscribers in case the default handling is not what is desired
+        if (!DisposeResponsibility.NotifyEvent(this, new(_contained, _stackOnCreation)))
+        {
+            string notice = $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.";
+            if (System.Diagnostics.Debugger.IsAttached) System.Diagnostics.Trace.Assert(_contained == null, notice);
+            else System.Diagnostics.Trace.WriteLine(notice);
+            Logger.Filter(AmbientLogLevel.Warning)?.Log(notice);
+        }
     }
 
     /// <summary>
@@ -297,21 +301,57 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
         return _contained?.ToString() ?? "";
     }
 }
+/// <summary>
+/// A class containins the arguments for the <see cref="DisposeResponsibility.UndisposedResponsibility"/> event.
+/// </summary>
+public class UndisposedResponsibilityEventArgs : EventArgs
+{
+    /// <summary>
+    /// Constructs a new <see cref="UndisposedResponsibilityEventArgs"/> with the specified stack on creation.
+    /// </summary>
+    /// <param name="contained">The instance constained in the <see cref="DisposeResponsibility{T}"/>.</param>
+    /// <param name="stackOnCreation">The stack trace captured when the instance was created.</param>
+    public UndisposedResponsibilityEventArgs(object? contained, string stackOnCreation)
+    {
+        StackOnCreation = stackOnCreation;
+    }
+    /// <summary>
+    /// The object contained within the <see cref="DisposeResponsibility{T}"/>.
+    /// </summary>
+    public object? Contained { get; }
+    /// <summary>
+    /// A string containing the stack trace captured when the disposable instance was created.
+    /// </summary>
+    public string StackOnCreation { get; }
+}
 
-#if DEBUG
 /// <summary>
 /// A static class that contains utility functions applicable across all <see cref="DisposeResponsibility{T}"/> types.
 /// For example, it allows you to query <see cref="DisposeResponsibility{T}"/> instances to see how many outstanding disposals remain for each unique construction call stack.
 /// </summary>
 public static class DisposeResponsibility
 {
+#if DEBUG
     /// <summary>
     /// Gets an enumeration of all pending disposals tracked by instances of <see cref="DisposeResponsibility{T}"/>, 
     /// with the path that created them and the number of instances created through that path that have not yet been disposed.
     /// Entries are returned in descending order of the number of pending disposals.
     /// </summary>
     public static IEnumerable<(string Stack, int Count)> AllPendingDisposals => PendingDispose.AllPendingDisposals;
+#endif
+    internal static bool NotifyEvent(object? sender, UndisposedResponsibilityEventArgs args)
+    {
+        if (ResponsibilityNotDisposed == null) return false;
+        ResponsibilityNotDisposed.Invoke(sender, args);
+        return true;
+    }
+    /// <summary>
+    /// An event that notifies subscribers that a <see cref="DisposeResponsibility{T}"/> was not properly disposed.
+    /// </summary>
+    public static event EventHandler<UndisposedResponsibilityEventArgs>? ResponsibilityNotDisposed;
 }
+
+#if DEBUG
 class PendingDispose
 {
     private static readonly ConcurrentDictionary<string, PendingDispose> _PendingDisposals = new();

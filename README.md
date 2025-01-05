@@ -1160,9 +1160,13 @@ The disposable pattern in C# has one glaring problem: there is often nothing in 
 In addition, it's syntactically extremely clumsy to return tuples where one or more of the contained items are disposable.
 Wrapping the output from the function in a `DisposeResponsibility` is not only a more visible indicator that the result needs disposal, but it will also notify callers if the instance is not disposed of properly.
 `DisposeResponsibility` will automatically look inside tuples for disposables and dispose any or all of those items as needed.
-For functions that return disposable instances where the caller is expected to dispose of the instance (as would usually be the case), switching to return a `DisposeResponsibility` instance will cause an assertion failure if running under the debugger and a log message and a trace message if not running under the debugger.
+For functions that return disposable instances where the caller is expected to dispose of the instance (as would usually be the case), switching to return a `DisposeResponsibility` instance will cause a notification if the instance is not disposed.
+That notification can come in several forms.  First, the `DisposeResponsiblity.ResponsibilityNotDisposed` event can be subscribed to notifications.
+If there are no subscribers to that event, if running under the debugger, the notification will cause an assertion failure (using System.Diagnostics.Trace).
+If not running under the debugger, both an `AmbientLogger` log message and a system diagnosticts trace message will be written.
 The notification will include the stack trace indicating where the disposable instance was created, so that the developer can determine why the instance wasn't disposed.
-In most cases the disposable instance should be disposed of using a `using` block in the scope where the call is made, but sometimes the instances are returned higher up the stack, or stored inside another object for later disposal.
+Care should be taken in the event handler for the `DisposeResponsiblity.ResponsibilityNotDisposed` event to avoid throwing exceptions, as this could cause the application to crash because it is called by the garbage collector during finalization.
+In most cases `DisposeResponsibility` instances returned from functions should be disposed of using a `using` block in the scope where the call is made, but sometimes the instances are returned higher up the stack, or stored inside another object for later disposal.
 `DisposeResponsibility` ensures that responsibility for disposing of the instance is not lost.  
 The responsibility can be transferred to another caller or scope, but won't be lost unintentionally as often is the case without it.
 Someday, it would be nice if C# incorporated this kind of explicit dispose responsibilty tracking and transfer into the language, as it could greatly improve the readability and performance, and could eliminate all numerous false positive code analysis warnings.
