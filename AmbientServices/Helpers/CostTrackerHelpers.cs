@@ -195,18 +195,4 @@ public class CostAccumulator
         Interlocked.Add(ref _totalCharges, charge);
     }
 }
-/// <summary>
-/// A record containing accrued charge totals for a specific service.
-/// </summary>
-/// <param name="ServiceId">An optional string identifying the service.</param>
-/// <param name="ChargeCount">The number of charges.</param>
-/// <param name="AccruedCharges">The accrued charges, in predetermined units.</param>
-public record AmbientServiceCharges(string ServiceId, long ChargeCount, long AccruedCharges);
-/// <summary>
-/// A record containing accrued charge totals for a specific customer.
-/// </summary>
-/// <param name="CustomerId">The ID of the customer responsible for the charges.</param>
-/// <param name="ChargeCount">The number of charges.</param>
-/// <param name="AccruedCharges">The accrued charges, in predetermined units.</param>
-public record AmbientCustomerCharges(string CustomerId, long ChargeCount, long AccruedCharges);
 #endif

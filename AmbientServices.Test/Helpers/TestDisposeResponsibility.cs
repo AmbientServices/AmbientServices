@@ -126,14 +126,16 @@ public class TestDisposeResponsibility
     [TestMethod]
     public void DisposeResponsibilityNotification()
     {
-        bool notified = false;
-        DisposeResponsibility.ResponsibilityNotDisposed += (sender, e) => notified = true;
+        UndisposedResponsibilityEventArgs? args = null;
+        DisposeResponsibility.ResponsibilityNotDisposed += (sender, e) => args = e;
         AllocateAndDontDispose();
         GC.Collect();// 2, GCCollectionMode.Forced);
         GC.WaitForPendingFinalizers();
         GC.Collect();//2, GCCollectionMode.Forced);
         GC.WaitForPendingFinalizers();
-        Assert.IsTrue(notified);
+        Assert.IsNotNull(args);
+        Assert.IsNull(args.Contained);
+        Assert.IsTrue(args.StackOnCreation.Contains(nameof(DisposeResponsibilityNotification)));
     }
     private void AllocateAndDontDispose()
     {
