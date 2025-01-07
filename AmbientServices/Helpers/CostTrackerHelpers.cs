@@ -77,7 +77,7 @@ The regular expression will attempt to match the system identifier, with the val
     /// <param name="windowPeriod">A <see cref="TimeSpan"/> indicating how often reports are desired.</param>
     /// <param name="onWindowComplete">An async delegate that receives a <see cref="IAmbientServiceProfile"/> at the end of each time window.</param>
     /// <returns>A <see cref="IDisposable"/> that scopes the collection of the profiles.</returns>
-    public static IDisposable? CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientAccruedCharges, Task> onWindowComplete)
+    public IDisposable? CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientAccruedCharges, Task> onWindowComplete)
     {
         IAmbientCostTracker? metrics = _AmbientCostTracker.Local;
         if (metrics == null) return null;
@@ -96,7 +96,7 @@ The regular expression will attempt to match the system identifier, with the val
     /// whereas this will analyze all threads and call contexts in the process.  
     /// They will produce the same results only for programs where there is only a single call context (no parallelization)
     /// </remarks>
-    public static IAmbientAccruedCharges? CreateProcessProfiler(string scopeName)
+    public IAmbientAccruedCharges? CreateProcessProfiler(string scopeName)
     {
         IAmbientCostTracker? metrics = _AmbientCostTracker.Local;
         if (metrics != null)
@@ -147,16 +147,20 @@ The regular expression will attempt to match the system identifier, with the val
 /// <summary>
 /// An interface that abstracts accrued charges.
 /// </summary>
-public interface IAmbientAccruedCharges
+public interface IAmbientAccruedCharges : IDisposable
 {
     /// <summary>
     /// Gets the name of the scope being analyzed.  The scope identifies the scope of the operations that were profiled.
     /// </summary>
     string ScopeName { get; }
     /// <summary>
-    /// Gets an enumeration of <see cref="AmbientServiceProfilerAccumulator"/> instances indicating the relative ratios of time spent executing in each of the systems in the associated scope.
+    /// Gets the number of separate operations triggering charge accumulation.
     /// </summary>
-    long TotalCharges { get; }
+    int ChargeCount{ get; }
+    /// <summary>
+    /// Gets the accumulated sum of all the charges.
+    /// </summary>
+    long AccumulatedChargeSum { get; }
 }
 /// <summary>
 /// A class that accumulates cost for some scope.
@@ -164,7 +168,7 @@ public interface IAmbientAccruedCharges
 public class CostAccumulator
 {
     private long _chargeCount;      // interlocked
-    private long _totalCharges;   // interlocked
+    private long _totalCharges;     // interlocked
 
     /// <summary>
     /// Constructs a cost accumulator.

@@ -276,7 +276,7 @@ namespace AmbientServices.Test
             Assert.ThrowsException<ArgumentNullException>(
                 () =>
                 {
-                    using IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerNull), TimeSpan.FromMilliseconds(100), null!);
+                    using IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerNullOnWindowComplete), TimeSpan.FromMilliseconds(100), null!);
                 });
         }
         [TestMethod]
@@ -285,7 +285,7 @@ namespace AmbientServices.Test
             using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
             using (AmbientClock.Pause())
             {
-                _ServiceProfiler.Local?.SwitchSystem(nameof(ServiceProfilerNull));
+                _ServiceProfiler.Local?.SwitchSystem(nameof(ServiceProfilerNoListener));
             }
         }
         [TestMethod]

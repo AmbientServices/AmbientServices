@@ -61,12 +61,15 @@ internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedCharges, IA
     private readonly IAmbientCostTracker _profiler;
     private readonly ConcurrentDictionary<string, CostAccumulator> _accumulatorsByService = new();
     private readonly ConcurrentDictionary<string, CostAccumulator> _accumulatorsByCustomer = new();
-    private long _totalCharges;
+    private int _chargeCount;       // interlocked
+    private long _totalCharges;     // interlocked
     private bool _disposedValue;
 
     public string ScopeName { get; }
 
-    public long TotalCharges => _totalCharges;
+    public int ChargeCount => _chargeCount;
+
+    public long AccumulatedChargeSum => _totalCharges;
 
     public ProcessOrSingleTimeWindowCostTracker(IAmbientCostTracker metrics, string scopeName)
     {
@@ -88,6 +91,13 @@ internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedCharges, IA
         _accumulatorsByCustomer[customerId] = new(charge);
         // track the total cost
         Interlocked.Add(ref _totalCharges, charge);
+        // track the number of charges
+        Interlocked.Increment(ref _chargeCount);
+    }
+    internal void CloseTracking()
+    {
+        _profiler.DeregisterCostTrackerNotificationSink(this);
+        _disposedValue = true;
     }
 
     protected virtual void Dispose(bool disposing)
@@ -167,12 +177,15 @@ internal class CallContextCostTracker : IAmbientAccruedCharges, IAmbientCostTrac
     private readonly ScopeOnChargesAccruedDistributor _distributor;
     private readonly ConcurrentDictionary<string, CostAccumulator> _accumulatorsByService = new();
     private readonly ConcurrentDictionary<string, CostAccumulator> _accumulatorsByCustomer = new();
-    private long _totalCharges;
+    private int _chargeCount;       // interlocked
+    private long _totalCharges;     // interlocked
     private bool _disposedValue;
 
     public string ScopeName { get; }
 
-    public long TotalCharges => _totalCharges;
+    public int ChargeCount => _chargeCount;
+
+    public long AccumulatedChargeSum => _totalCharges;
 
     /// <summary>
     /// Constructs a CallContextCostTracker.
@@ -199,6 +212,8 @@ internal class CallContextCostTracker : IAmbientAccruedCharges, IAmbientCostTrac
         _accumulatorsByCustomer[customerId] = new(charge);
         // track the total cost
         Interlocked.Add(ref _totalCharges, charge);
+        // track the number of charges
+        Interlocked.Increment(ref _chargeCount);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -287,6 +302,7 @@ internal class TimeWindowCostTracker : IDisposable, IAsyncDisposable
         string newAccumulatorScopeName = _scopeNamePrefix + windowName + "(" + WindowScope.WindowSize(windowPeriod) + ")"; ;
         ProcessOrSingleTimeWindowCostTracker newAccumulator = new(metrics, newAccumulatorScopeName);
         ProcessOrSingleTimeWindowCostTracker? oldAccumulator = Interlocked.Exchange(ref _timeWindowCallContextCollector, newAccumulator);
+        oldAccumulator?.CloseTracking();
         return oldAccumulator;
     }
 

@@ -399,11 +399,8 @@ internal class TimeWindowServiceProfiler : IDisposable
         string newAccumulatorScopeName = _scopeNamePrefix + windowName + "(" + WindowScope.WindowSize(windowPeriod) + ")"; ;
         ProcessOrSingleTimeWindowServiceProfiler newAccumulator = new(metrics, newAccumulatorScopeName, systemGroupTransform);
         ProcessOrSingleTimeWindowServiceProfiler? oldAccumulator = Interlocked.Exchange(ref _timeWindowCallContextCollector, newAccumulator);
-        if (oldAccumulator != null)
-        {
-            // close out the old accumulator
-            oldAccumulator.CloseSampling();
-        }
+        // close out the old accumulator
+        oldAccumulator?.CloseSampling();
         return oldAccumulator;
     }
 
