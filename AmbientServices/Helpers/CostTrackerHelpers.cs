@@ -48,7 +48,7 @@ The regular expression will attempt to match the system identifier, with the val
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="charge">The charge (in predetermined units).</param>
+    /// <param name="charge">The charge (in s).</param>
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
         _scopeDistributor.Value ??= new ScopeOnChargesAccruedDistributor();
@@ -188,7 +188,7 @@ public class CostAccumulator
     /// <summary>
     /// Adds a charge to the accumulator.
     /// </summary>
-    /// <param name="charge">The charge amount (in predetermined units).</param>
+    /// <param name="charge">The charge amount (in picodollars).</param>
     public void AddCharge(long charge)
     {
         Interlocked.Increment(ref _chargeCount);

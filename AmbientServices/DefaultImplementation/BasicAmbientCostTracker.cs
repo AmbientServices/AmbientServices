@@ -1,15 +1,12 @@
-﻿using System;
+﻿#if NET5_0_OR_GREATER
+
+using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace AmbientServices;
 
-#if NET5_0_OR_GREATER
 [DefaultAmbientService]
 internal class BasicAmbientCostTracker : IAmbientCostTracker
 {
@@ -24,7 +21,7 @@ internal class BasicAmbientCostTracker : IAmbientCostTracker
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="charge">The charge (in predetermined units).</param>
+    /// <param name="charge">The charge (in picodollars).</param>
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
         // call all the notification sinks
@@ -82,7 +79,7 @@ internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedCharges, IA
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="charge">The charge (in predetermined units).</param>
+    /// <param name="charge">The charge (in picodollars).</param>
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
         // track the cost per service
@@ -151,7 +148,7 @@ internal class ScopeOnChargesAccruedDistributor : IAmbientCostTrackerNotificatio
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="charge">The charge (in predetermined units).</param>
+    /// <param name="charge">The charge (in picodollars).</param>
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
         foreach (IAmbientCostTrackerNotificationSink notificationSink in _notificationSinks)
@@ -203,7 +200,7 @@ internal class CallContextCostTracker : IAmbientAccruedCharges, IAmbientCostTrac
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="charge">The charge (in predetermined units).</param>
+    /// <param name="charge">The charge (in picodollars).</param>
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
         // track the cost per service

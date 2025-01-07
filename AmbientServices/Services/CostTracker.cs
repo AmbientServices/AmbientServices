@@ -12,7 +12,7 @@ public interface IAmbientCostTrackerNotificationSink
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="charge">The charge (in predetermined units).</param>
+    /// <param name="charge">The charge (in picodollars).</param>
     void OnChargesAccrued(string serviceId, string customerId, long charge);
 }
 /// <summary>
@@ -25,7 +25,7 @@ public interface IAmbientCostTracker
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="charge">The charge (in predetermined units).</param>
+    /// <param name="charge">The charge (in picodollars).</param>
     void OnChargesAccrued(string serviceId, string customerId, long charge);
     /// <summary>
     /// Registers a cost tracker notificatoin sink with this ambient service profiler.
