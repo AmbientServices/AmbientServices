@@ -11,12 +11,11 @@ namespace AmbientServices;
 /// <summary>
 /// A class that coordinates service profilers.
 /// </summary>
-public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink, IDisposable, IAsyncDisposable
+public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink, IDisposable
 {
     private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
     private static readonly AmbientService<IAmbientCostTracker> _AmbientCostTracker = Ambient.GetService<IAmbientCostTracker>();
 
-    private readonly IAmbientSetting<Regex?> _defaultSystemGroupTransformSetting;
     private readonly IAmbientCostTracker? _eventBroadcaster;
     private readonly AsyncLocal<ScopeOnChargesAccruedDistributor> _scopeDistributor;
     private bool _disposedValue;
@@ -34,10 +33,6 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// <param name="settingsSet"></param>
     public AmbientCostTrackerCoordinator(IAmbientSettingsSet? settingsSet)
     {
-        _defaultSystemGroupTransformSetting = AmbientSettings.GetSettingsSetSetting<Regex?>(settingsSet, nameof(AmbientCostTrackerCoordinator) + "-DefaultSystemGroupTransform",
-            @"A `Regex` string used to transform the system identifier to a group identifier.
-The regular expression will attempt to match the system identifier, with the values for any matching match groups being concatenated into the system group identifier.",
-            s => string.IsNullOrEmpty(s) ? null : new Regex(s, RegexOptions.Compiled));
         _scopeDistributor = new AsyncLocal<ScopeOnChargesAccruedDistributor>();
         _eventBroadcaster = _AmbientCostTracker.Local;
         _eventBroadcaster?.RegisterCostTrackerNotificationSink(this);
@@ -55,11 +50,22 @@ The regular expression will attempt to match the system identifier, with the val
         _scopeDistributor.Value.OnChargesAccrued(serviceId, customerId, charge);
     }
     /// <summary>
+    /// Notifies the notification sink that an ongoing cost has changed.
+    /// </summary>
+    /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
+    /// <param name="customerId">A string identifying the customer.</param>
+    /// <param name="changePerMinute">The change in coste (in picodollars per minute).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    {
+        _scopeDistributor.Value ??= new ScopeOnChargesAccruedDistributor();
+        _scopeDistributor.Value.OnOngoingCostChanged(serviceId, customerId, changePerMinute);
+    }
+    /// <summary>
     /// Creates a cost tracker which profiles the current call context.
     /// </summary>
     /// <param name="scopeName">A name of the call context to attach to the analyzer.</param>
-    /// <returns>A <see cref="IAmbientAccruedCharges"/> that will profile systems executed in this call context, or null if there is no ambient service profiler event collector.  Note that the returned object is NOT thread-safe.</returns>
-    public IAmbientAccruedCharges? CreateCallContextProfiler(string scopeName)
+    /// <returns>A <see cref="IAmbientAccruedChargesAndCostChanges"/> that will profile systems executed in this call context, or null if there is no ambient service profiler event collector.  Note that the returned object is NOT thread-safe.</returns>
+    public IAmbientAccruedChargesAndCostChanges? CreateCallContextProfiler(string scopeName)
     {
         IAmbientCostTracker? metrics = _AmbientCostTracker.Local;
         if (metrics != null)
@@ -77,7 +83,7 @@ The regular expression will attempt to match the system identifier, with the val
     /// <param name="windowPeriod">A <see cref="TimeSpan"/> indicating how often reports are desired.</param>
     /// <param name="onWindowComplete">An async delegate that receives a <see cref="IAmbientServiceProfile"/> at the end of each time window.</param>
     /// <returns>A <see cref="IDisposable"/> that scopes the collection of the profiles.</returns>
-    public IDisposable? CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientAccruedCharges, Task> onWindowComplete)
+    public IDisposable? CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientAccruedChargesAndCostChanges, Task> onWindowComplete)
     {
         IAmbientCostTracker? metrics = _AmbientCostTracker.Local;
         if (metrics == null) return null;
@@ -90,13 +96,13 @@ The regular expression will attempt to match the system identifier, with the val
     /// <see cref="CreateTimeWindowProfiler"/> is a better match in most situations.
     /// </summary>
     /// <param name="scopeName">A name for the contxt to attach to the analyzer.</param>
-    /// <returns>A <see cref="IAmbientAccruedCharges"/> containing a service profile for the entire process.  Note that the returned object is NOT thread-safe.</returns>
+    /// <returns>A <see cref="IAmbientAccruedChargesAndCostChanges"/> containing a service profile for the entire process.  Note that the returned object is NOT thread-safe.</returns>
     /// <remarks>
     /// This is different from using <see cref="CreateCallContextProfiler"/> because that will only analyze the call context it's called from, 
     /// whereas this will analyze all threads and call contexts in the process.  
     /// They will produce the same results only for programs where there is only a single call context (no parallelization)
     /// </remarks>
-    public IAmbientAccruedCharges? CreateProcessProfiler(string scopeName)
+    public IAmbientAccruedChargesAndCostChanges? CreateProcessProfiler(string scopeName)
     {
         IAmbientCostTracker? metrics = _AmbientCostTracker.Local;
         if (metrics != null)
@@ -134,20 +140,11 @@ The regular expression will attempt to match the system identifier, with the val
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-    /// <summary>
-    /// Disposes of this instance asynchronously.
-    /// </summary>
-    public ValueTask DisposeAsync()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-        return ValueTask.CompletedTask;
-    }
 }
 /// <summary>
-/// An interface that abstracts accrued charges.
+/// An interface that abstracts accrued charges and cost changes.
 /// </summary>
-public interface IAmbientAccruedCharges : IDisposable
+public interface IAmbientAccruedChargesAndCostChanges : IDisposable
 {
     /// <summary>
     /// Gets the name of the scope being analyzed.  The scope identifies the scope of the operations that were profiled.
@@ -156,43 +153,18 @@ public interface IAmbientAccruedCharges : IDisposable
     /// <summary>
     /// Gets the number of separate operations triggering charge accumulation.
     /// </summary>
-    int ChargeCount{ get; }
+    int ChargeCount { get; }
     /// <summary>
     /// Gets the accumulated sum of all the charges.
     /// </summary>
     long AccumulatedChargeSum { get; }
-}
-/// <summary>
-/// A class that accumulates cost for some scope.
-/// </summary>
-public class CostAccumulator
-{
-    private long _chargeCount;      // interlocked
-    private long _totalCharges;     // interlocked
-
     /// <summary>
-    /// Constructs a cost accumulator.
+    /// Gets the number of separate operations triggering cost changes.
     /// </summary>
-    public CostAccumulator()
-    {
-    }
+    int CostChangeCount { get; }
     /// <summary>
-    /// Constructs a cost accumulator.
+    /// Gets the accumulated sum of all the cost changes.
     /// </summary>
-    /// <param name="charge">The initial charge.</param>
-    public CostAccumulator(long charge)
-    {
-        _chargeCount = 1;
-        _totalCharges = charge;
-    }
-    /// <summary>
-    /// Adds a charge to the accumulator.
-    /// </summary>
-    /// <param name="charge">The charge amount (in picodollars).</param>
-    public void AddCharge(long charge)
-    {
-        Interlocked.Increment(ref _chargeCount);
-        Interlocked.Add(ref _totalCharges, charge);
-    }
+    long AccumulatedCostChangeSum { get; }
 }
 #endif

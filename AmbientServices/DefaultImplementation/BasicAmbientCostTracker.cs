@@ -31,6 +31,20 @@ internal class BasicAmbientCostTracker : IAmbientCostTracker
         }
     }
     /// <summary>
+    /// Notifies the notification sink that an ongoing cost has changed.
+    /// </summary>
+    /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
+    /// <param name="customerId">A string identifying the customer.</param>
+    /// <param name="changePerMinute">The change in coste (in picodollars per minute).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    {
+        // call all the notification sinks
+        foreach (IAmbientCostTrackerNotificationSink notificationSink in _notificationSinks)
+        {
+            notificationSink.OnOngoingCostChanged(serviceId, customerId, changePerMinute);
+        }
+    }
+    /// <summary>
     /// Registers a cost tracker notificatoin sink with this ambient service profiler.
     /// </summary>
     /// <param name="sink">An <see cref="IAmbientCostTrackerNotificationSink"/> that will receive notifications as charges accrue.</param>
@@ -53,20 +67,25 @@ internal class BasicAmbientCostTracker : IAmbientCostTracker
 /// <summary>
 /// A class that tracks service profile statistics across multiple call contexts in a process or a single time window.
 /// </summary>
-internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedCharges, IAmbientCostTrackerNotificationSink, IDisposable, IAsyncDisposable
+internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedChargesAndCostChanges, IAmbientCostTrackerNotificationSink, IDisposable
 {
     private readonly IAmbientCostTracker _profiler;
-    private readonly ConcurrentDictionary<string, CostAccumulator> _accumulatorsByService = new();
-    private readonly ConcurrentDictionary<string, CostAccumulator> _accumulatorsByCustomer = new();
+    private readonly ConcurrentDictionary<string, ChargeAccumulator> _chargeAccumulatorsByService = new();
+    private readonly ConcurrentDictionary<string, ChargeAccumulator> _chargeAccumulatorsByCustomer = new();
+    private readonly ConcurrentDictionary<string, CostAccumulator> _costAccumulatorsByService = new();
+    private readonly ConcurrentDictionary<string, CostAccumulator> _costAccumulatorsByCustomer = new();
     private int _chargeCount;       // interlocked
+    private int _costChangeCount;   // interlocked
     private long _totalCharges;     // interlocked
+    private long _totalCostChange;  // interlocked
     private bool _disposedValue;
 
     public string ScopeName { get; }
 
     public int ChargeCount => _chargeCount;
-
     public long AccumulatedChargeSum => _totalCharges;
+    public int CostChangeCount => _costChangeCount;
+    public long AccumulatedCostChangeSum => _totalCostChange;
 
     public ProcessOrSingleTimeWindowCostTracker(IAmbientCostTracker metrics, string scopeName)
     {
@@ -82,14 +101,31 @@ internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedCharges, IA
     /// <param name="charge">The charge (in picodollars).</param>
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
-        // track the cost per service
-        _accumulatorsByService[serviceId] = new(charge);
-        // track the cost per customer
-        _accumulatorsByCustomer[customerId] = new(charge);
+        // track the charges per service
+        ChargeAccumulator.Accrue(_chargeAccumulatorsByService, serviceId, charge);
+        // track the charges per customer
+        ChargeAccumulator.Accrue(_chargeAccumulatorsByCustomer, customerId, charge);
         // track the total cost
         Interlocked.Add(ref _totalCharges, charge);
         // track the number of charges
         Interlocked.Increment(ref _chargeCount);
+    }
+    /// <summary>
+    /// Notifies the notification sink that an ongoing cost has changed.
+    /// </summary>
+    /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
+    /// <param name="customerId">A string identifying the customer.</param>
+    /// <param name="changePerMinute">The change in cost (in picodollars per minute).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    {
+        // track the cost changes per service
+        CostAccumulator.ChangeCost(_costAccumulatorsByService, serviceId, changePerMinute);
+        // track the cost changes per customer
+        CostAccumulator.ChangeCost(_costAccumulatorsByCustomer, customerId, changePerMinute);
+        // track the total cost
+        Interlocked.Add(ref _totalCostChange, changePerMinute);
+        // track the number of charges
+        Interlocked.Increment(ref _costChangeCount);
     }
     internal void CloseTracking()
     {
@@ -129,15 +165,6 @@ internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedCharges, IA
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-    /// <summary>
-    /// Disposes of this instance asynchronously.
-    /// </summary>
-    public ValueTask DisposeAsync()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-        return ValueTask.CompletedTask;
-    }
 }
 
 internal class ScopeOnChargesAccruedDistributor : IAmbientCostTrackerNotificationSink
@@ -156,6 +183,19 @@ internal class ScopeOnChargesAccruedDistributor : IAmbientCostTrackerNotificatio
             notificationSink.OnChargesAccrued(serviceId, customerId, charge);
         }
     }
+    /// <summary>
+    /// Notifies the notification sink that an ongoing cost has changed.
+    /// </summary>
+    /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
+    /// <param name="customerId">A string identifying the customer.</param>
+    /// <param name="changePerMinute">The change in cost (in picodollars per minute).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    {
+        foreach (IAmbientCostTrackerNotificationSink notificationSink in _notificationSinks)
+        {
+            notificationSink.OnOngoingCostChanged(serviceId, customerId, changePerMinute);
+        }
+    }
     public bool RegisterSystemSwitchedNotificationSink(IAmbientCostTrackerNotificationSink sink)
     {
         return _notificationSinks.Add(sink);
@@ -169,20 +209,24 @@ internal class ScopeOnChargesAccruedDistributor : IAmbientCostTrackerNotificatio
 /// <summary>
 /// A class that tracks service profile statistics for a specific call context.
 /// </summary>
-internal class CallContextCostTracker : IAmbientAccruedCharges, IAmbientCostTrackerNotificationSink, IDisposable, IAsyncDisposable
+internal class CallContextCostTracker : IAmbientAccruedChargesAndCostChanges, IAmbientCostTrackerNotificationSink, IDisposable
 {
     private readonly ScopeOnChargesAccruedDistributor _distributor;
-    private readonly ConcurrentDictionary<string, CostAccumulator> _accumulatorsByService = new();
-    private readonly ConcurrentDictionary<string, CostAccumulator> _accumulatorsByCustomer = new();
+    private readonly ConcurrentDictionary<string, ChargeAccumulator> _accumulatorsByService = new();
+    private readonly ConcurrentDictionary<string, ChargeAccumulator> _accumulatorsByCustomer = new();
+    private readonly ConcurrentDictionary<string, CostAccumulator> _costAccumulatorsByService = new();
+    private readonly ConcurrentDictionary<string, CostAccumulator> _costAccumulatorsByCustomer = new();
     private int _chargeCount;       // interlocked
+    private int _costChangeCount;   // interlocked
     private long _totalCharges;     // interlocked
+    private long _totalCostChange;  // interlocked
     private bool _disposedValue;
 
     public string ScopeName { get; }
-
     public int ChargeCount => _chargeCount;
-
     public long AccumulatedChargeSum => _totalCharges;
+    public int CostChangeCount => _costChangeCount;
+    public long AccumulatedCostChangeSum => _totalCostChange;
 
     /// <summary>
     /// Constructs a CallContextCostTracker.
@@ -203,14 +247,31 @@ internal class CallContextCostTracker : IAmbientAccruedCharges, IAmbientCostTrac
     /// <param name="charge">The charge (in picodollars).</param>
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
-        // track the cost per service
+        // track the charges per service
         _accumulatorsByService[serviceId] = new(charge);
-        // track the cost per customer
+        // track the charges per customer
         _accumulatorsByCustomer[customerId] = new(charge);
-        // track the total cost
+        // track the total charges
         Interlocked.Add(ref _totalCharges, charge);
         // track the number of charges
         Interlocked.Increment(ref _chargeCount);
+    }
+    /// <summary>
+    /// Notifies the notification sink that an ongoing cost has changed.
+    /// </summary>
+    /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
+    /// <param name="customerId">A string identifying the customer.</param>
+    /// <param name="changePerMinute">The change in cost (in picodollars per minute).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    {
+        // track the cost change per service
+        _costAccumulatorsByService[serviceId] = new(changePerMinute);
+        // track the cost change per customer
+        _costAccumulatorsByCustomer[customerId] = new(changePerMinute);
+        // track the total cost change
+        Interlocked.Add(ref _totalCostChange, changePerMinute);
+        // track the number of charges
+        Interlocked.Increment(ref _costChangeCount);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -245,21 +306,12 @@ internal class CallContextCostTracker : IAmbientAccruedCharges, IAmbientCostTrac
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-    /// <summary>
-    /// Disposes of this instance asynchronously.
-    /// </summary>
-    public ValueTask DisposeAsync()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-        return ValueTask.CompletedTask;
-    }
 }
 
 /// <summary>
 /// A class that tracks service profile statistics for a moving time window.
 /// </summary>
-internal class TimeWindowCostTracker : IDisposable, IAsyncDisposable
+internal class TimeWindowCostTracker : IDisposable
 {
     private readonly string _scopeNamePrefix;
     private readonly AmbientEventTimer _timeWindowRotator;
@@ -272,8 +324,8 @@ internal class TimeWindowCostTracker : IDisposable, IAsyncDisposable
     /// <param name="metrics">A <see cref="IAmbientCostTracker"/> to hook into to receive processor change events.</param>
     /// <param name="scopeNamePrefix">A <see cref="TimeSpan"/> indicating the size of the window.</param>
     /// <param name="windowPeriod">A <see cref="TimeSpan"/> indicating how often reports are desired.</param>
-    /// <param name="onWindowComplete">An async delegate that receives a <see cref="IAmbientAccruedCharges"/> at the end of each time window.</param>
-    public TimeWindowCostTracker(IAmbientCostTracker metrics, string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientAccruedCharges, Task> onWindowComplete)
+    /// <param name="onWindowComplete">An async delegate that receives a <see cref="IAmbientAccruedChargesAndCostChanges"/> at the end of each time window.</param>
+    public TimeWindowCostTracker(IAmbientCostTracker metrics, string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientAccruedChargesAndCostChanges, Task> onWindowComplete)
     {
         if (onWindowComplete == null) throw new ArgumentNullException(nameof(onWindowComplete), "Time Window Collection is pointless without a completion delegate!");
         _scopeNamePrefix = scopeNamePrefix;
@@ -335,14 +387,71 @@ internal class TimeWindowCostTracker : IDisposable, IAsyncDisposable
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
+}
+/// <summary>
+/// A class that accumulates charges for some scope.
+/// </summary>
+public class ChargeAccumulator
+{
+    private long _chargeCount;      // interlocked
+    private long _totalCharges;     // interlocked
+
     /// <summary>
-    /// Disposes of this instance asynchronously.
+    /// Constructs a charge accumulator.
     /// </summary>
-    public ValueTask DisposeAsync()
+    /// <param name="charge">The initial charge.</param>
+    public ChargeAccumulator(long charge)
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-        return ValueTask.CompletedTask;
+        _chargeCount = 1;
+        _totalCharges = charge;
+    }
+
+    internal static void Accrue(ConcurrentDictionary<string, ChargeAccumulator> chargeAccumulators, string key, long charge)
+    {
+        chargeAccumulators.AddOrUpdate(key, new ChargeAccumulator(charge), (k, v) => { v.AddCharge(charge); return v; });
+    }
+
+    /// <summary>
+    /// Adds a charge to the accumulator.
+    /// </summary>
+    /// <param name="charge">The charge amount (in picodollars).</param>
+    public void AddCharge(long charge)
+    {
+        Interlocked.Increment(ref _chargeCount);
+        Interlocked.Add(ref _totalCharges, charge);
+    }
+}
+/// <summary>
+/// A class that accumulates cost for some scope.
+/// </summary>
+public class CostAccumulator
+{
+    private long _chargeCount;                  // interlocked
+    private long _totalCostPerMinuteChange;     // interlocked
+
+    /// <summary>
+    /// Constructs a cost accumulator.
+    /// </summary>
+    /// <param name="costPerMinuteChange">The initial change in cost.</param>
+    public CostAccumulator(long costPerMinuteChange)
+    {
+        _chargeCount = 1;
+        _totalCostPerMinuteChange = costPerMinuteChange;
+    }
+
+    internal static void ChangeCost(ConcurrentDictionary<string, CostAccumulator> chargeAccumulators, string key, long costPerMinuteChange)
+    {
+        chargeAccumulators.AddOrUpdate(key, new CostAccumulator(costPerMinuteChange), (k, v) => { v.AddCostChange(costPerMinuteChange); return v; });
+    }
+
+    /// <summary>
+    /// Adds a cost changes to the accumulator.
+    /// </summary>
+    /// <param name="costPerMinuteChange">The cost change (in picodollars per minute).</param>
+    public void AddCostChange(long costPerMinuteChange)
+    {
+        Interlocked.Increment(ref _chargeCount);
+        Interlocked.Add(ref _totalCostPerMinuteChange, costPerMinuteChange);
     }
 }
 #endif
