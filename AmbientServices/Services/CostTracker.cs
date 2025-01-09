@@ -19,8 +19,8 @@ public interface IAmbientCostTrackerNotificationSink
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-        /// <param name="changePerMinute">The change in cost (in picodollars per minute).</param> 
-    void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute);
+        /// <param name="changePerMonth">The change in cost (in picodollars per month).</param> 
+    void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth);
 }
 /// <summary>
 /// An interface that abstracts a cost tracker service.
@@ -39,10 +39,10 @@ public interface IAmbientCostTracker
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMinute">The change in cost (in picodollars per minute).</param> 
-    void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute);  // S3 is $0.023/GB/month, so in picodollars per byte per minute, that's $0.023 GB*m * 10^12p$/$ * 1GB/10^9B * 30.4375d/m = 0.023 * 10^3 * 30.4375 * 24 * 60 = ~1008090 picodollars per byte * minute, which seems like a reasonable amount
+    /// <param name="changePerMonth">The change in cost (in picodollars per month).</param> 
+    void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth);  // S3 is $0.023/GB/month, so in picodollars per kilobyte per month, that's $0.023 GB*m * 10^12p$/$ * 1GB/10^9B * 30.4375d/m = 0.023 * 10^3 * 1000 = ~23000 picodollars per kilobyte per month, which seems like a reasonable resolution
     /// <summary>
-    /// Registers a cost tracker notificatoin sink with this ambient service profiler.
+    /// Registers a cost tracker notification sink with this ambient service profiler.
     /// </summary>
     /// <param name="sink">An <see cref="IAmbientCostTrackerNotificationSink"/> that will receive notifications as charges accrue.</param>
     /// <returns>true if the registration was successful, false if the specified sink was already registered.</returns>

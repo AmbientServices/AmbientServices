@@ -35,17 +35,17 @@ internal class BasicAmbientCostTracker : IAmbientCostTracker
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMinute">The change in coste (in picodollars per minute).</param> 
-    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    /// <param name="changePerMonth">The change in coste (in picodollars per minute).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         // call all the notification sinks
         foreach (IAmbientCostTrackerNotificationSink notificationSink in _notificationSinks)
         {
-            notificationSink.OnOngoingCostChanged(serviceId, customerId, changePerMinute);
+            notificationSink.OnOngoingCostChanged(serviceId, customerId, changePerMonth);
         }
     }
     /// <summary>
-    /// Registers a cost tracker notificatoin sink with this ambient service profiler.
+    /// Registers a cost tracker notification sink with this ambient service profiler.
     /// </summary>
     /// <param name="sink">An <see cref="IAmbientCostTrackerNotificationSink"/> that will receive notifications as charges accrue.</param>
     /// <returns>true if the registration was successful, false if the specified sink was already registered.</returns>
@@ -115,15 +115,15 @@ internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedChargesAndC
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMinute">The change in cost (in picodollars per minute).</param> 
-    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    /// <param name="changePerMonth">The change in cost (in picodollars per month).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         // track the cost changes per service
-        CostAccumulator.ChangeCost(_costAccumulatorsByService, serviceId, changePerMinute);
+        CostAccumulator.ChangeCost(_costAccumulatorsByService, serviceId, changePerMonth);
         // track the cost changes per customer
-        CostAccumulator.ChangeCost(_costAccumulatorsByCustomer, customerId, changePerMinute);
+        CostAccumulator.ChangeCost(_costAccumulatorsByCustomer, customerId, changePerMonth);
         // track the total cost
-        Interlocked.Add(ref _totalCostChange, changePerMinute);
+        Interlocked.Add(ref _totalCostChange, changePerMonth);
         // track the number of charges
         Interlocked.Increment(ref _costChangeCount);
     }
@@ -188,12 +188,12 @@ internal class ScopeOnChargesAccruedDistributor : IAmbientCostTrackerNotificatio
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMinute">The change in cost (in picodollars per minute).</param> 
-    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    /// <param name="changePerMonth">The change in cost (in picodollars per month).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         foreach (IAmbientCostTrackerNotificationSink notificationSink in _notificationSinks)
         {
-            notificationSink.OnOngoingCostChanged(serviceId, customerId, changePerMinute);
+            notificationSink.OnOngoingCostChanged(serviceId, customerId, changePerMonth);
         }
     }
     public bool RegisterSystemSwitchedNotificationSink(IAmbientCostTrackerNotificationSink sink)
@@ -261,15 +261,15 @@ internal class CallContextCostTracker : IAmbientAccruedChargesAndCostChanges, IA
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMinute">The change in cost (in picodollars per minute).</param> 
-    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    /// <param name="changePerMonth">The change in cost (in picodollars per month).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         // track the cost change per service
-        _costAccumulatorsByService[serviceId] = new(changePerMinute);
+        _costAccumulatorsByService[serviceId] = new(changePerMonth);
         // track the cost change per customer
-        _costAccumulatorsByCustomer[customerId] = new(changePerMinute);
+        _costAccumulatorsByCustomer[customerId] = new(changePerMonth);
         // track the total cost change
-        Interlocked.Add(ref _totalCostChange, changePerMinute);
+        Interlocked.Add(ref _totalCostChange, changePerMonth);
         // track the number of charges
         Interlocked.Increment(ref _costChangeCount);
     }

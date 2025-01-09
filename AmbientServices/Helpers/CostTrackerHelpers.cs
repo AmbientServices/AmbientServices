@@ -54,11 +54,11 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMinute">The change in coste (in picodollars per minute).</param> 
-    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMinute)
+    /// <param name="changePerMonth">The change in coste (in picodollars per minute).</param> 
+    public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         _scopeDistributor.Value ??= new ScopeOnChargesAccruedDistributor();
-        _scopeDistributor.Value.OnOngoingCostChanged(serviceId, customerId, changePerMinute);
+        _scopeDistributor.Value.OnOngoingCostChanged(serviceId, customerId, changePerMonth);
     }
     /// <summary>
     /// Creates a cost tracker which profiles the current call context.
