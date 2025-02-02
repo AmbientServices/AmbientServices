@@ -126,7 +126,7 @@ public class TestDisposeResponsibility
     [TestMethod]
     public void DisposeResponsibilityNotification()
     {
-        UndisposedResponsibilityEventArgs? args = null;
+        ResponsibilityNotDisposedEventArgs? args = null;
         DisposeResponsibility.ResponsibilityNotDisposed += (sender, e) => args = e;
         AllocateAndDontDispose();
         GC.Collect();// 2, GCCollectionMode.Forced);
@@ -134,7 +134,7 @@ public class TestDisposeResponsibility
         GC.Collect();//2, GCCollectionMode.Forced);
         GC.WaitForPendingFinalizers();
         Assert.IsNotNull(args);
-        Assert.IsNull(args.Contained);
+        Assert.IsNotNull(args.Contained);
         Assert.IsNotNull(args.StackOnCreation);// (args.StackOnCreation.Contains(nameof(DisposeResponsibilityNotification)));   // this fails on Linux (maybe under Prod?)
     }
     private static void AllocateAndDontDispose()

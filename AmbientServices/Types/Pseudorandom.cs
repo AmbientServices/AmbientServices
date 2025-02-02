@@ -421,7 +421,6 @@ public class Pseudorandom : IEquatable<Pseudorandom>
     /// <returns>An array of bytes of the specified length populated with random byte values.</returns>
     public void NextBytes(Span<byte> target, int offset = 0, int length = -1)
     {
-        if (target == null) throw new ArgumentNullException(nameof(target));
         int index = 0;
         ulong rawData;
         for (int endOffset = (length < 0 || offset + length > target.Length) ? target.Length : (offset + length); offset < endOffset; offset += 8, index = ((index + 1) % 8))

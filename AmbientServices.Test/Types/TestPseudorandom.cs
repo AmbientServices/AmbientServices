@@ -493,7 +493,6 @@ namespace AmbientServices.Test
             Pseudorandom rand = new(false);
             Assert.ThrowsException<ArgumentNullException>(() => rand.NextEnum(null!));
             Assert.ThrowsException<ArgumentNullException>(() => rand.NextBytes(null!, 1));
-            Assert.ThrowsException<ArgumentNullException>(() => rand.NextBytes((Span<byte>)null!, 1));
             Assert.ThrowsException<ArgumentException>(() => rand.NextInt32SignedRangedUsuallySmall(10, 5));
             Assert.ThrowsException<ArgumentException>(() => rand.NextInt64SignedRangedUsuallySmall(10, 5));
             Assert.ThrowsException<ArgumentException>(() => rand.NextEnum(typeof(int)));

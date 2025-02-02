@@ -302,17 +302,18 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     }
 }
 /// <summary>
-/// A class containins the arguments for the <see cref="DisposeResponsibility.UndisposedResponsibility"/> event.
+/// A class containins the arguments for the <see cref="DisposeResponsibility.ResponsibilityNotDisposed"/> event.
 /// </summary>
-public class UndisposedResponsibilityEventArgs : EventArgs
+public class ResponsibilityNotDisposedEventArgs : EventArgs
 {
     /// <summary>
-    /// Constructs a new <see cref="UndisposedResponsibilityEventArgs"/> with the specified stack on creation.
+    /// Constructs a new <see cref="ResponsibilityNotDisposedEventArgs"/> with the specified stack on creation.
     /// </summary>
     /// <param name="contained">The instance constained in the <see cref="DisposeResponsibility{T}"/>.</param>
     /// <param name="stackOnCreation">The stack trace captured when the instance was created.</param>
-    public UndisposedResponsibilityEventArgs(object? contained, string stackOnCreation)
+    public ResponsibilityNotDisposedEventArgs(object? contained, string stackOnCreation)
     {
+        Contained = contained;
         StackOnCreation = stackOnCreation;
     }
     /// <summary>
@@ -339,7 +340,7 @@ public static class DisposeResponsibility
     /// </summary>
     public static IEnumerable<(string Stack, int Count)> AllPendingDisposals => PendingDispose.AllPendingDisposals;
 #endif
-    internal static bool NotifyEvent(object? sender, UndisposedResponsibilityEventArgs args)
+    internal static bool NotifyEvent(object? sender, ResponsibilityNotDisposedEventArgs args)
     {
         if (ResponsibilityNotDisposed == null) return false;
         ResponsibilityNotDisposed.Invoke(sender, args);
@@ -348,7 +349,7 @@ public static class DisposeResponsibility
     /// <summary>
     /// An event that notifies subscribers that a <see cref="DisposeResponsibility{T}"/> was not properly disposed.
     /// </summary>
-    public static event EventHandler<UndisposedResponsibilityEventArgs>? ResponsibilityNotDisposed;
+    public static event EventHandler<ResponsibilityNotDisposedEventArgs>? ResponsibilityNotDisposed;
 }
 
 #if DEBUG

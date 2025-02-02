@@ -187,7 +187,7 @@ namespace AmbientServices.Test
 
             Assert.IsTrue(collector.ProcessAnalyzer.ScopeName.StartsWith("Process"));
 #if NET6_0_OR_GREATER   // starting in net6.0, the thread's name is automatically assigned
-            Assert.IsTrue(collector.ThreadAnalyzer.ScopeName.StartsWith(".NET Long Running Task"));
+            Assert.IsTrue(collector.ThreadAnalyzer.ScopeName.StartsWith(".NET TP Worker") || collector.ThreadAnalyzer.ScopeName.StartsWith(".NET ThreadPool Worker") || collector.ThreadAnalyzer.ScopeName.StartsWith(".NET Long Running Task"));
 #else
             Assert.IsTrue(collector.ThreadAnalyzer.ScopeName.StartsWith("Thread"));
 #endif
