@@ -150,7 +150,7 @@ public static class AssemblyLoggingExtensions
     /// <param name="assembly">The assembly that was loaded.</param>
     public static void LogLoaded(this Assembly assembly)
     {
-        Logger.Filter("Lifetime", AmbientLogLevel.Trace)?.Log(new { Assembly = assembly.FullName, Action = "Loaded" });
+        Logger.Filter("Lifetime", AmbientLogLevel.Trace)?.Log(new { Action = "AssemblyLoaded", Assembly = assembly.FullName });
     }
     /// <summary>
     /// Logs that there was an assembly load exception.
@@ -168,7 +168,7 @@ public static class AssemblyLoggingExtensions
     /// <param name="assembly">The <see cref="Assembly"/> that was scanned.</param>
     public static void LogScanned(this Assembly assembly)
     {
-        Logger.Filter("Scan", AmbientLogLevel.Trace)?.Log(new { Assembly = assembly.FullName, Action = "Scanned" });
+        Logger.Filter("Scan", AmbientLogLevel.Trace)?.Log(new { Action = "AssemblyScanned", Assembly = assembly.FullName });
     }
 }
 /// <summary>
@@ -187,7 +187,7 @@ public static class MyProgram
         {
             try
             {
-                Logger.Filter("Process", AmbientLogLevel.Debug)?.Log(new { Action = "Starting processing..." });
+                Logger.Filter("Process", AmbientLogLevel.Debug)?.Log(new { Action = "Sample Program Starting processing..." });
             }
             catch (Exception ex)
             {

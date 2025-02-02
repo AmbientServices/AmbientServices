@@ -52,7 +52,7 @@ namespace AmbientServices
         /// <param name="cancel">A <see cref="CancellationToken"/> the caller can use to stop the operation before it completes.</param>
         public ValueTask Start(CancellationToken cancel = default)
         {
-            Logger.Filter("StartStop")?.Log(new { Action = "Starting" });
+            Logger.Filter("StartStop")?.Log(new { Action = "StatusStarting" });
             if (Interlocked.Exchange(ref _started, 1) != 0) throw new InvalidOperationException("The Status system has already been started!");
             if (_loadAllCheckers)
             {
@@ -66,7 +66,7 @@ namespace AmbientServices
                     AddCheckersAndAuditors(assembly);
                 }
             }
-            Logger.Filter("StartStop")?.Log(new { Action = "Started" });
+            Logger.Filter("StartStop")?.Log(new { Action = "StatusStarted" });
             return default;
         }
         /// <summary>
@@ -74,7 +74,7 @@ namespace AmbientServices
         /// </summary>
         public async ValueTask Stop()
         {
-            Logger.Filter("StartStop")?.Log(new { Action = "Stopping" });
+            Logger.Filter("StartStop")?.Log(new { Action = "StatusStopping" });
             // make sure everyone can tell we're shutting down
             Interlocked.Exchange(ref _shuttingDown, 1);
             // stop the timers on each node
@@ -92,7 +92,7 @@ namespace AmbientServices
             {
                 checker.Dispose();
             }
-            Logger.Filter("StartStop")?.Log( new { Action = "Stopped" });
+            Logger.Filter("StartStop")?.Log( new { Action = "StatusStopped" });
             // now that we're done, reset everything back to where we were before we started
             _checkers.Clear();
             Interlocked.Exchange(ref _started, 0);
@@ -139,7 +139,7 @@ namespace AmbientServices
 #else
             if (checker is null) throw new ArgumentNullException(nameof(checker));
 #endif
-            Logger.Filter("Registration")?.Log(new { Action = $"Adding Checker: {checker.GetType().Name}" });
+            Logger.Filter("Registration")?.Log(new { Action = $"AddingStatusChecker", CheckerName = checker.GetType().Name });
             _checkers.Add(checker);
             // is this checker an auditor?
             StatusAuditor? auditor = checker as StatusAuditor;
@@ -160,7 +160,7 @@ namespace AmbientServices
             if (checker is null) throw new ArgumentNullException(nameof(checker));
 #endif
             _checkers.Remove(checker);
-            Logger.Filter("Registration")?.Log(new { Action = $"Removed Checker: {checker.GetType().Name}" });
+            Logger.Filter("Registration")?.Log(new { Action = $"RemovedStatusChecker", CheckerName = checker.GetType().Name });
         }
 
         private static float? Rating(StatusResults results)
@@ -182,7 +182,7 @@ namespace AmbientServices
         /// <returns>An enumeration of <see cref="StatusChecker"/>s that did not complete refreshing before being cancelled.</returns>
         public async ValueTask<IEnumerable<StatusChecker>> RefreshAsync(CancellationToken cancel = default)
         {
-            Logger.Filter("Check")?.Log(new { Action = "Explicit Refreshing" });
+            Logger.Filter("Check")?.Log(new { Action = "StatusExplicitRefresh" });
             // asynchronously get the status of each system
             Dictionary<StatusChecker, Task<StatusResults>> checkerTasks = new(_checkers.Count);
             foreach (StatusChecker checker in _checkers)

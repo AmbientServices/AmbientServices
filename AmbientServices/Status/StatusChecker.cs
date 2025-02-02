@@ -74,7 +74,7 @@ namespace AmbientServices
             if (newResults != null)
             {
                 if (!string.Equals(TargetSystem, newResults.TargetSystem, StringComparison.Ordinal)) throw new ArgumentException("The target system for the specified status results and must match the this StatusChecker's target system!", nameof(newResults));
-                Status.Logger.Filter("Results", newResults.Report?.Alert?.Rating < StatusRating.Okay ? AmbientLogLevel.Warning : AmbientLogLevel.Verbose)?.Log(new { TargetSystem = newResults.TargetSystemDisplayName, newResults.Report?.Alert });
+                if (newResults.Report != null) Status.Logger.Filter("Results", newResults.Report.Alert?.Rating < StatusRating.Okay ? AmbientLogLevel.Warning : AmbientLogLevel.Verbose)?.Log(new { Action = "NewStatusResults", TargetSystem = newResults.TargetSystemDisplayName, newResults.Report.Alert });
                 _resultsTracker.SetLatestResults(newResults);
             }
         }
