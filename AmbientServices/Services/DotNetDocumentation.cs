@@ -125,6 +125,23 @@ public class DotNetDocumentation
             {
                 ret.Append(parameter.ParameterType.Name);
             }
+            else if (parameter.ParameterType.IsGenericType)
+            { // put in the generic type name as listed in XML documentation parameter lists, which is GenericType{TypeParam1,TypeParam2,...}
+                string genericTypeName = parameter.ParameterType.GetGenericTypeDefinition().FullName ?? "UnknownType";
+                int backtickIndex = genericTypeName.IndexOf('`'
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+                    , StringComparison.Ordinal
+#endif
+                    );
+                if (backtickIndex >= 0)
+                {
+                    genericTypeName = genericTypeName.Substring(0, backtickIndex);
+                }
+                ret.Append(genericTypeName);
+                ret.Append('{');
+                ret.Append(string.Join(",", parameter.ParameterType.GetGenericArguments().Select(t => t.FullName)));
+                ret.Append('}');
+            }
             else
             {
                 ret.Append(parameter.ParameterType.FullName);
@@ -142,10 +159,12 @@ public class DotNetDocumentation
         string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Type}:{type.FullName.Replace('+', '.')}{""}\"]";
         return _documentRoot.SelectSingleNode(nodePath);
     }
-    private XPathNavigator? MethodDocumentation(MethodInfo method)
+    private XPathNavigator? MethodDocumentation(MethodBase method)
     {
         if (method.DeclaringType?.FullName == null) return null;
-        string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Method}:{method.DeclaringType.FullName.Replace('+', '.') + "." + method.Name}{BuildDisambiguatingParameterList(method.GetParameters())}\"]";
+        string methodName = method.Name;
+        if (methodName == ".ctor") methodName = "#ctor";
+        string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Method}:{method.DeclaringType.FullName.Replace('+', '.') + "." + methodName}{BuildDisambiguatingParameterList(method.GetParameters())}\"]";
         return _documentRoot.SelectSingleNode(nodePath);
     }
     private XPathNavigator? PropertyDocumentation(PropertyInfo property)
@@ -278,7 +297,7 @@ public class DotNetDocumentation
     {
         if (type.IsArray)
         {
-            return $"{GetHumanReadableTypeName(type.GetElementType())}[]";
+            return $"{GetHumanReadableTypeName(type.GetElementType()!)}[]"; // GetElementType() should never return null where type.IsArray is true
         }
         if (type.IsGenericType)
         {
@@ -286,8 +305,12 @@ public class DotNetDocumentation
             {
                 return $"{GetHumanReadableTypeName(type.GetGenericArguments()[0])}?";
             }
-            var genericTypeName = type.GetGenericTypeDefinition().Name;
-            var backtickIndex = genericTypeName.IndexOf('`');
+            string genericTypeName = type.GetGenericTypeDefinition().Name;
+            int backtickIndex = genericTypeName.IndexOf('`'
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+                , StringComparison.Ordinal
+#endif
+                );
             if (backtickIndex >= 0)
             {
                 genericTypeName = genericTypeName.Substring(0, backtickIndex);
@@ -299,7 +322,11 @@ public class DotNetDocumentation
         {
             return type.Name;
         }
-        if (type.DeclaringType != null && type.Name.Contains('<'))
+        if (type.DeclaringType != null && type.Name.Contains('<'
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+                , StringComparison.Ordinal
+#endif
+            ))
         {
             // Handle compiler-generated types (e.g., async state machines)
             var declaringTypeName = GetHumanReadableTypeName(type.DeclaringType);
@@ -330,7 +357,7 @@ public class DotNetDocumentation
     /// </summary>
     /// <param name="method">A <see cref="MethodInfo"/> identifying the method to get documentation for.</param>
     /// <returns>A <see cref="MethodDocumentation"/> containing documentation for the specified method, if one could be found.</returns>
-    public MethodDocumentation? GetMethodDocumentation(MethodInfo method)
+    public MethodDocumentation? GetMethodDocumentation(MethodBase method)
     {
 #if NET5_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(method);

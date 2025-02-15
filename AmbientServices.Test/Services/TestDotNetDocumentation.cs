@@ -31,7 +31,7 @@ public class TestDotNetDocumentation
     {
         DotNetDocumentation docs = DotNetDocumentation.Load(typeof(DotNetDocumentation).Assembly);
         TypeDocumentation docsDocs = docs.GetTypeDocumentation(typeof(DotNetDocumentation));
-        MethodDocumentation methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetMethodDocumentation)));
+        MethodDocumentation? methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetMethodDocumentation)));
         Assert.IsNotNull(methodDocs);
         methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetFieldDocumentation)));
         Assert.IsNotNull(methodDocs);
@@ -62,6 +62,9 @@ public class TestDotNetDocumentation
             methodDocs = docs.GetMethodDocumentation(mi);
             Assert.IsNotNull(methodDocs);
         }
+        ConstructorInfo ci = typeof(TypeDocumentation).GetConstructor( new System.Type[] { typeof(string), typeof(string), typeof(string), typeof(System.Collections.Generic.IEnumerable<ParameterDocumentation>) });
+        methodDocs = docs.GetMethodDocumentation(ci);
+        Assert.IsNotNull(methodDocs);
 
     }
     [TestMethod]
@@ -69,7 +72,7 @@ public class TestDotNetDocumentation
     {
         DotNetDocumentation docs = DotNetDocumentation.Load(typeof(AmbientFileLogger).Assembly);
         MethodInfo mi = typeof(AmbientFileLogger).GetMethod("Flush");
-        MethodDocumentation md = docs.GetMethodDocumentation(mi);
+        MethodDocumentation? md = docs.GetMethodDocumentation(mi);
         Assert.IsNotNull(md);
     }
     [TestMethod]
@@ -81,7 +84,7 @@ public class TestDotNetDocumentation
     public void ProxyType()
     {
         DotNetDocumentation docs = DotNetDocumentation.Load(typeof(IPAddressConverter).Assembly);
-        TypeDocumentation docsDocs = docs.GetTypeDocumentation(typeof(IPAddressConverter));
+        TypeDocumentation? docsDocs = docs.GetTypeDocumentation(typeof(IPAddressConverter));
         Assert.IsNotNull(docsDocs);
     }
     [TestMethod]
