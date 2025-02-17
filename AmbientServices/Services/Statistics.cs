@@ -432,7 +432,7 @@ public static class IAmbientStatisticsExtensions
         if (types == AggregationTypes.None) types = DefaultSpatialAggregation(reader.StatisicType);
         return types.Aggregate(samples);
     }
-    private static long? Sum(this IEnumerable<long?> source)
+    private static long? SumWithMax(this IEnumerable<long?> source)
     {
         long? sum = null;
         foreach (long? value in source ?? Array.Empty<long?>())
@@ -454,12 +454,23 @@ public static class IAmbientStatisticsExtensions
     {
         return type switch
         {
-            AggregationTypes.Average => (long?)samples.Average(),
+            AggregationTypes.Average => Average(samples),
             AggregationTypes.Min => samples.Min(),
             AggregationTypes.Max => samples.Max(),
             AggregationTypes.MostRecent => samples.LastOrDefault(),
-            _ => samples.Sum(),
+            _ => SumWithCutoff(samples),
         };
+    }
+    private static long? Average(IEnumerable<long?> samples)
+    {
+        double? avg = samples.Select(l => (double?)l).Average();
+        return (avg == null) ? null : (long?)Math.Round(avg.Value);
+    }
+    private static long? SumWithCutoff(IEnumerable<long?> samples)
+    {
+        double? sum = samples.Select(l => (double?)l).Sum();
+        if (sum > long.MaxValue) return long.MaxValue;
+        return (long?)sum;
     }
     /// <summary>
     /// Gets the default temporal (over time) aggregation type for the specified statistic type.
