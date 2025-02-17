@@ -432,18 +432,6 @@ public static class IAmbientStatisticsExtensions
         if (types == AggregationTypes.None) types = DefaultSpatialAggregation(reader.StatisicType);
         return types.Aggregate(samples);
     }
-    private static long? SumWithMax(this IEnumerable<long?> source)
-    {
-        long? sum = null;
-        foreach (long? value in source ?? Array.Empty<long?>())
-        {
-            if (value.HasValue)
-            {
-                sum = (sum ?? 0) + value.Value;
-            }
-        }
-        return sum;
-    }
     /// <summary>
     /// Uses the specified aggregation type to aggregate samples.
     /// </summary>
@@ -452,6 +440,7 @@ public static class IAmbientStatisticsExtensions
     /// <returns>The aggregated sample.</returns>
     public static long? Aggregate(this AggregationTypes type, IEnumerable<long?> samples)
     {
+        if (samples == null) throw new ArgumentNullException(nameof(samples));
         return type switch
         {
             AggregationTypes.Average => Average(samples),
@@ -468,7 +457,11 @@ public static class IAmbientStatisticsExtensions
     }
     private static long? SumWithCutoff(IEnumerable<long?> samples)
     {
-        double? sum = samples.Select(l => (double?)l).Sum();
+        double? sum = null;
+        foreach (long? l in samples)
+        {
+            if (l != null) sum = (sum ?? 0) + l.Value;
+        }
         if (sum > long.MaxValue) return long.MaxValue;
         return (long?)sum;
     }
