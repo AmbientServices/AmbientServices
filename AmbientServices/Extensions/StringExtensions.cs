@@ -125,12 +125,26 @@ public static partial class StringExtensions
 #pragma warning restore CA1801
 #endif
 #if !NET8_0_OR_GREATER
+    /// <summary>
+    /// Checks to see if the string starts with the specified character, using standard ordinal comparison.
+    /// </summary>
+    /// <param name="str">The string to test.</param>
+    /// <param name="value">The character to look for.</param>
+    /// <returns></returns>
     public static bool StartsWith(this string str, char value)
     {
+        if (str == null) throw new ArgumentNullException(nameof(str));
         return str.StartsWith(value.ToString(), StringComparison.Ordinal);
     }
+    /// <summary>
+    /// Checks to see if the string ends with the specified character, using standard ordinal comparison.
+    /// </summary>
+    /// <param name="str">The string to test.</param>
+    /// <param name="value">The character to look for.</param>
+    /// <returns></returns>
     public static bool EndsWith(this string str, char value)
     {
+        if (str == null) throw new ArgumentNullException(nameof(str));
         return str.EndsWith(value.ToString(), StringComparison.Ordinal);
     }
 #endif
@@ -142,6 +156,7 @@ public static partial class StringExtensions
     /// <returns>The index of the first occurrence of the character in the string, or -1 if the character is not found.</returns>
     public static int IndexOfOrdinal(this string str, char c)
     {
+        if (str == null) throw new ArgumentNullException(nameof(str));
 #if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         return str.IndexOf(c, StringComparison.Ordinal);
 #else
@@ -156,6 +171,7 @@ public static partial class StringExtensions
     /// <returns>true if the character is found in the string, false otherwise.</returns>
     public static bool ContainsOrdinal(this string str, char c)
     {
+        if (str == null) throw new ArgumentNullException(nameof(str));
 #if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         return str.Contains(c, StringComparison.Ordinal);
 #else
@@ -171,6 +187,7 @@ public static partial class StringExtensions
     /// <returns>true if the character is found in the string, false otherwise.</returns>
     public static string ReplaceOrdinal(this string str, string find, string replacement)
     {
+        if (str == null) throw new ArgumentNullException(nameof(str));
 #if NET5_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         return str.Replace(find, replacement, StringComparison.Ordinal);
 #else

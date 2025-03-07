@@ -68,6 +68,10 @@ public class AmbientLogger
         JsonSerializerOptions options = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
         options.Converters.Add(new IPAddressConverter());
         options.Converters.Add(new IPAddressConverterFactory());
+#if NETCOREAPP1_0_OR_GREATER
+        options.Converters.Add(new IPEndPointConverter());
+        options.Converters.Add(new IPEndPointConverterFactory());
+#endif
         return options;
     }
 
@@ -770,3 +774,69 @@ public class IPAddressConverter : JsonConverter<System.Net.IPAddress>
         writer.WriteStringValue(value?.ToString());
     }
 }
+
+#if NETCOREAPP1_0_OR_GREATER
+/// <summary>
+/// A JsonConverterFactory for System.Net.IPEndPoint.
+/// </summary>
+public class IPEndPointConverterFactory : JsonConverterFactory
+{
+    /// <summary>
+    /// Checks to see if the specified type can be converted.
+    /// </summary>
+    /// <param name="typeToConvert">The type to check.</param>
+    /// <returns>Whether or not the type can be converted.</returns>
+    public override bool CanConvert(Type typeToConvert)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(typeToConvert);
+#else
+        if (typeToConvert is null) throw new ArgumentNullException(nameof(typeToConvert));
+#endif
+        return typeof(System.Net.IPEndPoint).IsAssignableFrom(typeToConvert);
+    }
+    /// <summary>
+    /// Creates a JsonConverter for the specified type.
+    /// </summary>
+    /// <param name="typeToConvert">The type to convert.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use.</param>
+    /// <returns>The <see cref="JsonConverter"/>.</returns>
+    public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options) => new IPEndPointConverter();
+}
+
+/// <summary>
+/// A JsonConverter for System.Net.IPEndPoint.
+/// </summary>
+[JsonConverter(typeof(System.Net.IPEndPoint)), ProxyType(typeof(string))]
+public class IPEndPointConverter : JsonConverter<System.Net.IPEndPoint>
+{
+    /// <summary>
+    /// Reads the JSON representation of the object.
+    /// </summary>
+    /// <param name="reader">The <see cref="Utf8JsonReader"/> to read the object from.</param>
+    /// <param name="typeToConvert">The type to convert.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use to interpret the formatting.</param>
+    /// <returns>The <see cref="System.Net.IPEndPoint"/> that was deserialized.</returns>
+    public override System.Net.IPEndPoint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        string? ip = reader.GetString();
+        System.Net.IPEndPoint? ipEndPoint = (ip == null) ? null : System.Net.IPEndPoint.Parse(ip);
+        return ipEndPoint ?? System.Net.IPEndPoint.Parse("0");
+    }
+    /// <summary>
+    /// Writes the JSON representation of the object.
+    /// </summary>
+    /// <param name="writer">The <see cref="Utf8JsonWriter"/> to write the object into.</param>
+    /// <param name="value">The <see cref="System.Net.IPEndPoint"/> to write.</param>
+    /// <param name="options">The <see cref="JsonSerializerOptions"/> to use for formatting the data.</param>
+    public override void Write(Utf8JsonWriter writer, System.Net.IPEndPoint value, JsonSerializerOptions options)
+    {
+#if NET5_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(writer);
+#else
+        if (writer is null) throw new ArgumentNullException(nameof(writer));
+#endif
+        writer.WriteStringValue(value?.ToString());
+    }
+}
+#endif

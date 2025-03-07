@@ -417,6 +417,36 @@ public class TestLogger
 
         json = JsonSerializer.Serialize(dictionary, options);
     }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientLogger"/>.
+    /// </summary>
+    [TestMethod]
+    public void IPEndPointSerializer()
+    {
+        IPEndPoint min = IPEndPoint.Parse("0");
+
+        JsonSerializerOptions options = AmbientLogger.DefaultSerializer;
+        string none = JsonSerializer.Serialize(min, options);
+        Assert.AreEqual(min, JsonSerializer.Deserialize<IPEndPoint>(none, options));
+        string nullableNull = JsonSerializer.Serialize<IPEndPoint?>(null, options);
+        Assert.IsNull(JsonSerializer.Deserialize<IPEndPoint?>(nullableNull, options));
+
+        Dictionary<string, object?> dictionary = new()
+        {
+            { "Level", AmbientLogLevel.Information },
+            { "baselineKey", "baselineValue" },
+            { "key1", IPEndPoint.Parse("0.0.0.0") },
+            { "key2", null },
+        };
+
+        string json = JsonSerializer.Serialize(dictionary, options);
+
+        string logEntry = AmbientLogger.ConvertStructuredDataIntoSimpleMessage(dictionary);
+
+        dictionary["Key"] = min;
+
+        json = JsonSerializer.Serialize(dictionary, options);
+    }
     [TestMethod]
     public void AmbientLoggerTest()
     {
