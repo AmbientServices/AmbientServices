@@ -374,7 +374,7 @@ namespace AmbientServices.Test
         }
     }
 
-    sealed class AmbientSettingsOverride : IMutableAmbientSettingsSet
+    sealed class AmbientSettingsOverride : IAmbientSettingsSet
     {
         private readonly LazyUnsubscribeWeakEventListenerProxy<AmbientSettingsOverride, object, IAmbientSettingInfo> _weakSettingRegistered;
         private readonly IAmbientSettingsSet _fallbackSettings;
@@ -408,6 +408,10 @@ namespace AmbientServices.Test
         }
 
         public string SetName { get; }
+        /// <summary>
+        /// Gets whether or not the settings set is mutable.
+        /// </summary>
+        public bool SettingsAreMutable => true;
 
         public bool ChangeSetting(string key, string value)
         {

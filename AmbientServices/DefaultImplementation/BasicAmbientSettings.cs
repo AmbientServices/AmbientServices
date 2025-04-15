@@ -8,7 +8,7 @@ namespace AmbientServices;
 /// A basic settings set implementation that may be used for unit test dependency injection.
 /// </summary>
 [DefaultAmbientService(typeof(IAmbientSettingsSet))]
-public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
+public class BasicAmbientSettingsSet : IAmbientSettingsSet
 {
     /// <summary>
     /// The set name of the default settings set.
@@ -97,7 +97,10 @@ public class BasicAmbientSettingsSet : IMutableAmbientSettingsSet
         object? value;
         return _typedValues.TryGetValue(key, out value) ? value : null;
     }
-
+    /// <summary>
+    /// Gets whether or not the settings set is mutable.
+    /// </summary>
+    public bool SettingsAreMutable => true;
     /// <summary>
     /// Changes the specified setting.
     /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.

@@ -500,10 +500,13 @@ class BufferPool
 ```
 ### Default Implementation
 The default implementation just uses a local initally-empty ConcurrentDictionary to keep track of settings values, so the default settings values will be used unless the default settings set is altered.  
-An alternate interface, `IMutableAmbientSettingsSet`, extends `IAmbientSettingsSet` and adds methods to change the settings values in this implementation.  
-Other service implementations may or may not support changing settings values and may or may not support this interface to do so.  
-The simplicity of this abstraction is due to the wide variety of settings systems available and the fact that nearly all use cases can be handled using this abstraction.  
-Since the interface is only one function, implementing a bridge to Configuration.AppSettings or some other more appropriate settings repository is very simple.
+Some analysis tools encourage splitting `IAmbientSettingsSet` into a base interface that only reads and a derived interface that adds writing.
+This turns out to greatly complicate the system.  For example, with derived interfaces, how do you handle the ambient instance? 
+Do you force both to use the same instance?  Is that what you always want?  What if you have an implementation that only implements the base interface?
+If you allow separate instances, you end up with settings that write to one instance but read from another, which is usually not what you want.
+Following the example of .NET Stream, I've chosen to use a single interface that provides both reading and writing, but only if the implementation supports it.
+I at least povide a function that let you know whether you can write or not, so you don't have to attempt to write and get an exception.
+Implementations are provided for settings backed by the system environment (AmbientEnvironmentSettingsSet), an in-memory set (BasicAmbientSettingsSet), an immutable in-memory set (AmbientImmutableSettingsSet), app.config settings (AppConfigSettingsSet), a fake settings set attached to default settings (DefaultSettingsSet), and a layered settings set that allows you to combine multiple settings sets into a single set (AmbientSettingsLayers).
 
 # Customizing Ambient Services
 
@@ -638,6 +641,18 @@ class AppConfigAmbientSettings : IAmbientSettingsSet
         IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
         return (ps != null) ? ps.Convert(this, rawValue ?? "") : rawValue;
     }
+    /// <summary>
+    /// Gets whether or not the settings set is mutable.
+    /// </summary>
+    public bool SettingsAreMutable => false;
+    /// <summary>
+    /// Changes the specified setting, if possible.
+    /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.
+    /// </summary>
+    /// <param name="key">A string that uniquely identifies the setting.</param>
+    /// <param name="value">The new string value for the setting, or null if the setting should be removed.</param>
+    /// <returns>Whether or not the setting actually changed (it may have had already the same value).</returns>
+    public bool ChangeSetting(string key, string? value) => throw new InvalidOperationException($"{nameof(AppConfigAmbientSettings)} is not mutable.");
 }
 ```
 
@@ -690,6 +705,18 @@ class LocalAmbientSettingsOverride : IAmbientSettingsSet, IDisposable
         IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
         return (ps != null) ? ps.Convert(this, rawValue ?? "") : rawValue;
     }
+    /// <summary>
+    /// Gets whether or not the settings set is mutable.
+    /// </summary>
+    public bool SettingsAreMutable => false;
+    /// <summary>
+    /// Changes the specified setting, if possible.
+    /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.
+    /// </summary>
+    /// <param name="key">A string that uniquely identifies the setting.</param>
+    /// <param name="value">The new string value for the setting, or null if the setting should be removed.</param>
+    /// <returns>Whether or not the setting actually changed (it may have had already the same value).</returns>
+    public bool ChangeSetting(string key, string? value) => throw new InvalidOperationException($"{nameof(LocalAmbientSettingsOverride)} is not mutable.");
 }
 ```
 

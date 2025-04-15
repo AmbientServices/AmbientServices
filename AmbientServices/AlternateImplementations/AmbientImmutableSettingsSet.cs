@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace AmbientServices;
 
@@ -74,6 +75,18 @@ public class AmbientImmutableSettingsSet : IAmbientSettingsSet
     {
         return _typedValues.TryGetValue(key, out object? value) ? value : null;
     }
+    /// <summary>
+    /// Gets whether or not the settings set is mutable.
+    /// </summary>
+    public bool SettingsAreMutable => false;
+    /// <summary>
+    /// Changes the specified setting, if possible.
+    /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.
+    /// </summary>
+    /// <param name="key">A string that uniquely identifies the setting.</param>
+    /// <param name="value">The new string value for the setting, or null if the setting should be removed.</param>
+    /// <returns>Whether or not the setting actually changed (it may have had already the same value).</returns>
+    public bool ChangeSetting(string key, string? value) => throw new InvalidOperationException($"{nameof(AmbientImmutableSettingsSet)} is not mutable.");
 
     /// <summary>
     /// Gets a string representing the settings instance.

@@ -67,7 +67,7 @@ namespace AmbientServices.Test
         public void SettingsSetWithExtraSettings()
         {
             Dictionary<string, string> settings = new() { { nameof(SettingsSetWithExtraSettings) + "1", null }, { nameof(SettingsSetWithExtraSettings) + "2", "test" }, };
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetWithExtraSettings), settings);
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetWithExtraSettings), settings);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -76,7 +76,7 @@ namespace AmbientServices.Test
         public void SettingsSetGetRawValue()
         {
             Dictionary<string, string> settings = new() { { nameof(SettingsSetGetRawValue), "1" }, };
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetGetRawValue), settings);
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetGetRawValue), settings);
             Assert.AreEqual(null, settingsSet.GetRawValue(nameof(SettingsSetGetRawValue) + "-notfound"));
             Assert.AreEqual("1", settingsSet.GetRawValue(nameof(SettingsSetGetRawValue)));
         }
@@ -90,7 +90,7 @@ namespace AmbientServices.Test
             SettingInfo<int> base2 = new(nameof(SettingsSetWithPreregisteredSettings) + "2", "", s => string.IsNullOrEmpty(s) ? 2 : Int32.Parse(s));
             SettingInfo<int> base3 = new(nameof(SettingsSetWithPreregisteredSettings) + "3", "", s => Int32.Parse(s), "3");
             Dictionary<string, string> settings = new() { { nameof(SettingsSetWithPreregisteredSettings) + "1", null }, { nameof(SettingsSetWithPreregisteredSettings) + "2", "2" }, { nameof(SettingsSetWithPreregisteredSettings) + "3", null }, };
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetWithPreregisteredSettings), settings);
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetWithPreregisteredSettings), settings);
         }
         /// <summary>
         /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -98,7 +98,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsSetSettingChangeNotification()
         {
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingChangeNotification));
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingChangeNotification));
             string testSettingKey = nameof(SettingsSetSettingChangeNotification);
             string initialValue = "initialValue";
             string notificationNewValue = "";
@@ -115,7 +115,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsSetSettingChangeNoNotification()
         {
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingChangeNoNotification));
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingChangeNoNotification));
             string testSettingKey = nameof(SettingsSetSettingChangeNoNotification);
             string initialValue = "initialValue";
             SettingsSetSetting<string> testSetting = new(settingsSet, testSettingKey, "", s => s, initialValue);
@@ -130,7 +130,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsSetSettingNullConvert()
         {
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingNullConvert));
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingNullConvert));
             string testSettingKey = nameof(SettingsSetSettingNullConvert);
             string initialValue = "initialValue";
             string secondValue = "change1";
@@ -153,7 +153,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsSetSettingNonStringNullConvert()
         {
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingNonStringNullConvert));
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingNonStringNullConvert));
             string testSettingKey = nameof(SettingsSetSettingNonStringNullConvert);
             Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", null, "1"));
             Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", 1, null));
@@ -166,7 +166,7 @@ namespace AmbientServices.Test
         public void SettingMisc()
         {
             Dictionary<string, string> settings = new() { { "key", "value" } };
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingMisc), settings);
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingMisc), settings);
             Assert.IsTrue(settingsSet!.ToString()!.Contains(nameof(SettingMisc)));
             Assert.AreEqual("SettingMisc", settingsSet.SetName);
         }
@@ -176,7 +176,7 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingsGarbageCollection()
         {
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsGarbageCollection));
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsGarbageCollection));
             string testSettingKey = nameof(SettingsGarbageCollection);
             WeakReference<SettingsSetSetting<string>> wr = FinalizableSetting(testSettingKey, settingsSet);
             GC.Collect();   // this should collect the temporary Setting created in the function below
@@ -184,7 +184,7 @@ namespace AmbientServices.Test
             SettingsSetSetting<string> alive;
             Assert.IsFalse(wr.TryGetTarget(out alive));
         }
-        private WeakReference<SettingsSetSetting<string>> FinalizableSetting(string testSettingKey, IMutableAmbientSettingsSet settingsSet)
+        private WeakReference<SettingsSetSetting<string>> FinalizableSetting(string testSettingKey, IAmbientSettingsSet settingsSet)
         {
             bool valueChanged = false;
             string value = null;
@@ -212,7 +212,7 @@ namespace AmbientServices.Test
             string secondValue = "change1";
             Assert.AreEqual(initialValue, notificationNewValue);
             IAmbientSettingsSet settingsReader = _SettingsSet.Global;
-            IMutableAmbientSettingsSet settingsMutator = settingsReader as IMutableAmbientSettingsSet;
+            IAmbientSettingsSet settingsMutator = settingsReader as IAmbientSettingsSet;
             if (settingsMutator != null)
             {
                 settingsMutator.ChangeSetting(testSettingKey, secondValue);
@@ -248,7 +248,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(overrideValue, testSetting.Value);
             Assert.AreEqual(overrideValue, notificationNewValue);
 
-            IMutableAmbientSettingsSet globalSettingsSet = pretendGlobalSettings.Global as IMutableAmbientSettingsSet;
+            IAmbientSettingsSet globalSettingsSet = pretendGlobalSettings.Global as IAmbientSettingsSet;
             if (globalSettingsSet != null)
             {
                 string valueChangeValue = "valueChange";
@@ -288,7 +288,7 @@ namespace AmbientServices.Test
 
             Assert.AreEqual(overrideValue, testSetting.Value);
 
-            IMutableAmbientSettingsSet globalSettingsSet = pretendGlobalService.Global as IMutableAmbientSettingsSet;
+            IAmbientSettingsSet globalSettingsSet = pretendGlobalService.Global as IAmbientSettingsSet;
             if (globalSettingsSet != null)
             {
                 string valueChangeValue = "valueChange";
@@ -312,8 +312,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingLocalValueChangeNotification()
         {
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingLocalValueChangeNotification));
-            using (new ScopedLocalServiceOverride<IMutableAmbientSettingsSet>(settingsSet))
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingLocalValueChangeNotification));
+            using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
             {
                 string testSettingKey = nameof(SettingLocalValueChangeNotification);
@@ -338,8 +338,8 @@ namespace AmbientServices.Test
         [TestMethod]
         public void SettingLocalChangeSettingsSet()
         {
-            IMutableAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingLocalChangeSettingsSet));
-            using (new ScopedLocalServiceOverride<IMutableAmbientSettingsSet>(settingsSet))
+            IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingLocalChangeSettingsSet));
+            using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
             using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
             {
                 string testSettingKey = nameof(SettingLocalChangeSettingsSet);
@@ -351,8 +351,8 @@ namespace AmbientServices.Test
 
                 // now switch local settings set and try again
                 string secondValue = "change1";
-                IMutableAmbientSettingsSet settingsSet2 = new BasicAmbientSettingsSet(nameof(SettingLocalChangeSettingsSet) + "_2");
-                using (new ScopedLocalServiceOverride<IMutableAmbientSettingsSet>(settingsSet2))
+                IAmbientSettingsSet settingsSet2 = new BasicAmbientSettingsSet(nameof(SettingLocalChangeSettingsSet) + "_2");
+                using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet2))
                 using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet2))
                 {
                     settingsSet2.ChangeSetting(testSettingKey, secondValue);
@@ -449,7 +449,7 @@ namespace AmbientServices.Test
             AmbientSetting<int> setting3 = new(settingName, "", s => Int32.Parse(s), "1");
             Assert.AreEqual(1, setting3.Value);
             Assert.IsNotNull(setting3.GetValueWithSetName().Item2);
-            IMutableAmbientSettingsSet settingsSet = _SettingsSet.Global as IMutableAmbientSettingsSet;
+            IAmbientSettingsSet settingsSet = _SettingsSet.Global as IAmbientSettingsSet;
             if (settingsSet != null)
             {
                 settingsSet.ChangeSetting(settingName, "2");

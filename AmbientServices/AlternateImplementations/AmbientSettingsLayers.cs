@@ -8,7 +8,7 @@ namespace AmbientServices;
 /// <summary>
 /// An implementation of <see cref="IAmbientSettingsSet"/> that treats multiple settings sets as a single set.
 /// </summary>
-public class AmbientSettingsLayers : IMutableAmbientSettingsSet
+public class AmbientSettingsLayers : IAmbientSettingsSet
 {
     private readonly List<IAmbientSettingsSet> _setsInLowPriorityOrder = new();
 
@@ -30,7 +30,7 @@ public class AmbientSettingsLayers : IMutableAmbientSettingsSet
         if (sets == null) throw new ArgumentNullException(nameof(sets));
         _setsInLowPriorityOrder.AddRange(sets.WhereNotNull());
         // if the last set is not mutable, add a mutable set at the top level
-        if (_setsInLowPriorityOrder[_setsInLowPriorityOrder.Count-1] is not IMutableAmbientSettingsSet)
+        if (!_setsInLowPriorityOrder[_setsInLowPriorityOrder.Count-1].SettingsAreMutable)
         {
             _setsInLowPriorityOrder.Add(new BasicAmbientSettingsSet());
         }
@@ -49,6 +49,10 @@ public class AmbientSettingsLayers : IMutableAmbientSettingsSet
     /// </summary>
     public string SetName => $"Layers[{string.Join(",", _setsInLowPriorityOrder.Select(s => s.SetName))}]";
     /// <summary>
+    /// Gets whether or not the settings set is mutable.
+    /// </summary>
+    public bool SettingsAreMutable => true;
+    /// <summary>
     /// Changes the specified setting.
     /// For many ambient settings services, the value will only be reflected in memory until the process shuts down, but other services may persist the change.
     /// </summary>
@@ -57,7 +61,7 @@ public class AmbientSettingsLayers : IMutableAmbientSettingsSet
     /// <returns>Whether or not the setting actually changed.</returns>
     public bool ChangeSetting(string key, string? value)
     {
-        IMutableAmbientSettingsSet mutableSet = (IMutableAmbientSettingsSet)_setsInLowPriorityOrder[_setsInLowPriorityOrder.Count-1];
+        IAmbientSettingsSet mutableSet = (IAmbientSettingsSet)_setsInLowPriorityOrder[_setsInLowPriorityOrder.Count-1];
         return mutableSet.ChangeSetting(key, value);
     }
     /// <summary>

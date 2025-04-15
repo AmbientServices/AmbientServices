@@ -9,7 +9,7 @@ namespace AmbientServices;
 /// A settings set that uses the process environment.
 /// Note that since the framework does not provide an event for when environment variables change, changes after initialization will not be propagated unless those changes are made through <see cref="ChangeSetting(string, string?)"/>.
 /// </summary>
-public class AmbientEnvironmentSettingsSet : IMutableAmbientSettingsSet
+public class AmbientEnvironmentSettingsSet : IAmbientSettingsSet
 {
     /// <summary>
     /// Gets the singleton instance.
@@ -131,6 +131,11 @@ public class AmbientEnvironmentSettingsSet : IMutableAmbientSettingsSet
     {
         return _typedValues.TryGetValue(key, out object? value) ? value : null;
     }
+
+    /// <summary>
+    /// Gets whether or not the settings set is mutable.
+    /// </summary>
+    public bool SettingsAreMutable => true;
 
     /// <summary>
     /// Changes the specified setting.

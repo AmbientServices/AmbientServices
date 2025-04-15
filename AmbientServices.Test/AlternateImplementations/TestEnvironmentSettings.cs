@@ -98,7 +98,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetSettingChangeNotification()
     {
-        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
+        IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingChangeNotification);
         string initialValue = "initialValue";
         string notificationNewValue = "";
@@ -115,7 +115,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetSettingChangeNoNotification()
     {
-        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
+        IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingChangeNoNotification);
         string initialValue = "initialValue";
         SettingsSetSetting<string> testSetting = new(settingsSet, testSettingKey, "", s => s, initialValue);
@@ -130,7 +130,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetSettingNullConvert()
     {
-        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
+        IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingNullConvert);
         string initialValue = "initialValue";
         string secondValue = "change1";
@@ -158,7 +158,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsSetSettingNonStringNullConvert()
     {
-        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
+        IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingNonStringNullConvert);
         Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", null, "1"));
         Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", 1, null));
@@ -170,7 +170,7 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingMisc()
     {
-        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
+        IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         Assert.IsTrue(settingsSet!.ToString()!.Contains("Environment"));
         Assert.AreEqual("Environment", settingsSet.SetName);
     }
@@ -180,14 +180,14 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingsGarbageCollection()
     {
-        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
+        IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = Guid.NewGuid().ToString();
         WeakReference<SettingsSetSetting<string>> wr = FinalizableSetting(testSettingKey, settingsSet);
         GC.Collect();   // this should collect the temporary Setting created in the function below
         settingsSet.ChangeSetting(testSettingKey, $"{testSettingKey}-CauseCollect");  // this should cause the weak proxy to get removed and the instance to be destroyed
         Assert.IsFalse(wr.TryGetTarget(out SettingsSetSetting<string> alive));
     }
-    private WeakReference<SettingsSetSetting<string>> FinalizableSetting(string testSettingKey, IMutableAmbientSettingsSet settingsSet)
+    private WeakReference<SettingsSetSetting<string>> FinalizableSetting(string testSettingKey, IAmbientSettingsSet settingsSet)
     {
         bool valueChanged = false;
         string value = null;
@@ -207,8 +207,8 @@ public class TestEnvironmentSettings
     [TestMethod]
     public void EnvironmentSettingLocalValueChangeNotification()
     {
-        IMutableAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
-        using (new ScopedLocalServiceOverride<IMutableAmbientSettingsSet>(settingsSet))
+        IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
         using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settingsSet))
         {
             string testSettingKey = nameof(EnvironmentSettingLocalValueChangeNotification);
