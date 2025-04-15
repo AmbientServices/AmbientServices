@@ -1,10 +1,20 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace AmbientServices;
+
+/// <summary>
+/// An interface that can be used to mock recent CPU usage so that code branches depending on CPU utilization can be tested.
+/// </summary>
+public interface IMockCpuUsage
+{
+    /// <summary>
+    /// Gets the value to use as the most recent CPU usage, which should be a number between 0.0 and 1.0.
+    /// </summary>
+    float RecentUsage { get; }
+}
 
 /// <summary>
 /// A class that monitors process CPU utilization.
@@ -14,6 +24,8 @@ public sealed class CpuMonitor : IDisposable
     , IAsyncDisposable
 #endif
 {
+    private static readonly AmbientService<IMockCpuUsage> _MockCpu = Ambient.GetService<IMockCpuUsage>();
+
     private readonly AmbientEventTimer _timer = new();
     private float _averageCpuUsageLastWindow;
     private volatile object _mostRecentSample;
@@ -41,7 +53,7 @@ public sealed class CpuMonitor : IDisposable
     /// <summary>
     /// Gets the proportion of time the CPU was in use (average across all CPUs) in the previous measurement window, which will be at least the minimum window specified in the constructor.
     /// </summary>
-    public float RecentUsage => _averageCpuUsageLastWindow;
+    public float RecentUsage => _MockCpu.Local?.RecentUsage ?? _averageCpuUsageLastWindow;
 
     /// <summary>
     /// Gets the proportion of time the CPU that has been used in the current partial window.
