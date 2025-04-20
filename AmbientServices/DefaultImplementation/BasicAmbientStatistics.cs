@@ -139,7 +139,7 @@ internal class Statistic : IAmbientStatistic
         _currentValue = initialRawValue;
         ExpectedMinimumRawValue = expectedMinRawValue;
         ExpectedMaximumRawValue = expectedMaxRawValue;
-        FixedFloatingPointAdjustment = fixedFloatingPointAdjustment;
+        FixedFloatingPointAdjustment = (fixedFloatingPointAdjustment == 0) ? 1.0 : fixedFloatingPointAdjustment;    // don't allow zero for the floating point adjustment
         TemporalAggregationTypes = temporalAggregationTypes == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultTemporalAggregation(type) : temporalAggregationTypes;
         SpatialAggregationTypes = spatialAggregationTypes == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultSpatialAggregation(type) : spatialAggregationTypes;
         PreferredTemporalAggregationType = preferredTemporalAggregationType == AggregationTypes.None ? IAmbientStatisticsExtensions.DefaultTemporalAggregation(type) : preferredTemporalAggregationType;
