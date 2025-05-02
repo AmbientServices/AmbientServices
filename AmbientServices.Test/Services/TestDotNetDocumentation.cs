@@ -33,6 +33,8 @@ public class TestDotNetDocumentation
         TypeDocumentation docsDocs = docs.GetTypeDocumentation(typeof(DotNetDocumentation));
         MethodDocumentation? methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetMethodDocumentation)));
         Assert.IsNotNull(methodDocs);
+        Assert.IsNotNull(methodDocs.ReturnDescription);
+        Assert.IsNotNull(methodDocs.Summary);
         methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetFieldDocumentation)));
         Assert.IsNotNull(methodDocs);
         methodDocs = docs.GetMethodDocumentation(typeof(DotNetDocumentation).GetMethod(nameof(DotNetDocumentation.GetTypeDocumentation)));
@@ -86,6 +88,14 @@ public class TestDotNetDocumentation
         DotNetDocumentation docs = DotNetDocumentation.Load(typeof(IPAddressConverter).Assembly);
         TypeDocumentation? docsDocs = docs.GetTypeDocumentation(typeof(IPAddressConverter));
         Assert.IsNotNull(docsDocs);
+    }
+    [TestMethod]
+    public void EnumType()
+    {
+        DotNetDocumentation docs = DotNetDocumentation.Load(typeof(AmbientBottleneckUtilizationAlgorithm).Assembly);
+        TypeDocumentation enumDocs = docs.GetTypeDocumentation(typeof(AmbientBottleneckUtilizationAlgorithm));
+        Assert.IsNotNull(enumDocs);
+        Assert.IsNotNull(enumDocs.Summary);
     }
     [TestMethod]
     public void NoDocumentation()
