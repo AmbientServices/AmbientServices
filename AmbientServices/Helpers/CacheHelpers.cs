@@ -8,32 +8,36 @@ namespace AmbientServices;
 /// <summary>
 /// A class that provides caching using either a specified cache or the ambient cache.
 /// </summary>
-/// <typeparam name="TOWNER">The type that owns the items to be cached.</typeparam>
-public class AmbientCache<TOWNER>
+public class AmbientCache
 {
-    private static readonly string DefaultCacheKeyPrefix = typeof(TOWNER).Name + "-";
     private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
 
+    private readonly Type _type;
+    private readonly string _defaultCachePrefix;
     private readonly IAmbientCache? _explicitCache;
-    private readonly string _cacheKeyPrefix = DefaultCacheKeyPrefix;
+    private readonly string _cacheKeyPrefix;
 
     /// <summary>
     /// Creates the AmbientCache using the ambient cache service.
     /// </summary>
+    /// <param name="ownerType">The <see cref="Type"/> for the owner.</param>
     /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
-    public AmbientCache(string? cacheKeyPrefix = null)
-        : this (null, cacheKeyPrefix)
+    public AmbientCache(Type ownerType, string? cacheKeyPrefix = null)
+        : this (ownerType, null, cacheKeyPrefix)
     {
     }
     /// <summary>
     /// Creates the AmbientCache using the specified cache service.
     /// </summary>
+    /// <param name="ownerType">The <see cref="Type"/> for the owner.</param>
     /// <param name="cache">An explicit <see cref="IAmbientCache"/> to use.</param>
     /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
-    public AmbientCache(IAmbientCache? cache, string? cacheKeyPrefix = null)
+    public AmbientCache(Type ownerType, IAmbientCache? cache, string? cacheKeyPrefix = null)
     {
+        _type = ownerType;
+        _defaultCachePrefix = $"{_type.Name}-";
         _explicitCache = cache;
-        if (cacheKeyPrefix != null) _cacheKeyPrefix = cacheKeyPrefix;
+        _cacheKeyPrefix = cacheKeyPrefix ?? _defaultCachePrefix;
     }
     /// <summary>
     /// Retrieves the item with the specified key from the cache (if possible).
@@ -88,5 +92,29 @@ public class AmbientCache<TOWNER>
         IAmbientCache? cache = _explicitCache ?? _Cache.Local;
         if (cache == null) return default;
         return cache.Clear(cancel);
+    }
+}
+
+/// <summary>
+/// A generic type-specific cache owner class.  The name of the type is prepended to each cache key.
+/// </summary>
+/// <typeparam name="TOWNER">The type that owns the log messages.</typeparam>
+public class AmbientCache<TOWNER> : AmbientCache
+{
+    /// <summary>
+    /// Creates the AmbientCache using the ambient cache service.
+    /// </summary>
+    /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
+    public AmbientCache(string? cacheKeyPrefix = null)
+        : this(null, cacheKeyPrefix)
+    {
+    }
+    /// <summary>
+    /// Creates the AmbientCache using the specified cache service.
+    /// </summary>
+    /// <param name="cache">An explicit <see cref="IAmbientCache"/> to use.</param>
+    /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
+    public AmbientCache(IAmbientCache? cache, string? cacheKeyPrefix = null) : base (typeof(TOWNER), cache, cacheKeyPrefix)
+    {
     }
 }
