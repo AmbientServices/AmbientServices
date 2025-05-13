@@ -116,49 +116,50 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         using (IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerBasic), TimeSpan.FromMilliseconds(100), p => Task.CompletedTask))
         using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerBasic)))
         {
-            _ServiceProfiler.Local?.SwitchSystem("ServiceProfilerBasic1");
-            Assert.AreEqual(nameof(ServiceProfilerBasic), processProfile?.ScopeName);
-            if (processProfile != null)
+            using (_ServiceProfiler.Local?.ScopedSystemSwitch("ServiceProfilerBasic1"))
             {
-                foreach (AmbientServiceProfilerAccumulator stats in processProfile.ProfilerStatistics)
+                Assert.AreEqual(nameof(ServiceProfilerBasic), processProfile?.ScopeName);
+                if (processProfile != null)
                 {
-                    if (string.IsNullOrEmpty(stats.Group))
+                    foreach (AmbientServiceProfilerAccumulator stats in processProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
-                    }
-                    else
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        if (string.IsNullOrEmpty(stats.Group))
+                        {
+                            Assert.AreEqual("", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        }
+                        else
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        }
                     }
                 }
-            }
-            Assert.AreEqual(nameof(ServiceProfilerBasic), scopeProfile?.ScopeName);
-            if (scopeProfile != null)
-            {
-                foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
+                Assert.AreEqual(nameof(ServiceProfilerBasic), scopeProfile?.ScopeName);
+                if (scopeProfile != null)
                 {
-                    if (string.IsNullOrEmpty(stats.Group))
+                    foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
                     {
-                        Assert.AreEqual("", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
-                    }
-                    else
-                    {
-                        Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
-                        Assert.AreEqual(1, stats.ExecutionCount);
-                        Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        if (string.IsNullOrEmpty(stats.Group))
+                        {
+                            Assert.AreEqual("", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        }
+                        else
+                        {
+                            Assert.AreEqual("ServiceProfilerBasic1", stats.Group);
+                            Assert.AreEqual(1, stats.ExecutionCount);
+                            Assert.AreEqual(0, stats.TotalStopwatchTicksUsed);
+                        }
                     }
                 }
+
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+
             }
-
-            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
-
-            _ServiceProfiler.Local?.SwitchSystem(null);
 
             AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(113));
 
@@ -261,6 +262,7 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         using (AmbientClock.Pause())
         {
             _ServiceProfiler.Local?.SwitchSystem(nameof(ServiceProfilerNull));
+            using IDisposable d = _ServiceProfiler.Local?.ScopedSystemSwitch(nameof(ServiceProfilerNull) + "2");
         }
     }
     [TestMethod]

@@ -1,4 +1,6 @@
 ﻿
+using System;
+
 namespace AmbientServices;
 
 /// <summary>
@@ -58,4 +60,44 @@ public interface IAmbientServiceProfiler
     /// <param name="sink">An <see cref="IAmbientServiceProfilerNotificationSink"/> that will receive notifications when the system is switched.</param>
     /// <returns>true if the deregistration was successful, false if the specified sink was not registered.</returns>
     bool DeregisterSystemSwitchedNotificationSink(IAmbientServiceProfilerNotificationSink sink);
+#if NET5_0_OR_GREATER
+    /// <summary>
+    /// Scopes a switch to a specified system to simplify the syntax of tracking system usage when the full system identifier is known up-front.
+    /// </summary>
+    /// <param name="system">A string indicating which system is beginning to execute, or null or empty string to indicate that the default system (ie. CPU) is executing.</param>
+    /// <param name="updatedPreviousSystem">An optional updated for the previous system in case part of the system identifier couldn't be determined until the execution completed.  For example, if the operation failed, we can retroactively reclassify the time spent in order to properly separately track time spent on successful, timed-out, and failed operations.</param>
+    /// <returns>A <see cref="ScopedSystemSwitch"/> that should be disposed when usage of the system is finished.</returns>
+    ScopedSystemSwitch ScopedSystemSwitch(string? system, string? updatedPreviousSystem = null)
+    {
+        return new ScopedSystemSwitch(this, system, updatedPreviousSystem);
+    }
+#endif
+}
+/// <summary>
+/// A disposable scoping class that lets the caller indicate when system usage is complete.
+/// </summary>
+public sealed class ScopedSystemSwitch : IDisposable
+{
+    private readonly IAmbientServiceProfiler _profiler;
+
+    /// <summary>
+    /// Constructs a scoped system switcher.
+    /// </summary>
+    /// <param name="profiler">The <see cref="IAmbientServiceProfiler"/> to use.</param>
+    /// <param name="system">The name of the system that will execute during the scope.</param>
+    /// <param name="updatedPreviousSystem">An update to the previously-running system in case the full name was not known at the beginning of its execution.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="profiler"/> is null.</exception>
+    public ScopedSystemSwitch(IAmbientServiceProfiler profiler, string? system, string? updatedPreviousSystem = null)
+    {
+        if (profiler == null) throw new ArgumentNullException(nameof(profiler));
+        _profiler = profiler;
+        profiler.SwitchSystem(system, updatedPreviousSystem);
+    }
+    /// <summary>
+    /// Disposes of the instance.
+    /// </summary>
+    public void Dispose()
+    {
+        _profiler.SwitchSystem(null);
+    }
 }
