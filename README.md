@@ -44,20 +44,20 @@ For .NET Core environments, use:
 
 # Service Descriptions
 
-## AmbientCache
+## AmbientLocalCache
 The ambient cache interface abstracts a very simple cache of the type that is universally applicable.  Some items are cached for a specific amount of time, others are cached indefinitely.  Items cached temporarily may have their expiration time extended or shortened each time they are retrieved or updated.  Both types of items may expire from the cache at any time according to cache limits and/or memory capacity.  Items may be removed from the cache manually at any time.  
 
 In order to prevent unexpected alteration of outputs, care must be taken to ensure that cached items are based entierly on the inputs.  For functions that are not "pure" (database queries for example), the results should always be based entirely on the inputs and either the current state of the database or some previous state (when it uses cached results).  For example, if the cache key does not contain all the inputs identifying the item being cached, completely different results could be obtained depending on the order in which calls to the cache were made.  This is true of all caches and naturally every cache user and implementor understands that this type of usage is erroneous and must be avoided.
 
 ### Helpers
-The `AmbientCache<TOWNER>` generic class provides a wrapper of the ambient cache that attaches the owner type name as a prefix for each cache key to prevent cross-class cache key conflicts, and ignores calls when there is no ambient cache or it has been suppressed.
+The `AmbientLocalCache<TOWNER>` generic class provides a wrapper of the ambient cache that attaches the owner type name as a prefix for each cache key to prevent cross-class cache key conflicts, and ignores calls when there is no ambient cache or it has been suppressed.
 
 ### Settings
-BasicAmbientCache-EjectFrequency: the number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.  Default is 100.
-BasicAmbientCache-ItemCount: the maximum number of both timed and untimed items to allow in the cache before ejecting items.  Default is 1000.
+BasicAmbientLocalCache-EjectFrequency: the number of cache calls between cache ejections where at least one timed and one untimed entry is ejected from the cache.  Default is 100.
+BasicAmbientLocalCache-ItemCount: the maximum number of both timed and untimed items to allow in the cache before ejecting items.  Default is 1000.
 
 ### Sample
-[//]: # (AmbientCacheSample)
+[//]: # (AmbientLocalCacheSample)
 ```csharp
 /// <summary>
 /// A user manager class that shows how the caching ambient service might be used.

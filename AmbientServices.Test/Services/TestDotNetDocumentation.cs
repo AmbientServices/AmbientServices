@@ -59,7 +59,7 @@ public class TestDotNetDocumentation
             methodDocs = docs.GetMethodDocumentation(mi);
             Assert.IsNotNull(methodDocs);
         }
-        foreach (MethodInfo mi in typeof(AmbientCache<>).GetMethods(BindingFlags.Public))
+        foreach (MethodInfo mi in typeof(AmbientSharedCache<>).GetMethods(BindingFlags.Public))
         {
             methodDocs = docs.GetMethodDocumentation(mi);
             Assert.IsNotNull(methodDocs);

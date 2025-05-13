@@ -6,33 +6,33 @@ using System.Threading.Tasks;
 namespace AmbientServices;
 
 /// <summary>
-/// A class that provides caching using either a specified cache or the ambient cache.
+/// A class that provides caching using either a specified cache or the ambient shared cache (<see cref="IAmbientSharedCache"/>).
 /// </summary>
-public class AmbientCache
+public class AmbientSharedCache
 {
-    private static readonly AmbientService<IAmbientCache> _Cache = Ambient.GetService<IAmbientCache>();
+    private static readonly AmbientService<IAmbientSharedCache> _Cache = Ambient.GetService<IAmbientSharedCache>();
 
     private readonly Type _type;
     private readonly string _defaultCachePrefix;
-    private readonly IAmbientCache? _explicitCache;
+    private readonly IAmbientSharedCache? _explicitCache;
     private readonly string _cacheKeyPrefix;
 
     /// <summary>
-    /// Creates the AmbientCache using the ambient cache service.
+    /// Creates the AmbientSharedCache using the ambient cache service.
     /// </summary>
     /// <param name="ownerType">The <see cref="Type"/> for the owner.</param>
     /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
-    public AmbientCache(Type ownerType, string? cacheKeyPrefix = null)
-        : this (ownerType, null, cacheKeyPrefix)
+    public AmbientSharedCache(Type ownerType, string? cacheKeyPrefix = null)
+        : this(ownerType, null, cacheKeyPrefix)
     {
     }
     /// <summary>
-    /// Creates the AmbientCache using the specified cache service.
+    /// Creates the AmbientSharedCache using the specified cache service.
     /// </summary>
     /// <param name="ownerType">The <see cref="Type"/> for the owner.</param>
-    /// <param name="cache">An explicit <see cref="IAmbientCache"/> to use.</param>
+    /// <param name="cache">An explicit <see cref="IAmbientSharedCache"/> to use.</param>
     /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
-    public AmbientCache(Type ownerType, IAmbientCache? cache, string? cacheKeyPrefix = null)
+    public AmbientSharedCache(Type ownerType, IAmbientSharedCache? cache, string? cacheKeyPrefix = null)
     {
         _type = ownerType;
         _defaultCachePrefix = $"{_type.Name}-";
@@ -49,7 +49,7 @@ public class AmbientCache
     /// <returns>The cached object, or null if it was not found in the cache.</returns>
     public ValueTask<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default) where T : class
     {
-        IAmbientCache? cache = _explicitCache ?? _Cache.Local;
+        IAmbientSharedCache? cache = _explicitCache ?? _Cache.Local;
         if (cache == null) return TaskUtilities.ValueTaskFromResult<T?>(null);
         return cache.Retrieve<T>(_cacheKeyPrefix + itemKey, refresh, cancel);
     }
@@ -67,7 +67,7 @@ public class AmbientCache
     /// </remarks>
     public ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default) where T : class
     {
-        IAmbientCache? cache = _explicitCache ?? _Cache.Local;
+        IAmbientSharedCache? cache = _explicitCache ?? _Cache.Local;
         if (cache == null) return default;
         return cache.Store<T>(_cacheKeyPrefix + itemKey, item, maxCacheDuration, expiration, cancel);
     }
@@ -79,7 +79,7 @@ public class AmbientCache
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
     public ValueTask Remove<T>(string itemKey, CancellationToken cancel = default)
     {
-        IAmbientCache? cache = _explicitCache ?? _Cache.Local;
+        IAmbientSharedCache? cache = _explicitCache ?? _Cache.Local;
         if (cache == null) return default;
         return cache.Remove<T>(_cacheKeyPrefix + itemKey, cancel);
     }
@@ -89,17 +89,70 @@ public class AmbientCache
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
     public ValueTask Clear(CancellationToken cancel = default)
     {
-        IAmbientCache? cache = _explicitCache ?? _Cache.Local;
+        IAmbientSharedCache? cache = _explicitCache ?? _Cache.Local;
         if (cache == null) return default;
         return cache.Clear(cancel);
     }
 }
 
 /// <summary>
-/// A generic type-specific cache owner class.  The name of the type is prepended to each cache key.
+/// A generic type-specific shared cache owner class.  The name of the type is prepended to each cache key.
 /// </summary>
 /// <typeparam name="TOWNER">The type that owns the log messages.</typeparam>
-public class AmbientCache<TOWNER> : AmbientCache
+public class AmbientSharedCache<TOWNER> : AmbientSharedCache
+{
+    /// <summary>
+    /// Creates the AmbientSharedCache using the ambient cache service.
+    /// </summary>
+    /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
+    public AmbientSharedCache(string? cacheKeyPrefix = null)
+        : this(null, cacheKeyPrefix)
+    {
+    }
+    /// <summary>
+    /// Creates the AmbientSharedCache using the specified cache service.
+    /// </summary>
+    /// <param name="cache">An explicit <see cref="IAmbientSharedCache"/> to use.</param>
+    /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
+    public AmbientSharedCache(IAmbientSharedCache? cache, string? cacheKeyPrefix = null) : base(typeof(TOWNER), cache, cacheKeyPrefix)
+    {
+    }
+}
+
+
+// Remove these obsolete classes in 2026
+/// <summary>
+/// A class that provides caching using either a specified cache or the ambient shared cache (<see cref="IAmbientSharedCache"/>).
+/// </summary>
+[Obsolete("Rename all references to AmbientSharedCache before 2026")]
+public class AmbientCache : AmbientSharedCache
+{
+    /// <summary>
+    /// Creates the AmbientSharedCache using the ambient cache service.
+    /// </summary>
+    /// <param name="ownerType">The <see cref="Type"/> for the owner.</param>
+    /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
+    public AmbientCache(Type ownerType, string? cacheKeyPrefix = null)
+        : this(ownerType, null, cacheKeyPrefix)
+    {
+    }
+    /// <summary>
+    /// Creates the AmbientSharedCache using the specified cache service.
+    /// </summary>
+    /// <param name="ownerType">The <see cref="Type"/> for the owner.</param>
+    /// <param name="cache">An explicit <see cref="IAmbientSharedCache"/> to use.</param>
+    /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
+    public AmbientCache(Type ownerType, IAmbientSharedCache? cache, string? cacheKeyPrefix = null)
+        : base (ownerType, cache, cacheKeyPrefix)
+    {
+    }
+}
+/// <summary>
+/// A generic type-specific shared cache owner .  The name of the type is prepended to each cache key.
+/// </summary>
+/// <typeparam name="TOWNER">The type that owns the log messages.</typeparam>
+[Obsolete("Rename all references to AmbientSharedCache before 2026")]
+public class AmbientCache<TOWNER> : AmbientSharedCache
 {
     /// <summary>
     /// Creates the AmbientCache using the ambient cache service.
@@ -112,9 +165,9 @@ public class AmbientCache<TOWNER> : AmbientCache
     /// <summary>
     /// Creates the AmbientCache using the specified cache service.
     /// </summary>
-    /// <param name="cache">An explicit <see cref="IAmbientCache"/> to use.</param>
+    /// <param name="cache">An explicit <see cref="IAmbientSharedCache"/> to use.</param>
     /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
-    public AmbientCache(IAmbientCache? cache, string? cacheKeyPrefix = null) : base (typeof(TOWNER), cache, cacheKeyPrefix)
+    public AmbientCache(IAmbientSharedCache? cache, string? cacheKeyPrefix = null) : base(typeof(TOWNER), cache, cacheKeyPrefix)
     {
     }
 }

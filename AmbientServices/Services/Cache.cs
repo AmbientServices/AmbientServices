@@ -12,7 +12,7 @@ namespace AmbientServices;
 /// Objects that contain pointers or are disposable should not be used with this interface.
 /// For that kind of object, see <see cref="IAmbientLocalCache"/>.
 /// </remarks>
-public interface IAmbientCache
+public interface IAmbientSharedCache
 {
     /// <summary>
     /// Retrieves the item with the specified key from the cache (if possible).

@@ -1,7 +1,5 @@
 ﻿using AmbientServices.Utilities;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,7 +18,7 @@ namespace AmbientServices
         private readonly string _cacheKeyPrefix = DefaultCacheKeyPrefix;
 
         /// <summary>
-        /// Creates the AmbientCache using the ambient cache service.
+        /// Creates the AmbientLocalCache using the ambient cache service.
         /// </summary>
         /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
         public AmbientLocalCache(string? cacheKeyPrefix = null)
@@ -28,7 +26,7 @@ namespace AmbientServices
         {
         }
         /// <summary>
-        /// Creates the AmbientCache using the specified cache service.
+        /// Creates the AmbientLocalCache using the specified cache service.
         /// </summary>
         /// <param name="cache">An explicit <see cref="IAmbientLocalCache"/> to use.</param>
         /// <param name="cacheKeyPrefix">An optional cache key prefix for all items cached through this class.  Uses the type name if not specified.</param>
