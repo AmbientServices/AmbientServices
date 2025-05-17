@@ -200,7 +200,7 @@ public class AmbientLogger
         if (ex is null) throw new ArgumentNullException(nameof(ex));
         if (dictionary is null) throw new ArgumentNullException(nameof(dictionary));
 #endif
-        CopyStructuredDataToDictionary(dictionary, new ErrorLogInfo(GetErrorType(ex), ex.Message, ex.StackTrace));
+        CopyStructuredDataToDictionary(dictionary, new ErrorLogInfo(ex));
         if (ex is IExceptionLogInformation exli)
         {
             // loop through key-value pairs explicitly exposed by the exception for the purpose of logging
@@ -226,13 +226,6 @@ public class AmbientLogger
         Dictionary<string, object?> dictionary = AugmentStructuredDataWithExceptionInformation(ex, new { });
         if (contextDescription != null) CopyStructuredDataToDictionary(dictionary, new LogSummaryInfo(contextDescription));
         Filter(level)?.Log(dictionary);
-    }
-    private const string ExceptionSuffix = "Exception";
-    private static string GetErrorType(Exception error)
-    {
-        string errorType = error.GetType().Name;
-        if (errorType.EndsWith(ExceptionSuffix, StringComparison.Ordinal)) errorType = errorType.Substring(0, errorType.Length - ExceptionSuffix.Length);
-        return errorType;
     }
     internal void LogFiltered(AmbientLogLevel level, string? categoryName, object structuredData)
     {
@@ -708,7 +701,24 @@ internal class AmbientLogFilter
     }
 }
 record struct StandardRequestLogInfo(AmbientLogLevel Level);
-record struct ErrorLogInfo(string ErrorType, string ErrorMessage, string? ErrorStackTrace);
+record struct ErrorLogInfo(string ErrorType, string ErrorMessage, string? ErrorStackTrace, ErrorLogInfo[]? InnerExceptions)
+{
+    public const string ExceptionSuffix = "Exception";
+
+    public ErrorLogInfo(Exception ex) : this(GetErrorType(ex), ex.Message, ex.StackTrace, ex is AggregateException aex 
+        ? aex.InnerExceptions?.Select(e => new ErrorLogInfo(e)).ToArray()
+        : (ex.InnerException == null) 
+        ? null 
+        : new ErrorLogInfo[] { new(ex.InnerException) })
+    {
+    }
+    private static string GetErrorType(Exception error)
+    {
+        string errorType = error.GetType().Name;
+        if (errorType.EndsWith(ExceptionSuffix, StringComparison.Ordinal)) errorType = errorType.Substring(0, errorType.Length - ExceptionSuffix.Length);
+        return errorType;
+    }
+}
 record struct LogSummaryInfo(string? Summary);
 
 /// <summary>
