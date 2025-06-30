@@ -281,9 +281,16 @@ public class AmbientLogger
         {
             CopyStructuredDataToDictionary(dictionary, new LogSummaryInfo(sds));
         }
-        else if (structuredData is Dictionary<string, object?> sdd)
+        else if (structuredData is Dictionary<string, object?> sddo)
         {
-            foreach (KeyValuePair<string, object?> kvp in sdd)
+            foreach (KeyValuePair<string, object?> kvp in sddo)
+            {
+                dictionary[kvp.Key] = kvp.Value;
+            }
+        }
+        else if (structuredData is Dictionary<string, string?> sdds)
+        {
+            foreach (KeyValuePair<string, string?> kvp in sdds)
             {
                 dictionary[kvp.Key] = kvp.Value;
             }
