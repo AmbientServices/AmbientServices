@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading;
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP1_0_OR_GREATER
 using System.Threading.Tasks;
+#endif
 
 namespace AmbientServices;
 
@@ -105,7 +107,12 @@ public sealed class CpuMonitor : IDisposable
 /// </summary>
 public readonly struct CpuUsageSample : IEquatable<CpuUsageSample>
 {
-    private static readonly Process? _ThisProcess =
+    /// <summary>
+    /// Gets the current <see cref="Process"/>.
+    /// </summary>
+    /// <remarks>Note that when you want CPU usage time, this *cannot* be cached--it must be called each time.</remarks>
+    /// <returns>The current <see cref="Process"/>, if available, or null if not available.</returns>
+    private static Process? GetCurrentProcess() =>
 #if NET5_0_OR_GREATER
         OperatingSystem.IsBrowser() ? null : 
 #endif
@@ -187,6 +194,6 @@ public readonly struct CpuUsageSample : IEquatable<CpuUsageSample>
 #if NET5_0_OR_GREATER
             OperatingSystem.IsBrowser() ? 0 : 
 #endif
-            _ThisProcess?.TotalProcessorTime.Ticks ?? 0);
+            GetCurrentProcess()?.TotalProcessorTime.Ticks ?? 0);
     }
 }

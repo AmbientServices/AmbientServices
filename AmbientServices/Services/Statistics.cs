@@ -68,7 +68,7 @@ public interface IAmbientStatistics
     /// <param name="minimumValue">An optional value indicating the minimum possible value, if applicable.</param>
     /// <param name="maximumValue">An optional value indicating the maximum possible value, if applicable.</param>
     /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <paramref name="fixedFloatingPointAdjustment"/>).  Lower-cased, not an abbreviation.</param>
-    /// <param name="fixedFloatingPointAdjustment">An optional value to divide raw samples by to get a floating-point value.  Defaults to 1.0.</param>
+    /// <param name="fixedFloatingPointAdjustment">An optional value to divide raw samples by to get the floating-point display value in the units specified by <paramref name="units"/>.  Defaults to 1.0.</param>
     /// <param name="temporalAggregationTypes">A set of <see cref="AggregationTypes"/> indicating how this statistic should be aggregated over time.</param>
     /// <param name="spatialAggregationTypes">A set of <see cref="AggregationTypes"/> indicating how this statistic should be aggregated across systems.</param>
     /// <param name="preferredTemporalAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated over time.</param>
@@ -377,7 +377,7 @@ public interface IAmbientRatioStatistic : IDisposable
 public static class IAmbientStatisticsExtensions
 {
     /// <summary>
-    /// Sets the statistic sample value, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
+    /// Sets the statistic sample value in the units specified by <see cref="IAmbientStatisticReader.AdjustedUnits"/>, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="statistic">The <see cref="IAmbientStatistic"/> whose value should be set.</param>
     /// <param name="newValue">The new value to use.</param>
@@ -387,7 +387,7 @@ public static class IAmbientStatisticsExtensions
         statistic.SetRawValue((long)(newValue * statistic.FixedFloatingPointAdjustment));
     }
     /// <summary>
-    /// Sets the statistic sample value, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
+    /// Sets the statistic sample value in the units specified by <see cref="IAmbientStatisticReader.AdjustedUnits"/>, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="statistic">The <see cref="IAmbientStatistic"/> whose value should be set.</param>
     /// <param name="newValue">The new value to use.</param>
@@ -397,7 +397,7 @@ public static class IAmbientStatisticsExtensions
         statistic.SetRawValue((long)(newValue * statistic.FixedFloatingPointAdjustment));
     }
     /// <summary>
-    /// Sets the statistic sample value, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
+    /// Sets the statistic sample value in the units specified by <see cref="IAmbientStatisticReader.AdjustedUnits"/>, adjusting it by dividing by <see cref="IAmbientStatisticReader.FixedFloatingPointAdjustment"/> in the process.  Thread-safe, possibly interlocked.
     /// </summary>
     /// <param name="statistic">The <see cref="IAmbientStatistic"/> whose value should be set.</param>
     /// <param name="newValue">The new value to use.</param>
