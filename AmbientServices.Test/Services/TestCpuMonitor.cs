@@ -11,7 +11,7 @@ public class TestCpuMonitor
     [TestMethod]
     public async Task CpuMonitor()
     {
-        CpuUsageSample differentSample = CpuUsageSample.GetSample();
+        CpuSample differentSample = CpuSample.GetSample();
         float recentUsage;
         float pendingUsage;
         using IDisposable pause = AmbientClock.Pause();
@@ -43,8 +43,8 @@ public class TestCpuMonitor
         Assert.IsTrue(recentUsage <= 1.0f);
         Assert.IsTrue(0.0f <= pendingUsage);
 
-        CpuUsageSample sample = CpuUsageSample.GetSample();
-        CpuUsageSample sample2 = sample;
+        CpuSample sample = CpuSample.GetSample();
+        CpuSample sample2 = sample;
         Assert.IsTrue(sample.Equals((object)sample2));
         Assert.IsTrue(sample == sample2);
         Assert.IsFalse(sample != sample2);

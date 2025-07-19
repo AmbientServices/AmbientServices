@@ -31,7 +31,7 @@ public sealed class CpuPressurePoint : IPressurePoint
     /// <param name="neutralValue">A neutral value to use in case we're running in a browser and this information is not available.</param>
     public CpuPressurePoint(float neutralValue = 0.89f)
     {
-        _previousSample = CpuUsageSample.GetSample();
+        _previousSample = CpuSample.GetSample();
         _neutralValue = neutralValue;
     }
 #else
@@ -40,7 +40,7 @@ public sealed class CpuPressurePoint : IPressurePoint
     /// </summary>
     public CpuPressurePoint()
     {
-        _previousSample = CpuUsageSample.GetSample();
+        _previousSample = CpuSample.GetSample();
     }
 #endif
 
@@ -59,9 +59,9 @@ public sealed class CpuPressurePoint : IPressurePoint
 #if NET5_0_OR_GREATER
             if (OperatingSystem.IsBrowser()) return _neutralValue;
 #endif
-            CpuUsageSample newSample = CpuUsageSample.GetSample();
-            CpuUsageSample oldSample = (CpuUsageSample)Interlocked.Exchange(ref _previousSample, newSample);
-            float newPressure = 0.02f + CpuUsageSample.CpuUtilization(oldSample, newSample);   // _cpuMonitor is *process* usage, so we'll add a little extra to account for the rest of the system
+            CpuSample newSample = CpuSample.GetSample();
+            CpuSample oldSample = (CpuSample)Interlocked.Exchange(ref _previousSample, newSample);
+            float newPressure = 0.02f + CpuSample.CpuUtilization(oldSample, newSample);   // _cpuMonitor is *process* usage, so we'll add a little extra to account for the rest of the system
             _cpuPressure?.SetValue(newPressure);
             return newPressure;
         }
