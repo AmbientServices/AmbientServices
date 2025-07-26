@@ -131,8 +131,14 @@ public class TestDisposeResponsibility
         for (int attempt = 0; attempt < 10 && args == null; ++attempt)
         {
             AllocateAndDontDispose();
+            // allocate and then free a whole bunch of stuff to hopefully trigger the finalizer
+            for (int a = 0; a < 1000; ++a)
+            {
+                using IDisposable d = new MemoryStream(2048);
+            }
             GC.Collect();// 2, GCCollectionMode.Forced);
             GC.WaitForPendingFinalizers();
+            if (args != null) break;
             System.Threading.Thread.Sleep(Pseudorandom.Next.NextInt32 % ((attempt + 1) * 100));
         }
         Assert.IsNotNull(args);
