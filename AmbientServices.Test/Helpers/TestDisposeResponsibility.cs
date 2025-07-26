@@ -128,11 +128,13 @@ public class TestDisposeResponsibility
     {
         ResponsibilityNotDisposedEventArgs? args = null;
         DisposeResponsibility.ResponsibilityNotDisposed += (sender, e) => args = e;
-        AllocateAndDontDispose();
-        GC.Collect();// 2, GCCollectionMode.Forced);
-        GC.WaitForPendingFinalizers();
-        GC.Collect();//2, GCCollectionMode.Forced);
-        GC.WaitForPendingFinalizers();
+        for (int attempt = 0; attempt < 10 && args == null; ++attempt)
+        {
+            AllocateAndDontDispose();
+            GC.Collect();// 2, GCCollectionMode.Forced);
+            GC.WaitForPendingFinalizers();
+            System.Threading.Thread.Sleep(Pseudorandom.Next.NextInt32 % ((attempt + 1) * 100));
+        }
         Assert.IsNotNull(args);
         Assert.IsNotNull(args.Contained);
         Assert.IsNotNull(args.StackOnCreation);// (args.StackOnCreation.Contains(nameof(DisposeResponsibilityNotification)));   // this fails on Linux (maybe under Prod?)
