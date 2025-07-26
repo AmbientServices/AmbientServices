@@ -501,9 +501,11 @@ namespace AmbientServices
         private long _nextRaiseStopwatchTicks;
         private int _autoReset;
         private int _enabled;
+#pragma warning disable CS0649 // is never assigned a value
 #pragma warning disable IDE0044 // Add readonly modifier
         private EventHolder _eventHolder;  // NOTE: making this readonly screws up *everything*
 #pragma warning restore IDE0044 // Add readonly modifier
+#pragma warning restore CS0649 // is never assigned a value
 
         private struct EventHolder
         {

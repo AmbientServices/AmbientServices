@@ -8,6 +8,7 @@ namespace AmbientServices.Test;
 public class TestContextMutator
 {
     private static AsyncLocal<string> _contextValue = new();
+    private static AsyncLocal<string> _temporaryContextValue = new();
 
     [TestMethod]
     public async Task ContextMutatorAction()
@@ -29,6 +30,17 @@ public class TestContextMutator
         Assert.AreEqual("test2", (await AsyncTestFunc2()).ApplyContextChanges());
         Assert.AreEqual(nameof(AsyncTestFunc2), _contextValue.Value);
     }
+    [TestMethod]
+    public async Task TemporaryContextMutatorAction()
+    {
+        _temporaryContextValue.Value = nameof(TemporaryContextMutatorAction);
+        Assert.AreEqual(nameof(TemporaryContextMutatorAction), _temporaryContextValue.Value);
+        using (TemporaryContextMutator tcm = (await TemporarayAsyncTestAction()).ApplyContextChanges())
+        {
+            Assert.AreEqual(nameof(TemporarayAsyncTestAction), _temporaryContextValue.Value);
+        }
+        Assert.AreEqual(nameof(TemporaryContextMutatorAction), _temporaryContextValue.Value);
+    }
     private static async ValueTask InnerContext1()
     {
         _contextValue.Value = nameof(InnerContext1);
@@ -49,6 +61,13 @@ public class TestContextMutator
     {
         await Task.Delay(100); // Simulate some asynchronous operation
         ContextMutator mutator = new(() => _contextValue.Value = nameof(AsyncTestAction2));
+        return mutator;
+    }
+    private static async ValueTask<TemporaryContextMutator> TemporarayAsyncTestAction()
+    {
+        string oldValue = "not set";
+        TemporaryContextMutator mutator = new(() => { oldValue = _temporaryContextValue.Value; _temporaryContextValue.Value = nameof(TemporarayAsyncTestAction); }, () => { _temporaryContextValue.Value = oldValue; });
+        await Task.Delay(100); // Simulate some asynchronous operation
         return mutator;
     }
     private static async ValueTask<ContextMutator<string>> AsyncTestFunc1()

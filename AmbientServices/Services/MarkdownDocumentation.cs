@@ -504,9 +504,16 @@ public class MarkdownDocumentation
         return "-" + sb.ToString().ToLowerInvariant();
     }
 }
-
+/// <summary>
+/// A static class that contains utility functions to generate CRefs for various types.
+/// </summary>
 public static class DocumentationTypeToCref
 {
+    /// <summary>
+    /// Generates a CRef string for the specified member.
+    /// </summary>
+    /// <param name="member">The <see cref="MemberInfo"/> whose CRef is to be generated.</param>
+    /// <returns>A string containing the CRef.</returns>
     public static string GenerateCrefString(MemberInfo member)
     {
         switch (member)
@@ -527,7 +534,11 @@ public static class DocumentationTypeToCref
                 throw new ArgumentException("Unsupported member type", nameof(member));
         }
     }
-
+    /// <summary>
+    /// Generates a CRef string for the specified type.
+    /// </summary>
+    /// <param name="type">The <see cref="Type"/> to generatea CRef string for.</param>
+    /// <returns>A string containing the CRef.</returns>
     public static string GenerateCrefStringForType(Type type)
     {
         if (type.IsNested)
