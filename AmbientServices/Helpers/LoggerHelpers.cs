@@ -76,13 +76,21 @@ public class AmbientLogger
     }
 
     private readonly string _typeName;
-    private readonly bool _useLocalLogger;
+    private readonly bool _useAmbientLocalLogger;
     private readonly IAmbientLogger? _simpleLogger;
     private readonly IAmbientStructuredLogger? _logger;
     private readonly AmbientLogFilter _logFilter;
 
-    private IAmbientLogger? DynamicSimpleLogger => _useLocalLogger ? _AmbientSimpleLogger.Local : _simpleLogger;
-    private IAmbientStructuredLogger? DynamicLogger => _useLocalLogger ? _AmbientLogger.Local : _logger;
+    /// <summary>
+    /// Gets the <see cref="IAmbientStructuredLogger"/> used for logging.
+    public IAmbientLogger? DynamicSimpleLogger => _useAmbientLocalLogger ? _AmbientSimpleLogger.Local : _simpleLogger;
+    /// <summary>
+    /// Gets the <see cref="IAmbientStructuredLogger"/> used for logging.
+    public IAmbientStructuredLogger? DynamicLogger => _useAmbientLocalLogger ? _AmbientLogger.Local : _logger;
+    /// <summary>
+    /// Gets a string containing the logger types (simple/structured).
+    /// </summary>
+    public string LoggerType => $"{DynamicSimpleLogger?.GetType().Name}/{DynamicLogger?.GetType().Name}";
 
     private LogMessageRenderer? _simpleRenderer;
     private LogEntryRenderer? _renderer;
@@ -94,7 +102,7 @@ public class AmbientLogger
     public AmbientLogger(Type type)
         : this(type, null, null)
     {
-        _useLocalLogger = true;
+        _useAmbientLocalLogger = true;
     }
     /// <summary>
     /// Constructs an AmbientLogger with the specified logger and settings set.

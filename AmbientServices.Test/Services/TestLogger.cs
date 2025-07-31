@@ -198,6 +198,7 @@ public class TestLogger
             bl.Log((object)"direct log");
             bl.Log(new { Structured = outer });
             if (_Logger.Global != null) await _Logger.Global.Flush();
+            Assert.AreEqual("AmbientTraceLogger/AmbientFileLogger", logger.LoggerType);
         }
     }
     /// <summary>
@@ -260,6 +261,7 @@ public class TestLogger
             logger.Filter()?.Log(new { Summary = "Exception during test" }, new ApplicationException());
             logger.Error(new ApplicationException(), "Exception during test");
             logger.Filter("category", AmbientLogLevel.Information)?.Log(new { Summary = "Exception during test" }, new ApplicationException());
+            Assert.AreEqual("/AmbientTraceLogger", logger.LoggerType);
         }
     }
     /// <summary>
