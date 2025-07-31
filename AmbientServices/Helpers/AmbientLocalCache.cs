@@ -80,7 +80,7 @@ namespace AmbientServices
         {
             IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
             if (cache == null) return default;
-            return await cache.Remove<T>(_cacheKeyPrefix + itemKey, cancel).ConfigureAwait(false);
+            return await cache.Remove<T>(_cacheKeyPrefix + itemKey, cancel).ConfigureAwait(true);
         }
         /// <summary>
         /// Flushes everything from the cache.

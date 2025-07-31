@@ -80,12 +80,12 @@ namespace AmbientServices
             // stop the timers on each node
             foreach (StatusChecker checker in _checkers)
             {
-                await checker.BeginStop().ConfigureAwait(false);
+                await checker.BeginStop().ConfigureAwait(true);
             }
             // wait for each one to stop
             foreach (StatusChecker checker in _checkers)
             {
-                await checker.FinishStop().ConfigureAwait(false);
+                await checker.FinishStop().ConfigureAwait(true);
             }
             // dispose each one
             foreach (StatusChecker checker in _checkers)
@@ -191,7 +191,7 @@ namespace AmbientServices
                 checkerTasks.Add(checker, task);
             }
             // wait for either all the checker tasks to complete, or for the cancellation token to be canceled
-            await Task.WhenAny(Task.WhenAll(checkerTasks.Values), cancel.AsTask()).ConfigureAwait(false);
+            await Task.WhenAny(Task.WhenAll(checkerTasks.Values), cancel.AsTask()).ConfigureAwait(true);
             // make a list of those that got canceled or catastrophically failed (GetStatus should never throw an exception, but it's theoretically possible)
             List<StatusChecker> canceledOrFailedCheckers = new();
             foreach (KeyValuePair<StatusChecker, Task<StatusResults>> kvp in checkerTasks)

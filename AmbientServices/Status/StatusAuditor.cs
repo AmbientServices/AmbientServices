@@ -346,13 +346,13 @@ namespace AmbientServices
         {
             CancellationToken cancel = _backgroundCancelSource?.Token ?? default;
             _initialAuditTimer.Enabled = false;
-            await InternalAuditAsync(false, cancel).ConfigureAwait(false);
+            await InternalAuditAsync(false, cancel).ConfigureAwait(true);
             _initialAuditTimer.Close();
         }
         internal async void AuditTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs? e)
         {
             CancellationToken cancel = _backgroundCancelSource?.Token ?? default;
-            await InternalAuditAsync(false, cancel).ConfigureAwait(false);
+            await InternalAuditAsync(false, cancel).ConfigureAwait(true);
         }
         /// <summary>
         /// Computes the current status, building a <see cref="StatusResults"/> to hold information about the status.
@@ -360,7 +360,7 @@ namespace AmbientServices
         /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
         public async override sealed ValueTask<StatusResults> GetStatus(CancellationToken cancel = default)
         {
-            return await InternalAuditAsync(true, cancel).ConfigureAwait(false);
+            return await InternalAuditAsync(true, cancel).ConfigureAwait(true);
         }
         private async ValueTask<StatusResults> InternalAuditAsync(bool foreground = false, CancellationToken cancel = default)
         {
@@ -374,7 +374,7 @@ namespace AmbientServices
                     // have we already shut down?  bail out now!
                     if (foreground) Interlocked.Increment(ref _foregroundAuditCount); else Interlocked.Increment(ref _backgroundAuditCount);
                     // call the derived object to get the status
-                    await Audit(builder, cancel).ConfigureAwait(false);
+                    await Audit(builder, cancel).ConfigureAwait(true);
                     // schedule the next audit
                     builder.NextAuditTime = ScheduleNextAudit(builder.WorstAlert?.Rating, builder.Elapsed);
                 }

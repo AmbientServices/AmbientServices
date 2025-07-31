@@ -153,11 +153,11 @@ namespace AmbientServices
             if (_Clock.Override is PausedAmbientClock controllable)
             {
                 controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
-                await Task.Delay(0).ConfigureAwait(false);
+                await Task.Delay(0).ConfigureAwait(true);
             }
             else
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay)).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay)).ConfigureAwait(true);
             }
         }
         /// <summary>
@@ -185,11 +185,11 @@ namespace AmbientServices
             if (_Clock.Override is PausedAmbientClock controllable)
             {
                 controllable.SkipAhead(millisecondsToDelay * Stopwatch.Frequency / 1000);
-                await Task.Delay(0, cancel).ConfigureAwait(false);
+                await Task.Delay(0, cancel).ConfigureAwait(true);
             }
             else
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay), cancel).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(millisecondsToDelay), cancel).ConfigureAwait(true);
             }
         }
         /// <summary>
@@ -1062,7 +1062,7 @@ namespace AmbientServices
         public async ValueTask DisposeAsync()
         {
             // Perform async cleanup.
-            await DisposeAsyncCore().ConfigureAwait(false);
+            await DisposeAsyncCore().ConfigureAwait(true);
 
             // Dispose of unmanaged resources.
             Dispose();

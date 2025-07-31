@@ -77,9 +77,9 @@ public class AmbientTwoStageCache
     {
         string key = _cacheKeyPrefix + itemKey;
         IAmbientLocalCache? localCache = _explicitLocalCache ?? _LocalCache.Local;
-        if (localCache != null) await localCache.Store(key, item, false, maxCacheDuration, expiration, cancel).ConfigureAwait(false);
+        if (localCache != null) await localCache.Store(key, item, false, maxCacheDuration, expiration, cancel).ConfigureAwait(true);
         IAmbientSharedCache? sharedCache = _explicitSharedCache ?? _SharedCache.Local;
-        if (sharedCache != null) await sharedCache.Store(key, item, maxCacheDuration, expiration, cancel).ConfigureAwait(false);
+        if (sharedCache != null) await sharedCache.Store(key, item, maxCacheDuration, expiration, cancel).ConfigureAwait(true);
     }
     /// <summary>
     /// Removes the specified item from the cache.
@@ -91,9 +91,9 @@ public class AmbientTwoStageCache
     {
         string key = _cacheKeyPrefix + itemKey;
         IAmbientLocalCache? localCache = _explicitLocalCache ?? _LocalCache.Local;
-        if (localCache != null) await localCache.Remove<T>(key, cancel).ConfigureAwait(false);
+        if (localCache != null) await localCache.Remove<T>(key, cancel).ConfigureAwait(true);
         IAmbientSharedCache? sharedCache = _explicitSharedCache ?? _SharedCache.Local;
-        if (sharedCache != null) await sharedCache.Remove<T>(key, cancel).ConfigureAwait(false);
+        if (sharedCache != null) await sharedCache.Remove<T>(key, cancel).ConfigureAwait(true);
     }
     /// <summary>
     /// Flushes everything from the cache.
@@ -102,9 +102,9 @@ public class AmbientTwoStageCache
     public async ValueTask Clear(CancellationToken cancel = default)
     {
         IAmbientLocalCache? localCache = _explicitLocalCache ?? _LocalCache.Local;
-        if (localCache != null) await localCache.Clear(cancel).ConfigureAwait(false);
+        if (localCache != null) await localCache.Clear(cancel).ConfigureAwait(true);
         IAmbientSharedCache? sharedCache = _explicitSharedCache ?? _SharedCache.Local;
-        if (sharedCache != null) await sharedCache.Clear(cancel).ConfigureAwait(false);
+        if (sharedCache != null) await sharedCache.Clear(cancel).ConfigureAwait(true);
     }
 }
 

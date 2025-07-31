@@ -276,7 +276,7 @@ internal class RotatingFileBuffer : IDisposable
     {
         try
         {
-            await FlushInternal().ConfigureAwait(false);
+            await FlushInternal().ConfigureAwait(true);
         }
         // Coverage note: this code is pretty-much impossible to test because the time has to go off AFTER this instance is marked as disposed but before the timer is disposed (or at least before it's last invocation happens)
         catch (ObjectDisposedException)
@@ -317,7 +317,7 @@ internal class RotatingFileBuffer : IDisposable
     /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
     public async ValueTask Flush(CancellationToken cancel = default)
     {
-        await FlushInternal(cancel).ConfigureAwait(false);
+        await FlushInternal(cancel).ConfigureAwait(true);
     }
     private async ValueTask FlushInternal(CancellationToken cancel = default)
     {
@@ -331,7 +331,7 @@ internal class RotatingFileBuffer : IDisposable
         try
         {
             // make sure only one thread at a time processes the queue
-            await _writeLock.WaitAsync(cancel).ConfigureAwait(false);
+            await _writeLock.WaitAsync(cancel).ConfigureAwait(true);
             // loop through the queue processing log lines until we get to that message
             string logString;
             while (_queue.TryDequeue(out logString!))   // while TryQueue *can* put null into logString, it can only do so if it returns false, and we don't use logString in that case
@@ -340,12 +340,12 @@ internal class RotatingFileBuffer : IDisposable
                 if (_currentFileWriter == null)
                 {
                     // open the starting file
-                    await SwitchFiles(_startingSuffix).ConfigureAwait(false);
+                    await SwitchFiles(_startingSuffix).ConfigureAwait(true);
                 }
                 // time to switch files?
                 else if (logString.StartsWith(_SwitchFilesPrefix, StringComparison.Ordinal))
                 {
-                    await SwitchFiles(logString.Substring(_SwitchFilesPrefix.Length)).ConfigureAwait(false);
+                    await SwitchFiles(logString.Substring(_SwitchFilesPrefix.Length)).ConfigureAwait(true);
                 }
                 // reached the flush command queued above?
                 else if (logString.Equals(_FlushString, StringComparison.Ordinal))
@@ -355,7 +355,7 @@ internal class RotatingFileBuffer : IDisposable
                 }
                 else // this is just a regular log string
                 {
-                    await _currentFileWriter.WriteLineAsync(logString).ConfigureAwait(false);
+                    await _currentFileWriter.WriteLineAsync(logString).ConfigureAwait(true);
                 }
                 cancel.ThrowIfCancellationRequested();
             }
