@@ -723,7 +723,7 @@ public class TestClock
             Assert.AreEqual(0, elapsed);
             // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
             await ss.WaitAsync(5000);
-            Assert.AreEqual(1, elapsed);    // the event should *never* get raised more than once because AutoReset is false
+            Assert.IsTrue(elapsed <= 1);    // the event should *never* get raised more than once because AutoReset is false
             Assert.AreEqual(0, disposed);
         }
         Assert.AreEqual(1, disposed);

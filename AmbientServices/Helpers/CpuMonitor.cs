@@ -181,7 +181,7 @@ internal readonly struct CpuSample : IEquatable<CpuSample>
     {
         long wallTicks = second._wallClockTicks - first._wallClockTicks;
         long cpuTicks = second._processTicks - first._processTicks;
-        return (cpuTicks * 1.0f) / wallTicks / Environment.ProcessorCount;
+        return Math.Min(1.0f, Math.Max(0.0f, (cpuTicks * 1.0f) / wallTicks / Environment.ProcessorCount));
     }
     /// <summary>
     /// Samples the current CPU state for the process.
