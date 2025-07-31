@@ -29,7 +29,7 @@ public class AmbientTraceLogger : IAmbientLogger, IAmbientStructuredLogger
     /// <summary>
     /// Constructs an ambient trace logger, and implementation of <see cref="IAmbientLogger"/> that outputs log data to the system debug/trace output.
     /// </summary>
-    public AmbientTraceLogger()
+    private AmbientTraceLogger()
     {
     }
     /// <summary>

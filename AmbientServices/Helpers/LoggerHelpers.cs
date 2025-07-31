@@ -297,7 +297,7 @@ public class AmbientLogger
         }
         else
         {
-            foreach (PropertyInfo property in structuredData.GetType().GetProperties())
+            foreach (PropertyInfo property in structuredData.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
                 object? propertyValue = property.GetValue(structuredData);
                 if (logNullValues || propertyValue != null) dictionary[property.Name] = propertyValue;

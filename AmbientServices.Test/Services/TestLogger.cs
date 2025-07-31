@@ -143,7 +143,7 @@ public class TestLogger
     [TestMethod]
     public void LoggerStructuredConsole()
     {
-        AmbientConsoleLogger console = new();
+        AmbientConsoleLogger console = AmbientConsoleLogger.Instance;
         console.Log(new { Message = "this is a test" });
     }
     /// <summary>

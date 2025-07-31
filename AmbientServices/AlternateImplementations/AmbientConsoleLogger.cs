@@ -31,7 +31,7 @@ namespace AmbientServices
         /// <summary>
         /// Constructs an ambient console logger, and implementation of <see cref="IAmbientLogger"/> that outputs log data to the system console output.
         /// </summary>
-        public AmbientConsoleLogger()
+        private AmbientConsoleLogger()
         {
         }
         /// <summary>

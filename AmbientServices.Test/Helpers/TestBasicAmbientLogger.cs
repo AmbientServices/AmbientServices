@@ -185,7 +185,7 @@ public class TestBasicAmbientLogger
     [TestMethod]
     public void TestAmbientLogContext()
     {
-        AmbientTraceLogger loggerBackend = new();
+        AmbientTraceLogger loggerBackend = AmbientTraceLogger.Instance;
         AmbientLogger logger = new(typeof(TestBasicAmbientLogger), loggerBackend, loggerBackend);
         AmbientLogContext.Reset("baselineKey", "baselineValue");
         IDisposable kvpScope = AmbientLogContext.AddKeyValuePair(new("key1", System.Net.IPAddress.Any));
