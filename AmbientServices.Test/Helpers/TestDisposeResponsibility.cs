@@ -127,7 +127,7 @@ public class TestDisposeResponsibility
     public void DisposeResponsibilityNotification()
     {
         ResponsibilityNotDisposedEventArgs? args = null;
-        DisposeResponsibility.ResponsibilityNotDisposed += (sender, e) => args = e;
+        DisposeResponsibility.ResponsibilityNotDisposed += (sender, e) => args = e;     // note that either the outer or the inner item could be set last here!
         AllocateAndDontDispose();
         int gcCountBefore = GC.CollectionCount(2);
         for (int attempt = 0; attempt < 10 && args == null; ++attempt)
@@ -148,8 +148,6 @@ public class TestDisposeResponsibility
         if (gcCountAfter != gcCountBefore)
         {
             Assert.IsNotNull(args);
-            Assert.IsNotNull(args.Contained);
-            //Assert.IsNotNull(args.StackOnCreation);// (args.StackOnCreation.Contains(nameof(DisposeResponsibilityNotification)));   // this fails on Linux (maybe under Prod?)
         }
         // else just skip the testing
     }
