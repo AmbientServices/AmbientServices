@@ -229,6 +229,26 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
     private DateTime? _lastSampleTime;
     private float _lastUsagePercent;
 
+    // Cached paths discovered at startup
+    private static readonly string? _cpuUsagePath;
+    private static readonly string? _cpuQuotaPath;
+    private static readonly string? _cpuPeriodPath;
+    private static readonly bool _isCgroupV2;
+    private static readonly string? _containerId;
+
+    static LinuxContainerCpuSampler()
+    {
+        (_cpuUsagePath, _cpuQuotaPath, _cpuPeriodPath, _isCgroupV2, _containerId) = DiscoverCgroupPaths();
+
+        //// Log the discovered paths for debugging
+        //Console.WriteLine($"Cgroup paths discovered:");
+        //Console.WriteLine($"  Container ID: {_containerId ?? "unknown"}");
+        //Console.WriteLine($"  Cgroup version: {(_isCgroupV2 ? "v2" : "v1")}");
+        //Console.WriteLine($"  CPU usage path: {_cpuUsagePath ?? "not found"}");
+        //Console.WriteLine($"  CPU quota path: {_cpuQuotaPath ?? "not found"}");
+        //Console.WriteLine($"  CPU period path: {_cpuPeriodPath ?? "not found"}");
+    }
+
     public void Sample()
     {
         long? usage = GetCgroupCpuUsage();
@@ -287,33 +307,197 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
         return (float)Math.Min(Math.Max(percent, 0.0), 1.0);
     }
 
-    private static double? GetCgroupCpuLimit()
+    private static long? GetCgroupCpuUsage()
     {
+        if (_cpuUsagePath == null) return null;
+
         try
         {
-            string quotaPath = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us";
-            string periodPath = "/sys/fs/cgroup/cpu/cpu.cfs_period_us";
-            if (File.Exists(quotaPath) && File.Exists(periodPath))
+            if (_isCgroupV2)
             {
-                long quota = long.Parse(File.ReadAllText(quotaPath), System.Globalization.CultureInfo.InvariantCulture);
-                long period = long.Parse(File.ReadAllText(periodPath), System.Globalization.CultureInfo.InvariantCulture);
-                if (quota > 0 && period > 0)
-                    return (double)quota / period;
+                // cgroup v2 format: read from cpu.stat
+                string[] lines = File.ReadAllLines(_cpuUsagePath);
+                foreach (string line in lines)
+                {
+                    if (line.StartsWith("usage_usec ", StringComparison.Ordinal))
+                    {
+                        string usageStr = line.Substring("usage_usec ".Length);
+                        if (long.TryParse(usageStr, out long usageUsec)) return usageUsec * 1000; // Convert to nanoseconds
+                    }
+                }
+            }
+            else
+            {
+                // cgroup v1 format: direct file read
+                return long.Parse(File.ReadAllText(_cpuUsagePath), System.Globalization.CultureInfo.InvariantCulture);
             }
         }
         catch { }
+
         return null;
     }
 
-    private static long? GetCgroupCpuUsage()
+    private static double? GetCgroupCpuLimit()
+    {
+        if (_cpuQuotaPath == null || _cpuPeriodPath == null) return null;
+
+        try
+        {
+            if (_isCgroupV2)
+            {
+                // cgroup v2 format: read from cpu.max
+                string content = File.ReadAllText(_cpuQuotaPath).Trim();
+                string[] parts = content.Split(' ');
+                if (parts.Length == 2 && long.TryParse(parts[0], out long quota) && long.TryParse(parts[1], out long period))
+                {
+                    if (quota > 0 && period > 0) return (double)quota / period;
+                }
+            }
+            else
+            {
+                // cgroup v1 format: read from separate quota and period files
+                long quota = long.Parse(File.ReadAllText(_cpuQuotaPath), System.Globalization.CultureInfo.InvariantCulture);
+                long period = long.Parse(File.ReadAllText(_cpuPeriodPath), System.Globalization.CultureInfo.InvariantCulture);
+                if (quota > 0 && period > 0) return (double)quota / period;
+            }
+        }
+        catch { }
+
+        return null;
+    }
+
+    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupPaths()
+    {
+        string? containerId = GetContainerId();
+        bool isCgroupV2 = IsCgroupV2();
+
+        if (isCgroupV2)
+        {
+            return DiscoverCgroupV2Paths(containerId);
+        }
+        else
+        {
+            return DiscoverCgroupV1Paths(containerId);
+        }
+    }
+
+    private static string? GetContainerId()
     {
         try
         {
-            string usagePath = "/sys/fs/cgroup/cpuacct/cpuacct.usage";
-            if (File.Exists(usagePath))
-                return long.Parse(File.ReadAllText(usagePath), System.Globalization.CultureInfo.InvariantCulture);
+            // Read container ID from /proc/self/cgroup
+            string[] lines = File.ReadAllLines("/proc/self/cgroup");
+            foreach (string line in lines)
+            {
+                // Look for docker container ID in the path
+                if (line.Contains("docker"))
+                {
+                    string[] parts = line.Split(':');
+                    if (parts.Length >= 3)
+                    {
+                        string path = parts[2];
+                        // Extract container ID from path like "docker/1234567890abcdef"
+                        int dockerIndex = path.IndexOf("/docker/");
+                        if (dockerIndex >= 0)
+                        {
+                            string containerPart = path.Substring(dockerIndex + 8); // Skip "/docker/"
+                            // Container ID is typically 64 characters, but can be shorter
+                            int slashIndex = containerPart.IndexOf('/');
+                            if (slashIndex > 0) return containerPart.Substring(0, slashIndex);
+                            return containerPart;
+                        }
+                    }
+                }
+            }
         }
         catch { }
+
         return null;
+    }
+
+    private static bool IsCgroupV2()
+    {
+        // Check if cgroup v2 is mounted
+        return File.Exists("/sys/fs/cgroup/cgroup.controllers");
+    }
+
+    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupV2Paths(string? containerId)
+    {
+        string? cpuUsagePath = null;
+        string? cpuQuotaPath = null;
+        string? cpuPeriodPath = null;
+
+        // Try different possible paths for cgroup v2
+        string[] possibleBasePaths = {
+            "/sys/fs/cgroup",
+            $"/sys/fs/cgroup/docker/{containerId}",
+            $"/sys/fs/cgroup/system.slice/docker-{containerId}.scope"
+        };
+
+        foreach (string basePath in possibleBasePaths)
+        {
+            if (Directory.Exists(basePath))
+            {
+                string cpuStatPath = Path.Combine(basePath, "cpu.stat");
+                string cpuMaxPath = Path.Combine(basePath, "cpu.max");
+
+                if (File.Exists(cpuStatPath) && File.Exists(cpuMaxPath))
+                {
+                    cpuUsagePath = cpuStatPath;
+                    cpuQuotaPath = cpuMaxPath;
+                    cpuPeriodPath = cpuMaxPath; // Same file for v2
+                    break;
+                }
+            }
+        }
+
+        return (cpuUsagePath, cpuQuotaPath, cpuPeriodPath, true, containerId);
+    }
+
+    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupV1Paths(string? containerId)
+    {
+        string? cpuUsagePath = null;
+        string? cpuQuotaPath = null;
+        string? cpuPeriodPath = null;
+
+        // Try different possible paths for cgroup v1
+        string[] possibleBasePaths = {
+            "/sys/fs/cgroup/cpuacct",
+            $"/sys/fs/cgroup/cpuacct/docker/{containerId}",
+            $"/sys/fs/cgroup/cpuacct/system.slice/docker-{containerId}.scope"
+        };
+
+        string[] possibleCpuBasePaths = {
+            "/sys/fs/cgroup/cpu",
+            $"/sys/fs/cgroup/cpu/docker/{containerId}",
+            $"/sys/fs/cgroup/cpu/system.slice/docker-{containerId}.scope"
+        };
+
+        // Find CPU usage path
+        foreach (string basePath in possibleBasePaths)
+        {
+            string usagePath = Path.Combine(basePath, "cpuacct.usage");
+            if (File.Exists(usagePath))
+            {
+                cpuUsagePath = usagePath;
+                break;
+            }
+        }
+
+        // Find CPU quota and period paths
+        foreach (string basePath in possibleCpuBasePaths)
+        {
+            string quotaPath = Path.Combine(basePath, "cpu.cfs_quota_us");
+            string periodPath = Path.Combine(basePath, "cpu.cfs_period_us");
+
+            if (File.Exists(quotaPath) && File.Exists(periodPath))
+            {
+                cpuQuotaPath = quotaPath;
+                cpuPeriodPath = periodPath;
+                break;
+            }
+        }
+
+        return (cpuUsagePath, cpuQuotaPath, cpuPeriodPath, false, containerId);
     }
 }
