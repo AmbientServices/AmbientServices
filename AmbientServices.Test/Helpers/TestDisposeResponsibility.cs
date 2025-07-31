@@ -127,8 +127,9 @@ public class TestDisposeResponsibility
     public void DisposeResponsibilityNotification()
     {
         ResponsibilityNotDisposedEventArgs? args = null;
-        int gcCountBefore = GC.CollectionCount(2);
         DisposeResponsibility.ResponsibilityNotDisposed += (sender, e) => args = e;
+        AllocateAndDontDispose();
+        int gcCountBefore = GC.CollectionCount(2);
         for (int attempt = 0; attempt < 10 && args == null; ++attempt)
         {
             AllocateAndDontDispose();
