@@ -244,7 +244,7 @@ internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServ
 {
     private readonly ScopeOnSystemSwitchedDistributor _distributor;
     private readonly Regex? _systemGroupTransform;
-    private readonly Dictionary<string, ValueTuple<long, long>> _stopwatchTicksUsedByGroup;
+    private readonly ConcurrentDictionary<string, ValueTuple<long, long>> _stopwatchTicksUsedByGroup;   // note that even though this might not seem to need concurrent access, it is accessed from multiple forked threads within a single call context, so we need to use a concurrent dictionary
     private string _currentGroup;
     private long _currentGroupStartStopwatchTicks;
     private bool _disposedValue;
@@ -286,7 +286,7 @@ internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServ
         _distributor = distributor;
         _systemGroupTransform = systemGroupTransform;
         ScopeName = scopeName;
-        _stopwatchTicksUsedByGroup = new Dictionary<string, (long, long)>();
+        _stopwatchTicksUsedByGroup = new ConcurrentDictionary<string, ValueTuple<long, long>>();
         _currentGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, startSystem);
         _currentGroupStartStopwatchTicks = AmbientClock.Ticks;
         distributor.RegisterSystemSwitchedNotificationSink(this);
@@ -308,16 +308,8 @@ internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServ
         string? justEndedGroup = (revisedOldSystem == null)
             ? _currentGroup
             : ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, revisedOldSystem);
-        // update the just ended group
-        ValueTuple<long, long> values;
-        if (!_stopwatchTicksUsedByGroup.TryGetValue(justEndedGroup, out values))
-        {
-            _stopwatchTicksUsedByGroup.Add(justEndedGroup, (newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp, 1));
-        }
-        else
-        {
-            _stopwatchTicksUsedByGroup[justEndedGroup] = (values.Item1 + newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp, values.Item2 + 1);
-        }
+        // add/update the just ended group
+        _stopwatchTicksUsedByGroup.AddOrUpdate(justEndedGroup, (newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp, 1), (k, t) => (t.Item1 + newSystemStartStopwatchTimestamp - oldSystemStartStopwatchTimestamp, t.Item2 + 1));
         string? newGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, newSystem);
         // switch to the new processor
         _currentGroup = newGroup;
