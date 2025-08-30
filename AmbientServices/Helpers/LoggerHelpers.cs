@@ -83,9 +83,11 @@ public class AmbientLogger
 
     /// <summary>
     /// Gets the <see cref="IAmbientStructuredLogger"/> used for logging.
+    /// </summary>
     public IAmbientLogger? DynamicSimpleLogger => _useAmbientLocalLogger ? _AmbientSimpleLogger.Local : _simpleLogger;
     /// <summary>
     /// Gets the <see cref="IAmbientStructuredLogger"/> used for logging.
+    /// </summary>
     public IAmbientStructuredLogger? DynamicLogger => _useAmbientLocalLogger ? _AmbientLogger.Local : _logger;
     /// <summary>
     /// Gets a string containing the logger types (simple/structured).

@@ -53,7 +53,8 @@ internal interface IShirkResponsibility
 /// Also starts tracking the need for object disposal as returned by <see cref="DisposeResponsibility.AllPendingDisposals"/>.
 /// Instances of this class contained in another instance should only be contained in objects that are disposable and should ALWAYS be disposed.
 /// DO NOT use this for static objects or objects that are not disposable.
-/// Instances of this class on the stack should ALWAYS be in a using statement.  The responsibility to dispose may be transferred out to another instance using <see cref="TransferResponsibilityToCaller"/> passed into a constructor, by calling <see cref="TransferResponsibilityFrom(IDisposeResponsibility{T})"/> on another instance and passing in this instance, or by returning an instance to a caller, but each instance of this class should always be disposed to prevent leaks.
+/// Instances of this class on the stack should ALWAYS be in a using statement.  
+/// The responsibility to dispose may be transferred out to another instance using <see cref="TransferResponsibilityToCaller"/> passed into a constructor, by calling <see cref="TransferResponsibilityFrom(IDisposeResponsibility{T})"/> on another instance and passing in this instance, or by returning an instance to a caller, but each instance of this class should always be disposed to prevent leaks.
 /// </summary>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
 public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirkResponsibility
@@ -113,7 +114,14 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// </summary>
     public DisposeResponsibility()
     {
-        _stackOnCreation = "";
+        _stackOnCreation =
+#if DEBUG
+            PendingDispose.OnConstruct(null, 1024)
+#else
+            (stackOnCreation ?? new System.Diagnostics.StackTrace(1).ToString())
+#endif
+            ;
+        // Note that the rules are that this MUST be disposed, so we want to enforce that even it the contents are null!
     }
     /// <summary>
     /// Constructs a dispose responsibility object which takes responsibility for disposing the specified disposable object.
@@ -123,13 +131,14 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     public DisposeResponsibility(T? contained, string? stackOnCreation = null)
     {
         _contained = contained;
-        _stackOnCreation = (contained != null) ?
+        _stackOnCreation = 
 #if DEBUG
             PendingDispose.OnConstruct(stackOnCreation, 1024)
 #else
             (stackOnCreation ?? new System.Diagnostics.StackTrace(1).ToString())
 #endif
-            : "";
+            ;
+        // Note that the rules are that this MUST be disposed, so we want to enforce that even it the contents are null!
     }
     /// <summary>
     /// Constructs a dispose responsibility object that takes responsibility from the specified responsibility object.
@@ -146,6 +155,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
         _stackOnCreation = other.StackOnCreation;
         _contained = other.Contained;
         isr.ShirkResponsibility();
+        // Note that the rules are that this MUST be disposed, so we want to enforce that even it the contents are null!
     }
 
     private static void DisposeContained(T contained)
@@ -210,6 +220,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
             DisposeContained(_contained);
             GC.SuppressFinalize(this);
             _contained = default;
+            _stackOnCreation = "";
         }
     }
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -254,6 +265,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #else
         (stackOnCreation ?? new System.Diagnostics.StackTrace(1).ToString());
 #endif
+        // Note that the rules are that this MUST be disposed, so we want to enforce that even it the contents are null!
         GC.ReRegisterForFinalize(this);
     }
     /// <summary>
@@ -271,6 +283,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
         Dispose();
         _contained = sourceOwnership.NullableContained;
         _stackOnCreation = sourceOwnership.StackOnCreation;
+        // Note that the rules are that this MUST be disposed, so we want to enforce that even it the contents are null!
         GC.ReRegisterForFinalize(this);
         isr.ShirkResponsibility();
     }
@@ -280,7 +293,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     void IShirkResponsibility.ShirkResponsibility()
     {
         _contained = default;
-        _stackOnCreation = "";
+        // note that this instance must still be disposed--those are the rules
     }
     /// <summary>
     /// Returns a new instance to be returned from the containing function, with dispose responsibility transferred from this instance to that one.

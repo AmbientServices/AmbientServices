@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -113,5 +114,13 @@ public class AmbientLogSplitter : IAmbientLogger, IAmbientStructuredLogger
         {
             await structuredLogger.Flush(cancel).ConfigureAwait(true);
         }
+    }
+    /// <summary>
+    /// Gets the string representation of the ambient log splitter.
+    /// </summary>
+    /// <returns>The string representation of the ambient log splitter.</returns>
+    public override string ToString()
+    {
+        return string.Join(",", _ambientLoggers.Select(l => l.ToString())) + "/" + string.Join(",", _ambientStructuredLoggers.Select(l => l.ToString()));
     }
 }
