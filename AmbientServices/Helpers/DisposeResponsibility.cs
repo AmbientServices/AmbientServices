@@ -118,7 +118,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #if DEBUG
             PendingDispose.OnConstruct(null, 1024)
 #else
-            (stackOnCreation ?? new System.Diagnostics.StackTrace(1).ToString())
+            (new System.Diagnostics.StackTrace(1).ToString())
 #endif
             ;
         // Note that the rules are that this MUST be disposed, so we want to enforce that even it the contents are null!
