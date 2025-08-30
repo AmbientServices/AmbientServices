@@ -218,10 +218,10 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
             PendingDispose.OnDispose(_stackOnCreation);
 #endif
             DisposeContained(_contained);
-            GC.SuppressFinalize(this);
             _contained = default;
             _stackOnCreation = "";
         }
+        GC.SuppressFinalize(this);
     }
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
     /// <summary>
@@ -247,7 +247,10 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
             GC.SuppressFinalize(this);
             _contained = default;
         }
-        // else no need to dispse synchronously or asynchronously
+        else // no need to dispse synchronously or asynchronously, but we were disposed, so no need to finalize
+        {
+            GC.SuppressFinalize(this);
+        }
     }
 #endif
     /// <summary>

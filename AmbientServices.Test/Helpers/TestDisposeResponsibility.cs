@@ -24,6 +24,9 @@ public class TestDisposeResponsibility
 #endif
             Assert.IsFalse(firstOwner.ContainsDisposable);
             Assert.IsTrue(secondOwner.ContainsDisposable);
+            using (DisposeResponsibility<Stream> emptyShort = new())
+            {
+            }
             using DisposeResponsibility<Stream> thirdOwner = new();
 #if DEBUG
             Assert.IsTrue(DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum() >= 1);
