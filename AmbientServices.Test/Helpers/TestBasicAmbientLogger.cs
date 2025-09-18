@@ -183,7 +183,7 @@ public class TestBasicAmbientLogger
     /// Performs tests on <see cref="IAmbientLogger"/>.
     /// </summary>
     [TestMethod]
-    public void TestAmbientLogContext()
+    public async Task TestAmbientLogContext()
     {
         AmbientTraceLogger loggerBackend = AmbientTraceLogger.Instance;
         AmbientLogger logger = new(typeof(TestBasicAmbientLogger), loggerBackend, loggerBackend);
@@ -191,6 +191,8 @@ public class TestBasicAmbientLogger
         IDisposable kvpScope = AmbientLogContext.AddKeyValuePair(new("key1", System.Net.IPAddress.Any));
         IDisposable kvpsScope = AmbientLogContext.AddKeyValuePairs(new LogContextEntry[] { new("key2", (System.Net.IPAddress?)null) });
         logger.Filter()?.Log("test");
+        await logger.Flush(true);
+        await logger.Flush(false);
     }
     class ExceptionWithExtraLoggingInformation : Exception, IExceptionLogInformation
     {

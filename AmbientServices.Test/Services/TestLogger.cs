@@ -450,7 +450,7 @@ public class TestLogger
         json = JsonSerializer.Serialize(dictionary, options);
     }
     [TestMethod]
-    public void AmbientLoggerTest()
+    public async Task AmbientLoggerTest()
     {
         AmbientLogger<TestLogger> logger = new();
         string result;
@@ -471,6 +471,9 @@ public class TestLogger
         entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { IPAddress.None }, "owner", "category");
         entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { Summary = "Summary of the Error", IPAddress.None }, "owner", "category");
         entry = logger.Renderer(DateTime.UtcNow, AmbientLogLevel.Error, new { Summary = "Summary of the Error", IPAddress.None });
+
+        await logger.Flush(true);
+        await logger.Flush(false);
     }
     [TestMethod]
     public void HandleFallbackException()
