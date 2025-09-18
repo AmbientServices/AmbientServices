@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace AmbientServices;
 
@@ -586,6 +587,23 @@ public class AmbientLogger
         if (messageLambda is null) throw new ArgumentNullException(nameof(messageLambda));
 #endif
         LogDeprecated(messageLambda() + Environment.NewLine + ex.ToString(), category, level);
+    }
+    /// <summary>
+    /// Flushes all the logs.
+    /// </summary>
+    /// <param name="onlyUsedLoggers">Whether to flush only the loggers we were using rather than all the accessible logs.</param>
+    public async ValueTask Flush(bool onlyUsedLoggers = true)
+    {
+        if (_useAmbientLocalLogger || !onlyUsedLoggers)
+        {
+            if (_AmbientSimpleLogger.Local != null) await _AmbientSimpleLogger.Local.Flush().ConfigureAwait(true);
+            if (_AmbientLogger.Local != null) await _AmbientLogger.Local.Flush().ConfigureAwait(true);
+        }
+        if (!_useAmbientLocalLogger || !onlyUsedLoggers)
+        {
+            if (_logger != null) await _logger.Flush().ConfigureAwait(true);
+            if (_simpleLogger != null) await _simpleLogger.Flush().ConfigureAwait(true);
+        }
     }
 }
 /// <summary>
