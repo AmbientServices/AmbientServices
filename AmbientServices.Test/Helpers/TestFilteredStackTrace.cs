@@ -64,6 +64,8 @@ namespace AmbientServices.Test
             Assert.AreNotEqual(trace, new FilteredStackTrace());
             Assert.AreNotEqual(new FilteredStackTrace(), new object());
 
+            Assert.AreNotEqual(trace.ToString(), FilteredStackTrace.Current);
+
             Dictionary<FilteredStackTrace, string> dict = new();
             dict.Add(trace, trace.ToString());
             Assert.AreEqual(trace.ToString(), dict[trace]);
