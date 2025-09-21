@@ -33,7 +33,7 @@ namespace AmbientServices.Test
         public void FilteredStackTrace_()
         {
             FilteredStackTrace trace;
-            trace = new FilteredStackTrace();
+            trace = new FilteredStackTrace(0, true);
             Assert.IsFalse(string.IsNullOrEmpty(trace.ToString()));
             trace = new FilteredStackTrace(new ExpectedException("This is a test"));
             Assert.IsTrue(string.IsNullOrEmpty(trace.ToString().Trim()));

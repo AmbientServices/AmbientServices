@@ -369,7 +369,7 @@ public class FilteredStackTrace : StackTrace
     private static ConcurrentHashSet<string> InitializeNamespacesToFilterAfterFirst()
     {
         ConcurrentHashSet<string> dict = new();
-        dict.Add("System.");
+        dict.Add("System.");                    // filter the guts of these framework and SDK calls
         dict.Add("Microsoft.");
         dict.Add("Amazon.");
         return dict;
@@ -377,7 +377,7 @@ public class FilteredStackTrace : StackTrace
     private static ConcurrentHashSet<string> InitializeNamespacesToFilter()
     {
         ConcurrentHashSet<string> dict = new();
-        dict.Add("AmbientServices.Async.");
+        dict.Add("AmbientServices.Async.");     // filter this one because this library is mostly async-control wrappers that are not relevant
         return dict;
     }
 
