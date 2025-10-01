@@ -34,7 +34,7 @@ public interface IAmbientStatistics
     /// Adds or updates a time-based statistic with the specified identifier, description, and properties.
     /// Time-based statistics are always in seconds.
     /// </summary>
-    /// <param name="type">The <see cref="AmbientStatisicType"/> for the statistic.</param>
+    /// <param name="type">The <see cref="AmbientStatisticType"/> for the statistic.</param>
     /// <param name="id">A dash-delimited identifier for the statistic.</param>
     /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
     /// <param name="description">A human-readable description for the statistic.</param>
@@ -48,7 +48,7 @@ public interface IAmbientStatistics
     /// <param name="preferredSpatialAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated across systems.</param>
     /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
     /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
-    IAmbientStatistic GetOrAddTimeBasedStatistic(AmbientStatisicType type, string id, string name, string description, bool replaceIfAlreadyExists = false
+    IAmbientStatistic GetOrAddTimeBasedStatistic(AmbientStatisticType type, string id, string name, string description, bool replaceIfAlreadyExists = false
         , long initialValue = 0, long? minimumValue = null, long? maximumValue = null
         , AggregationTypes temporalAggregationTypes = AggregationTypes.None
         , AggregationTypes spatialAggregationTypes = AggregationTypes.None
@@ -59,7 +59,7 @@ public interface IAmbientStatistics
     /// <summary>
     /// Adds or updates a statistic with the specified identifier, description, and properties.
     /// </summary>
-    /// <param name="type">The <see cref="AmbientStatisicType"/> for the statistic.</param>
+    /// <param name="type">The <see cref="AmbientStatisticType"/> for the statistic.</param>
     /// <param name="id">A dash-delimited identifier for the statistic.</param>
     /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
     /// <param name="description">A human-readable description for the statistic.</param>
@@ -75,7 +75,7 @@ public interface IAmbientStatistics
     /// <param name="preferredSpatialAggregationType">A single <see cref="AggregationTypes"/> indicating the default way this statistic should be aggregated across systems.</param>
     /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
     /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
-    IAmbientStatistic GetOrAddStatistic(AmbientStatisicType type, string id, string name, string description, bool replaceIfAlreadyExists = false
+    IAmbientStatistic GetOrAddStatistic(AmbientStatisticType type, string id, string name, string description, bool replaceIfAlreadyExists = false
         , long initialValue = 0, long? minimumValue = null, long? maximumValue = null
         , string? units = null, double fixedFloatingPointAdjustment = 1.0
         , AggregationTypes temporalAggregationTypes = AggregationTypes.None
@@ -118,7 +118,7 @@ public interface IAmbientStatistics
 /// <summary>
 /// An enumeration of the types of statistics that can be collected.
 /// </summary>
-public enum AmbientStatisicType
+public enum AmbientStatisticType
 {
     /// <summary>
     /// A raw statistic is one that is not cumulative, that usually uses <see cref="IAmbientStatistic.SetRawValue"/> for updates, but may also use <see cref="IAmbientStatistic.IncrementRaw"/> and <see cref="IAmbientStatistic.DecrementRaw"/> to dynamically keep track of a count such as pending operations.
@@ -144,14 +144,14 @@ public enum AmbientStatisicType
 public enum AggregationTypes
 {
     /// <summary>
-    /// Since not aggregating doesn't ever make sense, we use this as the default value to do aggregation based on the <see cref="AmbientStatisicType"/>.
+    /// Since not aggregating doesn't ever make sense, we use this as the default value to do aggregation based on the <see cref="AmbientStatisticType"/>.
     /// See remarks for details about temporal and spatial aggregation defaults for each type.
     /// </summary>
     /// <remarks>
-    /// For <see cref="AmbientStatisicType.Raw"/>, temporal aggregation is <see cref="Average"/> and spatial aggregation is <see cref="Average"/>.
-    /// For <see cref="AmbientStatisicType.Cumulative"/>, temporal aggregation is <see cref="MostRecent"/> and spatial aggregation is <see cref="Average"/>.
-    /// For <see cref="AmbientStatisicType.Min"/>, temporal aggregation is <see cref="Min"/> and spatial aggregation is <see cref="Min"/>.
-    /// For <see cref="AmbientStatisicType.Max"/>, temporal aggregation is <see cref="Max"/> and spatial aggregation is <see cref="Max"/>.
+    /// For <see cref="AmbientStatisticType.Raw"/>, temporal aggregation is <see cref="Average"/> and spatial aggregation is <see cref="Average"/>.
+    /// For <see cref="AmbientStatisticType.Cumulative"/>, temporal aggregation is <see cref="MostRecent"/> and spatial aggregation is <see cref="Average"/>.
+    /// For <see cref="AmbientStatisticType.Min"/>, temporal aggregation is <see cref="Min"/> and spatial aggregation is <see cref="Min"/>.
+    /// For <see cref="AmbientStatisticType.Max"/>, temporal aggregation is <see cref="Max"/> and spatial aggregation is <see cref="Max"/>.
     /// </remarks>
     None = 0,
     /// <summary>
@@ -214,9 +214,9 @@ public interface IAmbientStatisticReader
     /// </summary>
     IAmbientStatistics StatisticsSet { get; }
     /// <summary>
-    /// Gets the <see cref="AmbientStatisicType"/> for the statistic.  Immutable.
+    /// Gets the <see cref="AmbientStatisticType"/> for the statistic.  Immutable.
     /// </summary>
-    AmbientStatisicType StatisicType { get; }
+    AmbientStatisticType StatisicType { get; }
     /// <summary>
     /// Gets the identifier for the statistic.
     /// The identifier should be a dash-delimited path identifying the data.  Immutable.
@@ -468,32 +468,32 @@ public static class IAmbientStatisticsExtensions
     /// <summary>
     /// Gets the default temporal (over time) aggregation type for the specified statistic type.
     /// </summary>
-    /// <param name="statisicType">The <see cref="AmbientStatisicType"/> for the statistic.</param>
+    /// <param name="statisicType">The <see cref="AmbientStatisticType"/> for the statistic.</param>
     /// <returns>The default <see cref="AggregationTypes"/> for aggregating samples for specified statistic over time.</returns>
-    public static AggregationTypes DefaultTemporalAggregation(this AmbientStatisicType statisicType)
+    public static AggregationTypes DefaultTemporalAggregation(this AmbientStatisticType statisicType)
     {
         return statisicType switch
         {
-            AmbientStatisicType.Raw => AggregationTypes.Average,
-            AmbientStatisicType.Cumulative => AggregationTypes.MostRecent,
-            AmbientStatisicType.Min => AggregationTypes.Min,
-            AmbientStatisicType.Max => AggregationTypes.Max,
+            AmbientStatisticType.Raw => AggregationTypes.Average,
+            AmbientStatisticType.Cumulative => AggregationTypes.MostRecent,
+            AmbientStatisticType.Min => AggregationTypes.Min,
+            AmbientStatisticType.Max => AggregationTypes.Max,
             _ => AggregationTypes.Average,
         };
     }
     /// <summary>
     /// Gets the default spatial (cross-system) aggregation type for the specified statistic type.
     /// </summary>
-    /// <param name="statisicType">The <see cref="AmbientStatisicType"/> for the statistic.</param>
+    /// <param name="statisicType">The <see cref="AmbientStatisticType"/> for the statistic.</param>
     /// <returns>The default <see cref="AggregationTypes"/> for aggregating samples for specified statistic across systems.</returns>
-    public static AggregationTypes DefaultSpatialAggregation(this AmbientStatisicType statisicType)
+    public static AggregationTypes DefaultSpatialAggregation(this AmbientStatisticType statisicType)
     {
         return statisicType switch
         {
-            AmbientStatisicType.Raw => AggregationTypes.Average,
-            AmbientStatisicType.Cumulative => AggregationTypes.Average,
-            AmbientStatisicType.Min => AggregationTypes.Min,
-            AmbientStatisicType.Max => AggregationTypes.Max,
+            AmbientStatisticType.Raw => AggregationTypes.Average,
+            AmbientStatisticType.Cumulative => AggregationTypes.Average,
+            AmbientStatisticType.Min => AggregationTypes.Min,
+            AmbientStatisticType.Max => AggregationTypes.Max,
             _ => AggregationTypes.Average,
         };
     }

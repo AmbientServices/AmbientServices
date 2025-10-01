@@ -650,12 +650,12 @@ public class RequestType
     public RequestType(string typeName)
     {
         IAmbientStatistics? ambientStatistics = AmbientStatistics.Local;
-        PendingRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Raw, typeName + "-RequestsPending", "Pending Requests", "The number of requests currently executing", false, 0, null, null, "", 1.0);
-        TotalRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-TotalRequests", "Total Requests", "The total number of requests that have finished executing", false, 0, null, null, "", 1.0);
-        TotalProcessingTime = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-TotalProcessingTime", "Total Processing Time", "The total time spent processing requests (only includes completed requests)", false, 0, null, null, "seconds", Stopwatch.Frequency);
-        Retries = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Retries", "Retries", "The total number of retries", false, 0, null, null, "", 1.0);
-        Failures = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Failures", "Failures", "The total number of failures", false, 0, null, null, "", 1.0);
-        Timeouts = ambientStatistics?.GetOrAddStatistic(AmbientStatisicType.Cumulative, typeName + "-Timeouts", "Timeouts", "The total number of timeouts", false, 0, null, null, "", 1.0);
+        PendingRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisticType.Raw, typeName + "-RequestsPending", "Pending Requests", "The number of requests currently executing", false, 0, null, null, "", 1.0);
+        TotalRequests = ambientStatistics?.GetOrAddStatistic(AmbientStatisticType.Cumulative, typeName + "-TotalRequests", "Total Requests", "The total number of requests that have finished executing", false, 0, null, null, "", 1.0);
+        TotalProcessingTime = ambientStatistics?.GetOrAddStatistic(AmbientStatisticType.Cumulative, typeName + "-TotalProcessingTime", "Total Processing Time", "The total time spent processing requests (only includes completed requests)", false, 0, null, null, "seconds", Stopwatch.Frequency);
+        Retries = ambientStatistics?.GetOrAddStatistic(AmbientStatisticType.Cumulative, typeName + "-Retries", "Retries", "The total number of retries", false, 0, null, null, "", 1.0);
+        Failures = ambientStatistics?.GetOrAddStatistic(AmbientStatisticType.Cumulative, typeName + "-Failures", "Failures", "The total number of failures", false, 0, null, null, "", 1.0);
+        Timeouts = ambientStatistics?.GetOrAddStatistic(AmbientStatisticType.Cumulative, typeName + "-Timeouts", "Timeouts", "The total number of timeouts", false, 0, null, null, "", 1.0);
     }
     /// <summary>
     /// Tracks a request by creating a <see cref="RequestTracker"/> which automatically counts the request and times its duration and allows the caller to report failures, timeouts, and retries.

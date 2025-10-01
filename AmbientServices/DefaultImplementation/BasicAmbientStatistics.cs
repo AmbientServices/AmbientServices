@@ -36,7 +36,7 @@ internal class BasicAmbientStatistics : IAmbientStatistics
         return null;
     }
 
-    public IAmbientStatistic GetOrAddStatistic(AmbientStatisicType type, string id, string name, string description, bool replaceIfAlreadyExists
+    public IAmbientStatistic GetOrAddStatistic(AmbientStatisticType type, string id, string name, string description, bool replaceIfAlreadyExists
         , long initialRawValue = 0, long? minimumExpectedRawValue = null, long? maximumExpectedRawValue = null
         , string? units = null, double fixedFloatingPointAdjustment = 1.0
         , AggregationTypes temporalAggregationTypes = AggregationTypes.None
@@ -58,7 +58,7 @@ internal class BasicAmbientStatistics : IAmbientStatistics
         }
         return statistic;
     }
-    public IAmbientStatistic GetOrAddTimeBasedStatistic(AmbientStatisicType type, string id, string name, string description, bool replaceIfAlreadyExists = false
+    public IAmbientStatistic GetOrAddTimeBasedStatistic(AmbientStatisticType type, string id, string name, string description, bool replaceIfAlreadyExists = false
         , long initialRawValue = 0, long? minimumExpectedRawValue = null, long? maximumExpectedRawValue = null
         , AggregationTypes temporalAggregationTypes = AggregationTypes.None
         , AggregationTypes spatialAggregationTypes = AggregationTypes.None
@@ -119,7 +119,7 @@ internal class Statistic : IAmbientStatistic
     private readonly Action _removeRegistration;
     private long _currentValue;    // interlocked
 
-    public Statistic(IAmbientStatistics statisticsSet, Action removeRegistration, AmbientStatisicType type, string id, string name, string description
+    public Statistic(IAmbientStatistics statisticsSet, Action removeRegistration, AmbientStatisticType type, string id, string name, string description
         , long initialRawValue = 0, long? expectedMinRawValue = null, long? expectedMaxRawValue = null
         , string? units = null, double fixedFloatingPointAdjustment = 1.0
         , AggregationTypes temporalAggregationTypes = AggregationTypes.None
@@ -149,7 +149,7 @@ internal class Statistic : IAmbientStatistic
 
     public IAmbientStatistics StatisticsSet { get; }
 
-    public AmbientStatisicType StatisicType { get; }
+    public AmbientStatisticType StatisicType { get; }
 
     public string Id { get; }
 
@@ -219,7 +219,7 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 
     public IAmbientStatistics StatisticsSet { get; }
 
-    public AmbientStatisicType StatisicType => AmbientStatisicType.Cumulative;
+    public AmbientStatisticType StatisicType => AmbientStatisticType.Cumulative;
 
     public string Id => "ExecutionTime";
 

@@ -21,7 +21,7 @@ public class TestStatistics
         double timeUnitsPerSecond = Stopwatch.Frequency;
         long startTime = _AmbientStatistics.Global?.ExecutionTime.CurrentRawValue ?? 0;
 
-        IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "counter", "counter", "counter test");
+        IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(AmbientStatisticType.Raw, "counter", "counter", "counter test");
         Assert.AreEqual(1, counter.IncrementRaw());
         Assert.AreEqual(3, counter.AddRaw(2));
         Assert.AreEqual(2, counter.DecrementRaw());
@@ -38,12 +38,12 @@ public class TestStatistics
         Assert.AreEqual(null, counter.ExpectedMinimumRawValue);
         Assert.AreEqual(null, counter.ExpectedMaximumRawValue);
         Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
-        IAmbientStatistic sameCounter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Max, "counter", "counter", "counter test");
+        IAmbientStatistic sameCounter = AmbientStatistics.GetOrAddStatistic(AmbientStatisticType.Max, "counter", "counter", "counter test");
         Assert.AreEqual(counter, sameCounter);
-        IAmbientStatistic replacedCounter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "counter", "counter", "counter test", true);
+        IAmbientStatistic replacedCounter = AmbientStatistics.GetOrAddStatistic(AmbientStatisticType.Raw, "counter", "counter", "counter test", true);
         Assert.AreNotEqual(counter, replacedCounter);
 
-        IAmbientStatistic timeBasedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Raw, "time-based", "time-based", "time-based test");
+        IAmbientStatistic timeBasedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisticType.Raw, "time-based", "time-based", "time-based test");
         using ((IDisposable)timeBasedCounter)
         {
             Assert.AreEqual(1, timeBasedCounter.IncrementRaw());
@@ -60,14 +60,14 @@ public class TestStatistics
             Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
             timeBasedCounter.SetRawValue(10);
             Assert.AreEqual(10, timeBasedCounter.CurrentRawValue);
-            sameCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Cumulative, "time-based", "time-based", "time-based test");
+            sameCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisticType.Cumulative, "time-based", "time-based", "time-based test");
             Assert.AreEqual(timeBasedCounter, sameCounter);
-            using (replacedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Cumulative, "time-based", "time-based", "time-based test", true))
+            using (replacedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisticType.Cumulative, "time-based", "time-based", "time-based test", true))
             {
                 Assert.AreNotEqual(timeBasedCounter, replacedCounter);
             }
 
-            using IAmbientStatistic unreplacedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Cumulative, "time-based-2", "time-based-2", "time-based-2 test", false);
+            using IAmbientStatistic unreplacedCounter = AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisticType.Cumulative, "time-based-2", "time-based-2", "time-based-2 test", false);
             Assert.AreNotEqual(unreplacedCounter, replacedCounter);
         }
 
@@ -107,7 +107,7 @@ public class TestStatistics
         Assert.AreEqual(AggregationTypes.MostRecent, runTime.PreferredTemporalAggregationType);
         Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max, runTime.SpatialAggregationTypes);
         Assert.AreEqual(AggregationTypes.Min | AggregationTypes.Max | AggregationTypes.MostRecent, runTime.TemporalAggregationTypes);
-        IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Min, nameof(AmbientPerformanceMetricsProperties), nameof(AmbientPerformanceMetricsProperties) + " Test", nameof(AmbientPerformanceMetricsProperties), true
+        IAmbientStatistic counter = AmbientStatistics.GetOrAddStatistic(AmbientStatisticType.Min, nameof(AmbientPerformanceMetricsProperties), nameof(AmbientPerformanceMetricsProperties) + " Test", nameof(AmbientPerformanceMetricsProperties), true
             , 0, null, null, null, 1.0
             , AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max
             , AggregationTypes.Min | AggregationTypes.Average | AggregationTypes.Max | AggregationTypes.Sum
@@ -121,13 +121,13 @@ public class TestStatistics
     [TestMethod]
     public void AmbientPerformanceMetricsException()
     {
-        using IAmbientStatistic stat = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(AmbientPerformanceMetricsException), "exception", "exception test");
+        using IAmbientStatistic stat = AmbientStatistics.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(AmbientPerformanceMetricsException), "exception", "exception test");
         foreach (KeyValuePair<string, IAmbientStatisticReader> kvp in AmbientStatistics.Statistics)
         {
             // is this one readonly?
             if (kvp.Value is not IAmbientStatistic)
             {
-                Assert.ThrowsException<InvalidOperationException>(() => AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisicType.Raw, kvp.Key, kvp.Key, "", false));
+                Assert.ThrowsException<InvalidOperationException>(() => AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisticType.Raw, kvp.Key, kvp.Key, "", false));
                 break;
             }
         }
@@ -136,11 +136,11 @@ public class TestStatistics
     public void PreferredSpatialAggregation()
     {
         IAmbientStatistics stats = new BasicAmbientStatistics();
-        using IAmbientStatistic statAverage = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statAverage), nameof(statAverage), $"test {nameof(statAverage)}", preferredSpatialAggregationType: AggregationTypes.Average, preferredTemporalAggregationType: AggregationTypes.Average);
-        using IAmbientStatistic statMin = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMin), nameof(statMin), $"test {nameof(statMin)}", preferredSpatialAggregationType: AggregationTypes.Min, preferredTemporalAggregationType: AggregationTypes.Min);
-        using IAmbientStatistic statMax = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMax), nameof(statMax), $"test {nameof(statMax)}", preferredSpatialAggregationType: AggregationTypes.Max, preferredTemporalAggregationType: AggregationTypes.Max);
-        using IAmbientStatistic statMostRecent = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMostRecent), nameof(statMostRecent), $"test {nameof(statMostRecent)}", preferredSpatialAggregationType: AggregationTypes.MostRecent, preferredTemporalAggregationType: AggregationTypes.MostRecent);
-        using IAmbientStatistic statOther = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statOther), nameof(statOther), $"test {nameof(statOther)}", preferredSpatialAggregationType: AggregationTypes.Sum, preferredTemporalAggregationType: AggregationTypes.Sum);
+        using IAmbientStatistic statAverage = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statAverage), nameof(statAverage), $"test {nameof(statAverage)}", preferredSpatialAggregationType: AggregationTypes.Average, preferredTemporalAggregationType: AggregationTypes.Average);
+        using IAmbientStatistic statMin = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statMin), nameof(statMin), $"test {nameof(statMin)}", preferredSpatialAggregationType: AggregationTypes.Min, preferredTemporalAggregationType: AggregationTypes.Min);
+        using IAmbientStatistic statMax = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statMax), nameof(statMax), $"test {nameof(statMax)}", preferredSpatialAggregationType: AggregationTypes.Max, preferredTemporalAggregationType: AggregationTypes.Max);
+        using IAmbientStatistic statMostRecent = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statMostRecent), nameof(statMostRecent), $"test {nameof(statMostRecent)}", preferredSpatialAggregationType: AggregationTypes.MostRecent, preferredTemporalAggregationType: AggregationTypes.MostRecent);
+        using IAmbientStatistic statOther = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statOther), nameof(statOther), $"test {nameof(statOther)}", preferredSpatialAggregationType: AggregationTypes.Sum, preferredTemporalAggregationType: AggregationTypes.Sum);
         long?[] samples1 = new long?[] { 10, null, 11, 12, 15, 14, 13 };
 
         Assert.AreEqual(12, statAverage.PreferredSpatialAggregation(samples1));
@@ -160,11 +160,11 @@ public class TestStatistics
     public void PreferredTemporalAggregation()
     {
         IAmbientStatistics stats = new BasicAmbientStatistics();
-        using IAmbientStatistic statAverage = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statAverage), nameof(statAverage), $"test {nameof(statAverage)}", preferredSpatialAggregationType: AggregationTypes.Average, preferredTemporalAggregationType: AggregationTypes.Average);
-        using IAmbientStatistic statMin = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMin), nameof(statMin), $"test {nameof(statMin)}", preferredSpatialAggregationType: AggregationTypes.Min, preferredTemporalAggregationType: AggregationTypes.Min);
-        using IAmbientStatistic statMax = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMax), nameof(statMax), $"test {nameof(statMax)}", preferredSpatialAggregationType: AggregationTypes.Max, preferredTemporalAggregationType: AggregationTypes.Max);
-        using IAmbientStatistic statMostRecent = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statMostRecent), nameof(statMostRecent), $"test {nameof(statMostRecent)}", preferredSpatialAggregationType: AggregationTypes.MostRecent, preferredTemporalAggregationType: AggregationTypes.MostRecent);
-        using IAmbientStatistic statOther = stats.GetOrAddStatistic(AmbientStatisicType.Raw, nameof(statOther), nameof(statOther), $"test {nameof(statOther)}", preferredSpatialAggregationType: AggregationTypes.Sum, preferredTemporalAggregationType: AggregationTypes.Sum);
+        using IAmbientStatistic statAverage = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statAverage), nameof(statAverage), $"test {nameof(statAverage)}", preferredSpatialAggregationType: AggregationTypes.Average, preferredTemporalAggregationType: AggregationTypes.Average);
+        using IAmbientStatistic statMin = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statMin), nameof(statMin), $"test {nameof(statMin)}", preferredSpatialAggregationType: AggregationTypes.Min, preferredTemporalAggregationType: AggregationTypes.Min);
+        using IAmbientStatistic statMax = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statMax), nameof(statMax), $"test {nameof(statMax)}", preferredSpatialAggregationType: AggregationTypes.Max, preferredTemporalAggregationType: AggregationTypes.Max);
+        using IAmbientStatistic statMostRecent = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statMostRecent), nameof(statMostRecent), $"test {nameof(statMostRecent)}", preferredSpatialAggregationType: AggregationTypes.MostRecent, preferredTemporalAggregationType: AggregationTypes.MostRecent);
+        using IAmbientStatistic statOther = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(statOther), nameof(statOther), $"test {nameof(statOther)}", preferredSpatialAggregationType: AggregationTypes.Sum, preferredTemporalAggregationType: AggregationTypes.Sum);
         long?[] samples1 = new long?[] { 10, null, 11, 12, 15, 14, 13 };
 
         Assert.AreEqual(12, statAverage.PreferredTemporalAggregation(samples1));
@@ -191,17 +191,17 @@ public class TestStatistics
     [TestMethod]
     public void DefaultAggregations()
     {
-        Assert.AreEqual(AggregationTypes.Average, AmbientStatisicType.Raw.DefaultTemporalAggregation());
-        Assert.AreEqual(AggregationTypes.MostRecent, AmbientStatisicType.Cumulative.DefaultTemporalAggregation());
-        Assert.AreEqual(AggregationTypes.Min, AmbientStatisicType.Min.DefaultTemporalAggregation());
-        Assert.AreEqual(AggregationTypes.Max, AmbientStatisicType.Max.DefaultTemporalAggregation());
-        Assert.AreEqual(AggregationTypes.Average, ((AmbientStatisicType)(-1)).DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.Average, AmbientStatisticType.Raw.DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.MostRecent, AmbientStatisticType.Cumulative.DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.Min, AmbientStatisticType.Min.DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.Max, AmbientStatisticType.Max.DefaultTemporalAggregation());
+        Assert.AreEqual(AggregationTypes.Average, ((AmbientStatisticType)(-1)).DefaultTemporalAggregation());
 
-        Assert.AreEqual(AggregationTypes.Average, AmbientStatisicType.Raw.DefaultSpatialAggregation());
-        Assert.AreEqual(AggregationTypes.Average, AmbientStatisicType.Cumulative.DefaultSpatialAggregation());
-        Assert.AreEqual(AggregationTypes.Min, AmbientStatisicType.Min.DefaultSpatialAggregation());
-        Assert.AreEqual(AggregationTypes.Max, AmbientStatisicType.Max.DefaultSpatialAggregation());
-        Assert.AreEqual(AggregationTypes.Average, ((AmbientStatisicType)(-1)).DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Average, AmbientStatisticType.Raw.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Average, AmbientStatisticType.Cumulative.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Min, AmbientStatisticType.Min.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Max, AmbientStatisticType.Max.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Average, ((AmbientStatisticType)(-1)).DefaultSpatialAggregation());
     }
     [TestMethod]
     public void StatisticsMissingSamples()
@@ -276,7 +276,7 @@ public class TestStatistics
     [TestMethod]
     public void AmbientRatioStatistics()
     {
-        using IAmbientStatistic requests = AmbientStatistics.GetOrAddStatistic(AmbientStatisicType.Raw, "total_requests", "Total Requests", "The total number of requests");
+        using IAmbientStatistic requests = AmbientStatistics.GetOrAddStatistic(AmbientStatisticType.Raw, "total_requests", "Total Requests", "The total number of requests");
         IAmbientStatisticReader executionTime = AmbientStatistics.Statistics["ExecutionTime"];
         using IAmbientRatioStatistic requestsPerSecond1 = AmbientStatistics.GetOrAddRatioStatistic("requestsPerSecond1", "requestsPerSecond", "requests per second", false, "r/s", requests.Id, true, executionTime.Id, true);
         using IAmbientRatioStatistic requestsPerSecond2 = AmbientStatistics.GetOrAddRatioStatistic("requestsPerSecond2", "requestsPerSecond", "requests per second", false, null, requests.Id, true, executionTime.Id, true);
