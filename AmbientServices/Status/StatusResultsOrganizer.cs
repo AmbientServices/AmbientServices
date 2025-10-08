@@ -445,9 +445,9 @@ namespace AmbientServices
         public List<string> Sources { get; private set; }
         public string Target { get; private set; }
         public List<StatusPropertyRange> PropertyRanges { get; private set; }
-        public DateTimeRange TimeRange { get; private set; }
+        public StatusResultsDateTimeRange TimeRange { get; private set; }
         public StatusAuditReport Report { get; private set; }
-        public DateTimeRange AuditStartRange { get; private set; }
+        public StatusResultsDateTimeRange AuditStartRange { get; private set; }
         public TimeSpanRange AuditDurationRange { get; private set; }
         public DateTime? NextAuditTime { get; private set; }
 
@@ -462,9 +462,9 @@ namespace AmbientServices
                 RenderSource(initialResults.SourceSystem)
             };
             Target = RenderTarget(initialResults.TargetSystem);
-            TimeRange = new DateTimeRange(initialResults.Time);
+            TimeRange = new StatusResultsDateTimeRange(initialResults.Time);
             Report = report;
-            AuditStartRange = new DateTimeRange(report.AuditStartTime);
+            AuditStartRange = new StatusResultsDateTimeRange(report.AuditStartTime);
             AuditDurationRange = new TimeSpanRange(report.AuditDuration);
             NextAuditTime = report.NextAuditTime;
             PropertyRanges = new List<StatusPropertyRange>();
@@ -479,9 +479,9 @@ namespace AmbientServices
                 RenderSource(source)
             };
             Target = RenderTarget(target);
-            TimeRange = new DateTimeRange(time);
+            TimeRange = new StatusResultsDateTimeRange(time);
             Report = report;
-            AuditStartRange = new DateTimeRange(report.AuditStartTime);
+            AuditStartRange = new StatusResultsDateTimeRange(report.AuditStartTime);
             AuditDurationRange = new TimeSpanRange(report.AuditDuration);
             NextAuditTime = report.NextAuditTime;
             PropertyRanges = new List<StatusPropertyRange>();
@@ -567,12 +567,12 @@ namespace AmbientServices
         }
     }
 
-    internal class DateTimeRange
+    internal class StatusResultsDateTimeRange
     {
         public DateTime Earliest { get; private set; }
         public DateTime Latest { get; private set; }
 
-        public DateTimeRange(DateTime time)
+        public StatusResultsDateTimeRange(DateTime time)
         {
             Earliest = Latest = time;
         }

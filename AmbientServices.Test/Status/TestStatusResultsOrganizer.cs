@@ -154,12 +154,12 @@ namespace AmbientServices.Test
             }
         }
         [TestMethod]
-        public void DateTimeRange()
+        public void StatusResultsDateTimeRange()
         {
             using (AmbientClock.Pause())
             {
                 // first test with a single date time
-                DateTimeRange range = new(AmbientClock.UtcNow);
+                StatusResultsDateTimeRange range = new(AmbientClock.UtcNow);
 
                 string longString = range.ToLongTimeString();
                 string shortString = range.ToShortTimeString();
