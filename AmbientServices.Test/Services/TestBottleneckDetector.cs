@@ -81,28 +81,28 @@ public class TestBottleneckDetector
         using AmbientBottleneckSurveyorCoordinator surveyorCoordinator = new();
         using (ProcessBottleneckSurveyor surveyor = new(null, _BottleneckDetector.Local, null, null))
         {
-            Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
+            Assert.Throws<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
         }
         using (ThreadSurveyManager threadManager = new(_BottleneckDetector.Local))
         {
             using ThreadBottleneckSurveyor surveyor = threadManager.CreateThreadSurveyor(null, null, null);
-            Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
+            Assert.Throws<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
         }
         using (ThreadSurveyManager threadManager = new(null))
         {
         }
         using (ScopedBottleneckSurveyor surveyor = new(null, _BottleneckDetector.Local, null, null))
         {
-            Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null));
+            Assert.Throws<ArgumentNullException>(() => surveyor.BottleneckExited(null));
         }
         using (TimeWindowSurveyManager timeWindowManager = new(TimeSpan.FromSeconds(1), a => Task.CompletedTask, _BottleneckDetector.Local, null, null))
         {
-            Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckEntered(null!));
-            Assert.ThrowsException<ArgumentNullException>(() => timeWindowManager.BottleneckExited(null!));
+            Assert.Throws<ArgumentNullException>(() => timeWindowManager.BottleneckEntered(null!));
+            Assert.Throws<ArgumentNullException>(() => timeWindowManager.BottleneckExited(null!));
 
             TimeWindowBottleneckSurvey surveyor = new(null, null, 0, TimeSpan.FromSeconds(1));
-            Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckEntered(null!));
-            Assert.ThrowsException<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
+            Assert.Throws<ArgumentNullException>(() => surveyor.BottleneckEntered(null!));
+            Assert.Throws<ArgumentNullException>(() => surveyor.BottleneckExited(null!));
         }
 
         BasicAmbientBottleneckDetector bd = new();
@@ -111,8 +111,8 @@ public class TestBottleneckDetector
         DateTime start = AmbientClock.UtcNow;
         using AmbientBottleneckAccessor a1 = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck1, start);
         using AmbientBottleneckAccessor a2 = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck2, start);
-        Assert.ThrowsException<ArgumentException>(() => a1.Combine(a2));
-        Assert.ThrowsException<ArgumentNullException>(
+        Assert.Throws<ArgumentException>(() => a1.Combine(a2));
+        Assert.Throws<ArgumentNullException>(
             () =>
             {
                 using (surveyorCoordinator.CreateTimeWindowSurveyor(TimeSpan.FromMilliseconds(100), null!))
@@ -140,15 +140,15 @@ public class TestBottleneckDetector
             try
             {
                 DateTime start = AmbientClock.UtcNow;
-                Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, start));
-                Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, start));
-                Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, 0));
-                Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0));
-                Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, 0, 0, 0, 0.0));
-                Assert.ThrowsException<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0, 0, 0, 0.0));
+                Assert.Throws<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, start));
+                Assert.Throws<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, start));
+                Assert.Throws<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, 0));
+                Assert.Throws<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0));
+                Assert.Throws<ArgumentNullException>(() => new AmbientBottleneckAccessor(null!, BottleneckDetectorAccessRecordPropertiesBottleneck, 0, 0, 0, 0.0));
+                Assert.Throws<ArgumentNullException>(() => new AmbientBottleneckAccessor(bd, null!, 0, 0, 0, 0.0));
                 using AmbientBottleneckAccessor r = new(bd, BottleneckDetectorAccessRecordPropertiesBottleneck, start);
-                Assert.ThrowsException<InvalidOperationException>(() => r.SetUsage(0, 0));
-                Assert.ThrowsException<InvalidOperationException>(() => r.AddUsage(0, 0));
+                Assert.Throws<InvalidOperationException>(() => r.SetUsage(0, 0));
+                Assert.Throws<InvalidOperationException>(() => r.AddUsage(0, 0));
             }
             finally
             {
@@ -159,8 +159,8 @@ public class TestBottleneckDetector
     [TestMethod]
     public void BottleneckDetectorBadLimits()
     {
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new AmbientBottleneck("BottleneckDetectorBadLimits", AmbientBottleneckUtilizationAlgorithm.Zero, true, "BottleneckDetectorBadLimits Test", -.01));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => new AmbientBottleneck("BottleneckDetectorBadLimits", AmbientBottleneckUtilizationAlgorithm.Zero, true, "BottleneckDetectorBadLimits Test", null, TimeSpan.FromMilliseconds(-1)));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AmbientBottleneck("BottleneckDetectorBadLimits", AmbientBottleneckUtilizationAlgorithm.Zero, true, "BottleneckDetectorBadLimits Test", -.01));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AmbientBottleneck("BottleneckDetectorBadLimits", AmbientBottleneckUtilizationAlgorithm.Zero, true, "BottleneckDetectorBadLimits Test", null, TimeSpan.FromMilliseconds(-1)));
     }
     [TestMethod]
     public void BottleneckDetectorDefaultScopeNames()

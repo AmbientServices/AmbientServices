@@ -357,16 +357,16 @@ public class TestLogger
         AmbientLogger<TestLogger> logger = new(_Logger.Global, null);
         Func<string> nullLambda = null;
         Exception nullException = null;
-        Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda!, "category", AmbientLogLevel.Information));
-        Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullException!, "category", AmbientLogLevel.Information));
-        Assert.ThrowsException<ArgumentNullException>(() => logger.Log("message", nullException!, "category", AmbientLogLevel.Information));
-        Assert.ThrowsException<ArgumentNullException>(() => logger.Log(() => "message", nullException!, "category", AmbientLogLevel.Information));
-        Assert.ThrowsException<ArgumentNullException>(() => logger.Log(nullLambda!, new ApplicationException(), "category", AmbientLogLevel.Information));
+        Assert.Throws<ArgumentNullException>(() => logger.Log(nullLambda!, "category", AmbientLogLevel.Information));
+        Assert.Throws<ArgumentNullException>(() => logger.Log(nullException!, "category", AmbientLogLevel.Information));
+        Assert.Throws<ArgumentNullException>(() => logger.Log("message", nullException!, "category", AmbientLogLevel.Information));
+        Assert.Throws<ArgumentNullException>(() => logger.Log(() => "message", nullException!, "category", AmbientLogLevel.Information));
+        Assert.Throws<ArgumentNullException>(() => logger.Log(nullLambda!, new ApplicationException(), "category", AmbientLogLevel.Information));
 
-        Assert.ThrowsException<ArgumentNullException>(() => new AmbientLogger(null!));
-        Assert.ThrowsException<ArgumentNullException>(() => logger.Error(nullException!, level: AmbientLogLevel.Warning));
-        Assert.ThrowsException<ArgumentNullException>(() => logger.Error(nullException!));
-        Assert.ThrowsException<ArgumentNullException>(() => logger.Error(nullException!, level: AmbientLogLevel.Critical));
+        Assert.Throws<ArgumentNullException>(() => new AmbientLogger(null!));
+        Assert.Throws<ArgumentNullException>(() => logger.Error(nullException!, level: AmbientLogLevel.Warning));
+        Assert.Throws<ArgumentNullException>(() => logger.Error(nullException!));
+        Assert.Throws<ArgumentNullException>(() => logger.Error(nullException!, level: AmbientLogLevel.Critical));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientLogger"/>.

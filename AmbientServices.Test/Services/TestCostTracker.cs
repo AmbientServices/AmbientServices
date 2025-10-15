@@ -179,7 +179,7 @@ public class TestCostTracker
     {
         using ScopedLocalServiceOverride<IAmbientCostTracker> o = new(new BasicAmbientCostTracker());
         using AmbientCostTrackerCoordinator coordinator = new();
-        Assert.ThrowsException<ArgumentNullException>(
+        Assert.Throws<ArgumentNullException>(
             () =>
             {
                 using IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(CostTrackerNullOnWindowComplete), TimeSpan.FromMilliseconds(100), null!);

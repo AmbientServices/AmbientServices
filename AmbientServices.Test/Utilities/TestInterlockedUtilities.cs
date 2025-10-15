@@ -87,7 +87,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(0.25, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, halfHalfLife, 1.0));
             Assert.AreEqual(0.4375, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, halfHalfLife, 1.0));
 
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, -0.0000001, 1.0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, -0.0000001, 1.0));
         }
         const int ThreadCount = 10;
         const int LoopCount = 10000;

@@ -129,27 +129,27 @@ public class TestProgress
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void PortionCompleteTooLowError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
         progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-        progress?.Update(-.01f);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => progress?.Update(-.01f));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void PortionCompleteTooHighError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
         progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-        progress?.Update(1.01f);
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => progress?.Update(1.01f));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void PartPortionCompleteTooLowError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
@@ -157,13 +157,13 @@ public class TestProgress
         using (progress?.TrackPart(0.01f, 0.02f))
         {
             IAmbientProgress subprogress = AmbientProgressService.GlobalProgress;
-            subprogress?.Update(-.01f);
+			Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => subprogress?.Update(-.01f));
         }
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void PartPortionCompleteTooHighError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
@@ -171,68 +171,58 @@ public class TestProgress
         using (progress?.TrackPart(0.01f, 0.02f))
         {
             IAmbientProgress subprogress = AmbientProgressService.GlobalProgress;
-            subprogress?.Update(1.01f);
+			Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => subprogress?.Update(1.01f));
         }
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void StartPortionTooLowError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
         progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-        using (progress?.TrackPart(-0.01f, 1.0f))
-        {
-        }
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => progress?.TrackPart(-0.01f, 1.0f));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void StartPortionTooHighError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
         progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-        using (progress?.TrackPart(0.0f, 1.01f))
-        {
-        }
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => progress?.TrackPart(0.0f, 1.01f));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void PortionPartTooLowError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
         progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-        using (progress?.TrackPart(1.0f, -0.01f))
-        {
-        }
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => progress?.TrackPart(1.0f, -0.01f));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void PortionPartTooHighError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
         progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-        using (progress?.TrackPart(1.0f, 1.01f))
-        {
-        }
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => progress?.TrackPart(1.0f, 1.01f));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
     /// </summary>
-    [TestMethod, ExpectedException(typeof(ArgumentOutOfRangeException))]
+    [TestMethod]
     public void PortionTooLargeError()
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
         progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-        using (progress?.TrackPart(0.5f, 0.73f))
-        {
-        }
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => progress?.TrackPart(0.5f, 0.73f));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -245,9 +235,9 @@ public class TestProgress
         IDisposable subProgress1 = progress?.TrackPart(0.05f, 0.13f);
         IDisposable subProgress2 = AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.24f);
         IDisposable subProgress3 = AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.24f);
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress1?.Dispose());
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress3?.Dispose());
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress2?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress1?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress3?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress2?.Dispose());
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -260,9 +250,9 @@ public class TestProgress
         IDisposable subProgress1 = progress?.TrackPart(0.05f, 0.13f);
         IDisposable subProgress2 = AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.24f);
         IDisposable subProgress3 = AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.24f);
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress1?.Dispose());
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress2?.Dispose());
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress3?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress1?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress2?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress3?.Dispose());
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -275,8 +265,8 @@ public class TestProgress
         IDisposable subProgress1 = progress?.TrackPart(0.05f, 0.13f);
         IDisposable subProgress2 = AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.24f);
         IDisposable subProgress3 = AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.24f);
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress2?.Dispose());
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress3?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress2?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress3?.Dispose());
         subProgress1?.Dispose();
     }
     /// <summary>
@@ -290,9 +280,9 @@ public class TestProgress
         IDisposable subProgress1 = progress?.TrackPart(0.05f, 0.13f);
         IDisposable subProgress2 = AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.24f);
         IDisposable subProgress3 = AmbientProgressService.GlobalProgress?.TrackPart(0.05f, 0.24f);
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress2?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress2?.Dispose());
         subProgress1?.Dispose();
-        Assert.ThrowsException<InvalidOperationException>(() => subProgress3?.Dispose());
+        Assert.Throws<InvalidOperationException>(() => subProgress3?.Dispose());
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -302,7 +292,7 @@ public class TestProgress
     {
         IAmbientProgress progress = AmbientProgressService.GlobalProgress;
         progress?.ResetCancellation(); // make a new cancellation in case the source was canceled in this execution context during a previous test
-        CancellationToken token = progress?.CancellationToken ?? default;
+        CancellationToken? token = progress?.CancellationToken ?? default;
         Assert.IsNotNull(token);
 
         using ScopedLocalServiceOverride<IAmbientProgressService> LocalServiceOverride = new(null);
@@ -442,7 +432,7 @@ public class TestProgress
             Assert.IsFalse(tokenSource?.IsCancellationRequested ?? true);
             AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
             Assert.IsTrue(tokenSource?.IsCancellationRequested ?? false);
-            Assert.ThrowsException<OperationCanceledException>(() => AmbientProgressService.Progress?.ThrowIfCancelled());
+            Assert.Throws<OperationCanceledException>(() => AmbientProgressService.Progress?.ThrowIfCancelled());
         }
     }
     /// <summary>
@@ -496,7 +486,7 @@ public class TestProgress
         progress.Update(0.01f, "");
         progress.Update(0.01f, "");
         Assert.AreEqual(4, tokenSource.Checks);
-        Assert.ThrowsException<OperationCanceledException>(() => progress.Update(0.01f, ""));
+        Assert.Throws<OperationCanceledException>(() => progress.Update(0.01f, ""));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientProgressService"/>.
@@ -535,7 +525,7 @@ public class TestProgress
         progress.Update(0.01f, "");
         progress.Update(0.01f, "");
         if (expectFail)
-            Assert.ThrowsException<OperationCanceledException>(() => progress.Update(0.01f, ""));
+            Assert.Throws<OperationCanceledException>(() => progress.Update(0.01f, ""));
         else
             progress.Update(0.01f, "");
     }
@@ -559,7 +549,7 @@ public class TestProgress
                 Assert.IsFalse(tokenSource?.IsCancellationRequested ?? true);
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(106));
                 Assert.IsTrue(tokenSource?.IsCancellationRequested ?? false);
-                Assert.ThrowsException<OperationCanceledException>(() => AmbientProgressService.Progress?.ThrowIfCancelled());
+                Assert.Throws<OperationCanceledException>(() => AmbientProgressService.Progress?.ThrowIfCancelled());
             }
         }
     }

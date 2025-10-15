@@ -144,13 +144,13 @@ namespace AmbientServices.Test
                 AggregatedAlert first = new("TestSource1", "TestTarget", DateTime.MinValue, report1);
                 AggregatedAlert second = new("TestSource2", "TestTarget", DateTime.MinValue, report2);
                 StatusResults secondResults = new("TestSource2", "TestTarget", AmbientClock.UtcNow.AddSeconds(-10), 0, ImmutableArray<StatusProperty>.Empty, report2);
-                Assert.ThrowsException<InvalidOperationException>(() => first.Aggregate(secondResults));
-                Assert.ThrowsException<InvalidOperationException>(() => first.Aggregate("TestSource2", "TestTarget", AmbientClock.UtcNow.AddSeconds(-10), report2));
+                Assert.Throws<InvalidOperationException>(() => first.Aggregate(secondResults));
+                Assert.Throws<InvalidOperationException>(() => first.Aggregate("TestSource2", "TestTarget", AmbientClock.UtcNow.AddSeconds(-10), report2));
 
                 report2 = new StatusAuditReport(AmbientClock.UtcNow.AddSeconds(-10), TimeSpan.FromSeconds(2), AmbientClock.UtcNow.AddSeconds(-10).AddMinutes(10), alert1);
                 secondResults = new StatusResults("TestSource2", "MismatchedTarget", AmbientClock.UtcNow.AddSeconds(-10), 0, ImmutableArray<StatusProperty>.Empty, report2);
-                Assert.ThrowsException<InvalidOperationException>(() => first.Aggregate(secondResults));
-                Assert.ThrowsException<InvalidOperationException>(() => first.Aggregate("TestSource2", "MismatchedTarget", AmbientClock.UtcNow.AddSeconds(-10), report2));
+                Assert.Throws<InvalidOperationException>(() => first.Aggregate(secondResults));
+                Assert.Throws<InvalidOperationException>(() => first.Aggregate("TestSource2", "MismatchedTarget", AmbientClock.UtcNow.AddSeconds(-10), report2));
             }
         }
         [TestMethod]

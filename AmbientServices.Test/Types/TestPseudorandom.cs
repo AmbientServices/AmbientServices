@@ -293,12 +293,12 @@ namespace AmbientServices.Test
         public void PseudorandomRanged()
         {
             Pseudorandom rand = new(4387617);
-            Assert.ThrowsException<ArgumentException>(() => rand.NextInt32Ranged(10, 9));
-            Assert.ThrowsException<ArgumentException>(() => rand.NextInt32SignedRanged(0, -100));
-            Assert.ThrowsException<ArgumentException>(() => rand.NextUInt32Ranged(10, 9));
-            Assert.ThrowsException<ArgumentException>(() => rand.NextInt64Ranged(10, 9));
-            Assert.ThrowsException<ArgumentException>(() => rand.NextInt64SignedRanged(0, -100));
-            Assert.ThrowsException<ArgumentException>(() => rand.NextUInt64Ranged(10, 9));
+            Assert.Throws<ArgumentException>(() => rand.NextInt32Ranged(10, 9));
+            Assert.Throws<ArgumentException>(() => rand.NextInt32SignedRanged(0, -100));
+            Assert.Throws<ArgumentException>(() => rand.NextUInt32Ranged(10, 9));
+            Assert.Throws<ArgumentException>(() => rand.NextInt64Ranged(10, 9));
+            Assert.Throws<ArgumentException>(() => rand.NextInt64SignedRanged(0, -100));
+            Assert.Throws<ArgumentException>(() => rand.NextUInt64Ranged(10, 9));
             Assert.AreEqual(9, rand.NextInt32Ranged(9, 9));
             Assert.AreEqual(-1, rand.NextInt32SignedRanged(-1, -1));
             Assert.AreEqual(9U, rand.NextUInt32Ranged(9, 9));
@@ -491,11 +491,11 @@ namespace AmbientServices.Test
         public void PseudorandomExceptions()
         {
             Pseudorandom rand = new(false);
-            Assert.ThrowsException<ArgumentNullException>(() => rand.NextEnum(null!));
-            Assert.ThrowsException<ArgumentNullException>(() => rand.NextBytes(null!, 1));
-            Assert.ThrowsException<ArgumentException>(() => rand.NextInt32SignedRangedUsuallySmall(10, 5));
-            Assert.ThrowsException<ArgumentException>(() => rand.NextInt64SignedRangedUsuallySmall(10, 5));
-            Assert.ThrowsException<ArgumentException>(() => rand.NextEnum(typeof(int)));
+            Assert.Throws<ArgumentNullException>(() => rand.NextEnum(null!));
+            Assert.Throws<ArgumentNullException>(() => rand.NextBytes(null!, 1));
+            Assert.Throws<ArgumentException>(() => rand.NextInt32SignedRangedUsuallySmall(10, 5));
+            Assert.Throws<ArgumentException>(() => rand.NextInt64SignedRangedUsuallySmall(10, 5));
+            Assert.Throws<ArgumentException>(() => rand.NextEnum(typeof(int)));
         }
         [TestMethod]
         public void PseudorandomUsuallyVerySmall()

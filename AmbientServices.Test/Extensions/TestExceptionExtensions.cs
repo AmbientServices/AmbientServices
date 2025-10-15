@@ -29,11 +29,11 @@ public class TestExceptionExtensions
     [TestMethod]
     public void ExceptionTypeNameNull()
     {
-        Assert.ThrowsException<ArgumentNullException>(() => ExceptionExtensions.TypeName(null!));
+        Assert.Throws<ArgumentNullException>(() => ExceptionExtensions.TypeName(null!));
     }
     [TestMethod]
     public void ExceptionNullArgumentException()
     {
-        Assert.ThrowsException<ArgumentNullException>(() => ExceptionExtensions.ToFilteredString(null!));
+        Assert.Throws<ArgumentNullException>(() => ExceptionExtensions.ToFilteredString(null!));
     }
 }

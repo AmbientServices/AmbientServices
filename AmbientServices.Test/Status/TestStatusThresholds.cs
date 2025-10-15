@@ -556,11 +556,11 @@ namespace AmbientServices.Test
         [TestMethod]
         public void StatusThresholdsExceptions()
         {
-            Assert.ThrowsException<ArgumentException>(() => { StatusPropertyThresholds s = new(2.0f, 3.0f, 1.0f); });
+            Assert.Throws<ArgumentException>(() => { StatusPropertyThresholds s = new(2.0f, 3.0f, 1.0f); });
             //StatusThresholds thresholds;
             //StatusAuditAlert alert;
 //            thresholds = new StatusThresholds(1.0f, 2.0f, 3.0f);
-//            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { alert = thresholds.Rate("Property", -0.0f001); });
+//            Assert.Throws<ArgumentOutOfRangeException>(() => { alert = thresholds.Rate("Property", -0.0f001); });
         }
         [TestMethod]
         public void DefaultPropertyThresholdsProperty()

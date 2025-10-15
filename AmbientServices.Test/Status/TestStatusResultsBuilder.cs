@@ -139,13 +139,13 @@ namespace AmbientServices.Test
             using (AmbientClock.Pause())
             {
                 StatusResultsBuilder test = new(nameof(StatusResultsBuilder));
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => test.AddException(new ApplicationException(), -1.0f));
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => test.AddFailure("Fail", "Terse", "Details", -0.1f));
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => test.AddAlert("Alert", "Terse", "Details", -0.001f));
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => test.AddAlert("Alert", "Terse", "Details", 1.001f));
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => test.AddOkay("Okay", "Terse", "Details", 1.1f));
-                Assert.ThrowsException<ArgumentNullException>(() => new StatusResultsBuilder((StatusResults)null!));
-                Assert.ThrowsException<ArgumentNullException>(() => new StatusResultsBuilder((StatusChecker)null!));
+                Assert.Throws<ArgumentOutOfRangeException>(() => test.AddException(new ApplicationException(), -1.0f));
+                Assert.Throws<ArgumentOutOfRangeException>(() => test.AddFailure("Fail", "Terse", "Details", -0.1f));
+                Assert.Throws<ArgumentOutOfRangeException>(() => test.AddAlert("Alert", "Terse", "Details", -0.001f));
+                Assert.Throws<ArgumentOutOfRangeException>(() => test.AddAlert("Alert", "Terse", "Details", 1.001f));
+                Assert.Throws<ArgumentOutOfRangeException>(() => test.AddOkay("Okay", "Terse", "Details", 1.1f));
+                Assert.Throws<ArgumentNullException>(() => new StatusResultsBuilder((StatusResults)null!));
+                Assert.Throws<ArgumentNullException>(() => new StatusResultsBuilder((StatusChecker)null!));
             }
         }
     }

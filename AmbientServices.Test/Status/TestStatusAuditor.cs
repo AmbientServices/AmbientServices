@@ -22,9 +22,9 @@ namespace AmbientServices.Test
             Assert.IsFalse(StatusAuditAlert.Empty!.Equals("test")); // the analyzer obviously gets confused when you test whether something is equal to null, even if you assert that it returns false
             Assert.AreNotEqual(StatusAuditAlert.Empty.ToString(), StatusAuditAlert.None.ToString());
             StatusAuditAlert sa = StatusAuditAlert.Empty;
-            Assert.ThrowsException<ArgumentNullException>(() => new StatusAuditAlert(1.0f, null!, "", ""));
-            Assert.ThrowsException<ArgumentNullException>(() => new StatusAuditAlert(1.0f, "", null!, ""));
-            Assert.ThrowsException<ArgumentNullException>(() => new StatusAuditAlert(1.0f, "", "", null!));
+            Assert.Throws<ArgumentNullException>(() => new StatusAuditAlert(1.0f, null!, "", ""));
+            Assert.Throws<ArgumentNullException>(() => new StatusAuditAlert(1.0f, "", null!, ""));
+            Assert.Throws<ArgumentNullException>(() => new StatusAuditAlert(1.0f, "", "", null!));
         }
         [TestMethod]
         public void StatusAuditReportMisc()
@@ -71,7 +71,7 @@ namespace AmbientServices.Test
                 using (StatusAuditorAuditExceptionTest test = new(nameof(StatusAuditorArgumentException) + "2"))
                 {
                     auditorAuditExceptionTestResults = await test.GetStatus();
-                    Assert.ThrowsException<ArgumentException>(() => test.SetLatestResults(auditorTestResults));
+                    Assert.Throws<ArgumentException>(() => test.SetLatestResults(auditorTestResults));
                 }
             }
         }

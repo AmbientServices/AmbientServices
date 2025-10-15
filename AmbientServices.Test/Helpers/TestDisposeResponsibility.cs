@@ -53,7 +53,7 @@ public class TestDisposeResponsibility
             using DisposeResponsibility<MemoryStream> fifthOwner = new();
             await Task.Yield();
 #endif
-            Assert.ThrowsException<ObjectDisposedException>(() => fifthOwner.Contained);
+            Assert.Throws<ObjectDisposedException>(() => fifthOwner.Contained);
 #if DEBUG
             Assert.IsTrue(DisposeResponsibility.AllPendingDisposals.Select(e => e.Count).Sum() >= 1);
 #endif
@@ -67,7 +67,7 @@ public class TestDisposeResponsibility
             Assert.IsTrue(fourthOwner.ContainsDisposable);
             Assert.IsTrue(fifthOwner.ContainsDisposable);
             Assert.IsNotNull(fifthOwner.NullableContained);
-            Assert.ThrowsException<ArgumentNullException>(() => fifthOwner.TransferResponsibilityFrom(null!));
+            Assert.Throws<ArgumentNullException>(() => fifthOwner.TransferResponsibilityFrom(null!));
             Assert.IsNotNull(fifthOwner.ToString());
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
             await using DisposeResponsibility<MemoryStream> emptyOwner1 = new();

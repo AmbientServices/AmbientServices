@@ -127,7 +127,7 @@ public class TestStatistics
             // is this one readonly?
             if (kvp.Value is not IAmbientStatistic)
             {
-                Assert.ThrowsException<InvalidOperationException>(() => AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisticType.Raw, kvp.Key, kvp.Key, "", false));
+                Assert.Throws<InvalidOperationException>(() => AmbientStatistics.GetOrAddTimeBasedStatistic(AmbientStatisticType.Raw, kvp.Key, kvp.Key, "", false));
                 break;
             }
         }
@@ -184,9 +184,9 @@ public class TestStatistics
     public void NullReferenceExceptions()
     {
         IAmbientStatistic nullStat = null!;
-        Assert.ThrowsException<ArgumentNullException>(() => nullStat.SetValue(0L));
-        Assert.ThrowsException<ArgumentNullException>(() => nullStat.SetValue(0f));
-        Assert.ThrowsException<ArgumentNullException>(() => nullStat.SetValue(0.0));
+        Assert.Throws<ArgumentNullException>(() => nullStat.SetValue(0L));
+        Assert.Throws<ArgumentNullException>(() => nullStat.SetValue(0f));
+        Assert.Throws<ArgumentNullException>(() => nullStat.SetValue(0.0));
     }
     [TestMethod]
     public void DefaultAggregations()

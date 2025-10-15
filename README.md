@@ -349,7 +349,7 @@ public class TimeDependentServiceTest
     {
         // this first part *should* get cancelled because we're using the system clock
         using AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
-        await Assert.ThrowsExceptionAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token).AsTask());
 
         // switch the current call context to the artifically-paused ambient clock and try again
         using (AmbientClock.Pause())
@@ -361,7 +361,7 @@ public class TimeDependentServiceTest
             // this skips the artifical paused clock ahead, raising the cancellation
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(1));
             // make sure the cancellation got raised
-            Assert.ThrowsException<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
+            Assert.Throws<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
         }
     }
     private async ValueTask AsyncFunctionThatShouldCancelAfterOneSecond(CancellationToken cancel)

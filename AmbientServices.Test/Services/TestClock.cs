@@ -1021,12 +1021,12 @@ public class TestClock
         void callback(object o) { ++invocations; }
         using (AmbientClock.Pause())
         {
-            Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
+            Assert.Throws<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
+            Assert.Throws<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
+            Assert.Throws<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
             using AmbientCallbackTimer timer = new(callback);
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
-            Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
+            Assert.Throws<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
+            Assert.Throws<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
         }
     }
     /*
@@ -1439,14 +1439,14 @@ public class TestClock
             {
                 int invocations = 0;
                 void callback(object o) { ++invocations; }
-                Assert.ThrowsException<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
+                Assert.Throws<ArgumentNullException>(() => { new AmbientCallbackTimer(null!); });
+                Assert.Throws<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, -2, 1); });
+                Assert.Throws<ArgumentOutOfRangeException>(() => { new AmbientCallbackTimer(callback, null, 1, -2); });
                 using AmbientCallbackTimer timer = new(callback);
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
-                Assert.ThrowsException<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
+                Assert.Throws<ArgumentOutOfRangeException>(() => { timer.Change(-2, 1); });
+                Assert.Throws<ArgumentOutOfRangeException>(() => { timer.Change(1, -2); });
                 IAmbientClockTimeChangedNotificationSink sink = timer;
-                Assert.ThrowsException<InvalidOperationException>(() => { sink.TimeChanged(null!, long.MinValue, long.MaxValue, DateTime.MinValue, DateTime.MaxValue); });
+                Assert.Throws<InvalidOperationException>(() => { sink.TimeChanged(null!, long.MinValue, long.MaxValue, DateTime.MinValue, DateTime.MaxValue); });
                 // if we get here, we succeeded
                 break;
             }

@@ -22,7 +22,7 @@ namespace AmbientServices.Test
             Assert.IsTrue(ArrayUtilities.ValueEquals(typeof(int), a, b));
             Assert.IsFalse(ArrayUtilities.ValueEquals(typeof(int), a, new int[] { 0, 1, 2 }));
             Assert.IsFalse(ArrayUtilities.ValueEquals(typeof(int), a, new int[,] { { 0 }, { 1 } }));
-            Assert.ThrowsException<ArgumentNullException>(() => ArrayUtilities.ValueEquals(null!, a, a));
+            Assert.Throws<ArgumentNullException>(() => ArrayUtilities.ValueEquals(null!, a, a));
         }
         [TestMethod]
         public void CompareArraysOfArraysByValue()

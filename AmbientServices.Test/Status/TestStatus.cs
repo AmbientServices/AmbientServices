@@ -151,10 +151,10 @@ namespace AmbientServices.Test
         {
             Status s = new(false);
             await s.Start();
-            Assert.ThrowsException<InvalidOperationException>(() => s.Start());
-            Assert.ThrowsException<ArgumentNullException>(() => Status.IsTestableStatusCheckerClass(null!));
-            Assert.ThrowsException<ArgumentNullException>(() => s.AddCheckerOrAuditor(null!));
-            Assert.ThrowsException<ArgumentNullException>(() => s.RemoveCheckerOrAuditor(null!));
+            Assert.Throws<InvalidOperationException>(() => s.Start());
+            Assert.Throws<ArgumentNullException>(() => Status.IsTestableStatusCheckerClass(null!));
+            Assert.Throws<ArgumentNullException>(() => s.AddCheckerOrAuditor(null!));
+            Assert.Throws<ArgumentNullException>(() => s.RemoveCheckerOrAuditor(null!));
         }
         [TestMethod]
         public async Task StatusEmpty()

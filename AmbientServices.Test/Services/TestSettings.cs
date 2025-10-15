@@ -152,9 +152,9 @@ public class TestSettings
     {
         IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingNonStringNullConvert));
         string testSettingKey = nameof(SettingsSetSettingNonStringNullConvert);
-        Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", null, "1"));
-        Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", 1, null));
-        Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int?>(settingsSet, testSettingKey, "", (int?)null, null));
+        Assert.Throws<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", null, "1"));
+        Assert.Throws<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", 1, null));
+        Assert.Throws<ArgumentNullException>(() => new SettingsSetSetting<int?>(settingsSet, testSettingKey, "", (int?)null, null));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -422,9 +422,9 @@ public class TestSettings
         GC.Collect(2, GCCollectionMode.Forced, false, false);
         TempRegister(registry);
         TempRegister(registry, "key2", "description");
-        Assert.ThrowsException<ArgumentException>(() => TempRegister(registry, description: "different description"));
+        Assert.Throws<ArgumentException>(() => TempRegister(registry, description: "different description"));
 
-        Assert.ThrowsException<ArgumentNullException>(() => registry.Register(null!));
+        Assert.Throws<ArgumentNullException>(() => registry.Register(null!));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientSettingsSet"/>.

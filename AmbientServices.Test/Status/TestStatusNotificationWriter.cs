@@ -159,12 +159,12 @@ namespace AmbientServices.Test
         public void NotificationWriterExceptions()
         {
             StatusNotificationWriter writer = new();
-            Assert.ThrowsException<InvalidOperationException>(() => writer.LeaveStatusRange());
-            Assert.ThrowsException<InvalidOperationException>(() => writer.LeaveTarget());
-            Assert.ThrowsException<InvalidOperationException>(() => writer.EnterTarget(nameof(NotificationWriterExceptions), StatusRating.Okay));
-            Assert.ThrowsException<InvalidOperationException>(() => writer.WriteAggregatedAlert(new AggregatedAlert("Source", "Target", AmbientClock.UtcNow, StatusAuditReport.Pending)));
+            Assert.Throws<InvalidOperationException>(() => writer.LeaveStatusRange());
+            Assert.Throws<InvalidOperationException>(() => writer.LeaveTarget());
+            Assert.Throws<InvalidOperationException>(() => writer.EnterTarget(nameof(NotificationWriterExceptions), StatusRating.Okay));
+            Assert.Throws<InvalidOperationException>(() => writer.WriteAggregatedAlert(new AggregatedAlert("Source", "Target", AmbientClock.UtcNow, StatusAuditReport.Pending)));
             writer.EnterStatusRange(StatusRating.Okay);
-            Assert.ThrowsException<InvalidOperationException>(() => writer.EnterStatusRange(StatusRating.Okay));
+            Assert.Throws<InvalidOperationException>(() => writer.EnterStatusRange(StatusRating.Okay));
             writer.EnterTarget(nameof(NotificationWriterExceptions), StatusRating.Okay);
             for (int loop = 0; loop < 7; ++loop) writer.EnterTarget(nameof(NotificationWriterExceptions) + loop.ToString(), StatusRating.Okay);
         }

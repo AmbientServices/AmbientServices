@@ -44,7 +44,7 @@ public class TestArrayExtensions
         int hashCode = a.ValueHashCode();
         Assert.IsTrue(hashCode != 0);
         a = null!;
-        Assert.ThrowsException<ArgumentNullException>(() => a.ValueHashCode());
+        Assert.Throws<ArgumentNullException>(() => a.ValueHashCode());
     }
     [TestMethod]
     public void ArrayValueHashWithNull()

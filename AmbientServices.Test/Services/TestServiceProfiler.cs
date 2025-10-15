@@ -270,7 +270,7 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
     {
         using ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler());
         using AmbientServiceProfilerCoordinator coordinator = new();
-        Assert.ThrowsException<ArgumentNullException>(
+        Assert.Throws<ArgumentNullException>(
             () =>
             {
                 using IDisposable timeWindowProfile = coordinator.CreateTimeWindowProfiler(nameof(ServiceProfilerNullOnWindowComplete), TimeSpan.FromMilliseconds(100), null!);

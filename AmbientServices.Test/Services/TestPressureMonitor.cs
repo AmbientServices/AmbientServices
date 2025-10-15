@@ -88,7 +88,7 @@ public class TestPressureMonitor
     [TestMethod]
     public void PressureMonitorError()
     {
-        Assert.ThrowsException<ArgumentNullException>(() => PressureMonitor.Max((IEnumerable<float>)null!));
+        Assert.Throws<ArgumentNullException>(() => PressureMonitor.Max((IEnumerable<float>)null!));
     }
     [TestMethod]
     public void LinearPressureToMemoryPressure()

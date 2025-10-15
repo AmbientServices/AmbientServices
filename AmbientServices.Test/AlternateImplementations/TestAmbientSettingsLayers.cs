@@ -48,6 +48,6 @@ public class TestAmbientSettingsLayers
         Assert.IsNull(mutableLayers.GetRawValue("key99"));
         Assert.IsNull(mutableLayers.GetTypedValue("key99"));
 
-        Assert.ThrowsException<ArgumentNullException>(() => new AmbientSettingsLayers(null!));
+        Assert.Throws<ArgumentNullException>(() => new AmbientSettingsLayers(null!));
     }
 }

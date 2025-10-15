@@ -167,8 +167,8 @@ public class TestBasicAmbientLogger
         {
             using RotatingFileBuffer buffer = new(tempPath, "0.log", TimeSpan.Zero);
             buffer.Dispose();
-            Assert.ThrowsException<ObjectDisposedException>(() => buffer.BufferLine(""));
-            Assert.ThrowsException<ObjectDisposedException>(() => buffer.BufferFileRotation("1.log"));
+            Assert.Throws<ObjectDisposedException>(() => buffer.BufferLine(""));
+            Assert.Throws<ObjectDisposedException>(() => buffer.BufferFileRotation("1.log"));
             try
             {
                 await buffer.Flush();

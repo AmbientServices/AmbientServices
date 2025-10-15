@@ -92,7 +92,7 @@ namespace AmbientServices.Test
         public void StackTraceExtensions_GetFilteredString()
         {
             StackTrace? nullStackTrace = null;
-            Assert.ThrowsException<ArgumentNullException>(() => nullStackTrace!.GetFilteredString());   // we're intentionally testing an invalid null here
+            Assert.Throws<ArgumentNullException>(() => nullStackTrace!.GetFilteredString());   // we're intentionally testing an invalid null here
             Assert.IsNotNull(new StackTrace().GetFilteredString());
             Assert.IsNotNull(new FilteredStackTrace().GetFilteredString());
         }

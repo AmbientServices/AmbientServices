@@ -31,9 +31,9 @@ public class TestAssemblyUtilities
     public void AssemblyExtensionsNullArgumentExceptions()
     {
         Assembly n = null!;
-        Assert.ThrowsException<ArgumentNullException>(() => n.GetLoadableTypes());
-        Assert.ThrowsException<ArgumentNullException>(() => n.DoesAssemblyReferDirectlyToAssembly(n));
+        Assert.Throws<ArgumentNullException>(() => n.GetLoadableTypes());
+        Assert.Throws<ArgumentNullException>(() => n.DoesAssemblyReferDirectlyToAssembly(n));
         ReflectionTypeLoadException ex = null!;
-        Assert.ThrowsException<ArgumentNullException>(() => AssemblyUtilities.TypesFromException(ex));
+        Assert.Throws<ArgumentNullException>(() => AssemblyUtilities.TypesFromException(ex));
     }
 }

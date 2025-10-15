@@ -160,9 +160,9 @@ public class TestEnvironmentSettings
     {
         IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
         string testSettingKey = nameof(EnvironmentSettingsSetSettingNonStringNullConvert);
-        Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", null, "1"));
-        Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", 1, null));
-        Assert.ThrowsException<ArgumentNullException>(() => new SettingsSetSetting<int?>(settingsSet, testSettingKey, "", (int?)null, null));
+        Assert.Throws<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", null, "1"));
+        Assert.Throws<ArgumentNullException>(() => new SettingsSetSetting<int>(settingsSet, testSettingKey, "", 1, null));
+        Assert.Throws<ArgumentNullException>(() => new SettingsSetSetting<int?>(settingsSet, testSettingKey, "", (int?)null, null));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientSettingsSet"/>.
