@@ -35,8 +35,8 @@ public class TestStatistics
         counter.SetValue(10.0);
         counter.SetValue(10L);
         Assert.AreEqual(10, counter.CurrentRawValue);
-        Assert.AreEqual(null, counter.ExpectedMinimumRawValue);
-        Assert.AreEqual(null, counter.ExpectedMaximumRawValue);
+        Assert.IsNull(counter.ExpectedMinimumRawValue);
+        Assert.IsNull(counter.ExpectedMaximumRawValue);
         Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
         IAmbientStatistic sameCounter = AmbientStatistics.GetOrAddStatistic(AmbientStatisticType.Max, "counter", "counter", "counter test");
         Assert.AreEqual(counter, sameCounter);
@@ -55,8 +55,8 @@ public class TestStatistics
             Assert.AreEqual(5, timeBasedCounter.SetRawMax(3));
             Assert.AreEqual(3, timeBasedCounter.SetRawMin(3));
             Assert.AreEqual(3, timeBasedCounter.SetRawMin(5));
-            Assert.AreEqual(null, counter.ExpectedMinimumRawValue);
-            Assert.AreEqual(null, counter.ExpectedMaximumRawValue);
+            Assert.IsNull(counter.ExpectedMinimumRawValue);
+            Assert.IsNull(counter.ExpectedMaximumRawValue);
             Assert.AreEqual(1.0, counter.FixedFloatingPointAdjustment);
             timeBasedCounter.SetRawValue(10);
             Assert.AreEqual(10, timeBasedCounter.CurrentRawValue);
@@ -74,9 +74,9 @@ public class TestStatistics
         IAmbientStatisticReader executionTime = AmbientStatistics.Statistics["ExecutionTime"];
         long endTime = executionTime.CurrentRawValue;
         replacedCounter.SetRawValue(endTime - startTime);
-        Assert.IsTrue(endTime >= startTime);
+        Assert.IsGreaterThanOrEqualTo(startTime, endTime);
         Assert.AreEqual(0, executionTime.ExpectedMinimumRawValue);
-        Assert.AreEqual(null, executionTime.ExpectedMaximumRawValue);
+        Assert.IsNull(executionTime.ExpectedMaximumRawValue);
         Assert.AreEqual(Stopwatch.Frequency, executionTime.FixedFloatingPointAdjustment);
 
         Assert.IsTrue(AmbientStatistics.RemoveStatistic(counter.Id));
@@ -91,7 +91,7 @@ public class TestStatistics
     public void AmbientPerformanceMetricsRunTime()
     {
         IAmbientStatisticReader runTime = AmbientStatistics.Statistics["ExecutionTime"];
-        Assert.IsTrue(runTime.Description.Contains(" seconds "));
+        Assert.Contains(" seconds ", runTime.Description);
         Assert.IsTrue(runTime.AdjustedUnits.Equals("seconds"));
 
         Assert.AreEqual(runTime, AmbientStatistics.ReadStatistic("ExecutionTime"));

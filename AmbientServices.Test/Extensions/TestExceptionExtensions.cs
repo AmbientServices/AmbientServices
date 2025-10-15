@@ -13,7 +13,7 @@ public class TestExceptionExtensions
         Exception inner = new("inner");
         Exception outer = new("outer", inner);
         string s = outer.ToFilteredString();
-        Assert.IsTrue(s.Contains("[Exception]"));
+        Assert.Contains("[Exception]", s);
     }
     class WeirdNamed : Exception
     {
@@ -24,7 +24,7 @@ public class TestExceptionExtensions
         WeirdNamed weird = new();
         Assert.AreEqual("WeirdNamed", weird.TypeName());
         string s = weird.ToFilteredString();
-        Assert.IsTrue(s.Contains("[WeirdNamed]"));
+        Assert.Contains("[WeirdNamed]", s);
     }
     [TestMethod]
     public void ExceptionTypeNameNull()

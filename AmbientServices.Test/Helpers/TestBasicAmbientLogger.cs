@@ -113,8 +113,8 @@ public class TestBasicAmbientLogger
 
                     // open the first log file
                     string firstLogContents = File.ReadAllText(firstLogFile);
-                    Assert.IsFalse(firstLogContents.Contains("test1")); // the first log message should have been overwritten when the log rotated around to the first file again
-                    Assert.IsTrue(firstLogContents.Contains("test4"));
+                    Assert.DoesNotContain("test1", firstLogContents); // the first log message should have been overwritten when the log rotated around to the first file again
+                    Assert.Contains("test4", firstLogContents);
 
                     // try to delete files here (this will cause an ignored exception)
                     await AmbientFileLogger.TryDeleteAllFiles(logFilePrefix);

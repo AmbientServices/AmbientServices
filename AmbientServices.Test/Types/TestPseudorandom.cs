@@ -24,10 +24,10 @@ namespace AmbientServices.Test
             );
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsLessThan(25.0, standardDeviation);
 
             double df = AverageFrequencyDecreaseFactor(distribution);
-            Assert.IsTrue(df < 1000, df.ToString());
+            Assert.IsLessThan(1000, df, df.ToString());
         }
         [TestMethod]
         public void PseudorandomSerialDistributionUInt32()
@@ -41,9 +41,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsLessThan(25.0, standardDeviation);
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
+            Assert.IsLessThan(2, AverageFrequencyDecreaseFactor(distribution));
 
             distribution = new int[ushort.MaxValue + 1];
             rand = Pseudorandom.Next;
@@ -54,9 +54,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0);
+            Assert.IsLessThan(25.0, standardDeviation);
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
+            Assert.IsLessThan(2, AverageFrequencyDecreaseFactor(distribution));
         }
         [TestMethod]
         public void PseudorandomSerialDistributionInt32()
@@ -70,9 +70,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
+            Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2, AverageFrequencyDecreaseFactor(distribution).ToString());
+            Assert.IsLessThan(2, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
 
             distribution = new int[ushort.MaxValue + 1];
             rand = Pseudorandom.Next;
@@ -83,9 +83,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
+            Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2, AverageFrequencyDecreaseFactor(distribution).ToString());
+            Assert.IsLessThan(2, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
         }
         [TestMethod]
         public void PseudorandomMultithreadedDistributionUInt64()
@@ -100,9 +100,9 @@ namespace AmbientServices.Test
             );
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
+            Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 200, AverageFrequencyDecreaseFactor(distribution).ToString());
+            Assert.IsLessThan(200, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
         }
         [TestMethod]
         public void PseudorandomSerialDistributionUInt64()
@@ -116,9 +116,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
+            Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
+            Assert.IsLessThan(2, AverageFrequencyDecreaseFactor(distribution));
 
             distribution = new int[ushort.MaxValue + 1];
             rand = Pseudorandom.Next;
@@ -129,9 +129,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
+            Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
+            Assert.IsLessThan(2, AverageFrequencyDecreaseFactor(distribution));
         }
         [TestMethod]
         public void PseudorandomSerialDistributionInt64()
@@ -145,9 +145,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
+            Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
+            Assert.IsLessThan(2, AverageFrequencyDecreaseFactor(distribution));
 
             distribution = new int[ushort.MaxValue + 1];
             rand = Pseudorandom.Next;
@@ -158,9 +158,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation < 25.0, standardDeviation.ToString());
+            Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) < 2);
+            Assert.IsLessThan(2, AverageFrequencyDecreaseFactor(distribution));
         }
 
         private static double StandardDeviation(IEnumerable<int> values, int count, double mean)
@@ -199,9 +199,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation > 200.0);
+            Assert.IsGreaterThan(200.0, standardDeviation);
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) > 1000);
+            Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
         }
 
         [TestMethod]
@@ -216,9 +216,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation > 200.0);
+            Assert.IsGreaterThan(200.0, standardDeviation);
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) > 1000);
+            Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
         }
 
         [TestMethod]
@@ -233,9 +233,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation > 5.0);
+            Assert.IsGreaterThan(5.0, standardDeviation);
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) > 1000);
+            Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
         }
 
         [TestMethod]
@@ -250,9 +250,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation > 200.0);
+            Assert.IsGreaterThan(200.0, standardDeviation);
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) > 1000);
+            Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
         }
 
         [TestMethod]
@@ -267,9 +267,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation > 5.0);
+            Assert.IsGreaterThan(5.0, standardDeviation);
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) > 1000);
+            Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
         }
 
         [TestMethod]
@@ -284,9 +284,9 @@ namespace AmbientServices.Test
             }
             // compute the standard deviation
             double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
-            Assert.IsTrue(standardDeviation > 200.0);
+            Assert.IsGreaterThan(200.0, standardDeviation);
 
-            Assert.IsTrue(AverageFrequencyDecreaseFactor(distribution) > 1000);
+            Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
         }
 
         [TestMethod]
@@ -330,13 +330,13 @@ namespace AmbientServices.Test
                 smallAbsSum += Math.Abs(small);
                 smallSum += small;
             }
-            Assert.IsTrue(regularAbsSum / loops > int.MaxValue / 4);
-            Assert.IsTrue(Math.Abs(regularSum) / loops / int.MaxValue < .01);
-            Assert.IsTrue(Math.Abs(regularSum / regularAbsSum) < .01);
-            Assert.IsTrue(Math.Abs(smallAbsSum / regularAbsSum) < .1);
-            Assert.IsTrue(smallAbsSum / loops > int.MaxValue / 2_000);
-            Assert.IsTrue(Math.Abs(smallSum) / loops < int.MaxValue / 2_000);
-            Assert.IsTrue(Math.Abs(smallSum / smallAbsSum) < .2);
+            Assert.IsGreaterThan(int.MaxValue / 4, regularAbsSum / loops);
+            Assert.IsLessThan(.01, Math.Abs(regularSum) / loops / int.MaxValue);
+            Assert.IsLessThan(.01, Math.Abs(regularSum / regularAbsSum));
+            Assert.IsLessThan(.1, Math.Abs(smallAbsSum / regularAbsSum));
+            Assert.IsGreaterThan(int.MaxValue / 2_000, smallAbsSum / loops);
+            Assert.IsLessThan(int.MaxValue / 2_000, Math.Abs(smallSum) / loops);
+            Assert.IsLessThan(.2, Math.Abs(smallSum / smallAbsSum));
 
             regularAbsSum = 0;
             regularSum = 0;
@@ -352,13 +352,13 @@ namespace AmbientServices.Test
                 smallAbsSum += Math.Abs(small);
                 smallSum += small;
             }
-            Assert.IsTrue(regularAbsSum / loops > long.MaxValue / 4);
-            Assert.IsTrue(Math.Abs(regularSum) / loops / long.MaxValue < .01);
-            Assert.IsTrue(Math.Abs(regularSum / regularAbsSum) < .01);
-            Assert.IsTrue(Math.Abs(smallAbsSum / regularAbsSum) < .1);
-            Assert.IsTrue(smallAbsSum / loops > long.MaxValue / 5_000_000);
-            Assert.IsTrue(Math.Abs(smallSum) / loops < long.MaxValue / 5_000_000);
-            Assert.IsTrue(Math.Abs(smallSum / smallAbsSum) < .5);
+            Assert.IsGreaterThan(long.MaxValue / 4, regularAbsSum / loops);
+            Assert.IsLessThan(.01, Math.Abs(regularSum) / loops / long.MaxValue);
+            Assert.IsLessThan(.01, Math.Abs(regularSum / regularAbsSum));
+            Assert.IsLessThan(.1, Math.Abs(smallAbsSum / regularAbsSum));
+            Assert.IsGreaterThan(long.MaxValue / 5_000_000, smallAbsSum / loops);
+            Assert.IsLessThan(long.MaxValue / 5_000_000, Math.Abs(smallSum) / loops);
+            Assert.IsLessThan(.5, Math.Abs(smallSum / smallAbsSum));
         }
 
         enum NormalEnum
@@ -483,7 +483,7 @@ namespace AmbientServices.Test
                 matches += (new Pseudorandom(true) == rand) ? 1 : 0;
                 System.Threading.Thread.Sleep(15);
             }
-            Assert.IsTrue(matches < 2); // there is some randomness due to the time factor integrated into the global seed generator, which could cause the seeds to be the same in rare cases
+            Assert.IsLessThan(2, matches); // there is some randomness due to the time factor integrated into the global seed generator, which could cause the seeds to be the same in rare cases
 
             Assert.AreNotEqual(new Pseudorandom(false), rand);
         }
@@ -520,9 +520,9 @@ namespace AmbientServices.Test
             for (int loop = 0; loop < loops; ++loop)
             {
                 int i = rand.NextInt32SignedRangedUsuallySmall(int.MinValue, -1);
-                Assert.IsTrue(i < 0);
+                Assert.IsLessThan(0, i);
                 long l = rand.NextInt64SignedRangedUsuallySmall(long.MinValue, -1);
-                Assert.IsTrue(l < 0);
+                Assert.IsLessThan(0, l);
             }
         }
         [TestMethod]
@@ -535,9 +535,9 @@ namespace AmbientServices.Test
             for (int loop = 0; loop < loops; ++loop)
             {
                 int i = rand.NextInt32SignedRangedUsuallySmall(1, int.MaxValue);
-                Assert.IsTrue(i > 0);
+                Assert.IsGreaterThan(0, i);
                 long l = rand.NextInt64SignedRangedUsuallySmall(1, long.MaxValue);
-                Assert.IsTrue(l > 0);
+                Assert.IsGreaterThan(0, l);
             }
         }
         [TestMethod]

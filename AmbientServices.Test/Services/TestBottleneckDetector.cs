@@ -69,10 +69,10 @@ public class TestBottleneckDetector
         Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.GetMostUtilizedBottlenecks(10).First().Bottleneck);
         Assert.AreEqual(_ZeroAutoBottleneck, collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.GetMostUtilizedBottlenecks(10).First().Bottleneck);
 
-        Assert.IsTrue(collector.ProcessAnalyzer.ScopeName.StartsWith("Zero"));
-        Assert.IsTrue(collector.ThreadAnalyzer.ScopeName.StartsWith("Zero"));
-        Assert.IsTrue(collector.ScopeAnalyzer.ScopeName.StartsWith("Zero"));
-        Assert.IsTrue(collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.ScopeName.StartsWith("TimeWindow"));
+        Assert.StartsWith("Zero", collector.ProcessAnalyzer.ScopeName);
+        Assert.StartsWith("Zero", collector.ThreadAnalyzer.ScopeName);
+        Assert.StartsWith("Zero", collector.ScopeAnalyzer.ScopeName);
+        Assert.StartsWith("TimeWindow", collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.ScopeName);
     }
     [TestMethod]
     public void BottleneckDetectorExceptions()
@@ -183,14 +183,14 @@ public class TestBottleneckDetector
         Assert.AreEqual(_ZeroAutoBottleneck, collector.ThreadAnalyzer.GetMostUtilizedBottlenecks(10).First().Bottleneck);
         Assert.AreEqual(_ZeroAutoBottleneck, collector.ScopeAnalyzer.GetMostUtilizedBottlenecks(10).First().Bottleneck);
 
-        Assert.IsTrue(collector.ProcessAnalyzer.ScopeName.StartsWith("Process"));
+        Assert.StartsWith("Process", collector.ProcessAnalyzer.ScopeName);
 #if NET6_0_OR_GREATER   // starting in net6.0, the thread's name is automatically assigned
         Assert.IsTrue(collector.ThreadAnalyzer.ScopeName.StartsWith(".NET TP Worker") || collector.ThreadAnalyzer.ScopeName.StartsWith(".NET ThreadPool Worker") || collector.ThreadAnalyzer.ScopeName.StartsWith(".NET Long Running Task"));
 #else
         Assert.IsTrue(collector.ThreadAnalyzer.ScopeName.StartsWith("Thread"));
 #endif
-        Assert.IsTrue(collector.ScopeAnalyzer.ScopeName.StartsWith(".ctor"));
-        Assert.IsTrue(collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.ScopeName.StartsWith("TimeWindow"));
+        Assert.StartsWith(".ctor", collector.ScopeAnalyzer.ScopeName);
+        Assert.StartsWith("TimeWindow", collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.ScopeName);
     }
     [TestMethod]
     public void BottleneckDetectorLinear()
@@ -316,8 +316,8 @@ public class TestBottleneckDetector
             Assert.IsFalse(a2 <= null);
             Assert.IsTrue(null <= a2);
             Assert.IsTrue(a2 <= b1);
-            Assert.IsTrue(b1.CompareTo(a2) > 0);
-            Assert.IsTrue(a2.CompareTo(b1) < 0);
+            Assert.IsGreaterThan(0, b1.CompareTo(a2));
+            Assert.IsLessThan(0, a2.CompareTo(b1));
         }
     }
     [TestMethod]
@@ -341,7 +341,7 @@ public class TestBottleneckDetector
                 Assert.AreEqual(0, a1.AccessCount);
                 Assert.AreEqual(0, a1.AccessDurationStopwatchTicks, $"Begin: {a1.AccessBegin}({a1.AccessBeginStopwatchTimestamp}), End: {a1.AccessEnd}({a1.AccessEndStopwatchTimestamp}), Count: {a1.AccessCount}, Utilization: {a1.Utilization}, LimitUsed: {a1.LimitUsed}, AmbientTicks: {AmbientClock.Ticks}, startTicks: {startTicks}");
                 Assert.AreEqual(start, a1.AccessBegin);
-                Assert.AreEqual(null, a1.AccessEnd);
+                Assert.IsNull(a1.AccessEnd);
                 Assert.AreEqual(0, a1.LimitUsed);
                 Assert.AreEqual(0, a1.Utilization);
                 // now we'll unpause time, skip ahead, and pause again
@@ -386,7 +386,7 @@ public class TestBottleneckDetector
 
                 Assert.AreEqual(a1.Utilization, a2.Utilization);
                 // a2 should be greater even though the utilizations are the same because it had more usage
-                Assert.IsTrue(a1.CompareTo(a2) < 0);
+                Assert.IsLessThan(0, a1.CompareTo(a2));
             }
             finally
             {
@@ -632,7 +632,7 @@ public class TestBottleneckDetector
                     {
                         AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                     }
-                    Assert.AreEqual(1, timeWindowResults.Count);
+                    Assert.HasCount(1, timeWindowResults);
                     analysis = timeWindowResults[0];
                     Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                     timeWindowResults.Clear();
@@ -640,7 +640,7 @@ public class TestBottleneckDetector
                 // trigger another time window (all the bottleneck accessors are closed now)
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                 // in the second window, we should have 50ms for 1, 0ms for 2, and 50ms for 3, but 3 has a higher limit, so 1 should be the most used
-                Assert.AreEqual(1, timeWindowResults.Count);
+                Assert.HasCount(1, timeWindowResults);
                 analysis = timeWindowResults[0];
                 Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                 timeWindowResults.Clear();
@@ -681,7 +681,7 @@ public class TestBottleneckDetector
                         access2?.SetUsage(1, 50);
                         AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(51));  // this should end the initial window and add it to the list
                         if (timeWindowResults.Count != 1) Assert.Fail("str:" + log.ToString());
-                        Assert.AreEqual(1, timeWindowResults.Count, log.ToString());
+                        Assert.HasCount(1, timeWindowResults, log.ToString());
                     }
                     using (AmbientBottleneckAccessor access3 = bottleneck3.EnterBottleneck())
                     {
@@ -689,7 +689,7 @@ public class TestBottleneckDetector
                         access3?.SetUsage(1, 50);
                         AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(51));  // this puts us in the middle of the second window
                     }
-                    Assert.AreEqual(1, timeWindowResults.Count, log.ToString());
+                    Assert.HasCount(1, timeWindowResults, log.ToString());
                     analysis = timeWindowResults[0];
                     Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                     timeWindowResults.Clear();
@@ -697,7 +697,7 @@ public class TestBottleneckDetector
                 // trigger another time window (all the bottleneck accessors are closed now)
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(51));      // this should end the second window and add it to the list
                                                                             // in the second window, we should have 50 units for 1, 0 units for 2, and 50 units for 3, but 3 has a higher limit, so 1 should be the most used
-                Assert.AreEqual(1, timeWindowResults.Count, log.ToString());
+                Assert.HasCount(1, timeWindowResults, log.ToString());
                 analysis = timeWindowResults[0];
                 Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                 timeWindowResults.Clear();
@@ -741,7 +741,7 @@ public class TestBottleneckDetector
                             access3?.SetUsage(1, 50);
                             AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                         }
-                        Assert.AreEqual(1, timeWindowResults.Count);
+                        Assert.HasCount(1, timeWindowResults);
                         analysis = timeWindowResults[0];
                         Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                         timeWindowResults.Clear();
@@ -749,7 +749,7 @@ public class TestBottleneckDetector
                         // trigger another time window (all the bottleneck accessors are closed now)
                         AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
                         // in the second window, we should have 50 units for 1, 0 units for 2, and 50 units for 3, but 3 has a higher limit, so 1 should be the most used
-                        Assert.AreEqual(1, timeWindowResults.Count);
+                        Assert.HasCount(1, timeWindowResults);
                     analysis = timeWindowResults[0];
                     Assert.AreEqual(bottleneck1, analysis.MostUtilizedBottleneck?.Bottleneck);
                     timeWindowResults.Clear();

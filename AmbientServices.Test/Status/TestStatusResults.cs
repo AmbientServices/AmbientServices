@@ -17,8 +17,8 @@ namespace AmbientServices.Test
         {
             StatusProperty property = new("Property", "Value");
             string prop = property.ToString();
-            Assert.IsTrue(prop.Contains("Property"));
-            Assert.IsTrue(prop.Contains("Value"));
+            Assert.Contains("Property", prop);
+            Assert.Contains("Value", prop);
             Assert.AreEqual("<null>", StatusProperty.Create("TestNullToString", new NullToString()).Value);
         }
         class NullToString
@@ -38,26 +38,26 @@ namespace AmbientServices.Test
             Assert.AreEqual("Source", results.SourceSystemDisplayName);
             Assert.AreEqual("StatusTarget", results.TargetSystem);
             Assert.AreEqual("StatusTarget", results.TargetSystemDisplayName);
-            Assert.IsTrue(results.ToString().Contains("Source"));
-            Assert.IsTrue(results.ToString().Contains("StatusTarget"));
+            Assert.Contains("Source", results.ToString());
+            Assert.Contains("StatusTarget", results.ToString());
 
             results = new StatusResults("Source", "/", AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
             Assert.AreEqual("Source", results.SourceSystem);
             Assert.AreEqual("Source", results.SourceSystemDisplayName);
             Assert.AreEqual("/", results.TargetSystem);
             Assert.AreEqual("Overall", results.TargetSystemDisplayName);
-            Assert.IsTrue(results.ToString().Contains("Source"));
-            Assert.IsTrue(results.ToString().Contains("Overall"));
+            Assert.Contains("Source", results.ToString());
+            Assert.Contains("Overall", results.ToString());
 
             results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
             Assert.IsNull(results.SourceSystem);
             Assert.AreEqual("Localhost", results.SourceSystemDisplayName);
             Assert.AreEqual("", results.TargetSystem);
             Assert.AreEqual("Unknown Target", results.TargetSystemDisplayName);
-            Assert.IsTrue(results.ToString().Length == 0);
+            Assert.AreEqual(0, results.ToString().Length);
 
             results = new StatusResults(null, "/SampleDisk.Temp", AmbientClock.UtcNow, 0, new StatusProperty[] { new StatusProperty("AvailablePercent", "2.2"), new StatusProperty("AvailableBytes", "1100000000.0") }, new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromSeconds(3), AmbientClock.UtcNow.AddSeconds(2), new StatusAuditAlert(StatusRating.Okay - .0001f, "ALERT", "Alert", "AlertDetails")));
-            Assert.IsTrue(results.ToString().Length != 0);
+            Assert.AreNotEqual(0, results.ToString().Length);
         }
         [TestMethod]
         public void StatusResultsGetSummaryAlerts()
@@ -180,39 +180,39 @@ namespace AmbientServices.Test
                 longTime = now.ToLongTimeString();
                 results = new StatusResults("Source", "StatusTarget", new StatusResults[0]);
                 alert = results.GetSummaryAlerts(true, StatusRating.Okay, false);
-                Assert.IsTrue(alert.Details.Contains("Okay"));
-                Assert.IsTrue(alert.Details.Contains(longTime));
-                Assert.IsTrue(alert.Terse.Contains("OKAY"));
-                Assert.IsTrue(alert.Terse.Contains(shortTime));
+                Assert.Contains("Okay", alert.Details);
+                Assert.Contains(longTime, alert.Details);
+                Assert.Contains("OKAY", alert.Terse);
+                Assert.Contains(shortTime, alert.Terse);
                 alert = results.GetSummaryAlerts(true, StatusRating.Alert, false);
-                Assert.IsTrue(alert.Details.Contains("Okay"));
-                Assert.IsTrue(alert.Details.Contains(longTime));
-                Assert.IsTrue(alert.Terse.Contains("OKAY"));
-                Assert.IsTrue(alert.Terse.Contains(shortTime));
+                Assert.Contains("Okay", alert.Details);
+                Assert.Contains(longTime, alert.Details);
+                Assert.Contains("OKAY", alert.Terse);
+                Assert.Contains(shortTime, alert.Terse);
                 alert = results.GetSummaryAlerts(true, StatusRating.Fail, true);
-                Assert.IsTrue(alert.Details.Contains("Okay"));
-                Assert.IsTrue(alert.Details.Contains(longTime));
-                Assert.IsTrue(alert.Terse.Contains("OKAY"));
-                Assert.IsTrue(alert.Terse.Contains(shortTime));
+                Assert.Contains("Okay", alert.Details);
+                Assert.Contains(longTime, alert.Details);
+                Assert.Contains("OKAY", alert.Terse);
+                Assert.Contains(shortTime, alert.Terse);
 
                 now = TimeZoneInfo.ConvertTime(now, TimeZoneInfo.Local);
                 shortTime = now.ToShortTimeString();
                 longTime = now.ToLongTimeString();
                 alert = results.GetSummaryAlerts(true, StatusRating.Okay, false, TimeZoneInfo.Local);
-                Assert.IsTrue(alert.Details.Contains("Okay"));
-                Assert.IsTrue(alert.Details.Contains(longTime));
-                Assert.IsTrue(alert.Terse.Contains("OKAY"));
-                Assert.IsTrue(alert.Terse.Contains(shortTime));
+                Assert.Contains("Okay", alert.Details);
+                Assert.Contains(longTime, alert.Details);
+                Assert.Contains("OKAY", alert.Terse);
+                Assert.Contains(shortTime, alert.Terse);
                 alert = results.GetSummaryAlerts(true, StatusRating.Alert, false, TimeZoneInfo.Local);
-                Assert.IsTrue(alert.Details.Contains("Okay"));
-                Assert.IsTrue(alert.Details.Contains(longTime));
-                Assert.IsTrue(alert.Terse.Contains("OKAY"));
-                Assert.IsTrue(alert.Terse.Contains(shortTime));
+                Assert.Contains("Okay", alert.Details);
+                Assert.Contains(longTime, alert.Details);
+                Assert.Contains("OKAY", alert.Terse);
+                Assert.Contains(shortTime, alert.Terse);
                 alert = results.GetSummaryAlerts(true, StatusRating.Fail, false, TimeZoneInfo.Local);
-                Assert.IsTrue(alert.Details.Contains("Okay"));
-                Assert.IsTrue(alert.Details.Contains(longTime));
-                Assert.IsTrue(alert.Terse.Contains("OKAY"));
-                Assert.IsTrue(alert.Terse.Contains(shortTime));
+                Assert.Contains("Okay", alert.Details);
+                Assert.Contains(longTime, alert.Details);
+                Assert.Contains("OKAY", alert.Terse);
+                Assert.Contains(shortTime, alert.Terse);
             }
         }
     }

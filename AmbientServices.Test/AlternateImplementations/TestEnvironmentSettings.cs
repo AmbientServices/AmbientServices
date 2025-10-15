@@ -48,7 +48,7 @@ public class TestEnvironmentSettings
         string testString = nameof(EnvironmentSettingsSetGetRawValue) + Guid.NewGuid().ToString();
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetGetRawValue) + "_testValue", testString);
         settingsSet.Refresh();
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetGetRawValue) + "-notfound"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(EnvironmentSettingsSetGetRawValue) + "-notfound"));
         Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetGetRawValue) + "_testValue"));
     }
     /// <summary>
@@ -61,17 +61,17 @@ public class TestEnvironmentSettings
         AmbientEnvironmentSettingsSet settingsSet = new();
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", testString);
         settingsSet.Refresh();
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
         Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", null);
         Assert.IsNull(Environment.GetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue"));
         settingsSet.Refresh();
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
 // The following line seems to fail frequently with: Assert.AreEqual failed. Expected:<(null)>. Actual:<EnvironmentSettingsRefresh687fdfa2-0d32-46ab-be96-f06af6866048>.
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsRefresh) + "_testValue", testString);
         settingsSet.Refresh();
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "-notfound"));
         Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsRefresh) + "_testValue"));
     }
     /// <summary>
@@ -84,13 +84,13 @@ public class TestEnvironmentSettings
         AmbientEnvironmentSettingsSet settingsSet = new();
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", testString);
         settingsSet.Refresh();
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "-notfound"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "-notfound"));
         Assert.AreEqual(testString, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "_testValue"));
         Environment.SetEnvironmentVariable(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", null);
         settingsSet.Refresh();
         settingsSet.ChangeSetting(nameof(EnvironmentSettingsSetNullToNull) + "_testValue", null);
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "-notfound"));
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "_testValue"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "-notfound"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(EnvironmentSettingsSetNullToNull) + "_testValue"));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientSettingsSet"/>.
@@ -140,9 +140,6 @@ public class TestEnvironmentSettings
         Assert.AreEqual(secondValue, testSetting.Value);
         settingsSet.ChangeSetting(testSettingKey, initialValue);
         Assert.AreEqual(initialValue, settingsSet.GetTypedValue(testSettingKey));// somehow this fails sometimes
-        Assert.IsTrue(true);
-        Assert.IsTrue(true);
-        Assert.IsTrue(true);
         Assert.AreEqual(initialValue, testSetting.Value);       // somehow this fails even when the above doesn't
         testSetting = new SettingsSetSetting<string>(settingsSet, testSettingKey, "", initialValue, null);
         Assert.AreEqual(initialValue, settingsSet.GetTypedValue(testSettingKey));// somehow this fails sometimes--not sure how this can fail, especially when the same check above succeeded
@@ -171,7 +168,7 @@ public class TestEnvironmentSettings
     public void EnvironmentSettingMisc()
     {
         IAmbientSettingsSet settingsSet = new AmbientEnvironmentSettingsSet();
-        Assert.IsTrue(settingsSet!.ToString()!.Contains("Environment"));
+        Assert.Contains("Environment", settingsSet!.ToString());
         Assert.AreEqual("Environment", settingsSet.SetName);
     }
     /// <summary>

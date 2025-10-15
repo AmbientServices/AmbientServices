@@ -138,40 +138,40 @@ namespace AmbientServices.Test
                 StatusResults results = await test.GetStatus();
                 Assert.AreEqual("StatusAuditorTest", test.TargetSystem);
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // since we're rotating the status rating, the frequency will vary because of that
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // this one starts kicking out history items due to count (this was determined by simply trying it out, but that part doesn't matter for this test)
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));   // this one should start kicking history items out due to time
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
                 AmbientClock.SkipAhead(TimeSpan.FromSeconds(30));
-                Assert.IsTrue(test.History.Count() <= 10);
+                Assert.IsLessThanOrEqualTo(10, test.History.Count());
                 Assert.IsTrue(test.History.First().Time >= AmbientClock.UtcNow.AddMinutes(-5));
             }
         }

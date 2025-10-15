@@ -105,14 +105,14 @@ public class TestClock
 
         DateTime test = AmbientClock.UtcNow;
         DateTime testLocal = AmbientClock.Now;
-        Assert.IsTrue(Math.Abs((test.ToLocalTime() - testLocal).Ticks) < 10000000);
+        Assert.IsLessThan(10000000, Math.Abs((test.ToLocalTime() - testLocal).Ticks));
         Assert.IsTrue(AmbientClock.IsSystemClock);
         await AmbientClock.TaskDelay(100, default);
         Assert.IsTrue(AmbientClock.IsSystemClock);
 
         test = AmbientClock.UtcNow;
         testLocal = AmbientClock.Now;
-        Assert.IsTrue(Math.Abs((test.ToLocalTime() - testLocal).Ticks) < 10000000);
+        Assert.IsLessThan(10000000, Math.Abs((test.ToLocalTime() - testLocal).Ticks));
         Assert.IsTrue(AmbientClock.IsSystemClock);
         AmbientClock.ThreadSleep(100);
         Assert.IsTrue(AmbientClock.IsSystemClock);
@@ -154,7 +154,7 @@ public class TestClock
             
             test = AmbientClock.UtcNow;
             DateTime testLocal = AmbientClock.Now;
-            Assert.IsTrue(Math.Abs((test.ToLocalTime() - testLocal).Ticks) < 10000000);
+            Assert.IsLessThan(10000000, Math.Abs((test.ToLocalTime() - testLocal).Ticks));
         }
     }
     /// <summary>
@@ -173,7 +173,7 @@ public class TestClock
             TimeSpan testElapsed = AmbientClock.Elapsed;
             DateTime test = AmbientClock.UtcNow;
             DateTime testLocal = AmbientClock.Now;
-            Assert.IsTrue(Math.Abs((test.ToLocalTime() - testLocal).Ticks) < 10000000);
+            Assert.IsLessThan(10000000, Math.Abs((test.ToLocalTime() - testLocal).Ticks));
             await Task.Delay(100);
             DateTime end = DateTime.UtcNow;
             long endTicks = AmbientClock.Ticks;
@@ -191,13 +191,13 @@ public class TestClock
     {
         long timestamp1 = Stopwatch.GetTimestamp();
         long timestamp2 = AmbientStopwatch.GetTimestamp();
-        Assert.IsTrue(Math.Abs(timestamp1 - timestamp2) < Stopwatch.Frequency * 10);    // if this fails, it means that either there is a bug or the two lines above took 10+ seconds to run
+        Assert.IsLessThan(Stopwatch.Frequency * 10, Math.Abs(timestamp1 - timestamp2));    // if this fails, it means that either there is a bug or the two lines above took 10+ seconds to run
         using (AmbientClock.Pause())
         {
             AmbientStopwatch stopwatch = new(true);
             await Task.Delay(100);
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
-            Assert.IsTrue(stopwatch.ElapsedTicks == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
+            Assert.AreEqual(0, stopwatch.ElapsedTicks);
             Assert.IsTrue(stopwatch.Elapsed == TimeSpan.Zero);
             stopwatch = new AmbientStopwatch(true);
             TimeSpan delay = TimeSpan.FromMilliseconds(100);
@@ -215,15 +215,15 @@ public class TestClock
         using (new ScopedLocalServiceOverride<IAmbientClock>(null))
         {
             AmbientStopwatch stopwatch = new(false);
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
-            Assert.IsTrue(stopwatch.ElapsedTicks == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
+            Assert.AreEqual(0, stopwatch.ElapsedTicks);
             await Task.Delay(100);
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
-            Assert.IsTrue(stopwatch.ElapsedTicks == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
+            Assert.AreEqual(0, stopwatch.ElapsedTicks);
             stopwatch = new AmbientStopwatch(true);
             await Task.Delay(100);
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds > 0);
-            Assert.IsTrue(stopwatch.ElapsedTicks > 0);
+            Assert.IsGreaterThan(0, stopwatch.Elapsed.TotalMilliseconds);
+            Assert.IsGreaterThan(0, stopwatch.ElapsedTicks);
         }
     }
     /// <summary>
@@ -236,9 +236,9 @@ public class TestClock
         {
             AmbientStopwatch stopwatch = AmbientStopwatch.StartNew();
             await Task.Delay(100);
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
             stopwatch.Reset();
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
             stopwatch.Start();
             stopwatch.Start();
             await AmbientClock.TaskDelay(100);
@@ -250,7 +250,7 @@ public class TestClock
             await AmbientClock.TaskDelay(TimeSpan.FromMilliseconds(100), default);
             Assert.AreEqual(200, stopwatch.ElapsedMilliseconds);
             stopwatch.Reset();
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
         }
     }
     /// <summary>
@@ -290,15 +290,15 @@ public class TestClock
         using (new ScopedLocalServiceOverride<IAmbientClock>(null))
         {
             AmbientStopwatch stopwatch = new(false);
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
             await Task.Delay(100);
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
             stopwatch.Reset();
-            Assert.IsTrue(stopwatch.Elapsed.TotalMilliseconds == 0);
+            Assert.AreEqual(0, stopwatch.Elapsed.TotalMilliseconds);
             stopwatch.Start();
             stopwatch.Start();
             await Task.Delay(100);
-            Assert.IsTrue(stopwatch.ElapsedTicks > 0);
+            Assert.IsGreaterThan(0, stopwatch.ElapsedTicks);
             stopwatch.Stop();
             stopwatch.Stop();
             long elapsed = stopwatch.ElapsedTicks;
@@ -306,7 +306,7 @@ public class TestClock
             Assert.AreEqual(elapsed, stopwatch.ElapsedTicks);
             stopwatch.Start();
             stopwatch.Reset();
-            Assert.IsTrue(stopwatch.Elapsed.Ticks < 1000);  // this could fail if there is lots of CPU contention
+            Assert.IsLessThan(1000, stopwatch.Elapsed.Ticks);  // this could fail if there is lots of CPU contention
         }
     }
     /// <summary>
@@ -723,7 +723,7 @@ public class TestClock
             Assert.AreEqual(0, elapsed);
             // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
             await ss.WaitAsync(5000);
-            Assert.IsTrue(elapsed <= 1);    // the event should *never* get raised more than once because AutoReset is false
+            Assert.IsLessThanOrEqualTo(1, elapsed);    // the event should *never* get raised more than once because AutoReset is false
             Assert.AreEqual(0, disposed);
         }
         Assert.AreEqual(1, disposed);
@@ -749,7 +749,7 @@ public class TestClock
             Assert.AreEqual(0, elapsed);
             // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
             await ss.WaitAsync(5000);
-            Assert.IsTrue(elapsed >= 1);    // this could be more than one occasionally if the event gets raised again after being released and before we can stop it here
+            Assert.IsGreaterThanOrEqualTo(1, elapsed);    // this could be more than one occasionally if the event gets raised again after being released and before we can stop it here
             Assert.AreEqual(0, disposed);
             timer.Stop();   // after this, the event should *not* be raised again, though a notification may already be in progress, so this could fail on rare occasions
             int postStopElapsed = elapsed;
@@ -1194,9 +1194,9 @@ public class TestClock
                 timer.Change(330L, Timeout.Infinite);
                 Assert.AreEqual(0, invocations);
                 Thread.Sleep(TimeSpan.FromMilliseconds(500));
-                Assert.IsTrue(invocations <= 1, invocations.ToString());        // this test is somewhat more reliable than the test above because the callback should only ever be invoked once at most
+                Assert.IsLessThanOrEqualTo(1, invocations, invocations.ToString());        // this test is somewhat more reliable than the test above because the callback should only ever be invoked once at most
                 Thread.Sleep(TimeSpan.FromMilliseconds(990));
-                Assert.IsTrue(invocations <= 1, invocations.ToString());
+                Assert.IsLessThanOrEqualTo(1, invocations, invocations.ToString());
                 // if we get here, we succeeded
                 break;
             }
@@ -1224,11 +1224,11 @@ public class TestClock
                 Assert.AreEqual(0, invocations);    // this could theoretically fail, but only if the system paused for more than one second after the previous line, but then scheduled the callback before resuming here
                                                     // if it becomes unreliable, we shall comment out this assert
                 Thread.Sleep(TimeSpan.FromMilliseconds(560));
-                Assert.IsTrue(invocations <= 1, invocations.ToString());        // these should be okay because we shouldn't ever be called more than once anyway
+                Assert.IsLessThanOrEqualTo(1, invocations, invocations.ToString());        // these should be okay because we shouldn't ever be called more than once anyway
                 Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations <= 1, invocations.ToString());
+                Assert.IsLessThanOrEqualTo(1, invocations, invocations.ToString());
                 Thread.Sleep(TimeSpan.FromMilliseconds(530));
-                Assert.IsTrue(invocations <= 1, invocations.ToString());
+                Assert.IsLessThanOrEqualTo(1, invocations, invocations.ToString());
                 // if we get here, we succeeded
                 break;
             }
@@ -1627,7 +1627,7 @@ public class TestClock
 
                 if (errorInfo.Length == 0) break;
             }
-            Assert.IsTrue(errorInfo.Length == 0, errorInfo.ToString());
+            Assert.AreEqual(0, errorInfo.Length, errorInfo.ToString());
         }
     }
     /// <summary>
@@ -1719,7 +1719,7 @@ public class TestClock
                 // wait a random time to break any kind of resonant failure
                 Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
             }
-            Assert.IsTrue(errorInfo.Length == 0, errorInfo.ToString());
+            Assert.AreEqual(0, errorInfo.Length, errorInfo.ToString());
         }
     }
     /// <summary>

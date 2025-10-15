@@ -257,30 +257,30 @@ namespace AmbientServices.Test.Samples
                 //Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{DefaultAmbientServices.TestSamplesLoaded},{DefaultAmbientServices.TestSamplesDependent},{DefaultAmbientServices.TestSamplesTypes},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoading},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedOtherException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedFinally},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedTypes},{new StackTrace()}");
                 Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{typeof(BasicAmbientCallStack).Assembly.GetLoadableTypes().Length},{new StackTrace()}");
             }
-            Assert.IsFalse(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));
-            Assert.IsFalse(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("InnerFunc"));
+            Assert.DoesNotContain("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+            Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
             using (_CallStack?.Scope("OuterFunc"))
             {
-                Assert.IsTrue(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));
-                Assert.IsFalse(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("InnerFunc"));
+                Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+                Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
                 InnerFunc();
-                Assert.IsTrue(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));
-                Assert.IsFalse(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("InnerFunc"));
+                Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+                Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
             }
-            Assert.IsFalse(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));
-            Assert.IsFalse(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("InnerFunc"));
+            Assert.DoesNotContain("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+            Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
         }
         private static void InnerFunc()
         {
-            Assert.IsTrue(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));
-            Assert.IsFalse(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("InnerFunc"));
+            Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+            Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
             using (_CallStack?.Scope("InnerFunc"))
             {
-                Assert.IsTrue(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));
-                Assert.IsTrue(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("InnerFunc"));
+                Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+                Assert.Contains("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
             }
-            Assert.IsTrue(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("OuterFunc"));
-            Assert.IsFalse(string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()).Contains("InnerFunc"));
+            Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+            Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
         }
     }
 }

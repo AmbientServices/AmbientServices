@@ -26,10 +26,10 @@ namespace AmbientServices.Test
             writer.LeaveStatusRange();
             terse = writer.Terse;
             details = writer.Details;
-            Assert.IsTrue(terse.Contains("FAIL"));
-            Assert.IsTrue(terse.Contains("SampleTarget"));
-            Assert.IsTrue(details.Contains("Fail"));
-            Assert.IsTrue(details.Contains("SampleTarget"));
+            Assert.Contains("FAIL", terse);
+            Assert.Contains("SampleTarget", terse);
+            Assert.Contains("Fail", details);
+            Assert.Contains("SampleTarget", details);
 
             writer = new StatusNotificationWriter();
             writer.EnterHtmlAndBody(StatusRating.Fail);
@@ -40,10 +40,10 @@ namespace AmbientServices.Test
             writer.LeaveBodyAndHtml();
             terse = writer.Terse;
             details = writer.Details;
-            Assert.IsTrue(terse.Contains("FAIL"));
-            Assert.IsTrue(terse.Contains("SampleTarget"));
-            Assert.IsTrue(details.Contains("Fail"));
-            Assert.IsTrue(details.Contains("SampleTarget"));
+            Assert.Contains("FAIL", terse);
+            Assert.Contains("SampleTarget", terse);
+            Assert.Contains("Fail", details);
+            Assert.Contains("SampleTarget", details);
 
             writer = new StatusNotificationWriter();
             writer.EnterHtmlAndBody(StatusRating.Fail);
@@ -54,10 +54,10 @@ namespace AmbientServices.Test
             writer.LeaveBodyAndHtml();
             terse = writer.Terse;
             details = writer.Details;
-            Assert.IsTrue(terse.Contains("OKAY"));
-            Assert.IsTrue(terse.Contains("SampleTarget"));
-            Assert.IsTrue(details.Contains("Okay"));
-            Assert.IsTrue(details.Contains("SampleTarget"));
+            Assert.Contains("OKAY", terse);
+            Assert.Contains("SampleTarget", terse);
+            Assert.Contains("Okay", details);
+            Assert.Contains("SampleTarget", details);
 
             writer = new StatusNotificationWriter();
             StatusResults r = new("Source", "Target", new StatusResults[0]);
@@ -69,10 +69,10 @@ namespace AmbientServices.Test
             writer.LeaveStatusRange();
             terse = writer.Terse;
             details = writer.Details;
-            Assert.IsTrue(terse.Contains("OKAY"));
-            Assert.IsTrue(terse.Contains("Target"));
-            Assert.IsTrue(details.Contains("Okay"));
-            Assert.IsTrue(details.Contains("Target"));
+            Assert.Contains("OKAY", terse);
+            Assert.Contains("Target", terse);
+            Assert.Contains("Okay", details);
+            Assert.Contains("Target", details);
 
             writer = new StatusNotificationWriter();
             r = new StatusResults("Source", "Target", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5)));
@@ -84,10 +84,10 @@ namespace AmbientServices.Test
             writer.LeaveStatusRange();
             terse = writer.Terse;
             details = writer.Details;
-            Assert.IsTrue(terse.Contains("OKAY"));
-            Assert.IsTrue(terse.Contains("Target"));
-            Assert.IsTrue(details.Contains("Okay"));
-            Assert.IsTrue(details.Contains("Target"));
+            Assert.Contains("OKAY", terse);
+            Assert.Contains("Target", terse);
+            Assert.Contains("Okay", details);
+            Assert.Contains("Target", details);
 
             writer = new StatusNotificationWriter();
             r = new StatusResults("Source1", "Target", new StatusResults[0]);
@@ -103,10 +103,10 @@ namespace AmbientServices.Test
             writer.LeaveStatusRange();
             terse = writer.Terse;
             details = writer.Details;
-            Assert.IsTrue(terse.Contains("OKAY"));
-            Assert.IsTrue(terse.Contains("Target"));
-            Assert.IsTrue(details.Contains("Okay"));
-            Assert.IsTrue(details.Contains("Target"));
+            Assert.Contains("OKAY", terse);
+            Assert.Contains("Target", terse);
+            Assert.Contains("Okay", details);
+            Assert.Contains("Target", details);
         }
         [TestMethod]
         public void NotificationWriterWithProperties()

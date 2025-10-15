@@ -74,7 +74,7 @@ public class TestSettings
     {
         Dictionary<string, string> settings = new() { { nameof(SettingsSetGetRawValue), "1" }, };
         IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetGetRawValue), settings);
-        Assert.AreEqual(null, settingsSet.GetRawValue(nameof(SettingsSetGetRawValue) + "-notfound"));
+        Assert.IsNull(settingsSet.GetRawValue(nameof(SettingsSetGetRawValue) + "-notfound"));
         Assert.AreEqual("1", settingsSet.GetRawValue(nameof(SettingsSetGetRawValue)));
     }
     /// <summary>
@@ -164,7 +164,7 @@ public class TestSettings
     {
         Dictionary<string, string> settings = new() { { "key", "value" } };
         IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingMisc), settings);
-        Assert.IsTrue(settingsSet!.ToString()!.Contains(nameof(SettingMisc)));
+        Assert.Contains(nameof(SettingMisc), settingsSet!.ToString());
         Assert.AreEqual("SettingMisc", settingsSet.SetName);
     }
     /// <summary>

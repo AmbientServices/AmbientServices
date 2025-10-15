@@ -114,7 +114,7 @@ namespace AmbientServices.Test
             foreach (object o in ((System.Collections.IEnumerable)smallSet))
             {
                 Assert.IsTrue(o is int);
-                Assert.IsTrue((int)o < 10);
+                Assert.IsLessThan(10, (int)o);
             }
         }
     }

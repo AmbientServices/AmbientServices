@@ -32,14 +32,14 @@ namespace AmbientServices.Test
                 Assert.AreEqual(0, overallStatus.RelativeDetailLevel);
                 Assert.AreEqual(StatusNatureOfSystem.ChildrenHeterogenous, overallStatus.NatureOfSystem);
                 Assert.AreEqual(0, overallStatus.Properties.Count());
-                Assert.IsTrue(overallStatus.Children.Count() > 0);
+                Assert.IsGreaterThan(0, overallStatus.Children.Count());
                 Assert.IsFalse(string.IsNullOrEmpty(overallStatus.ToString()));
 
                 StatusResults sampleDisk = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == "SampleDisk" && c.Children.Any());
                 Assert.IsNotNull(sampleDisk);
                 StatusResults disk = sampleDisk!.Children.FirstOrDefault();
                 Assert.IsNotNull(disk);
-                Assert.IsTrue(disk!.Properties.Count() > 0); // the properties in the node itself are the constant properties, ie. the path for a disk test
+                Assert.IsGreaterThan(0, disk!.Properties.Count()); // the properties in the node itself are the constant properties, ie. the path for a disk test
                 Assert.IsFalse(string.IsNullOrEmpty(sampleDisk!.ToString()));
 
                 StatusProperty att = disk.Properties.FirstOrDefault(a => a.Name == "TotalBytes");
@@ -78,8 +78,8 @@ namespace AmbientServices.Test
                 Assert.IsTrue(auditResult.Rating >= -1.0f && auditResult.Rating <= 4.0f);
                 Assert.IsFalse(string.IsNullOrEmpty(auditResult.Terse));
                 Assert.IsFalse(string.IsNullOrEmpty(auditResult.Details));
-                Assert.IsTrue(overallStatus.SourceSystem == null);
-                Assert.IsTrue(auditResult.Rating <= StatusRating.Fail);
+                Assert.IsNull(overallStatus.SourceSystem);
+                Assert.IsLessThanOrEqualTo(StatusRating.Fail, auditResult.Rating);
                 Assert.IsFalse(string.IsNullOrEmpty(auditResult.ToString()));
 
                 AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
@@ -116,7 +116,7 @@ namespace AmbientServices.Test
                     // note that in this case, the initial audit should never run because the clock is paused, and that's just fine--manual refreshes can still happen
                     ahuc.TokenSource = cts;
                     IEnumerable<StatusChecker> canceledCheckers = await status.RefreshAsync(cts.Token);
-                    Assert.IsTrue(canceledCheckers.FirstOrDefault() == ahuc);
+                    Assert.AreEqual(ahuc, canceledCheckers.FirstOrDefault());
                     // unpause the clock to run the "initial" audit, even after this forced audit completes
                     await AmbientClock.TaskDelay(100);
                 }

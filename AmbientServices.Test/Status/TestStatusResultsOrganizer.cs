@@ -163,7 +163,7 @@ namespace AmbientServices.Test
 
                 string longString = range.ToLongTimeString();
                 string shortString = range.ToShortTimeString();
-                Assert.IsTrue(longString.Length > shortString.Length);
+                Assert.IsGreaterThan(shortString.Length, longString.Length);
                 string defaultString = range.ToString();
                 Assert.IsTrue(String.Equals(longString, defaultString) || String.Equals(shortString, defaultString));
 
@@ -172,7 +172,7 @@ namespace AmbientServices.Test
 
                 longString = range.ToLongTimeString();
                 shortString = range.ToShortTimeString();
-                Assert.IsTrue(longString.Length > shortString.Length);
+                Assert.IsGreaterThan(shortString.Length, longString.Length);
                 defaultString = range.ToString();
                 Assert.IsTrue(String.Equals(longString, defaultString) || String.Equals(shortString, defaultString));
             }
@@ -187,7 +187,7 @@ namespace AmbientServices.Test
 
                 string longString = range.ToLongString();
                 string shortString = range.ToShortString();
-                Assert.IsTrue(longString.Length > shortString.Length);
+                Assert.IsGreaterThan(shortString.Length, longString.Length);
                 string defaultString = range.ToString();
                 Assert.IsTrue(String.Equals(longString, defaultString) || String.Equals(shortString, defaultString));
 
@@ -196,7 +196,7 @@ namespace AmbientServices.Test
 
                 longString = range.ToLongString();
                 shortString = range.ToShortString();
-                Assert.IsTrue(longString.Length > shortString.Length);
+                Assert.IsGreaterThan(shortString.Length, longString.Length);
                 defaultString = range.ToString();
                 Assert.IsTrue(String.Equals(longString, defaultString) || String.Equals(shortString, defaultString));
             }
@@ -209,28 +209,28 @@ namespace AmbientServices.Test
                 // first test with a single property value
                 StatusPropertyRange range = new(new StatusProperty("property", "5"));
 
-                Assert.IsTrue(range.ToString().Contains("5"));
+                Assert.Contains("5", range.ToString());
 
                 // now add another property value
                 range.Merge("10");
 
-                Assert.IsTrue(range.ToString().Contains("5"));
-                Assert.IsTrue(range.ToString().Contains("10"));
+                Assert.Contains("5", range.ToString());
+                Assert.Contains("10", range.ToString());
 
                 // now add another property value in the middle
                 range.Merge("7");
 
-                Assert.IsTrue(range.ToString().Contains("5"));
-                Assert.IsTrue(range.ToString().Contains("10"));
-                Assert.IsFalse(range.ToString().Contains("7"));
+                Assert.Contains("5", range.ToString());
+                Assert.Contains("10", range.ToString());
+                Assert.DoesNotContain("7", range.ToString());
 
                 // now add another property value
                 range.Merge("2");
 
-                Assert.IsTrue(range.ToString().Contains("2"));
-                Assert.IsTrue(range.ToString().Contains("10"));
-                Assert.IsFalse(range.ToString().Contains("7"));
-                Assert.IsFalse(range.ToString().Contains("5"));
+                Assert.Contains("2", range.ToString());
+                Assert.Contains("10", range.ToString());
+                Assert.DoesNotContain("7", range.ToString());
+                Assert.DoesNotContain("5", range.ToString());
             }
         }
         [TestMethod]
@@ -259,10 +259,10 @@ namespace AmbientServices.Test
                 organizer.Add(organizer.Children.Skip(2).First(), new StatusResults(null, "/", AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, Array.Empty<StatusResults>()));
                 organizer.ComputeOverallRatingAndSort();
                 o = organizer.ToString();
-                Assert.IsTrue(o.Contains("Overall:"));
+                Assert.Contains("Overall:", o);
                 o = organizer.Children.First().ToString();
-                Assert.IsTrue(o.Contains("Source1->"));
-                Assert.IsTrue(o.Contains("/Target1:"));
+                Assert.Contains("Source1->", o);
+                Assert.Contains("/Target1:", o);
 
                 organizer = new StatusResultsOrganizer();
                 StatusResults source1Root = new(null, null, AmbientClock.UtcNow, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {

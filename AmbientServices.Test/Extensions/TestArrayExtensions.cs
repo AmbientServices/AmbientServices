@@ -42,7 +42,7 @@ public class TestArrayExtensions
     {
         int[] a = new int[] { 0, 1, 2 };
         int hashCode = a.ValueHashCode();
-        Assert.IsTrue(hashCode != 0);
+        Assert.AreNotEqual(0, hashCode);
         a = null!;
         Assert.Throws<ArgumentNullException>(() => a.ValueHashCode());
     }
@@ -51,6 +51,6 @@ public class TestArrayExtensions
     {
         int?[] a = new int?[] { 0, null, 2 };
         int hashCode = a.ValueHashCode();
-        Assert.IsTrue(hashCode != 0);
+        Assert.AreNotEqual(0, hashCode);
     }
 }

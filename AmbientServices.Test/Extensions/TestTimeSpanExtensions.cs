@@ -10,7 +10,7 @@ public class TestTimeSpanExtensions
     [TestMethod]
     public void TimeSpanRenderAndParse()
     {
-        Assert.AreEqual(null, "".TryParseTimeSpan());
+        Assert.IsNull("".TryParseTimeSpan());
         foreach (TimeSpan ts in new TimeSpan[] {    // NOTE: These numbers were carefully chosen to avoid rounding issues and avoid issues with the short string using only two significant digits
                 TimeSpan.FromMilliseconds(1), TimeSpan.FromMilliseconds(-1),
                 TimeSpan.FromMilliseconds(1.3), TimeSpan.FromMilliseconds(-1.3),

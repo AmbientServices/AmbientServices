@@ -481,8 +481,8 @@ public class TestLogger
         StringBuilder sb = new();
         AmbientLogger.HandleFallbackException(sb, new ExpectedException(nameof(HandleFallbackException)));
         AmbientLogger.HandleFallbackException(sb, new TargetInvocationException(new ExpectedException(nameof(HandleFallbackException))));
-        Assert.IsTrue(sb.ToString().Length > 0);
-        Assert.IsTrue(sb.ToString().Contains(nameof(HandleFallbackException)));
+        Assert.IsGreaterThan(0, sb.ToString().Length);
+        Assert.Contains(nameof(HandleFallbackException), sb.ToString());
     }
     [TestMethod]
     public void HandleUnserializable()

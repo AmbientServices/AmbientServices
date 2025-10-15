@@ -22,70 +22,70 @@ namespace AmbientServices.Test
             thresholds = new StatusPropertyThresholds(10.0f, 20.0f, 30.0f);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.AreEqual(StatusRating.Catastrophic, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Alert);
-            Assert.IsTrue(alert.Rating < StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.IsGreaterThan(StatusRating.Alert, alert.Rating);
+            Assert.IsLessThan(StatusRating.Okay, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains(">"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Okay, alert.Rating);
+            Assert.Contains(">", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
 
             thresholds = new StatusPropertyThresholds(30.0f, 20.0f, 10.0f);
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Alert);
-            Assert.IsTrue(alert.Rating < StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.IsGreaterThan(StatusRating.Alert, alert.Rating);
+            Assert.IsLessThan(StatusRating.Okay, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Okay);
-            Assert.IsTrue(alert.Rating < StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains("<"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Okay, alert.Rating);
+            Assert.IsLessThan(StatusRating.Superlative, alert.Rating);
+            Assert.Contains("<", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains("<"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.AreEqual(StatusRating.Superlative, alert.Rating);
+            Assert.Contains("<", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
 
 
@@ -93,69 +93,69 @@ namespace AmbientServices.Test
             thresholds = new StatusPropertyThresholds(null, 20.0f, 30.0f);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.AreEqual(StatusRating.Catastrophic, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Alert);
-            Assert.IsTrue(alert.Rating < StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.IsGreaterThan(StatusRating.Alert, alert.Rating);
+            Assert.IsLessThan(StatusRating.Okay, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Okay);
-            Assert.IsTrue(alert.Rating < StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains(">"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Okay, alert.Rating);
+            Assert.IsLessThan(StatusRating.Superlative, alert.Rating);
+            Assert.Contains(">", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
 
             thresholds = new StatusPropertyThresholds(null, 20.0f, 10.0f);
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Alert);
-            Assert.IsTrue(alert.Rating < StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.IsGreaterThan(StatusRating.Alert, alert.Rating);
+            Assert.IsLessThan(StatusRating.Okay, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Okay);
-            Assert.IsTrue(alert.Rating < StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains("<"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Okay, alert.Rating);
+            Assert.IsLessThan(StatusRating.Superlative, alert.Rating);
+            Assert.Contains("<", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains("<"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.AreEqual(StatusRating.Superlative, alert.Rating);
+            Assert.Contains("<", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
 
 
@@ -163,67 +163,67 @@ namespace AmbientServices.Test
             thresholds = new StatusPropertyThresholds(null, null, 30.0f, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.AreEqual(StatusRating.Catastrophic, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Okay);
-            Assert.IsTrue(alert.Rating < StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains(">"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Okay, alert.Rating);
+            Assert.IsLessThan(StatusRating.Superlative, alert.Rating);
+            Assert.Contains(">", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
 
             thresholds = new StatusPropertyThresholds(null, null, 10.0f, StatusThresholdNature.LowIsGood);
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Okay);
-            Assert.IsTrue(alert.Rating < StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains("<"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Okay, alert.Rating);
+            Assert.IsLessThan(StatusRating.Superlative, alert.Rating);
+            Assert.Contains("<", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains("<"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.AreEqual(StatusRating.Superlative, alert.Rating);
+            Assert.Contains("<", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
 
 
@@ -231,67 +231,67 @@ namespace AmbientServices.Test
             thresholds = new StatusPropertyThresholds(10.0f, null, null, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.AreEqual(StatusRating.Catastrophic, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating < StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThan(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
 
             thresholds = new StatusPropertyThresholds(30.0f, null, null, StatusThresholdNature.LowIsGood);
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.AreEqual(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
 
 
@@ -299,68 +299,68 @@ namespace AmbientServices.Test
             thresholds = new StatusPropertyThresholds(10.0f, 20.0f, null, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.AreEqual(StatusRating.Catastrophic, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating < StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThan(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Alert, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Alert, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
 
             thresholds = new StatusPropertyThresholds(30.0f, 20.0f, null, StatusThresholdNature.LowIsGood);
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Alert);
-            Assert.IsTrue(alert.Rating < StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.IsGreaterThan(StatusRating.Alert, alert.Rating);
+            Assert.IsLessThan(StatusRating.Okay, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.IsGreaterThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Okay) + " range"));
+            Assert.AreEqual(StatusRating.Okay, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Okay) + " range", alert.Details);
 
 
 
@@ -368,65 +368,65 @@ namespace AmbientServices.Test
             thresholds = new StatusPropertyThresholds(null, null, null, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.AreEqual(StatusRating.Catastrophic, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
 
             thresholds = new StatusPropertyThresholds(null, null, null, StatusThresholdNature.LowIsGood);
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.AreEqual(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
 
 
@@ -434,69 +434,69 @@ namespace AmbientServices.Test
             thresholds = new StatusPropertyThresholds(10.0f, null, 30.0f, StatusThresholdNature.HighIsGood);
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Catastrophic);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.AreEqual(StatusRating.Catastrophic, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating < StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("at or below"));
+            Assert.IsLessThan(StatusRating.Fail, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("at or below", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains("<="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains("<=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating >= StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains(">"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.IsGreaterThanOrEqualTo(StatusRating.Okay, alert.Rating);
+            Assert.Contains(">", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
 
             thresholds = new StatusPropertyThresholds(30.0f, null, 10.0f, StatusThresholdNature.LowIsGood);
             alert = thresholds.Rate("Property", 35.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating <= StatusRating.Fail);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("at or above"));
+            Assert.IsLessThanOrEqualTo(StatusRating.Fail, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("at or above", alert.Details);
 
             alert = thresholds.Rate("Property", 25.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 15.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Fail);
-            Assert.IsTrue(alert.Rating < StatusRating.Alert);
-            Assert.IsTrue(alert.Terse.Contains(">="));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Alert) + " range"));
+            Assert.IsGreaterThan(StatusRating.Fail, alert.Rating);
+            Assert.IsLessThan(StatusRating.Alert, alert.Rating);
+            Assert.Contains(">=", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Alert) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 5.0f);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating > StatusRating.Okay);
-            Assert.IsTrue(alert.Terse.Contains("<"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.IsGreaterThan(StatusRating.Okay, alert.Rating);
+            Assert.Contains("<", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
             alert = thresholds.Rate("Property", 0);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains("<"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.AreEqual(StatusRating.Superlative, alert.Rating);
+            Assert.Contains("<", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
 
 
@@ -504,16 +504,16 @@ namespace AmbientServices.Test
             thresholds = new StatusPropertyThresholds(10.0f, 20.0f, 30.0f);
             alert = thresholds.Rate("Property", Single.MaxValue);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains(">"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.AreEqual(StatusRating.Superlative, alert.Rating);
+            Assert.Contains(">", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
 
             thresholds = new StatusPropertyThresholds(10.0f, 20.0f, 30.0f);
             alert = thresholds.Rate("Property", Single.PositiveInfinity);
             Assert.AreEqual("Property.Threshold", alert.AuditAlertCode);
-            Assert.IsTrue(alert.Rating == StatusRating.Superlative);
-            Assert.IsTrue(alert.Terse.Contains(">"));
-            Assert.IsTrue(alert.Details.Contains("in the " + nameof(StatusRating.Superlative) + " range"));
+            Assert.AreEqual(StatusRating.Superlative, alert.Rating);
+            Assert.Contains(">", alert.Terse);
+            Assert.Contains("in the " + nameof(StatusRating.Superlative) + " range", alert.Details);
         }
         [TestMethod]
         public void StatusThresholdsRange()

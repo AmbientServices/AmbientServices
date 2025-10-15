@@ -86,7 +86,7 @@ namespace AmbientServices.Test
             Assert.AreEqual(parentStackFrames + 1, new FilteredStackTrace().FrameCount);
 
             IEnumerable<StackFrame> filtered = FilteredStackTrace.FilterFrames(new FilteredStackTrace().GetFrames().Where(f => f != null)!);  // we filter null frames at runtime
-            Assert.IsTrue(filtered.Count() > 1);
+            Assert.IsGreaterThan(1, filtered.Count());
         }
         [TestMethod]
         public void StackTraceExtensions_GetFilteredString()
@@ -103,8 +103,8 @@ namespace AmbientServices.Test
             FilteredStackTrace fst = new(true);
             Assert.IsTrue(fst.Equals(fst));
             Assert.IsFalse(fst.Equals(null));
-            Assert.IsTrue(fst.FrameCount > 0);
-            Assert.IsTrue(fst.GetHashCode() != 0);
+            Assert.IsGreaterThan(0, fst.FrameCount);
+            Assert.AreNotEqual(0, fst.GetHashCode());
             int frameNum = 0;
             foreach (StackFrame frame in fst.GetFrames())
             {
