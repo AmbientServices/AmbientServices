@@ -19,6 +19,10 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
+    - name: Setup .NET 10.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 10.0.x
     - name: Install dotnet-set-version
       run: dotnet tool install --global dotnet-set-version
     - name: Run dotnet-set-version
@@ -35,8 +39,8 @@ jobs:
       run: dotnet build AmbientServices.Test -c Release
     - name: Package
       run: dotnet pack AmbientServices -c Release
-    - name: Test .NET 9 with coverage
-      run: dotnet test -c Release -f net9.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
+    - name: Test .NET 10 with coverage
+      run: dotnet test -c Release -f net10.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
     - name: ReportGenerator
       uses: danielpalme/ReportGenerator-GitHub-Action@5.3.6 # The GitHub Action for ReportGenerator
       with:
