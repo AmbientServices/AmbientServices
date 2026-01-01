@@ -388,7 +388,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
         {
             ret = _convert(value);
         }
-#pragma warning disable CA1031 // this is a "do your best" kind of function, so we really do want to cactch all exceptions here
+#pragma warning disable CA1031 // this is a "do your best" kind of function, so we really do want to catch all exceptions here
         catch
 #pragma warning restore CA1031 
         {
@@ -426,7 +426,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
     /// <summary>
     /// Gets the current value of the setting (cached from the value given by the settings set).
     /// </summary>
-    public T GlobalValue
+    public T GlobalOrDefaultValue
     {
         get
         {
@@ -482,15 +482,18 @@ internal class SettingsSetSetting<T> : IAmbientSetting<T>
     protected IAmbientSettingsSet? GetValueSet()
     {
         _settingInfo.UpdateLastUsed();
+        // internal override for testing?
         if (_settingsSet != null)
         {
             return _settingsSet.Local;
         }
+        // is there a fixed settings set?
         else if (_fixedSettingsSet != null)
         {
             return _fixedSettingsSet;
         }
-        return null;
+        // otherwise use the current ambient settings set
+        return _AmbientSettingsSet.Local;
     }
     protected T GetValueFromSet(IAmbientSettingsSet set)
     {
@@ -516,7 +519,7 @@ internal class SettingsSetSetting<T> : IAmbientSetting<T>
             IAmbientSettingsSet? set = GetValueSet();
             return (set != null)
                 ? GetValueFromSet(set)
-                : _settingInfo.GlobalValue;
+                : _settingInfo.GlobalOrDefaultValue;
         }
     }
     /// <summary>
@@ -529,7 +532,7 @@ internal class SettingsSetSetting<T> : IAmbientSetting<T>
         IAmbientSettingsSet? set = GetValueSet();
         return (set != null)
             ? GetValueAndSet(set)
-            : (_settingInfo.GlobalValue, DefaultSettingsSet.Instance.SetName);
+            : (_settingInfo.GlobalOrDefaultValue, DefaultSettingsSet.Instance.SetName);
     }
 }
 
@@ -579,7 +582,7 @@ internal class AmbientSetting<T> : SettingsSetSetting<T>
             IAmbientSettingsSet? set = GetAmbientValueSet();
             return (set != null)
                 ? GetValueFromSet(set)
-                : _settingInfo.GlobalValue;
+                : _settingInfo.GlobalOrDefaultValue;
         }
     }
     /// <summary>
