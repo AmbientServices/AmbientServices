@@ -21,7 +21,7 @@ public class BasicAmbientSettingsSet : IAmbientSettingsSet
     /// <summary>
     /// Constructs the default ambient settings set.
     /// </summary>
-    internal BasicAmbientSettingsSet()
+    public BasicAmbientSettingsSet()
         : this (DefaultSetName)
     {
     }

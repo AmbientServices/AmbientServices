@@ -105,7 +105,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
             string notice = $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.";
             if (System.Diagnostics.Debugger.IsAttached) System.Diagnostics.Trace.Assert(_contained == null, notice);
             else System.Diagnostics.Trace.WriteLine(notice);
-            Logger.Filter(AmbientLogLevel.Warning)?.Log(new { Action = "UndisposedDisposedResponsibility", Message = notice });
+            Logger.Filter(AmbientLogLevel.Warning)?.Log(new { Action = "UndisposedDisposeResponsibility", Message = notice });
         }
     }
 
