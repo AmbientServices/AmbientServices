@@ -11,14 +11,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Setup .NET 8.0
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-    - name: Setup .NET 9.0
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 9.0.x
     - name: Setup .NET 10.0
       uses: actions/setup-dotnet@v4
       with:
@@ -26,7 +18,7 @@ jobs:
     - name: Install dotnet-set-version
       run: dotnet tool install --global dotnet-set-version
     - name: Run dotnet-set-version
-      run: dotnet-set-version 0.8.${{ github.run_number }} -NoPackageOutputPath
+      run: dotnet-set-version 0.8.${{ github.run_number }} ${{ github.sha }} -NoPackageOutputPath
     - name: Install dotnet-markdown-sample-code
       run: dotnet tool install --global dotnet-markdown-sample-code
     - name: Build AmbientServices
