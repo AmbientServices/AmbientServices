@@ -64,4 +64,6 @@ jobs:
     # - name: Test .NET 6.0
     #   run: dotnet test -c Release -f net6.0 --blame-hang-timeout 120s
     - name: Publish
-      run: dotnet nuget push AmbientServices/bin/Release/AmbientServices.0.8.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+      run: |
+        dotnet nuget push AmbientServices/bin/Release/AmbientServices.0.8.${{ github.run_number }}.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+        dotnet nuget push AmbientServices/bin/Release/AmbientServices.0.8.${{ github.run_number }}.snupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
