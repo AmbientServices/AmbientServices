@@ -21,7 +21,7 @@
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EmbedUntrackedSources>false</EmbedUntrackedSources>
-    <DebugType>embedded</DebugType>
+    <DebugType>portable</DebugType>
     <Deterministic>true</Deterministic>
     <AnalysisLevel>latest</AnalysisLevel>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
