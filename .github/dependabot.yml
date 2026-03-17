@@ -5,18 +5,26 @@
 
 version: 2
 updates:
-  # Nuget C#/ASP.NET project dependencies
-  - package-ecosystem: "nuget" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # NuGet dependencies
+  - package-ecosystem: "nuget"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "15:00"
+    groups:
+      all-nuget:
+        patterns:
+          - "*"
 
-  # GitHub Actions (workflows in .github/workflows)
+  # GitHub Actions dependencies
   - package-ecosystem: "github-actions"
-    directory: "/"           # workflows are under .github/workflows at repo root
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "15:00"
+    groups:
+      all-actions:
+        patterns:
+          - "*"
