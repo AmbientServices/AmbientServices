@@ -34,7 +34,7 @@ jobs:
     - name: Test .NET 10 with coverage
       run: dotnet test -c Release -f net10.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
     - name: ReportGenerator
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.3.6 # The GitHub Action for ReportGenerator
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.5.4 # The GitHub Action for ReportGenerator
       with:
         reports: '**/coverage.cobertura.xml' # REQUIRED # The coverage reports that should be parsed (separated by semicolon). Globbing is supported.
         targetdir: 'coveragereport' # REQUIRED # The directory where the generated report should be saved.
