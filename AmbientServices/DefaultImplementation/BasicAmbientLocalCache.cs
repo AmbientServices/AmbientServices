@@ -222,7 +222,7 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
         }
     }
 
-    public ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default)
+    public ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default) where T : class
     {
         CacheEntry? disposeEntry;
         if (_cache.TryRemove(itemKey, out disposeEntry))

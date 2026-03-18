@@ -87,7 +87,7 @@ public class AmbientTwoStageCache
     /// <typeparam name="T">The type of the item to be cached.</typeparam>
     /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
-    public async ValueTask Remove<T>(string itemKey, CancellationToken cancel = default)
+    public async ValueTask Remove<T>(string itemKey, CancellationToken cancel = default) where T : class
     {
         string key = _cacheKeyPrefix + itemKey;
         IAmbientLocalCache? localCache = _explicitLocalCache ?? _LocalCache.Local;

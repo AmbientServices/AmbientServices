@@ -78,7 +78,7 @@ public class AmbientLocalCache
     /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
     /// <returns>The item that was removed, or default if the specified item was not found.</returns>
-    public async ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default)
+    public async ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default) where T : class
     {
         IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
         if (cache == null) return default;
