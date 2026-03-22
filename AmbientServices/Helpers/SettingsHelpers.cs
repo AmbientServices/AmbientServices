@@ -534,6 +534,15 @@ internal class SettingsSetSetting<T> : IAmbientSetting<T>
             ? GetValueAndSet(set)
             : (_settingInfo.GlobalOrDefaultValue, DefaultSettingsSet.Instance.SetName);
     }
+    /// <summary>
+    /// Gets a string representation of the setting, which may be useful for debugging.  Note that this is not guaranteed to be stable and should not be used for anything other than debugging.
+    /// </summary>
+    /// <returns>A string representation of the setting.</returns>
+    public override string ToString()
+    {
+        (T value, string setName) = GetValueWithSetName();
+        return $"{setName}:{value}";
+    }
 }
 
 internal class AmbientSetting<T> : SettingsSetSetting<T>
