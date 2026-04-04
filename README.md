@@ -11,9 +11,10 @@ The well known dependency injection pattern is one possible solution to this pro
 Dependency injection becomes even more cumbersome when the assembly being used adds or removes service dependencies, requiring the consumer to update every constructor invocation with the new dependencies.
 Dependency injection still makes sense for services that are required, but when services are optional anyway, AmbientServices is a simpler option.
 
-By convention, AmbientServices should not be used for information that alters the outputs of functions that use it in any way that the caller might care about.  Side-effects should either not alter the relationship between inputs and outputs at all, or should not alter them unexpectedly.  
+By convention, AmbientServices should not be used for information that alters the outputs of functions that use it in any way that the caller might care about or that don't behave like something that is normally environmental.  Side-effects should either not alter the relationship between inputs and outputs at all, or should not alter them unexpectedly.  
 
 For example, logging and performance tracking should never alter function outputs at all.  Caching may affect the output, but only by giving results that are slightly stale, and only in cases where there are already hidden inputs (like a database) anyway.  Some functions may measure the passage of time during processing and might record that information or change their outputs based on the duration of time passed, but callers should not be surprised when the passage of time is slower or faster than their expected "normal."  Settings (often stored in a configuration file) can alter the output of a function, but never in a way that the caller is concerned about.  In fact, the very concept of settings is in reality a type of parameter intended to affect functions without requiring the caller to be concerned with their specific values.  Progress tracking and cancellation may be useful for the caller, but never affects the output of the function other than aborting its processing altogether.
+Security context is an example of something that's often global that makes sense for AmbientServices because the fallback is to just use the environmental/global system.  For example, explicitly passing the IAM Role around in AWS would be really painful, which is why the AWS SDK has rules for how it looks up the rights it uses, and those rules often involve multiple environmental or global credentials.  Passing those credentials around is actually a bad idea.
 
 ## Performance Services
 Advanced ambient services provide detailed system performance monitoring.
@@ -1521,6 +1522,37 @@ Date (because that should be implemented by the system and isn't),
 International System of Units (SI) string generation for more readable status reports,
 FilteredStackTrace to remove system code tracing from exception stack dumps,
 and Pseudorandom for greatly improved and threadsafe random number generation.
+
+# Advanced Topics
+
+## AssemblyLoadContext
+Many .NET projects use multiple assembly load contexts, and sometimes load assemblies at runtime.
+Care must be taken to ensure that the ambient services are correctly shared, or not shared, with dynamically-loaded assemblies.
+
+A commonly misunderstood feature of AssemblyLoadContext is that by default it load *separate* copies of assemblies that have already been loaded in the main assembly load context, resulting in separate static/global variable values.
+This causes AmbientService<T>.* variables to *not* flow into different assembly contexts.
+If you want to share ambient services across assembly contexts, you need to ensure that the assembly loading in the separate AssemblyLoadingContext shares the AmbientServies assembly with the main loading context.
+If you fail to do this you'll be perplexed when the ambient services all of a sudden revert to the defaults when you call across assembly load contexts or when you give some information to the ambient service inside the loaded assembly and then when you get back to the main program, it acts as if that never happened.
+It will appear as if the ExecutionContext got corrupted, but in reality it's just that there are two separate ambient services.
+This can be especially confusing when the two separate ambient services don't just implement the same interface, but are separate instances of the same singleton type.
+The key being that even singeltons are only singletons within their assembly load context.
+
+Having separate ambient services in different assembly load contexts can be useful when the loaded assembly is not completely trusted by the caller, or doesn't share coding styles and conventions, so if you override the assembly loading to share assemblies, you also need to ensure that no ambient services are inappropriately leaked across these boundaries.
+In systems where some plugins are trusted and written by the same team, ambient services may need to flow across these boundaries, so the code may have to know which plugins to trust with some ambient services and which to not trust at all and use different assembly loading overrides to control the sharing appropriately.
+
+When assemblies are partially-trusted, the controlling code may need to suppress *some* ambient services and flow others.
+This can be done by in either of two ways.  The first way would be to *not* share AmbientServices assemblies in the assembly load context and to explicitly pass the needed ambient services to the partially-trusted assembly explicitly, at which point it can either use those explicit dependencies directly or store them it its separate ambient context.
+The second approach is to share ambient services by default, but selectively suppress specific ambient services when calling into the partially-trusted assembly like this:
+```csharp
+private static AmbientService<IMyService> MySensitiveService;
+
+private void CallIntoPartiallyTrustedCode(IPlugin plugin)
+{
+    using IDisposable suppressSensitive = MySensitiveService.ScopedLocalOverride(null);
+    plugin.DoPluginStuff();
+    // at the end of the using, the ambient IMyService is restored to what it was on entry
+}
+```
 
 # Library Information
 

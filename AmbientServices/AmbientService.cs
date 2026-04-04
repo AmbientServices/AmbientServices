@@ -1,28 +1,22 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Threading;
+#if NETCOREAPP3_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 
 namespace AmbientServices
 {
     /// <summary>
     /// A class that contains information about an initialization error.
     /// </summary>
-    public class InitializationErrorEventArgs : EventArgs 
+    /// <param name="exception">The <see cref="Exception"/> that caused the initialization error.</param>
+    public class InitializationErrorEventArgs(Exception exception) : EventArgs 
     {
-
-        /// <summary>
-        /// Constructs an InitializationErrorEventArgs from the specified exception.
-        /// </summary>
-        /// <param name="ex">The <see cref="Exception"/> that caused the initialization error.</param>
-        public InitializationErrorEventArgs(Exception ex)
-        {
-            Exception = ex;
-        }
         /// <summary>
         /// The <see cref="Exception"/> that caused the initialization error.
         /// </summary>
-        public Exception Exception { get; }
+        public Exception Exception { get; } = exception;
     }
     /// <summary>
     /// A static class that provides access to <see cref="AmbientService{T}"/>s.
@@ -125,6 +119,18 @@ namespace AmbientServices
         public IDisposable ScopedLocalOverride(T? newLocalServiceImplementation)
         {
             return new ScopedLocalServiceOverride<T>(newLocalServiceImplementation);
+        }
+
+        /// <summary>
+        /// Suppresses both the global and local implementations temporarily, optionally replacing everything with a specified implementation.
+        /// This can be useful in cases where you're calling across assembly load contexts into a partially-trusted assembly that shares ambient services by default,
+        /// but that you want to prevent from accessing specific ambient services.
+        /// </summary>
+        /// <param name="temporaryGlobalServiceImplementation">An optional implementation to use as the global implementation until the returned instance is disposed.</param>
+        /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the global and local service implementations to what they were before this call.</returns>
+        public IDisposable ScopedGlobalOverride(T? temporaryGlobalServiceImplementation = null)
+        {
+            return new ScopedGlobalServiceOverride<T>(temporaryGlobalServiceImplementation);
         }
 
         internal AmbientService()
@@ -267,6 +273,62 @@ namespace AmbientServices
         }
         #endregion
     }
+    /// <summary>
+    /// A scoping class that overrides both the global and local service implementation with a specified global one during its scope.
+    /// </summary>
+    /// <typeparam name="T">The service interface type.</typeparam>
+    public sealed class ScopedGlobalServiceOverride<
+#if NETCOREAPP3_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+        T> : IDisposable where T : class
+    {
+        private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
+
+        /// <summary>
+        /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
+        /// </summary>
+        /// <param name="temporaryGlobalService">The optional service to temporarily use in this call context.</param>
+        public ScopedGlobalServiceOverride(T? temporaryGlobalService = null)
+        {
+            OldGlobal = _Reference.Global;
+            OldOverride = _Reference.Override;
+            _Reference.Global = temporaryGlobalService;
+        }
+        /// <summary>
+        /// Gets the old global override in case it is needed by the overriding implementation.
+        /// </summary>
+        public T? OldOverride { get; }
+        /// <summary>
+        /// Gets the old global implementation in case it is needed by the overriding implementation.
+        /// </summary>
+        public T? OldGlobal { get; }
+
+        #region IDisposable Support
+        private bool _disposed; // To detect redundant calls
+
+        private void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _Reference.Override = OldOverride;
+                    _Reference.Global = OldGlobal;
+                }
+                _disposed = true;
+            }
+        }
+        /// <summary>
+        /// Disposes of the instance.
+        /// </summary>
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+        }
+        #endregion
+    }
 
     /// <summary>
     /// A generic class used to ensure that only one instance of the default service implementation gets created.
@@ -283,7 +345,7 @@ namespace AmbientServices
         {
             ConstructorInfo ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)
                 ?? throw new InvalidOperationException($"Classes with [DefaultAmbientService] attributes applied type must have a default constructor.  {typeof(T).Name} does not have a default constructor!");
-            return (T)ci.Invoke(Array.Empty<object>());
+            return (T)ci.Invoke([]);
         }
         public static T GetImplementation() { return _ImplementationSingleton; }
     }
@@ -319,7 +381,7 @@ namespace AmbientServices
                 if (impType == null) return null;       // there is no default implementation (yet)
                 Type type = typeof(DefaultServiceImplementation<>).MakeGenericType(impType);
                 MethodInfo mi = type.GetMethod(nameof(DefaultServiceImplementation<T>.GetImplementation))!; // DefaultServiceImplementation<T> has a public GetImplementation method, so this should always succeed
-                T implementation = (T)mi.Invoke(null, Array.Empty<object>())!;  // DefaultServiceImplementation<T> returns a non-null T
+                T implementation = (T)mi.Invoke(null, [])!;  // DefaultServiceImplementation<T> returns a non-null T
                 return implementation;
             }
             catch (Exception ex)
