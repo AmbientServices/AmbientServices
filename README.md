@@ -1530,6 +1530,7 @@ Many .NET projects use multiple assembly load contexts, and sometimes load assem
 Care must be taken to ensure that the ambient services are correctly shared, or not shared, with dynamically-loaded assemblies.
 
 A commonly misunderstood feature of AssemblyLoadContext is that by default it load *separate* copies of assemblies that have already been loaded in the main assembly load context, resulting in separate static/global variable values.
+Automated regression tests for sharing vs isolating `AmbientServices` across a collectible load context live in `TestAssemblyLoadContextAmbient` (see `AmbientServices.Test.AlcPlugin` and `AmbientServices.Test.AlcContract`).
 This causes AmbientService<T>.* variables to *not* flow into different assembly contexts.
 If you want to share ambient services across assembly contexts, you need to ensure that the assembly loading in the separate AssemblyLoadingContext shares the AmbientServies assembly with the main loading context.
 If you fail to do this you'll be perplexed when the ambient services all of a sudden revert to the defaults when you call across assembly load contexts or when you give some information to the ambient service inside the loaded assembly and then when you get back to the main program, it acts as if that never happened.

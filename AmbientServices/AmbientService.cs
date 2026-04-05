@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using System.Threading;
 #if NETCOREAPP3_0_OR_GREATER
@@ -68,13 +68,16 @@ namespace AmbientServices
     /// Must be accessed through <see cref="Ambient.GetService{T}()"/> or <see cref="Ambient.GetService{T}(out AmbientService{T})"/>.
     /// </summary>
     /// <remarks>
-    /// Note that accessing an ambient service usually requires two dereferences, one to check for a local override, and one to get the global service.
+    /// <para>Ambient state lives in static fields on <see cref="AmbientService{T}"/> in each loaded copy of this assembly. For a single shared ambient domain per <see cref="AppDomain"/>
+    /// (or a single default assembly load context on .NET Core+), the library must be loaded only once; additional custom assembly load contexts
+    /// that need to share overrides with the host should resolve this assembly from the default context (or another agreed single context). Otherwise scoped and global state are isolated per load, which is easy to mistake for <see cref="ExecutionContext"/> corruption.</para>
+    /// <para>Note that accessing an ambient service usually requires two dereferences, one to check for a local override, and one to get the global service.
     /// Attempting to optimize this to only do one access by caching the appropriate service in an AsyncLocal as it changes doesn't appear to be possible
     /// because this would still require checking the AsyncLocal to see if it is initialized, so conditional and dereferencing costs would be the same,
     /// but such a system would require allocating an AsyncLocal object for every call context, which greatly degrades AsyncLocal performance and has higher memory requirements.
     /// In addition, such a system would require either allocating another AsyncLocal refernce-type object for any local overrides in subcontexts, or 
     /// requires keeping track of the old local value to restore at the end of the subcontext override.  
-    /// Using an implementation where a single AsyncLocal for the local override is checked on every access makes subcontext overrides naturally rollback as the stack is unwound.
+    /// Using an implementation where a single AsyncLocal for the local override is checked on every access makes subcontext overrides naturally rollback as the stack is unwound.</para>
     /// </remarks>
     /// <typeparam name="T">The interface for the service.</typeparam>
     public class AmbientService<
@@ -114,6 +117,9 @@ namespace AmbientServices
         /// <summary>
         /// Overrides the service implementation locally and temporarily.
         /// </summary>
+        /// <remarks>
+        /// <para>This override applies to the <see cref="AmbientService{T}"/> singleton for the loaded copy of this assembly. Dynamically loaded code in another assembly load context that loaded a different copy of this assembly uses separate singletons and <see cref="AsyncLocal{T}"/> storage, so the same logical call context will not see this override unless that load context shares the same physical assembly load (see class remarks).</para>
+        /// </remarks>
         /// <param name="newLocalServiceImplementation">The new local service implementation to use until the returned object is disposed.  If null, temporarily removes the ambient service in this call context.</param>
         /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the local service implementation to what it was before this call.</returns>
         public IDisposable ScopedLocalOverride(T? newLocalServiceImplementation)
