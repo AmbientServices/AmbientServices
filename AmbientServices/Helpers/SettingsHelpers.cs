@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
@@ -155,8 +155,24 @@ public class SettingsRegistry
     /// </summary>
     public static SettingsRegistry DefaultRegistry { get; } = new();
 
-
+    private readonly int _registerLoopLimit;
     private readonly ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _settings = new();
+
+    /// <summary>
+    /// Constructs a registry with the default register retry limit.
+    /// </summary>
+    public SettingsRegistry() : this(10)
+    {
+    }
+
+    /// <summary>
+    /// Constructs a registry (used by tests to exercise rare contention paths with a low retry limit).
+    /// </summary>
+    /// <param name="registerLoopLimit">Maximum register retry iterations before timing out.</param>
+    internal SettingsRegistry(int registerLoopLimit)
+    {
+        _registerLoopLimit = registerLoopLimit;
+    }
     /// <summary>
     /// Registers an <see cref="IAmbientSettingInfo"/> in the global registry.
     /// </summary>
@@ -204,7 +220,7 @@ public class SettingsRegistry
             SettingRegistered?.Invoke(null, setting);
             return;
             // Coverage note: the loop and exception is nearly impossible to cover in tests
-        } while (loopCount++ < 10);
+        } while (loopCount++ < _registerLoopLimit);
         throw new TimeoutException("Timeout attempting to register setting!");
     }
     /// <summary>

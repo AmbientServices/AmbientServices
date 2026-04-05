@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -440,7 +440,7 @@ public class AmbientLogger
                 }
                 catch (Exception valueEx)
                 {
-                    if (valueEx is TargetInvocationException tie && tie.InnerException != null) valueEx = tie.InnerException;
+                    valueEx = UnwrapTargetInvocationChain(valueEx);
                     jsonEncodedValue = JsonSerializer.Serialize(kvp.Value?.ToString() + "--" + valueEx.Message, DefaultSerializer);
                 }
                 _ = sb.Append(',');
@@ -457,9 +457,18 @@ public class AmbientLogger
         return sb.ToString();
     }
 
+    private static Exception UnwrapTargetInvocationChain(Exception ex)
+    {
+        while (ex is TargetInvocationException tie && tie.InnerException != null)
+        {
+            ex = tie.InnerException;
+        }
+        return ex;
+    }
+
     internal static void HandleFallbackException(StringBuilder sb, Exception fallbackEx)
     {
-        if (fallbackEx is TargetInvocationException tie && tie.InnerException != null) fallbackEx = tie.InnerException;
+        fallbackEx = UnwrapTargetInvocationChain(fallbackEx);
         sb.Append(',');
         sb.Append(nameof(fallbackEx));
         sb.Append(':');

@@ -1,4 +1,4 @@
-﻿using AmbientServices.Extensions;
+using AmbientServices.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -107,8 +107,9 @@ public class DotNetDocumentation
     /// Gets an enumeration of the public <see cref="Type"/>s in the corresponding assembly, which should be documented.
     /// </summary>
     public IEnumerable<Type> PublicTypes => _types;
-    private static string BuildDisambiguatingParameterList(ParameterInfo[] parameters)
+    internal static string BuildDisambiguatingParameterList(MethodBase method)
     {
+        ParameterInfo[] parameters = method.GetParameters();
         // when there are NO parameters, we output empty string (not "()")
         if (parameters == null || parameters.Length == 0)
         {
@@ -123,7 +124,26 @@ public class DotNetDocumentation
             var parameter = parameters[i];
             if (parameter.ParameterType.IsGenericParameter)
             {
-                ret.Append(parameter.ParameterType.Name);
+                // ECMA XML doc IDs use `0, `1, ... for method and type generic parameters (not the metadata name "T").
+                Type[]? genericArgs = null;
+                if (method is MethodInfo mi && mi.IsGenericMethod)
+                {
+                    genericArgs = mi.GetGenericMethodDefinition().GetGenericArguments();
+                }
+                else if (method.DeclaringType?.IsGenericTypeDefinition == true)
+                {
+                    genericArgs = method.DeclaringType.GetGenericArguments();
+                }
+                int gpIndex = genericArgs == null ? -1 : Array.IndexOf(genericArgs, parameter.ParameterType);
+                if (gpIndex >= 0)
+                {
+                    ret.Append("``");
+                    ret.Append(gpIndex.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
+                else
+                {
+                    ret.Append(parameter.ParameterType.Name);
+                }
             }
             else if (parameter.ParameterType.IsGenericType)
             { // put in the generic type name as listed in XML documentation parameter lists, which is GenericType{TypeParam1,TypeParam2,...}
@@ -164,7 +184,16 @@ public class DotNetDocumentation
         if (method.DeclaringType?.FullName == null) return null;
         string methodName = method.Name;
         if (methodName == ".ctor") methodName = "#ctor";
-        string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Method}:{method.DeclaringType.FullName.Replace('+', '.') + "." + methodName}{BuildDisambiguatingParameterList(method.GetParameters())}\"]";
+        if (method is MethodInfo methodInfo)
+        {
+            MethodInfo docIdentity = methodInfo.IsGenericMethod ? methodInfo.GetGenericMethodDefinition() : methodInfo;
+            if (docIdentity.IsGenericMethodDefinition)
+            {
+                // ECMA IDs use two backticks before generic arity (e.g. ValueTaskFromResult``1).
+                methodName += "``" + docIdentity.GetGenericArguments().Length.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+        string nodePath = $"/doc/members/member[@name=\"{DocumentationMemberType.Method}:{method.DeclaringType.FullName.Replace('+', '.') + "." + methodName}{BuildDisambiguatingParameterList(method)}\"]";
         return _documentRoot.SelectSingleNode(nodePath);
     }
     private XPathNavigator? PropertyDocumentation(PropertyInfo property)
@@ -293,7 +322,7 @@ public class DotNetDocumentation
         return new TypeDocumentation(GetHumanReadableTypeName(type), GetNodeContents(nav, "summary"), GetNodeContents(nav, "remarks"), BuildTypeParameters(nav));
     }
 
-    private static string GetHumanReadableTypeName(Type type)
+    internal static string GetHumanReadableTypeName(Type type)
     {
         if (type.IsArray)
         {

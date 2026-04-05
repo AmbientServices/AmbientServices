@@ -1,7 +1,8 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
@@ -205,4 +206,85 @@ public class TestBasicAmbientLogger
         AmbientLogger.AddExceptionInformationToDictionary(dict, new ExceptionWithExtraLoggingInformation());
         Assert.AreEqual("value", dict["key"]);
     }
+
+    [TestMethod]
+    public void LinuxLocalSharePathAndEnsureDirectoryHelpers()
+    {
+        Assert.AreEqual("/home/testuser/.local/share", AmbientFileLogger.LinuxLocalShareDataFolderPath("testuser"));
+        string dir = Path.Combine(Path.GetTempPath(), "AmbientLinuxPathTest_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            AmbientFileLogger.EnsureDirectoryExists(dir);
+            Assert.IsTrue(Directory.Exists(dir));
+        }
+        finally
+        {
+            try { Directory.Delete(dir, true); } catch { /* best effort */ }
+        }
+    }
+
+    [TestMethod]
+    public void EnsureLinuxLocalShareFolderExists_UsesSharePathAndCreatesDirectory()
+    {
+        string path = AmbientFileLogger.EnsureLinuxLocalShareFolderExists("covUser");
+        Assert.AreEqual("/home/covUser/.local/share", path);
+    }
+
+    [TestMethod]
+    public void CompleteProgramDataFolderPath_LinuxFallbackWhenEmpty()
+    {
+        string path = AmbientFileLogger.CompleteProgramDataFolderPath("", useLinuxEmptyLocalAppDataFallback: true);
+        Assert.AreEqual(AmbientFileLogger.EnsureLinuxLocalShareFolderExists(Environment.UserName), path);
+        Assert.AreEqual("x", AmbientFileLogger.CompleteProgramDataFolderPath("x", useLinuxEmptyLocalAppDataFallback: true));
+        Assert.AreEqual("", AmbientFileLogger.CompleteProgramDataFolderPath("", useLinuxEmptyLocalAppDataFallback: false));
+    }
+
+    [TestMethod]
+    public void CombineRelativeFilePrefixWithProgramData_FallbackWhenCombineThrows()
+    {
+        string r = AmbientFileLogger.CombineRelativeFilePrefixWithProgramData("p",
+            () => throw new IOException("simulated"),
+            () => "MyExe");
+        StringAssert.Contains(r, "MyExe");
+        StringAssert.Contains(r, "_AmbientLogger");
+    }
+
+    [TestMethod]
+    public void GetExecutableNameAppDomainFallback_ReturnsNonEmpty()
+    {
+        Assert.IsFalse(string.IsNullOrEmpty(AmbientFileLogger.GetExecutableNameAppDomainFallback()));
+    }
+
+    [TestMethod]
+    public void AmbientFileLogger_FileExtensionWithoutLeadingDot()
+    {
+        string tempPath = Path.GetTempPath() + Guid.NewGuid().ToString("N");
+        using (AmbientClock.Pause())
+        using (AmbientFileLogger logger = new(tempPath + "ExtTest", "log", 60, 0))
+        {
+            Assert.IsTrue(logger.FilePrefix.EndsWith("ExtTest", StringComparison.Ordinal));
+        }
+    }
+
+    [TestMethod]
+    public async Task AmbientFileLogger_StructuredLogOverload()
+    {
+        string tempPath = Path.GetTempPath() + Guid.NewGuid().ToString("N");
+        try
+        {
+            using (AmbientClock.Pause())
+            using (AmbientFileLogger logger = new(tempPath, ".log", 60, 0))
+            {
+                await AmbientFileLogger.TryDeleteAllFiles(logger.FilePrefix);
+                logger.Log(new { Message = "structured" });
+                await logger.Flush();
+                Assert.IsTrue(TempFileCount(logger.FilePrefix) >= 1);
+            }
+        }
+        finally
+        {
+            await AmbientFileLogger.TryDeleteAllFiles(tempPath);
+        }
+    }
+
 }

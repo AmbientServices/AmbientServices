@@ -1,4 +1,4 @@
-﻿using AmbientServices.Utilities;
+using AmbientServices.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -45,14 +45,7 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
         // else if we have a file prefix, but it doesn't have a directory, use the program data location
         if (string.IsNullOrEmpty(Path.GetDirectoryName(filePrefix)))
         {
-            try
-            {
-                filePrefix = Path.Combine(GetProgramDataFolderLocation(), filePrefix);
-            }
-            catch
-            {
-                filePrefix = $"{Path.GetTempPath()}{GetExecutableName()}_AmbientLogger";
-            }
+            filePrefix = CombineRelativeFilePrefixWithProgramData(filePrefix, GetProgramDataFolderLocation, GetExecutableName);
         }
         fileExtension ??= ".log";
         if (fileExtension.Length > 0 && fileExtension[0] != '.') fileExtension = "." + fileExtension;
@@ -77,20 +70,69 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
         {
             return System.Diagnostics.Process.GetCurrentProcess().ProcessName;
         }
-        return System.AppDomain.CurrentDomain.FriendlyName;
+        return GetExecutableNameAppDomainFallback();
     }
+
+    /// <summary>
+    /// Returns <see cref="AppDomain.CurrentDomain"/>'s friendly name (used when the OS is not Windows, Linux, macOS, or FreeBSD).
+    /// </summary>
+    internal static string GetExecutableNameAppDomainFallback() => AppDomain.CurrentDomain.FriendlyName;
+
+    /// <summary>
+    /// Combines a filename-only prefix with the program data folder, or falls back to a temp-path prefix when <see cref="Path.Combine(string, string)"/> throws.
+    /// </summary>
+    internal static string CombineRelativeFilePrefixWithProgramData(string filePrefix, Func<string> getProgramDataFolderLocation, Func<string> getExecutableName)
+    {
+        try
+        {
+            return Path.Combine(getProgramDataFolderLocation(), filePrefix);
+        }
+        catch
+        {
+            return $"{Path.GetTempPath()}{getExecutableName()}_AmbientLogger";
+        }
+    }
+
+    /// <summary>
+    /// Linux fallback when <see cref="Environment.SpecialFolder.LocalApplicationData"/> is empty (exposed for unit tests on non-Linux).
+    /// </summary>
+    internal static string LinuxLocalShareDataFolderPath(string userName) =>
+        $"/home/{userName}/.local/share";
+
+    /// <summary>
+    /// Creates <paramref name="folderPath"/> when missing (exposed for unit tests; used from Linux fallback).
+    /// </summary>
+    internal static void EnsureDirectoryExists(string folderPath)
+    {
+        if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+    }
+
+    /// <summary>
+    /// Ensures the Linux per-user share folder exists and returns its path (same logic as the Linux branch of <see cref="GetProgramDataFolderLocation"/>).
+    /// </summary>
+    internal static string EnsureLinuxLocalShareFolderExists(string userName)
+    {
+        string folderPath = LinuxLocalShareDataFolderPath(userName);
+        EnsureDirectoryExists(folderPath);
+        return folderPath;
+    }
+
+    /// <summary>
+    /// When <paramref name="useLinuxEmptyLocalAppDataFallback"/> is true and <paramref name="localApplicationDataPath"/> is empty, returns <see cref="EnsureLinuxLocalShareFolderExists"/> for the current user; otherwise returns <paramref name="localApplicationDataPath"/> unchanged.
+    /// </summary>
+    internal static string CompleteProgramDataFolderPath(string localApplicationDataPath, bool useLinuxEmptyLocalAppDataFallback)
+    {
+        if (!useLinuxEmptyLocalAppDataFallback || !string.IsNullOrEmpty(localApplicationDataPath))
+        {
+            return localApplicationDataPath;
+        }
+        return EnsureLinuxLocalShareFolderExists(Environment.UserName);
+    }
+
     private static string GetProgramDataFolderLocation()
     {
         string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string folderPath;
-        // fixup on linux
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && string.IsNullOrEmpty(path))
-        {
-            folderPath = $"/home/{Environment.UserName}/.local/share";
-            // make sure this directory exists
-            if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
-            path = folderPath;
-        }
+        path = CompleteProgramDataFolderPath(path, RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
         return path + Path.DirectorySeparatorChar;
     }
     /// <summary>

@@ -1,7 +1,11 @@
-﻿using AmbientServices;
+using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
 
@@ -426,6 +430,59 @@ public class TestSettings
 
         Assert.Throws<ArgumentNullException>(() => registry.Register(null!));
     }
+
+    /// <summary>
+    /// Covers the rare <see cref="SettingsRegistry.Register"/> path where <see cref="ConcurrentDictionary{TKey,TValue}.TryUpdate"/> loses a race replacing a dead weak reference, then times out when the retry limit is zero.
+    /// </summary>
+    [TestMethod]
+    [DoNotParallelize]
+    public void SettingsRegistry_Register_ContentionOnDeadWeakReference_CanTimeOut()
+    {
+        const int registerThreads = 96;
+        SettingsRegistry registry = new(0);
+        FieldInfo? fi = typeof(SettingsRegistry).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Instance);
+        var dict = (ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>>)fi!.GetValue(registry)!;
+        string key = nameof(SettingsRegistry_Register_ContentionOnDeadWeakReference_CanTimeOut) + Guid.NewGuid().ToString("N");
+        WeakReference<IAmbientSettingInfo> wr = AddDeadWeakSettingEntry(dict, key);
+        for (int g = 0; g < 5; g++)
+        {
+            GC.Collect(2, GCCollectionMode.Forced, true);
+            GC.WaitForPendingFinalizers();
+        }
+        Assert.IsFalse(wr.TryGetTarget(out _), "Weak reference should be collectible so Register uses the dead-entry path.");
+
+        using Barrier alignedStart = new(registerThreads + 1);
+        int timeouts = 0;
+        Action[] actions = new Action[registerThreads + 1];
+        for (int i = 0; i < registerThreads; i++)
+        {
+            actions[i] = () =>
+            {
+                alignedStart.SignalAndWait();
+                try
+                {
+                    registry.Register(new TestSettingsSetSetting(key, "dv", "sameDesc"));
+                }
+                catch (TimeoutException)
+                {
+                    Interlocked.Increment(ref timeouts);
+                }
+            };
+        }
+        actions[registerThreads] = () => alignedStart.SignalAndWait();
+        Parallel.Invoke(actions);
+
+        Assert.IsTrue(timeouts > 0);
+    }
+
+    private static WeakReference<IAmbientSettingInfo> AddDeadWeakSettingEntry(ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> dict, string key)
+    {
+        // Allocate inline so no local strongly roots the setting after this method returns.
+        var wr = new WeakReference<IAmbientSettingInfo>(new TestSettingsSetSetting(key, "dv", "sameDesc"));
+        Assert.IsTrue(dict.TryAdd(key, wr));
+        return wr;
+    }
+
     /// <summary>
     /// Performs tests on <see cref="IAmbientSettingsSet"/>.
     /// </summary>

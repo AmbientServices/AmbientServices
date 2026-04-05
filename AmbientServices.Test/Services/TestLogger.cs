@@ -1,6 +1,7 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -390,6 +391,15 @@ public class TestLogger
     /// Performs tests on <see cref="IAmbientLogger"/>.
     /// </summary>
     [TestMethod]
+    public void JsonConverterFactories_ArgumentNull()
+    {
+        IPAddressConverterFactory ipf = new();
+        Assert.ThrowsExactly<ArgumentNullException>(() => ipf.CanConvert(null!));
+        IPEndPointConverterFactory epf = new();
+        Assert.ThrowsExactly<ArgumentNullException>(() => epf.CanConvert(null!));
+    }
+
+    [TestMethod]
     public void IPAddressSerializer()
     {
         JsonSerializerOptions options = AmbientLogger.DefaultSerializer;
@@ -491,5 +501,82 @@ public class TestLogger
         s = AmbientLogger.HandleUnserializable(new { IntPtr = System.IntPtr.Zero }, new ExpectedException(nameof(HandleUnserializable)));
         s = AmbientLogger.HandleUnserializable(new { Inner = new { Nint = System.IntPtr.Zero } }, new ExpectedException(nameof(HandleUnserializable)));
     }
+
+    /// <summary>
+    /// When <see cref="AmbientLogger.HandleUnserializable"/> calls <see cref="JsonSerializer"/> for a child value, failure enters nested
+    /// <see cref="AmbientLogger.HandleUnserializable"/>. If that nested call throws while building its dictionary (e.g. a public property getter throws),
+    /// the exception escapes the outer <c>JsonSerialize</c> catch (the <c>return HandleUnserializable(...)</c> is not inside the try) and is handled by the
+    /// per-property fallback in the parent <see cref="AmbientLogger.HandleUnserializable"/>.
+    /// </summary>
+    [TestMethod]
+    public void HandleUnserializable_PerPropertyFallbackWhenNestedHandleUnserializableThrows()
+    {
+        Dictionary<string, object?> payload = new()
+        {
+            ["p"] = new TypeWhoseHandleUnserializableThrowsOnStructuredDataToDictionary(),
+        };
+        string s = AmbientLogger.HandleUnserializable(payload, new ExpectedException(nameof(HandleUnserializable)));
+        StringAssert.Contains(s, "nested-dictionary-fail");
+    }
+
+    [TestMethod]
+    public void HandleUnserializable_PerPropertyFallbackUnwrapsTargetInvocationExceptionFromNestedHandleUnserializable()
+    {
+        Dictionary<string, object?> payload = new()
+        {
+            ["p"] = new TypeWhoseHandleUnserializableThrowsTieOnStructuredDataToDictionary(),
+        };
+        string s = AmbientLogger.HandleUnserializable(payload, new ExpectedException(nameof(HandleUnserializable)));
+        StringAssert.Contains(s, "tie-inner");
+    }
+
+    [TestMethod]
+    public void ConvertStructuredDataIntoSimpleMessage_InstanceOverload()
+    {
+        AmbientLogger logger = new(typeof(TestLogger), _Logger.Global, null);
+        string msg = logger.ConvertStructuredDataIntoSimpleMessage(AmbientLogLevel.Information, "cat", new { A = 1 });
+        Assert.IsFalse(string.IsNullOrEmpty(msg));
+    }
+
+    [TestMethod]
+    public void CopyStructuredDataToDictionary_StringDictionaryBranch()
+    {
+        Dictionary<string, string?> src = new() { { "a", "b" }, { "c", null } };
+        Dictionary<string, object?> dst = AmbientLogger.CopyStructuredDataToDictionary(new(), src);
+        Assert.AreEqual("b", dst["a"]);
+        Assert.IsNull(dst["c"]);
+    }
+
+    [TestMethod]
+    public void ConvertStructuredDataIncludesCultureInfoWhenSerializationFails()
+    {
+        string msg = AmbientLogger.ConvertStructuredDataIntoSimpleMessage(new { Tag = System.Globalization.CultureInfo.InvariantCulture });
+        Assert.IsFalse(string.IsNullOrEmpty(msg));
+    }
+
+    [TestMethod]
+    public void JsonSerialize_StopsRecursionWhenDepthExceedsLimit()
+    {
+        MethodInfo? jsonSerialize = typeof(AmbientLogger).GetMethod("JsonSerialize", BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(object), typeof(Type), typeof(int) }, null);
+        Assert.IsNotNull(jsonSerialize);
+        string result = (string)jsonSerialize.Invoke(null, new object?[] { (IntPtr)1, null, 33 })!;
+        StringAssert.Contains(result, "Recursion Error");
+    }
 }
+
+/// <summary>
+/// Public property getter throws when <see cref="AmbientLogger.StructuredDataToDictionary"/> reflects after <see cref="System.Text.Json.JsonSerializer"/>
+/// has already failed on this instance (so the nested <see cref="AmbientLogger.HandleUnserializable"/> throws while the parent is inside
+/// <c>JsonSerialize</c>'s catch block).
+/// </summary>
+sealed class TypeWhoseHandleUnserializableThrowsOnStructuredDataToDictionary
+{
+    public int X => throw new InvalidOperationException("nested-dictionary-fail");
+}
+
+sealed class TypeWhoseHandleUnserializableThrowsTieOnStructuredDataToDictionary
+{
+    public int X => throw new TargetInvocationException(new IOException("tie-inner"));
+}
+
 class AllowedLoggerType { }
