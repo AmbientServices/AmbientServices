@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,6 +21,10 @@ public class TestAmbientSettingsLayers
         AmbientSettingsLayers layers = new(emptyLayers, fixedSet, emptySet);
 
         Assert.IsNotNull(fixedSet.SetName);
+        Assert.IsTrue(layers.SettingsAreMutable);
+        Assert.IsFalse(emptySet.SettingsAreMutable);
+        StringAssert.StartsWith(emptySet.ToString(), "ImmutableSettings:");
+        Assert.ThrowsExactly<InvalidOperationException>(() => emptySet.ChangeSetting("k", "v"));
 
         layers.ChangeSetting("key3", "value3");
         Assert.AreEqual("value3", layers.GetRawValue("key3"));

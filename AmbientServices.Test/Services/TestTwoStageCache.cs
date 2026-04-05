@@ -1,4 +1,4 @@
-﻿using AmbientServices;
+using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,7 @@ public class TestTwoStageCache
         AmbientSettingsOverride localSettingsSet = new(TestCacheSettingsDictionary, nameof(CacheAmbient));
         using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
         {
+            _ = new AmbientTwoStageCache(typeof(TestTwoStageCache), nameof(CacheAmbient) + "-non-generic");
             IAmbientSharedCache localSharedOverride = new BasicAmbientCache();
             using ScopedLocalServiceOverride<IAmbientSharedCache> scopeSharedCache = new(localSharedOverride);
             IAmbientLocalCache localLocalOverride = new BasicAmbientLocalCache();

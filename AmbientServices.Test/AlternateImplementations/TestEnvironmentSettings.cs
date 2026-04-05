@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
 namespace AmbientServices.Test;
@@ -21,6 +21,7 @@ public class TestEnvironmentSettings
     {
         // use a local override so we don't interfere with other tests
         AmbientEnvironmentSettingsSet settingsSet = new();
+        Assert.IsTrue(settingsSet.SettingsAreMutable);
         using ScopedLocalServiceOverride<IAmbientSettingsSet> localOverrideTest = new(settingsSet);
         AmbientSetting<int> setting1 = new(nameof(EnvironmentSettingInt) + "-int-setting", "", s => string.IsNullOrEmpty(s) ? 0 : Int32.Parse(s));
         Assert.AreEqual(0, setting1.Value);

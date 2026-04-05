@@ -1,4 +1,4 @@
-﻿using AmbientServices.Extensions;
+using AmbientServices.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace AmbientServices.Test;
@@ -179,5 +179,6 @@ public class TestStringExtensions
     {
         Assert.AreEqual(1, "abcdef".IndexOfOrdinal('b'));
         Assert.IsTrue("abcdef".ContainsOrdinal('b'));
+        Assert.AreEqual("axcdef", "abcdef".ReplaceOrdinal("b", "x"));
     }
 }

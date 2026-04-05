@@ -607,5 +607,7 @@ public class TestSettings
         Assert.IsNull(DefaultSettingsSet.Instance.GetRawValue(""));
         Assert.IsNull(DefaultSettingsSet.Instance.GetTypedValue("test"));
         Assert.IsNull(DefaultSettingsSet.Instance.GetRawValue("test"));
+        Assert.IsFalse(DefaultSettingsSet.Instance.SettingsAreMutable);
+        Assert.ThrowsExactly<InvalidOperationException>(() => DefaultSettingsSet.Instance.ChangeSetting("k", "v"));
     }
 }

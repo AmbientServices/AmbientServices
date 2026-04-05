@@ -208,6 +208,22 @@ public class TestBasicAmbientLogger
     }
 
     [TestMethod]
+    public void AddExceptionInformationToDictionary_ErrorLogInfoInnerBranches()
+    {
+        Dictionary<string, object?> flat = new();
+        AmbientLogger.AddExceptionInformationToDictionary(flat, new Exception("flat"));
+        Assert.IsFalse(flat.ContainsKey("InnerExceptions"));
+
+        Dictionary<string, object?> oneInner = new();
+        AmbientLogger.AddExceptionInformationToDictionary(oneInner, new Exception("o", new IOException("i")));
+        Assert.AreEqual(1, ((Array)oneInner["InnerExceptions"]!).Length);
+
+        Dictionary<string, object?> agg = new();
+        AmbientLogger.AddExceptionInformationToDictionary(agg, new AggregateException(new IOException("a"), new IOException("b")));
+        Assert.AreEqual(2, ((Array)agg["InnerExceptions"]!).Length);
+    }
+
+    [TestMethod]
     public void LinuxLocalSharePathAndEnsureDirectoryHelpers()
     {
         Assert.AreEqual("/home/testuser/.local/share", AmbientFileLogger.LinuxLocalShareDataFolderPath("testuser"));

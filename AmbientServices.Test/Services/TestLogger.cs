@@ -397,6 +397,14 @@ public class TestLogger
         Assert.ThrowsExactly<ArgumentNullException>(() => ipf.CanConvert(null!));
         IPEndPointConverterFactory epf = new();
         Assert.ThrowsExactly<ArgumentNullException>(() => epf.CanConvert(null!));
+        Assert.IsNotNull(epf.CreateConverter(typeof(IPEndPoint), JsonSerializerOptions.Default));
+    }
+
+    [TestMethod]
+    public void AmbientLogFilter_IsLevelBlocked()
+    {
+        Assert.IsTrue(AmbientLogFilter.Default.IsLevelBlocked(AmbientLogLevel.Trace));
+        Assert.IsFalse(AmbientLogFilter.Default.IsLevelBlocked(AmbientLogLevel.Information));
     }
 
     [TestMethod]
