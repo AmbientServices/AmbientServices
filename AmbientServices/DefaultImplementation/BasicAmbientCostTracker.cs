@@ -332,13 +332,12 @@ internal class TimeWindowCostTracker : IDisposable
         using (Rotate(metrics, windowPeriod)) { }
         _timeWindowRotator = new AmbientEventTimer(windowPeriod);
         _timeWindowRotator.Elapsed +=
-            (sender, handler) =>
+            async (sender, handler) =>
             {
-                ProcessOrSingleTimeWindowCostTracker? oldAccumulator = Rotate(metrics, windowPeriod);
+                using ProcessOrSingleTimeWindowCostTracker? oldAccumulator = Rotate(metrics, windowPeriod);
                 if (oldAccumulator != null)
                 {
-                    Task t = onWindowComplete(oldAccumulator);
-                    t.Wait();
+                    await onWindowComplete(oldAccumulator).ConfigureAwait(true);
                 }
             };
         _timeWindowRotator.AutoReset = true;

@@ -372,13 +372,12 @@ internal class TimeWindowServiceProfiler : IDisposable
         using (Rotate(metrics, windowPeriod, systemGroupTransform)) { }
         _timeWindowRotator = new AmbientEventTimer(windowPeriod);
         _timeWindowRotator.Elapsed +=
-            (sender, handler) =>
+            async (sender, handler) =>
             {
                 ProcessOrSingleTimeWindowServiceProfiler? oldAccumulator = Rotate(metrics, windowPeriod, systemGroupTransform);
                 if (oldAccumulator != null)
                 {
-                    Task t = onWindowComplete(oldAccumulator);
-                    t.Wait();
+                    await onWindowComplete(oldAccumulator).ConfigureAwait(true);
                 }
             };
         _timeWindowRotator.AutoReset = true;

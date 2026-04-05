@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,7 +50,7 @@ internal interface IShirkResponsibility
 /// <summary>
 /// A class that wraps a contained <see cref="IDisposable"/> and allows transfer of the disposal responsibility between objects (and the stack).
 /// Failure to dispose of this object will result in a finalizer that will notify you that the contained object was not disposed.
-/// Also starts tracking the need for object disposal as returned by <see cref="DisposeResponsibility.AllPendingDisposals"/>.
+/// The DEBUG version of the code also has a property in <see cref="DisposeResponsibility"/> that tracks all tracked undisposed objects if you're having trouble tracking down a leak.
 /// Instances of this class contained in another instance should only be contained in objects that are disposable and should ALWAYS be disposed.
 /// DO NOT use this for static objects or objects that are not disposable.
 /// Instances of this class on the stack should ALWAYS be in a using statement.  
@@ -71,7 +71,11 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     {
         get
         {
+#if NET7_0_OR_GREATER
+            ObjectDisposedException.ThrowIf(_contained == null, this);
+#else
             if (_contained == null) throw new ObjectDisposedException("The contained disposable object is no longer owned by this responsibility object!");
+#endif
             return _contained;
         }
     }
@@ -95,18 +99,27 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     public string StackOnCreation => _stackOnCreation;
 
     /// <summary>
-    /// Finalizes the object and ensures that the contained object was disposed as expected.
+    /// Does the logic as if the finalizer was called (for testing).
+    /// There is no reason to call this except for testing.
     /// </summary>
-    ~DisposeResponsibility()
+    public void FinalizeLogic()
     {
         // notify any subscribers in case the default handling is not what is desired
         if (!DisposeResponsibility.NotifyEvent(this, new(_contained, _stackOnCreation)))
         {
             string notice = $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.";
+            Logger.Filter(AmbientLogLevel.Warning)?.Log(new { Action = "UndisposedDisposeResponsibility", Message = notice });
             if (System.Diagnostics.Debugger.IsAttached) System.Diagnostics.Trace.Assert(_contained == null, notice);
             else System.Diagnostics.Trace.WriteLine(notice);
-            Logger.Filter(AmbientLogLevel.Warning)?.Log(new { Action = "UndisposedDisposeResponsibility", Message = notice });
         }
+    }
+
+    /// <summary>
+    /// Finalizes the object and ensures that the contained object was disposed as expected.
+    /// </summary>
+    ~DisposeResponsibility()
+    {
+        FinalizeLogic();
     }
 
     /// <summary>
@@ -229,16 +242,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// </summary>
     public async ValueTask DisposeAsync()
     {
-        if (_contained is IAsyncDisposable ad)
-        {
-#if DEBUG
-            PendingDispose.OnDispose(_stackOnCreation);
-#endif
-            await ad.DisposeAsync().ConfigureAwait(true);
-            GC.SuppressFinalize(this);
-            _contained = default;
-        }
-        else if (_contained is not null)
+        if (_contained is not null)
         {
 #if DEBUG
             PendingDispose.OnDispose(_stackOnCreation);

@@ -349,7 +349,7 @@ public class FilteredStackTrace : StackTrace
     {
         ConcurrentHashSet<string> dict = new();
         string? projectPath = AssemblyUtilities.GetCallingCodeSourceFolder(1, 1);
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1 || NETCOREAPP || NET5_0_OR_GREATER
         if (projectPath != null && !string.IsNullOrEmpty(projectPath) && (projectPath.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal) || projectPath.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal)))
 #else
         if (projectPath != null && !string.IsNullOrEmpty(projectPath) && (projectPath.Contains(Path.DirectorySeparatorChar) || projectPath.Contains(Path.AltDirectorySeparatorChar)))

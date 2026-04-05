@@ -97,6 +97,7 @@ public static partial class StringExtensions
     /// <returns>Whether or not <paramref name="source"/> contains <paramref name="find"/>.</returns>
     public static bool Contains(this string source, char find, StringComparison compare)
     {
+        if (source == null) throw new ArgumentNullException(nameof(source));
         return source.Contains(find, StringComparison.Ordinal);
     }
     /// <summary>

@@ -697,7 +697,11 @@ internal class AmbientLogFilter
     internal AmbientLogFilter(string name, IAmbientSettingsSet? settingsSet)
     {
         Name = name;
+#if NETSTANDARD2_1 || NETCOREAPP || NET5_0_OR_GREATER
+        _logLevelSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-LogLevel", "The AmbientLogLevel above which events should not be logged.  The default value is AmbientLogLevel.Information.", AmbientLogLevel.Information, Enum.Parse<AmbientLogLevel>);
+#else
         _logLevelSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-LogLevel", "The AmbientLogLevel above which events should not be logged.  The default value is AmbientLogLevel.Information.", AmbientLogLevel.Information, s => (AmbientLogLevel)Enum.Parse(typeof(AmbientLogLevel), s));
+#endif
         _typeAllowSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-TypeAllow", "A regular expression indicating which logger owner types should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all types.", null, s => new Regex(s, RegexOptions.Compiled));
         _typeBlockSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-TypeBlock", "A regular expression indicating which logger owner types should be blocked.  Blocks takes precedence over allows.  The default value is null, which blocks no types.", null, s => new Regex(s, RegexOptions.Compiled));
         _categoryAllowSetting = AmbientSettings.GetSetting(settingsSet, name + "-" + nameof(AmbientLogFilter) + "-CategoryAllow", "A regular expression indicating which categories should be allowed.  Blocks takes precedence over allows.  The default value is null, which allows all categories.", null, s => new Regex(s, RegexOptions.Compiled));

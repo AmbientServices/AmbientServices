@@ -68,7 +68,7 @@ public class AmbientConsoleLogger : IAmbientLogger, IAmbientStructuredLogger
 #endif
     public async ValueTask Flush(CancellationToken cancel = default)
     {
-        await ConsoleBuffer.Flush(cancel);
+        await ConsoleBuffer.Flush(cancel).ConfigureAwait(true);
     }
 }
 /// <summary>

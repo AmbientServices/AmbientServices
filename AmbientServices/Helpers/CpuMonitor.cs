@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -225,28 +225,24 @@ internal sealed class StandardCpuSampler : ICpuSampler
 
 internal sealed class LinuxContainerCpuSampler : ICpuSampler
 {
+    private static readonly char[] SlashCharacterArray = ['/'];
+
     private long? _lastUsage;
     private DateTime? _lastSampleTime;
     private float _lastUsagePercent;
 
-    // Cached paths discovered at startup
-    private static readonly string? _cpuUsagePath;
-    private static readonly string? _cpuQuotaPath;
-    private static readonly string? _cpuPeriodPath;
-    private static readonly bool _isCgroupV2;
-    private static readonly string? _containerId;
+    private readonly string? _cpuUsagePath;
+    private readonly string? _cpuQuotaPath;
+    private readonly string? _cpuPeriodPath;
+    private readonly bool _isCgroupV2;
 
-    static LinuxContainerCpuSampler()
+    /// <summary>
+    /// Constructs a cgroup-based CPU sampler. For production on Linux, use the parameterless form so paths resolve to real <c>/proc</c> and <c>/sys/fs/cgroup</c>.
+    /// </summary>
+    /// <param name="cgroupFilesystemRoot">Optional directory that mirrors the root filesystem layout (e.g. contains <c>proc/self/cgroup</c> and <c>sys/fs/cgroup</c>) for tests; null or empty uses real absolute paths.</param>
+    internal LinuxContainerCpuSampler(string? cgroupFilesystemRoot = null)
     {
-        (_cpuUsagePath, _cpuQuotaPath, _cpuPeriodPath, _isCgroupV2, _containerId) = DiscoverCgroupPaths();
-
-        //// Log the discovered paths for debugging
-        //Console.WriteLine($"Cgroup paths discovered:");
-        //Console.WriteLine($"  Container ID: {_containerId ?? "unknown"}");
-        //Console.WriteLine($"  Cgroup version: {(_isCgroupV2 ? "v2" : "v1")}");
-        //Console.WriteLine($"  CPU usage path: {_cpuUsagePath ?? "not found"}");
-        //Console.WriteLine($"  CPU quota path: {_cpuQuotaPath ?? "not found"}");
-        //Console.WriteLine($"  CPU period path: {_cpuPeriodPath ?? "not found"}");
+        (_cpuUsagePath, _cpuQuotaPath, _cpuPeriodPath, _isCgroupV2, _) = DiscoverCgroupPaths(cgroupFilesystemRoot);
     }
 
     public void Sample()
@@ -307,10 +303,11 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
         return (float)Math.Min(Math.Max(percent, 0.0), 1.0);
     }
 
-    private static long? GetCgroupCpuUsage()
+    private long? GetCgroupCpuUsage()
     {
         if (_cpuUsagePath == null) return null;
 
+        long? ret = null;
         try
         {
             if (_isCgroupV2)
@@ -322,25 +319,29 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
                     if (line.StartsWith("usage_usec ", StringComparison.Ordinal))
                     {
                         string usageStr = line.Substring("usage_usec ".Length);
-                        if (long.TryParse(usageStr, out long usageUsec)) return usageUsec * 1000; // Convert to nanoseconds
+                        if (long.TryParse(usageStr, out long usageUsec))
+                        {
+                            return usageUsec * 1000; // Convert to nanoseconds
+                        }
                     }
                 }
             }
             else
             {
                 // cgroup v1 format: direct file read
-                return long.Parse(File.ReadAllText(_cpuUsagePath), System.Globalization.CultureInfo.InvariantCulture);
+                ret = long.Parse(File.ReadAllText(_cpuUsagePath), System.Globalization.CultureInfo.InvariantCulture);
             }
         }
         catch { }
 
-        return null;
+        return ret;
     }
 
-    private static double? GetCgroupCpuLimit()
+    private double? GetCgroupCpuLimit()
     {
         if (_cpuQuotaPath == null || _cpuPeriodPath == null) return null;
 
+        double? ret = null;
         try
         {
             if (_isCgroupV2)
@@ -350,7 +351,7 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
                 string[] parts = content.Split(' ');
                 if (parts.Length == 2 && long.TryParse(parts[0], out long quota) && long.TryParse(parts[1], out long period))
                 {
-                    if (quota > 0 && period > 0) return (double)quota / period;
+                    if (quota > 0 && period > 0) ret = (double)quota / period;
                 }
             }
             else
@@ -358,51 +359,76 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
                 // cgroup v1 format: read from separate quota and period files
                 long quota = long.Parse(File.ReadAllText(_cpuQuotaPath), System.Globalization.CultureInfo.InvariantCulture);
                 long period = long.Parse(File.ReadAllText(_cpuPeriodPath), System.Globalization.CultureInfo.InvariantCulture);
-                if (quota > 0 && period > 0) return (double)quota / period;
+                if (quota > 0 && period > 0) ret = (double)quota / period;
             }
         }
         catch { }
 
-        return null;
+        return ret;
     }
 
-    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupPaths()
+    private static string ResolvePath(string? rootPrefix, string absoluteUnixPath)
     {
-        string? containerId = GetContainerId();
-        bool isCgroupV2 = IsCgroupV2();
+        if (rootPrefix == null || string.IsNullOrEmpty(rootPrefix)) return absoluteUnixPath;
+        string trimmed = absoluteUnixPath.TrimStart('/');
+        if (trimmed.Length == 0) return Path.GetFullPath(rootPrefix);
+        string combined = rootPrefix;
+        foreach (string segment in trimmed.Split(SlashCharacterArray, StringSplitOptions.RemoveEmptyEntries))
+        {
+            combined = Path.Combine(combined, segment);
+        }
+        return Path.GetFullPath(combined);
+    }
+
+    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupPaths(string? cgroupFilesystemRoot)
+    {
+        string? containerId = GetContainerId(cgroupFilesystemRoot);
+        bool isCgroupV2 = IsCgroupV2(cgroupFilesystemRoot);
 
         if (isCgroupV2)
         {
-            return DiscoverCgroupV2Paths(containerId);
+            return DiscoverCgroupV2Paths(containerId, cgroupFilesystemRoot);
         }
         else
         {
-            return DiscoverCgroupV1Paths(containerId);
+            return DiscoverCgroupV1Paths(containerId, cgroupFilesystemRoot);
         }
     }
 
-    private static string? GetContainerId()
+    private static string? GetContainerId(string? cgroupFilesystemRoot)
     {
         try
         {
             // Read container ID from /proc/self/cgroup
-            string[] lines = File.ReadAllLines("/proc/self/cgroup");
+            string[] lines = File.ReadAllLines(ResolvePath(cgroupFilesystemRoot, "/proc/self/cgroup"));
             foreach (string line in lines)
             {
                 // Look for docker container ID in the path
+#if NETSTANDARD2_1 || NETCOREAPP || NET5_0_OR_GREATER
+                if (line.Contains("docker", StringComparison.Ordinal))
+#else
                 if (line.Contains("docker"))
+#endif
                 {
                     string[] parts = line.Split(':');
                     if (parts.Length >= 3)
                     {
                         string path = parts[2];
                         // Extract container ID from path like "docker/1234567890abcdef"
+#if NETSTANDARD2_0_OR_GREATER || NETCOREAPP || NET5_0_OR_GREATER
+                        int dockerIndex = path.IndexOf("/docker/", StringComparison.Ordinal);
+#else
                         int dockerIndex = path.IndexOf("/docker/");
+#endif
                         if (dockerIndex >= 0)
                         {
                             string containerPart = path.Substring(dockerIndex + 8); // Skip "/docker/"
                             // Container ID is typically 64 characters, but can be shorter
+#if NETSTANDARD2_1 || NETCOREAPP || NET5_0_OR_GREATER
+                            int slashIndex = containerPart.IndexOf('/', StringComparison.Ordinal);
+#else
                             int slashIndex = containerPart.IndexOf('/');
+#endif
                             if (slashIndex > 0) return containerPart.Substring(0, slashIndex);
                             return containerPart;
                         }
@@ -415,13 +441,13 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
         return null;
     }
 
-    private static bool IsCgroupV2()
+    private static bool IsCgroupV2(string? cgroupFilesystemRoot)
     {
         // Check if cgroup v2 is mounted
-        return File.Exists("/sys/fs/cgroup/cgroup.controllers");
+        return File.Exists(ResolvePath(cgroupFilesystemRoot, "/sys/fs/cgroup/cgroup.controllers"));
     }
 
-    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupV2Paths(string? containerId)
+    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupV2Paths(string? containerId, string? cgroupFilesystemRoot)
     {
         string? cpuUsagePath = null;
         string? cpuQuotaPath = null;
@@ -436,10 +462,11 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
 
         foreach (string basePath in possibleBasePaths)
         {
-            if (Directory.Exists(basePath))
+            string resolvedBase = ResolvePath(cgroupFilesystemRoot, basePath);
+            if (Directory.Exists(resolvedBase))
             {
-                string cpuStatPath = Path.Combine(basePath, "cpu.stat");
-                string cpuMaxPath = Path.Combine(basePath, "cpu.max");
+                string cpuStatPath = Path.Combine(resolvedBase, "cpu.stat");
+                string cpuMaxPath = Path.Combine(resolvedBase, "cpu.max");
 
                 if (File.Exists(cpuStatPath) && File.Exists(cpuMaxPath))
                 {
@@ -454,7 +481,7 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
         return (cpuUsagePath, cpuQuotaPath, cpuPeriodPath, true, containerId);
     }
 
-    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupV1Paths(string? containerId)
+    private static (string? cpuUsagePath, string? cpuQuotaPath, string? cpuPeriodPath, bool isCgroupV2, string? containerId) DiscoverCgroupV1Paths(string? containerId, string? cgroupFilesystemRoot)
     {
         string? cpuUsagePath = null;
         string? cpuQuotaPath = null;
@@ -476,7 +503,8 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
         // Find CPU usage path
         foreach (string basePath in possibleBasePaths)
         {
-            string usagePath = Path.Combine(basePath, "cpuacct.usage");
+            string resolvedBase = ResolvePath(cgroupFilesystemRoot, basePath);
+            string usagePath = Path.Combine(resolvedBase, "cpuacct.usage");
             if (File.Exists(usagePath))
             {
                 cpuUsagePath = usagePath;
@@ -487,8 +515,9 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
         // Find CPU quota and period paths
         foreach (string basePath in possibleCpuBasePaths)
         {
-            string quotaPath = Path.Combine(basePath, "cpu.cfs_quota_us");
-            string periodPath = Path.Combine(basePath, "cpu.cfs_period_us");
+            string resolvedBase = ResolvePath(cgroupFilesystemRoot, basePath);
+            string quotaPath = Path.Combine(resolvedBase, "cpu.cfs_quota_us");
+            string periodPath = Path.Combine(resolvedBase, "cpu.cfs_period_us");
 
             if (File.Exists(quotaPath) && File.Exists(periodPath))
             {

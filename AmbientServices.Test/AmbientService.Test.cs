@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
 
@@ -19,6 +20,11 @@ public class TestAmbientService
     private static readonly AmbientService<IGlobalOverrideTest> _GlobalOverrideTest = Ambient.GetService<IGlobalOverrideTest>();
     private static readonly AmbientService<IScopedGlobalOverrideTest> _ScopedGlobalOverrideTest = Ambient.GetService<IScopedGlobalOverrideTest>();
     private static readonly AmbientService<ILocalOverrideTest> _LocalOverrideTest = Ambient.GetService<ILocalOverrideTest>();
+    private static readonly AmbientService<IScopedLocalOverrideFlowTest> _ScopedLocalOverrideFlow = Ambient.GetService<IScopedLocalOverrideFlowTest>();
+
+    private sealed class ScopedLocalOverrideFlowTestStub : IScopedLocalOverrideFlowTest
+    {
+    }
 
     [AssemblyInitialize]
     public static void AssemblyInitialize(TestContext context)
@@ -258,6 +264,57 @@ public class TestAmbientService
         Assert.IsInstanceOfType(_LocalTest.Local, typeof(LocalTest3));
         Assert.AreEqual(_LocalTest.Global, _LocalTest.Local);
     }
+
+    [TestMethod]
+    public async Task ScopedLocalOverride_ReferenceType_PreservedAfterTaskYield()
+    {
+        ScopedLocalOverrideFlowTestStub stub = new();
+        using IDisposable scope = _ScopedLocalOverrideFlow.ScopedLocalOverride(stub);
+        await Task.Yield();
+        Assert.AreSame(stub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
+    }
+
+    [TestMethod]
+    public async Task ScopedLocalOverride_ReferenceType_PreservedAfterTaskDelayConfigureAwaitFalse()
+    {
+        ScopedLocalOverrideFlowTestStub stub = new();
+        using IDisposable scope = _ScopedLocalOverrideFlow.ScopedLocalOverride(stub);
+        await Task.Delay(1).ConfigureAwait(false);
+        Assert.AreSame(stub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
+    }
+
+    [TestMethod]
+    public async Task ScopedLocalOverride_ReferenceType_PreservedInsideTaskRunWithYield()
+    {
+        ScopedLocalOverrideFlowTestStub stub = new();
+        using IDisposable scope = _ScopedLocalOverrideFlow.ScopedLocalOverride(stub);
+        await Task.Run(async () =>
+        {
+            await Task.Yield();
+            Assert.AreSame(stub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
+        }).ConfigureAwait(false);
+        Assert.AreSame(stub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
+    }
+
+    [TestMethod]
+    public void ScopedLocalOverride_Nested_RestoresOldOverrideAfterInnerDispose()
+    {
+        IScopedLocalOverrideFlowTest originalGlobal = _ScopedLocalOverrideFlow.Global;
+        Assert.IsNotNull(originalGlobal);
+        ScopedLocalOverrideFlowTestStub outerStub = new();
+        ScopedLocalOverrideFlowTestStub innerStub = new();
+        using (IDisposable outer = _ScopedLocalOverrideFlow.ScopedLocalOverride(outerStub))
+        {
+            Assert.AreSame(outerStub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
+            using (ScopedLocalServiceOverride<IScopedLocalOverrideFlowTest> inner = new(innerStub))
+            {
+                Assert.AreSame(innerStub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
+                Assert.AreSame(outerStub, inner.OldOverride);
+            }
+            Assert.AreSame(outerStub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
+        }
+        Assert.AreSame(originalGlobal, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
+    }
 }
 
 interface IJunk
@@ -336,6 +393,15 @@ class ScopedGlobalOverrideAmbientDefault : IScopedGlobalOverrideTest
 {
 }
 class ScopedGlobalOverrideTestStub : IScopedGlobalOverrideTest
+{
+}
+
+interface IScopedLocalOverrideFlowTest
+{
+}
+
+[DefaultAmbientService]
+class ScopedLocalOverrideFlowTestDefault : IScopedLocalOverrideFlowTest
 {
 }
 

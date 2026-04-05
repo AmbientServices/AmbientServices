@@ -1,6 +1,5 @@
 ﻿#if NET5_0_OR_GREATER
 using System;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 #endif
@@ -83,7 +82,9 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// <param name="windowPeriod">A <see cref="TimeSpan"/> indicating how often reports are desired.</param>
     /// <param name="onWindowComplete">An async delegate that receives a <see cref="IAmbientServiceProfile"/> at the end of each time window.</param>
     /// <returns>A <see cref="IDisposable"/> that scopes the collection of the profiles.</returns>
+#pragma warning disable CA1822 // Mark members as static--I reserve the right to use member data in this function in the future and don't want to break the interface
     public IDisposable? CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientAccruedChargesAndCostChanges, Task> onWindowComplete)
+#pragma warning restore CA1822 // Mark members as static
     {
         IAmbientCostTracker? metrics = _AmbientCostTracker.Local;
         if (metrics == null) return null;
@@ -102,7 +103,9 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// whereas this will analyze all threads and call contexts in the process.  
     /// They will produce the same results only for programs where there is only a single call context (no parallelization)
     /// </remarks>
+#pragma warning disable CA1822 // Mark members as static--I reserve the right to use member data in this function in the future and don't want to break the interface
     public IAmbientAccruedChargesAndCostChanges? CreateProcessProfiler(string scopeName)
+#pragma warning restore CA1822 // Mark members as static
     {
         IAmbientCostTracker? metrics = _AmbientCostTracker.Local;
         if (metrics != null)
