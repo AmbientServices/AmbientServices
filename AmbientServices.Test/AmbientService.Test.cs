@@ -315,6 +315,65 @@ public class TestAmbientService
         }
         Assert.AreSame(originalGlobal, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
     }
+
+    /// <summary>
+    /// When <see cref="AmbientService{T}.Local"/> is null due to local suppression, <see cref="LocalServiceReference{T}.RawOverride"/>
+    /// holds <see cref="LocalServiceReference{T}.SuppressedImplementation"/>; the scoped override dispose path must restore that
+    /// object, not <see cref="AmbientService{T}.Override"/> = null (which only clears the override to follow global).
+    /// </summary>
+    [TestMethod]
+    public void ScopedLocalOverride_RestoresLocalSuppression_WhenGlobalStillSet()
+    {
+        IScopedLocalOverrideFlowTest originalGlobal = _ScopedLocalOverrideFlow.Global;
+        Assert.IsNotNull(originalGlobal);
+        _ScopedLocalOverrideFlow.Local = null;
+        try
+        {
+            Assert.IsNull(_ScopedLocalOverrideFlow.Local, "local suppression should hide the global implementation");
+            Assert.AreSame(originalGlobal, _ScopedLocalOverrideFlow.Global);
+            ScopedLocalOverrideFlowTestStub stub = new();
+            using (_ScopedLocalOverrideFlow.ScopedLocalOverride(stub))
+            {
+                Assert.AreSame(stub, _ScopedLocalOverrideFlow.Local);
+            }
+            Assert.IsNull(_ScopedLocalOverrideFlow.Local, "after dispose, local suppression must be restored, not cleared to follow global");
+            Assert.AreSame(originalGlobal, _ScopedLocalOverrideFlow.Global);
+        }
+        finally
+        {
+            _ScopedLocalOverrideFlow.Override = null;
+        }
+    }
+
+    /// <summary>
+    /// Same <see cref="LocalServiceReference{T}.RawOverride"/> sentinel restore requirement as
+    /// <see cref="ScopedLocalOverride_RestoresLocalSuppression_WhenGlobalStillSet"/> for <see cref="ScopedGlobalServiceOverride{T}"/>.
+    /// </summary>
+    [TestMethod]
+    [DoNotParallelize]
+    public void ScopedGlobalOverride_RestoresLocalSuppression_WhenGlobalStillSet()
+    {
+        IScopedGlobalOverrideTest originalGlobal = _ScopedGlobalOverrideTest.Global;
+        Assert.IsNotNull(originalGlobal);
+        _ScopedGlobalOverrideTest.Local = null;
+        try
+        {
+            Assert.IsNull(_ScopedGlobalOverrideTest.Local);
+            Assert.AreSame(originalGlobal, _ScopedGlobalOverrideTest.Global);
+            ScopedGlobalOverrideTestStub replacement = new();
+            using (new ScopedGlobalServiceOverride<IScopedGlobalOverrideTest>(replacement))
+            {
+                Assert.AreSame(replacement, _ScopedGlobalOverrideTest.Global);
+                Assert.IsNull(_ScopedGlobalOverrideTest.Local);
+            }
+            Assert.IsNull(_ScopedGlobalOverrideTest.Local, "after dispose, local suppression must be restored, not cleared to follow global");
+            Assert.AreSame(originalGlobal, _ScopedGlobalOverrideTest.Global);
+        }
+        finally
+        {
+            _ScopedGlobalOverrideTest.Override = null;
+        }
+    }
 }
 
 interface IJunk

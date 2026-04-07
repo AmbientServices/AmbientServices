@@ -236,24 +236,27 @@ namespace AmbientServices
     {
         private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
 
+        private readonly object? _oldRawOverride;
+        /// <summary>
+        /// Gets the old local override in case it is needed by the overriding implementation.  (Mostly for debugging).
+        /// </summary>
+        public T? OldOverride { get; }
+        /// <summary>
+        /// Gets the old global implementation in case it is needed by the overriding implementation.  (Mostly for debugging).
+        /// </summary>
+        public T? OldGlobal { get; }
+
         /// <summary>
         /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
         /// </summary>
         /// <param name="temporaryLocalService">The service to temporarily use in this call context.</param>
         public ScopedLocalServiceOverride(T? temporaryLocalService)
         {
+            _oldRawOverride = _Reference.LocalReference.RawOverride;
             OldGlobal = _Reference.Global;
             OldOverride = _Reference.Override;
             _Reference.Local = temporaryLocalService;
         }
-        /// <summary>
-        /// Gets the old local override in case it is needed by the overriding implementation.
-        /// </summary>
-        public T? OldOverride { get; }
-        /// <summary>
-        /// Gets the old global implementation in case it is needed by the overriding implementation.
-        /// </summary>
-        public T? OldGlobal { get; }
 
         #region IDisposable Support
         private bool _disposed; // To detect redundant calls
@@ -264,7 +267,7 @@ namespace AmbientServices
             {
                 if (disposing)
                 {
-                    _Reference.Override = OldOverride;
+                    _Reference.LocalReference.RawOverride = _oldRawOverride;
                 }
                 _disposed = true;
             }
@@ -291,24 +294,26 @@ namespace AmbientServices
     {
         private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
 
+        private readonly object? _oldRawOverride;
+        /// <summary>
+        /// Gets the old local override in case it is needed by the overriding implementation.  (Mostly for debugging).
+        /// </summary>
+        public T? OldOverride { get; }
+        /// <summary>
+        /// Gets the old global implementation in case it is needed by the overriding implementation.  (Mostly for debugging).
+        /// </summary>
+        public T? OldGlobal { get; }
         /// <summary>
         /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
         /// </summary>
         /// <param name="temporaryGlobalService">The optional service to temporarily use in this call context.</param>
         public ScopedGlobalServiceOverride(T? temporaryGlobalService = null)
         {
+            _oldRawOverride = _Reference.LocalReference.RawOverride;
             OldGlobal = _Reference.Global;
             OldOverride = _Reference.Override;
             _Reference.Global = temporaryGlobalService;
         }
-        /// <summary>
-        /// Gets the old global override in case it is needed by the overriding implementation.
-        /// </summary>
-        public T? OldOverride { get; }
-        /// <summary>
-        /// Gets the old global implementation in case it is needed by the overriding implementation.
-        /// </summary>
-        public T? OldGlobal { get; }
 
         #region IDisposable Support
         private bool _disposed; // To detect redundant calls
@@ -319,8 +324,8 @@ namespace AmbientServices
             {
                 if (disposing)
                 {
-                    _Reference.Override = OldOverride;
                     _Reference.Global = OldGlobal;
+                    _Reference.LocalReference.RawOverride = _oldRawOverride;
                 }
                 _disposed = true;
             }
