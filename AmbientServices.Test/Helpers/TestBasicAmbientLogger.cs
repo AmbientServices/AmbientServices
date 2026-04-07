@@ -2,7 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
@@ -242,8 +242,18 @@ public class TestBasicAmbientLogger
     [TestMethod]
     public void EnsureLinuxLocalShareFolderExists_UsesSharePathAndCreatesDirectory()
     {
-        string path = AmbientFileLogger.EnsureLinuxLocalShareFolderExists("covUser");
-        Assert.AreEqual("/home/covUser/.local/share", path);
+        string userName = Environment.UserName;
+        string expectedSharePath = $"/home/{userName}/.local/share";
+        Assert.AreEqual(expectedSharePath, AmbientFileLogger.LinuxLocalShareDataFolderPath(userName));
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            return;
+        }
+
+        string path = AmbientFileLogger.EnsureLinuxLocalShareFolderExists(userName);
+        Assert.AreEqual(expectedSharePath, path);
+        Assert.IsTrue(Directory.Exists(path));
     }
 
     [TestMethod]
