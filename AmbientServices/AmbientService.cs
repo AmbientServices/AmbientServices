@@ -5,483 +5,476 @@ using System.Threading;
 using System.Diagnostics.CodeAnalysis;
 #endif
 
-namespace AmbientServices
+namespace AmbientServices;
+
+/// <summary>
+/// A class that contains information about an initialization error.
+/// </summary>
+/// <param name="exception">The <see cref="Exception"/> that caused the initialization error.</param>
+public class InitializationErrorEventArgs(Exception exception) : EventArgs 
 {
     /// <summary>
-    /// A class that contains information about an initialization error.
+    /// The <see cref="Exception"/> that caused the initialization error.
     /// </summary>
-    /// <param name="exception">The <see cref="Exception"/> that caused the initialization error.</param>
-    public class InitializationErrorEventArgs(Exception exception) : EventArgs 
-    {
-        /// <summary>
-        /// The <see cref="Exception"/> that caused the initialization error.
-        /// </summary>
-        public Exception Exception { get; } = exception;
-    }
+    public Exception Exception { get; } = exception;
+}
+/// <summary>
+/// A static class that provides access to <see cref="AmbientService{T}"/>s.
+/// </summary>
+public static class Ambient
+{
     /// <summary>
-    /// A static class that provides access to <see cref="AmbientService{T}"/>s.
+    /// Gets the <see cref="AmbientService{T}"/> for the indicated type.
     /// </summary>
-    public static class Ambient
-    {
-        /// <summary>
-        /// Gets the <see cref="AmbientService{T}"/> for the indicated type.
-        /// </summary>
-        /// <typeparam name="T">The type of service that is needed.</typeparam>
-        /// <returns>The <see cref="AmbientService{T}"/> instance.  This should never be null.</returns>
-        public static AmbientService<T> GetService<
-#if NETCOREAPP3_0_OR_GREATER
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
-#endif
-            T>() where T : class
-        {
-            return AmbientService<T>.Instance;
-        }
-        /// <summary>
-        /// Gets the <see cref="AmbientService{T}"/> for the indicated type.
-        /// </summary>
-        /// <typeparam name="T">The type of service that is needed.</typeparam>
-        /// <param name="service">[OUT] Receives the ambient service.</param>
-        /// <returns>The <see cref="AmbientService{T}"/> instance.  This should never be null.</returns>
-        public static AmbientService<T> GetService<
-#if NETCOREAPP3_0_OR_GREATER
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
-#endif
-            T>(out AmbientService<T> service) where T : class
-        {
-            service = AmbientService<T>.Instance;
-            return service;
-        }
-        /// <summary>
-        /// An event that will notify subscribers when a service initialization error occurs.
-        /// The notification may happen on any arbitrary thread.
-        /// Thread-safe.
-        /// </summary>
-        public static event EventHandler<InitializationErrorEventArgs>? InitializationError;
-
-        internal static void NotifyInitializationError(Exception ex)
-        {
-            InitializationError?.Invoke(null, new InitializationErrorEventArgs(ex));
-        }
-    }
-    /// <summary>
-    /// A generic class that provides access to an ambient service implementation.
-    /// Must be accessed through <see cref="Ambient.GetService{T}()"/> or <see cref="Ambient.GetService{T}(out AmbientService{T})"/>.
-    /// </summary>
-    /// <remarks>
-    /// <para>Ambient state lives in static fields on <see cref="AmbientService{T}"/> in each loaded copy of this assembly. For a single shared ambient domain per <see cref="AppDomain"/>
-    /// (or a single default assembly load context on .NET Core+), the library must be loaded only once; additional custom assembly load contexts
-    /// that need to share overrides with the host should resolve this assembly from the default context (or another agreed single context). Otherwise scoped and global state are isolated per load, which is easy to mistake for <see cref="ExecutionContext"/> corruption.</para>
-    /// <para>Note that accessing an ambient service usually requires two dereferences, one to check for a local override, and one to get the global service.
-    /// Attempting to optimize this to only do one access by caching the appropriate service in an AsyncLocal as it changes doesn't appear to be possible
-    /// because this would still require checking the AsyncLocal to see if it is initialized, so conditional and dereferencing costs would be the same,
-    /// but such a system would require allocating an AsyncLocal object for every call context, which greatly degrades AsyncLocal performance and has higher memory requirements.
-    /// In addition, such a system would require either allocating another AsyncLocal refernce-type object for any local overrides in subcontexts, or 
-    /// requires keeping track of the old local value to restore at the end of the subcontext override.  
-    /// Using an implementation where a single AsyncLocal for the local override is checked on every access makes subcontext overrides naturally rollback as the stack is unwound.</para>
-    /// </remarks>
-    /// <typeparam name="T">The interface for the service.</typeparam>
-    public class AmbientService<
+    /// <typeparam name="T">The type of service that is needed.</typeparam>
+    /// <returns>The <see cref="AmbientService{T}"/> instance.  This should never be null.</returns>
+    public static AmbientService<T> GetService<
 #if NETCOREAPP3_0_OR_GREATER
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
 #endif
-        T> where T : class
+        T>() where T : class
     {
-        /// <summary>
-        /// Gets the <see cref="AmbientService{T}"/> for the service indicated by the type.
-        /// </summary>
-        internal static AmbientService<T> Instance { get; } = new();
-        /// <summary>
-        /// The singleton call-context-local service reference (non-singleton reference can be used for unit testing).
-        /// </summary>
-        private readonly AsyncLocal<LocalServiceReference<T>?> _localReference = new();
-
-
-        // this is only internal instead of private so that we can diagnose issues in test cases
-        internal GlobalServiceReference<T> GlobalReference { get; } = new();
-
-        /// <summary>
-        /// Gets the <see cref="LocalServiceReference{T}"/> for the service indicated by the type.
-        /// This property must be used internally in order to ensure local initialization of the <see cref="AsyncLocal{T}"/>.
-        /// </summary>
-        /// <returns>The <see cref="LocalServiceReference{T}"/> instance.</returns>
-        internal LocalServiceReference<T> LocalReference
-        {
-            get
-            {
-                LocalServiceReference<T>? ret = _localReference.Value;
-                ret ??= _localReference.Value = new LocalServiceReference<T>();    // initialize if needed
-                return ret;
-            }
-        }
-
-        /// <summary>
-        /// Overrides the service implementation locally and temporarily.
-        /// </summary>
-        /// <remarks>
-        /// <para>This override applies to the <see cref="AmbientService{T}"/> singleton for the loaded copy of this assembly. Dynamically loaded code in another assembly load context that loaded a different copy of this assembly uses separate singletons and <see cref="AsyncLocal{T}"/> storage, so the same logical call context will not see this override unless that load context shares the same physical assembly load (see class remarks).</para>
-        /// </remarks>
-        /// <param name="newLocalServiceImplementation">The new local service implementation to use until the returned object is disposed.  If null, temporarily removes the ambient service in this call context.</param>
-        /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the local service implementation to what it was before this call.</returns>
-        public IDisposable ScopedLocalOverride(T? newLocalServiceImplementation)
-        {
-            return new ScopedLocalServiceOverride<T>(newLocalServiceImplementation);
-        }
-
-        /// <summary>
-        /// Suppresses both the global and local implementations temporarily, optionally replacing everything with a specified implementation.
-        /// This can be useful in cases where you're calling across assembly load contexts into a partially-trusted assembly that shares ambient services by default,
-        /// but that you want to prevent from accessing specific ambient services.
-        /// </summary>
-        /// <param name="temporaryGlobalServiceImplementation">An optional implementation to use as the global implementation until the returned instance is disposed.</param>
-        /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the global and local service implementations to what they were before this call.</returns>
-        public IDisposable ScopedGlobalOverride(T? temporaryGlobalServiceImplementation = null)
-        {
-            return new ScopedGlobalServiceOverride<T>(temporaryGlobalServiceImplementation);
-        }
-
-        internal AmbientService()
-        {
-        }
-        /// <summary>
-        /// Gets or sets the global service implementation, or null if there is no implementation or it has been suppressed.
-        /// If set to null, suppresses the global service.
-        /// When setting the service, overwrites any previous implementation and raises the <see cref="GlobalChanged"/> event either on this thread or another thread asynchronously.
-        /// Thread-safe.
-        /// </summary>
-        public T? Global
-        {
-            get
-            {
-                return GlobalReference.Service;
-            }
-            set
-            {
-                GlobalReference.Service = value;
-            }
-        }
-        /// <summary>
-        /// Gets or sets the call-context-local override implementation for the service, or null if there is no override implementation.
-        /// If set to null, reverts to the global service implementation and begins watching changes to that.
-        /// Otherwise sets to the specified implementation.
-        /// Thread-safe.
-        /// </summary>
-        public T? Override
-        {
-            get
-            {
-                return LocalReference.RawOverride as T;
-            }
-            set
-            {
-                LocalReference.RawOverride = value;
-            }
-        }
-        /// <summary>
-        /// Gets or sets the call-context-local service impelementation.
-        /// If set to null, suppresses any local or global service (and begins ignoring changes to the global service).
-        /// Otherwise sets the local override to the specified implementation.
-        /// Thread-safe.
-        /// </summary>
-        public T? Local
-        {
-            get
-            {
-                return (LocalReference.RawOverride ?? GlobalReference.Service) as T;
-            }
-            set
-            {
-                LocalReference.Service = value;
-            }
-        }
-        /// <summary>
-        /// An event that will notify subscribers when a global service implementation is changed.  
-        /// The notification may happen on any arbitrary thread.
-        /// Thread-safe.
-        /// </summary>
-        /// <remarks>
-        /// In order to avoid memory leaks, most subscribers will want to subscribe a static method or use the weak event listener pattern when subscribing to this event, 
-        /// because this instance lives forever.
-        /// Because the event might be raised simultaneously on other threads or call contexts (due to multiple changes happening at the same time), and
-        /// the fact that each notification may proceed at a different pace, notifications may appear to come in a different order than the changes actually occurred.
-        /// As a result, subscribers should query the latest value if needed when they receive the event notification.
-        /// This way if multiple changes happen, they will always end up with the latest value.
-        /// Subscribers must take care to avoid race conditions that may be caused by such out-of-order notifications.
-        /// </remarks>
-        public event EventHandler<EventArgs> GlobalChanged
-        {
-            add
-            {
-                GlobalReference.ServiceChanged += value;
-            }
-            remove
-            {
-                GlobalReference.ServiceChanged -= value;
-            }
-        }
+        return AmbientService<T>.Instance;
     }
     /// <summary>
-    /// A scoping class that overrides the global service implementation with a specified local one during its scope.
-    /// Note that call context variables can sometimes survive returning from a function and calling into another function, 
-    /// so it is important to reset a local override before returning from the function where the override is used.
-    /// As a result, depending on how contexts are reused, restoring the original may be needed.
-    /// For example, in unit tests, the same call context is used for multiple unit tests, so any overrides need
-    /// to be undone when the test is complete just in case another test subsequently runs using the same call context.
+    /// Gets the <see cref="AmbientService{T}"/> for the indicated type.
     /// </summary>
-    /// <typeparam name="T">The service interface type.</typeparam>
-    public sealed class ScopedLocalServiceOverride<
+    /// <typeparam name="T">The type of service that is needed.</typeparam>
+    /// <param name="service">[OUT] Receives the ambient service.</param>
+    /// <returns>The <see cref="AmbientService{T}"/> instance.  This should never be null.</returns>
+    public static AmbientService<T> GetService<
 #if NETCOREAPP3_0_OR_GREATER
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
 #endif
-        T> : IDisposable where T : class
+        T>(out AmbientService<T> service) where T : class
     {
-        private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
-
-        private readonly object? _oldRawOverride;
-        /// <summary>
-        /// Gets the old local override in case it is needed by the overriding implementation.  (Mostly for debugging).
-        /// </summary>
-        public T? OldOverride { get; }
-        /// <summary>
-        /// Gets the old global implementation in case it is needed by the overriding implementation.  (Mostly for debugging).
-        /// </summary>
-        public T? OldGlobal { get; }
-
-        /// <summary>
-        /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
-        /// </summary>
-        /// <param name="temporaryLocalService">The service to temporarily use in this call context.</param>
-        public ScopedLocalServiceOverride(T? temporaryLocalService)
-        {
-            _oldRawOverride = _Reference.LocalReference.RawOverride;
-            OldGlobal = _Reference.Global;
-            OldOverride = _Reference.Override;
-            _Reference.Local = temporaryLocalService;
-        }
-
-        #region IDisposable Support
-        private bool _disposed; // To detect redundant calls
-
-        private void Dispose(bool disposing)
-        {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    _Reference.LocalReference.RawOverride = _oldRawOverride;
-                }
-                _disposed = true;
-            }
-        }
-        /// <summary>
-        /// Disposes of the instance.
-        /// </summary>
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-        }
-        #endregion
+        service = AmbientService<T>.Instance;
+        return service;
     }
     /// <summary>
-    /// A scoping class that overrides both the global and local service implementation with a specified global one during its scope.
+    /// An event that will notify subscribers when a service initialization error occurs.
+    /// The notification may happen on any arbitrary thread.
+    /// Thread-safe.
     /// </summary>
-    /// <typeparam name="T">The service interface type.</typeparam>
-    public sealed class ScopedGlobalServiceOverride<
-#if NETCOREAPP3_0_OR_GREATER
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
-#endif
-        T> : IDisposable where T : class
+    public static event EventHandler<InitializationErrorEventArgs>? InitializationError;
+
+    internal static void NotifyInitializationError(Exception ex)
     {
-        private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
-
-        private readonly object? _oldRawOverride;
-        /// <summary>
-        /// Gets the old local override in case it is needed by the overriding implementation.  (Mostly for debugging).
-        /// </summary>
-        public T? OldOverride { get; }
-        /// <summary>
-        /// Gets the old global implementation in case it is needed by the overriding implementation.  (Mostly for debugging).
-        /// </summary>
-        public T? OldGlobal { get; }
-        /// <summary>
-        /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
-        /// </summary>
-        /// <param name="temporaryGlobalService">The optional service to temporarily use in this call context.</param>
-        public ScopedGlobalServiceOverride(T? temporaryGlobalService = null)
-        {
-            _oldRawOverride = _Reference.LocalReference.RawOverride;
-            OldGlobal = _Reference.Global;
-            OldOverride = _Reference.Override;
-            _Reference.Global = temporaryGlobalService;
-        }
-
-        #region IDisposable Support
-        private bool _disposed; // To detect redundant calls
-
-        private void Dispose(bool disposing)
-        {
-            if (!_disposed)
-            {
-                if (disposing)
-                {
-                    _Reference.Global = OldGlobal;
-                    _Reference.LocalReference.RawOverride = _oldRawOverride;
-                }
-                _disposed = true;
-            }
-        }
-        /// <summary>
-        /// Disposes of the instance.
-        /// </summary>
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
-        }
-        #endregion
+        InitializationError?.Invoke(null, new InitializationErrorEventArgs(ex));
     }
-
-    /// <summary>
-    /// A generic class used to ensure that only one instance of the default service implementation gets created.
-    /// </summary>
-    /// <typeparam name="T">The concrete type of the service.</typeparam>
-    internal class DefaultServiceImplementation<
+}
+/// <summary>
+/// A generic class that provides access to an ambient service implementation.
+/// Must be accessed through <see cref="Ambient.GetService{T}()"/> or <see cref="Ambient.GetService{T}(out AmbientService{T})"/>.
+/// </summary>
+/// <remarks>
+/// <para>Ambient state lives in static fields on <see cref="AmbientService{T}"/> in each loaded copy of this assembly. For a single shared ambient domain per <see cref="AppDomain"/>
+/// (or a single default assembly load context on .NET Core+), the library must be loaded only once; additional custom assembly load contexts
+/// that need to share overrides with the host should resolve this assembly from the default context (or another agreed single context). Otherwise scoped and global state are isolated per load, which is easy to mistake for <see cref="ExecutionContext"/> corruption.</para>
+/// <para>Resolving an ambient implementation usually checks the call-context local slot first, then the global implementation.</para>
+/// <para>The local slot is an <see cref="System.Threading.AsyncLocal{T}"/> holding <c>object?</c>: <see langword="null"/> (follow global), a service instance, or an internal sentinel value when <see cref="Local"/> needs to suppress the global instance.
+/// Assignments to the local slot participate in <see cref="System.Threading.ExecutionContext"/> copy-on-write, so nested asynchronous work that sets its own local value does not share one mutable holder with ancestor contexts.</para>
+/// </remarks>
+/// <typeparam name="T">The interface for the service.</typeparam>
+public class AmbientService<
 #if NETCOREAPP3_0_OR_GREATER
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
-#endif
-        T> where T : class
-    {
-        private static readonly T _ImplementationSingleton = CreateInstance();
-        private static T CreateInstance()
-        {
-            ConstructorInfo ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)
-                ?? throw new InvalidOperationException($"Classes with [DefaultAmbientService] attributes applied type must have a default constructor.  {typeof(T).Name} does not have a default constructor!");
-            return (T)ci.Invoke([]);
-        }
-        public static T GetImplementation() { return _ImplementationSingleton; }
-    }
-    /// <summary>
-    /// A class that manages a global service reference.
-    /// </summary>
-    /// <typeparam name="T">The interface type for the service being managed.</typeparam>
-    internal class GlobalServiceReference<
-#if NETCOREAPP3_0_OR_GREATER
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
 #endif
     T> where T : class
+{
+    /// <summary>
+    /// Gets the <see cref="AmbientService{T}"/> for the service indicated by the type.
+    /// </summary>
+    internal static AmbientService<T> Instance { get; } = new();
+    /// <summary>
+    /// The singleton call-context-local service reference (non-singleton AmbientService&lt;T&gt; can be used for unit testing).
+    /// </summary>
+    private readonly AsyncLocal<object?> _localReference = new();
+
+    /// <summary>
+    /// An object whose instance is used to indicate that the global implementation has been not overridden with a local instance, but rather suppressed so that it appears to be null.
+    /// </summary>
+    internal static readonly object SuppressedImplementation = new();
+
+    /// <summary>
+    /// Gets the raw local reference, which may be <see cref="SuppressedImplementation"/>.
+    /// </summary>
+    internal object? RawLocalOverride => _localReference.Value;
+    /// <summary>
+    /// Sets the raw local override implementation.
+    /// Thread-safe without caller synchronization: values are stored in <see cref="AsyncLocal{T}"/> and follow <see cref="ExecutionContext"/> flow (including thread hops when the context is flowed).
+    /// </summary>
+    /// <param name="override">The new local service implementation to use, <see cref="SuppressedImplementation"/> to suppress the global implementation, or null to revert to the global implementation.</param>
+    internal void SetRawLocalOverride(object? @override)
     {
-        /// <summary>
-        /// A generic object whose instance is used to indicate that the default service implementation has been suppressed.
-        /// </summary>
-        private static readonly object SuppressedService = new();
-
-        /// <summary>
-        /// A reference to the current service implementation.  Null if not yet initialized.  <see cref="SuppressedService"/> if the service has been explicitly suppressed.
-        /// </summary>
-        private object? _service;
-
-        internal GlobalServiceReference()
-        {
-            _service = DefaultImplementation();
-        }
-        private static T? DefaultImplementation()
-        {
-            try
-            {
-                Type? impType = DefaultAmbientServices.TryFind(typeof(T));
-                if (impType == null) return null;       // there is no default implementation (yet)
-                Type type = typeof(DefaultServiceImplementation<>).MakeGenericType(impType);
-                MethodInfo mi = type.GetMethod(nameof(DefaultServiceImplementation<T>.GetImplementation))!; // DefaultServiceImplementation<T> has a public GetImplementation method, so this should always succeed
-                T implementation = (T)mi.Invoke(null, [])!;  // DefaultServiceImplementation<T> returns a non-null T
-                return implementation;
-            }
-            catch (Exception ex)
-            {
-                string traceMessage = $"Error constructing default {typeof(T).FullName}: {ex}!";
-                System.Diagnostics.Trace.WriteLine(traceMessage);
-                Console.WriteLine(traceMessage);
-                Ambient.NotifyInitializationError(ex);
-            }
-            return null;
-        }
-        private T? LateAssignedDefaultServiceImplementation()
-        {
-            T? newDefaultImplementation = DefaultImplementation();
-            // still no default implementation registered?  try again later
-            if (newDefaultImplementation == null) return null;
-            // we should almost always get a null back here below, but it's theoretically possible if two attempts to retrieve the implementation happen at the same time, but even in this case, the only way we would get back instances of different types would be if the default ambient service changed, which shouldn't be possible given the current implementation
-            // as a result, the non-null case below is unlikely to get covered by tests
-            return (Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) is not T oldDefaultImplementation)
-                ? newDefaultImplementation
-                : oldDefaultImplementation;
-        }
-
-        /// <summary>
-        /// Gets or sets the service.
-        /// If set to null, suppresses the default service (so that the getter returns null).
-        /// When setting the service, overwrites any previous service and raises the <see cref="ServiceChanged"/> event.
-        /// Thread-safe.
-        /// </summary>
-        public T? Service
-        {
-            get
-            {
-                return (_service ?? LateAssignedDefaultServiceImplementation()) as T;
-            }
-            set
-            {
-                T? oldImplementation = Interlocked.Exchange(ref _service, value ?? SuppressedService) as T;
-                ServiceChanged?.Invoke(typeof(LocalServiceReference<T>), EventArgs.Empty);
-            }
-        }
-        /// <summary>
-        /// An event that will notify subscribers when the global service implementation is changed.  
-        /// The notification will happen on the thread and within the call context from which the change is initiated.
-        /// Thread-safe.
-        /// </summary>
-        /// <remarks>
-        /// In order to avoid memory leaks, most subscribers will want to subscribe a static method or use the weak event listener pattern when subscribing to this event, 
-        /// because the service reference lives forever.
-        /// Because the event might be raised simultaneously on other threads or call contexts (due to multiple changes happening at the same time), 
-        /// and each notification may proceed at a different pace, notifications may appear to come in a different order than the changes actually occurred.
-        /// Subscribers should query the latest value if needed when they receive the event notification.
-        /// This way if multiple changes happen, they will always end up with the latest value.
-        /// Subscribers must take care to avoid race conditions that may be caused by such out-of-order notifications.
-        /// </remarks>
-        public event EventHandler<EventArgs>? ServiceChanged;
+        _localReference.Value = @override;
+    }
+#if NEEDED
+    /// <summary>
+    /// Sets the context-local service  implementation.
+    /// Thread-safe without caller synchronization: values are stored in <see cref="AsyncLocal{T}"/> and follow <see cref="ExecutionContext"/> flow (including thread hops when the context is flowed).
+    /// </summary>
+    /// <param name="newLocalService">The new local service implementation to use.</param>
+    internal void SetLocalOverride(T newLocalService)
+    {
+        _localReference.Value = newLocalService;
+    }
+#endif
+    /// <summary>
+    /// Clears the local override of the global implementation.
+    /// Thread-safe without caller synchronization: values are stored in <see cref="AsyncLocal{T}"/> and follow <see cref="ExecutionContext"/> flow (including thread hops when the context is flowed).
+    /// </summary>
+    internal void ClearLocalOverride()
+    {
+        _localReference.Value = null;
     }
     /// <summary>
-    /// A class that manages a call-context-local service reference.
+    /// Sets the local override of the global implementation in such a way that the global implementation is suppressed (so the "Local" value will be null, even if there is a global implementation).
+    /// Thread-safe without caller synchronization: values are stored in <see cref="AsyncLocal{T}"/> and follow <see cref="ExecutionContext"/> flow (including thread hops when the context is flowed).
     /// </summary>
-    /// <typeparam name="T">The interface type for the service being managed.</typeparam>
-    internal class LocalServiceReference<T> where T : class
+    internal void SuppressGlobalUsingLocalOverride()
     {
-        /// <summary>
-        /// An object whose instance is used to indicate that the default implementation has been suppressed.
-        /// </summary>
-        internal static readonly object SuppressedImplementation = new();
+        _localReference.Value = SuppressedImplementation;
+    }
 
-        internal LocalServiceReference()
+    // this is only internal instead of private so that we can diagnose issues in test cases
+    internal GlobalServiceReference<T> GlobalReference { get; } = new();
+
+    /// <summary>
+    /// Overrides the service implementation locally and temporarily.
+    /// </summary>
+    /// <remarks>
+    /// <para>This override applies to the <see cref="AmbientService{T}"/> singleton for the loaded copy of this assembly. Dynamically loaded code in another assembly load context that loaded a different copy of this assembly uses separate singletons and <see cref="AsyncLocal{T}"/> storage, so the same logical call context will not see this override unless that load context shares the same physical assembly load (see class remarks).</para>
+    /// </remarks>
+    /// <param name="newLocalServiceImplementation">The new local service implementation to use until the returned object is disposed.  If null, temporarily removes the ambient service in this call context.</param>
+    /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the local service implementation to what it was before this call.</returns>
+    public IDisposable ScopedLocalOverride(T? newLocalServiceImplementation)
+    {
+        return new ScopedLocalServiceOverride<T>(newLocalServiceImplementation);
+    }
+
+    /// <summary>
+    /// Suppresses both the global and local implementations temporarily, optionally replacing everything with a specified implementation.
+    /// This can be useful in cases where you're calling across assembly load contexts into a partially-trusted assembly that shares ambient services by default,
+    /// but that you want to prevent from accessing specific ambient services.
+    /// </summary>
+    /// <param name="temporaryGlobalServiceImplementation">An optional implementation to use as the global implementation until the returned instance is disposed.</param>
+    /// <returns>An <see cref="IDisposable"/> instance that, when disposed, will return the global and local service implementations to what they were before this call.</returns>
+    public IDisposable ScopedGlobalOverride(T? temporaryGlobalServiceImplementation = null)
+    {
+        return new ScopedGlobalServiceOverride<T>(temporaryGlobalServiceImplementation);
+    }
+
+    internal AmbientService()
+    {
+    }
+    /// <summary>
+    /// Gets or sets the global service implementation, or null if there is no implementation or it has been suppressed.
+    /// If set to null, suppresses the global service.
+    /// When setting the service, overwrites any previous implementation and raises the <see cref="GlobalChanged"/> event either on this thread or another thread asynchronously.
+    /// Thread-safe.
+    /// </summary>
+    public T? Global
+    {
+        get
         {
-            RawOverride = null;
+            return GlobalReference.Service;
         }
-        internal object? RawOverride { get; set; }
-        /// <summary>
-        /// Sets the implementation.
-        /// If set to null, suppresses the default implementation (so that the getter returns null).
-        /// Thread-safe.
-        /// </summary>
-        public T? Service
+        set
         {
-            // this isn't currently needed, but if it is, just uncomment this code
-            //get
-            //{
-            //    return _localOverride as T;
-            //}
-            set
-            {
-                RawOverride = value ?? SuppressedImplementation;
-            }
+            GlobalReference.Service = value;
         }
     }
+    /// <summary>
+    /// Gets or sets the call-context-local override implementation for the service, or null if there is no override implementation.
+    /// If set to null, reverts to the global service implementation and begins watching changes to that.
+    /// Otherwise sets to the specified implementation.
+    /// Thread-safe without caller synchronization: local values use <see cref="AsyncLocal{T}"/> and <see cref="ExecutionContext"/> flow (see also <see cref="SetRawLocalOverride"/>).
+    /// </summary>
+    public T? Override
+    {
+        get
+        {
+            return _localReference.Value as T;
+        }
+        set
+        {
+            if (value == null) ClearLocalOverride();
+            else _localReference.Value = value;
+        }
+    }
+    /// <summary>
+    /// Gets or sets the call-context-local service impelementation.
+    /// If set to null, suppresses any local or global service (and begins ignoring changes to the global service).
+    /// Otherwise sets the local override to the specified implementation.
+    /// Thread-safe without caller synchronization: local values use <see cref="AsyncLocal{T}"/> and <see cref="ExecutionContext"/> flow (see also <see cref="SetRawLocalOverride"/>).
+    /// </summary>
+    public T? Local
+    {
+        get
+        {
+            return (_localReference.Value ?? GlobalReference.Service) as T;
+        }
+        set
+        {
+            if (value == null) SuppressGlobalUsingLocalOverride();
+            else _localReference.Value = value;
+        }
+    }
+    /// <summary>
+    /// An event that will notify subscribers when a global service implementation is changed.  
+    /// The notification may happen on any arbitrary thread.
+    /// Thread-safe.
+    /// </summary>
+    /// <remarks>
+    /// In order to avoid memory leaks, most subscribers will want to subscribe a static method or use the weak event listener pattern when subscribing to this event, 
+    /// because this instance lives forever.
+    /// Because the event might be raised simultaneously on other threads or call contexts (due to multiple changes happening at the same time), and
+    /// the fact that each notification may proceed at a different pace, notifications may appear to come in a different order than the changes actually occurred.
+    /// As a result, subscribers should query the latest value if needed when they receive the event notification.
+    /// This way if multiple changes happen, they will always end up with the latest value.
+    /// Subscribers must take care to avoid race conditions that may be caused by such out-of-order notifications.
+    /// </remarks>
+    public event EventHandler<EventArgs> GlobalChanged
+    {
+        add
+        {
+            GlobalReference.ServiceChanged += value;
+        }
+        remove
+        {
+            GlobalReference.ServiceChanged -= value;
+        }
+    }
+}
+/// <summary>
+/// A scoping class that overrides the global service implementation with a specified local one during its scope.
+/// Note that call context variables can sometimes survive returning from a function and calling into another function, 
+/// so it is important to reset a local override before returning from the function where the override is used.
+/// As a result, depending on how contexts are reused, restoring the original may be needed.
+/// For example, in unit tests, the same call context is used for multiple unit tests, so any overrides need
+/// to be undone when the test is complete just in case another test subsequently runs using the same call context.
+/// </summary>
+/// <typeparam name="T">The service interface type.</typeparam>
+public sealed class ScopedLocalServiceOverride<
+#if NETCOREAPP3_0_OR_GREATER
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+    T> : IDisposable where T : class
+{
+    private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
+
+    private readonly object? _oldRawOverride;
+    /// <summary>
+    /// Gets the old local override in case it is needed by the overriding implementation.  (Mostly for debugging).
+    /// </summary>
+    public T? OldOverride { get; }
+    /// <summary>
+    /// Gets the old global implementation in case it is needed by the overriding implementation.  (Mostly for debugging).
+    /// </summary>
+    public T? OldGlobal { get; }
+
+    /// <summary>
+    /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
+    /// </summary>
+    /// <param name="temporaryLocalService">The service to temporarily use in this call context.</param>
+    public ScopedLocalServiceOverride(T? temporaryLocalService)
+    {
+        _oldRawOverride = _Reference.RawLocalOverride;
+        OldGlobal = _Reference.Global;
+        OldOverride = _Reference.Override;
+        _Reference.Local = temporaryLocalService;
+    }
+
+    #region IDisposable Support
+    private bool _disposed; // To detect redundant calls
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _Reference.SetRawLocalOverride(_oldRawOverride);
+            }
+            _disposed = true;
+        }
+    }
+    /// <summary>
+    /// Disposes of the instance.
+    /// </summary>
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        Dispose(true);
+    }
+    #endregion
+}
+/// <summary>
+/// A scoping class that overrides both the global and local service implementation with a specified global one during its scope.
+/// </summary>
+/// <typeparam name="T">The service interface type.</typeparam>
+public sealed class ScopedGlobalServiceOverride<
+#if NETCOREAPP3_0_OR_GREATER
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+    T> : IDisposable where T : class
+{
+    private static readonly AmbientService<T> _Reference = Ambient.GetService<T>();
+
+    private readonly object? _oldRawOverride;
+    /// <summary>
+    /// Gets the old local override in case it is needed by the overriding implementation.  (Mostly for debugging).
+    /// </summary>
+    public T? OldOverride { get; }
+    /// <summary>
+    /// Gets the old global implementation in case it is needed by the overriding implementation.  (Mostly for debugging).
+    /// </summary>
+    public T? OldGlobal { get; }
+    /// <summary>
+    /// Constructs a scoped override that changes the service implementation for this call context until this instance is disposed.
+    /// </summary>
+    /// <param name="temporaryGlobalService">The optional service to temporarily use in this call context.</param>
+    public ScopedGlobalServiceOverride(T? temporaryGlobalService = null)
+    {
+        _oldRawOverride = _Reference.RawLocalOverride;
+        OldGlobal = _Reference.Global;
+        OldOverride = _Reference.Override;
+        _Reference.Global = temporaryGlobalService;
+    }
+
+    #region IDisposable Support
+    private bool _disposed; // To detect redundant calls
+
+    private void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                _Reference.Global = OldGlobal;
+                _Reference.SetRawLocalOverride(_oldRawOverride);
+            }
+            _disposed = true;
+        }
+    }
+    /// <summary>
+    /// Disposes of the instance.
+    /// </summary>
+    public void Dispose()
+    {
+        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        Dispose(true);
+    }
+    #endregion
+}
+
+/// <summary>
+/// A generic class used to ensure that only one instance of the default service implementation gets created.
+/// </summary>
+/// <typeparam name="T">The concrete type of the service.</typeparam>
+internal class DefaultServiceImplementation<
+#if NETCOREAPP3_0_OR_GREATER
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+    T> where T : class
+{
+    private static readonly T _ImplementationSingleton = CreateInstance();
+    private static T CreateInstance()
+    {
+        ConstructorInfo ci = typeof(T).GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)
+            ?? throw new InvalidOperationException($"Classes with [DefaultAmbientService] attributes applied type must have a default constructor.  {typeof(T).Name} does not have a default constructor!");
+        return (T)ci.Invoke([]);
+    }
+    public static T GetImplementation() { return _ImplementationSingleton; }
+}
+/// <summary>
+/// A class that manages a global service reference.
+/// </summary>
+/// <typeparam name="T">The interface type for the service being managed.</typeparam>
+internal class GlobalServiceReference<
+#if NETCOREAPP3_0_OR_GREATER
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors)]
+#endif
+T> where T : class
+{
+    /// <summary>
+    /// A generic object whose instance is used to indicate that the default service implementation has been suppressed.
+    /// </summary>
+    private static readonly object SuppressedService = new();
+
+    /// <summary>
+    /// A reference to the current service implementation.  Null if not yet initialized.  <see cref="SuppressedService"/> if the service has been explicitly suppressed.
+    /// </summary>
+    private object? _service;
+
+    internal GlobalServiceReference()
+    {
+        _service = DefaultImplementation();
+    }
+    private static T? DefaultImplementation()
+    {
+        try
+        {
+            Type? impType = DefaultAmbientServices.TryFind(typeof(T));
+            if (impType == null) return null;       // there is no default implementation (yet)
+            Type type = typeof(DefaultServiceImplementation<>).MakeGenericType(impType);
+            MethodInfo mi = type.GetMethod(nameof(DefaultServiceImplementation<T>.GetImplementation))!; // DefaultServiceImplementation<T> has a public GetImplementation method, so this should always succeed
+            T implementation = (T)mi.Invoke(null, [])!;  // DefaultServiceImplementation<T> returns a non-null T
+            return implementation;
+        }
+        catch (Exception ex)
+        {
+            string traceMessage = $"Error constructing default {typeof(T).FullName}: {ex}!";
+            System.Diagnostics.Trace.WriteLine(traceMessage);
+            Console.WriteLine(traceMessage);
+            Ambient.NotifyInitializationError(ex);
+        }
+        return null;
+    }
+    private T? LateAssignedDefaultServiceImplementation()
+    {
+        T? newDefaultImplementation = DefaultImplementation();
+        // still no default implementation registered?  try again later
+        if (newDefaultImplementation == null) return null;
+        // we should almost always get a null back here below, but it's theoretically possible if two attempts to retrieve the implementation happen at the same time, but even in this case, the only way we would get back instances of different types would be if the default ambient service changed, which shouldn't be possible given the current implementation
+        // as a result, the non-null case below is unlikely to get covered by tests
+        return (Interlocked.CompareExchange(ref _service, newDefaultImplementation, null) is not T oldDefaultImplementation)
+            ? newDefaultImplementation
+            : oldDefaultImplementation;
+    }
+
+    /// <summary>
+    /// Gets or sets the service.
+    /// If set to null, suppresses the default service (so that the getter returns null).
+    /// When setting the service, overwrites any previous service and raises the <see cref="ServiceChanged"/> event.
+    /// Thread-safe.
+    /// </summary>
+    public T? Service
+    {
+        get
+        {
+            return (_service ?? LateAssignedDefaultServiceImplementation()) as T;
+        }
+        set
+        {
+            T? oldImplementation = Interlocked.Exchange(ref _service, value ?? SuppressedService) as T;
+            ServiceChanged?.Invoke(typeof(AmbientService<T>), EventArgs.Empty);
+        }
+    }
+    /// <summary>
+    /// An event that will notify subscribers when the global service implementation is changed.  
+    /// The notification will happen on the thread and within the call context from which the change is initiated.
+    /// Thread-safe.
+    /// </summary>
+    /// <remarks>
+    /// In order to avoid memory leaks, most subscribers will want to subscribe a static method or use the weak event listener pattern when subscribing to this event, 
+    /// because the service reference lives forever.
+    /// Because the event might be raised simultaneously on other threads or call contexts (due to multiple changes happening at the same time), 
+    /// and each notification may proceed at a different pace, notifications may appear to come in a different order than the changes actually occurred.
+    /// Subscribers should query the latest value if needed when they receive the event notification.
+    /// This way if multiple changes happen, they will always end up with the latest value.
+    /// Subscribers must take care to avoid race conditions that may be caused by such out-of-order notifications.
+    /// </remarks>
+    public event EventHandler<EventArgs>? ServiceChanged;
 }

@@ -317,9 +317,9 @@ public class TestAmbientService
     }
 
     /// <summary>
-    /// When <see cref="AmbientService{T}.Local"/> is null due to local suppression, <see cref="LocalServiceReference{T}.RawOverride"/>
-    /// holds <see cref="LocalServiceReference{T}.SuppressedImplementation"/>; the scoped override dispose path must restore that
-    /// object, not <see cref="AmbientService{T}.Override"/> = null (which only clears the override to follow global).
+    /// When <see cref="AmbientService{T}.Local"/> is null due to local suppression, <see cref="AmbientService{T}.RawLocalOverride"/> is
+    /// <see cref="AmbientService{T}.SuppressedImplementation"/>; the scoped override dispose path must restore that value,
+    /// not <see cref="AmbientService{T}.Override"/> = null (which only clears the override to follow global).
     /// </summary>
     [TestMethod]
     public void ScopedLocalOverride_RestoresLocalSuppression_WhenGlobalStillSet()
@@ -346,7 +346,7 @@ public class TestAmbientService
     }
 
     /// <summary>
-    /// Same <see cref="LocalServiceReference{T}.RawOverride"/> sentinel restore requirement as
+    /// Same <see cref="AmbientService{T}.RawLocalOverride"/> / suppression-sentinel restore requirement as
     /// <see cref="ScopedLocalOverride_RestoresLocalSuppression_WhenGlobalStillSet"/> for <see cref="ScopedGlobalServiceOverride{T}"/>.
     /// </summary>
     [TestMethod]
