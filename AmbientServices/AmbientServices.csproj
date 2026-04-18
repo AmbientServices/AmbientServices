@@ -13,7 +13,7 @@
     <Copyright>2020-2025</Copyright>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageOutputPath>\\192.168.13.99\Code\NuGet\</PackageOutputPath>
+<!--    <PackageOutputPath>\\192.168.13.99\Code\NuGet\</PackageOutputPath> -->
     <PackageProjectUrl>https://github.com/jamesivie/AmbientServices</PackageProjectUrl>
     <RepositoryUrl>https://github.com/jamesivie/AmbientServices</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
