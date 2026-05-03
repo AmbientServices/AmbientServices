@@ -63,7 +63,9 @@ jobs:
     - name: Sync line coverage badge for README / NuGet (raw.githubusercontent.com)
       run: |
         mkdir -p docs
-        cp coveragereport/badge_shieldsio_linecoverage_green.svg docs/line-coverage.svg
+        PERCENT=$(grep -oE '[0-9]+(\.[0-9]+)?%' coveragereport/badge_shieldsio_linecoverage_green.svg | head -1)
+        test -n "$PERCENT" || (echo "Could not read line coverage percent from ReportGenerator output." && exit 1)
+        sed "s|__PERCENT__|${PERCENT}|g" docs/line-coverage.template.svg > docs/line-coverage.svg
     - name: Commit line coverage badge if changed
       run: |
         git config user.name "github-actions[bot]"
