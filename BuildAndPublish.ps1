@@ -13,13 +13,9 @@ dotnet build -c Release
 if (!$?) { exit 1 }
 
 "`nRunning Tests with Coverage`n---------------------------" 
-# dotnet add package coverlet.collector
-# dotnet tool install -g dotnet-reportgenerator-globaltool
-dotnet test AmbientServices.Test -f net5.0 --collect:"XPlat Code Coverage" --logger:"trx;LogFileName=unit.testresults.trx"
+dotnet test AmbientServices.Test -f net5.0 --collect:"Code Coverage" --settings CodeCoverage.runsettings --logger:"trx;LogFileName=unit.testresults.trx"
 $testResult = $?
 if (!$testResult) {exit 1}
-# delete coverage from AmbientServices.Test.DelayedLoad dll (we don't care about coverage in test assemblies)
-Remove-Item -Recurse -Force AmbientServices.Test.DelayedLoad\TestResults -ErrorAction SilentlyContinue
 
 "`n`nCreating Nuget Package`n---------------------------" 
 dotnet pack -c Release

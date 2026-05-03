@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Microsoft Code Coverage collector. See https://github.com/microsoft/codecoverage/blob/main/docs/configuration.md -->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="Code Coverage" uri="datacollector://Microsoft/CodeCoverage/2.0"
+        assemblyQualifiedName="Microsoft.VisualStudio.Coverage.DynamicCoverageDataCollector, Microsoft.VisualStudio.TraceCollector, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+        <Configuration>
+          <!-- Default for VSTest is true; set false so the entry test assembly is not counted as product code. -->
+          <IncludeTestAssembly>False</IncludeTestAssembly>
+          <Format>Cobertura</Format>
+          <CodeCoverage>
+            <!-- No C++ / native projects in this solution. -->
+            <EnableStaticNativeInstrumentation>False</EnableStaticNativeInstrumentation>
+            <EnableDynamicNativeInstrumentation>False</EnableDynamicNativeInstrumentation>
+            <ModulePaths>
+              <Exclude>
+                <ModulePath>.*AmbientServices\.Test\.dll$</ModulePath>
+                <ModulePath>.*AmbientServices\.Test\.DelayedLoad\.dll$</ModulePath>
+                <ModulePath>.*AmbientServices\.Test\.AlcContract\.dll$</ModulePath>
+                <ModulePath>.*AmbientServices\.Test\.AlcPlugin\.dll$</ModulePath>
+                <ModulePath>.*AmbientServices\.Samples\.dll$</ModulePath>
+                <ModulePath>.*ReflectionTypeLoadException\.Assembly\.dll$</ModulePath>
+              </Exclude>
+            </ModulePaths>
+          </CodeCoverage>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

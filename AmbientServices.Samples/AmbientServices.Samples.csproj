@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="utf-16"?><Project Sdk="Microsoft.NET.Sdk">
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
@@ -13,18 +14,14 @@
     <SqlLegacyFrameworks>netstandard2.1;netstandard2.0</SqlLegacyFrameworks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="10.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="4.2.1" />
-    <PackageReference Include="MSTest.TestFramework" Version="4.2.1" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" Condition="!$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.7" Condition="$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" Condition="!$(SqlLegacyFrameworks.Contains('$(TargetFramework)'))" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.1.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.1.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.3" Condition="!$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.10" Condition="$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" Condition="!$(SqlLegacyFrameworks.Contains('$(TargetFramework)'))" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" Condition="$(SqlLegacyFrameworks.Contains('$(TargetFramework)'))" />
-	</ItemGroup>
+  </ItemGroup>
   <ItemGroup>
     <Compile Remove="TestResults\**" />
     <EmbeddedResource Remove="TestResults\**" />
