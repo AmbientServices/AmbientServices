@@ -73,6 +73,8 @@ jobs:
           AmbientServices/bin/Release/*.nupkg
           AmbientServices/bin/Release/*.snupkg
 
+  # Requires: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+  # If Pages is off or source is still "Deploy from a branch", create deployment returns 404.
   deploy-github-pages:
     needs: build
     runs-on: ubuntu-latest
