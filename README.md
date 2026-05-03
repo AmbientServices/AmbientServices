@@ -1,7 +1,7 @@
 # Overview
 
 [![CI](https://github.com/AmbientServices/AmbientServices/actions/workflows/Build.yml/badge.svg?branch=master&event=push)](https://github.com/AmbientServices/AmbientServices/actions/workflows/Build.yml)
-[![Line coverage](https://ambientservices.github.io/AmbientServices/badge_shieldsio_linecoverage_green.svg)](https://ambientservices.github.io/AmbientServices/)
+[![Line coverage](https://raw.githubusercontent.com/AmbientServices/AmbientServices/master/docs/line-coverage.svg)](https://ambientservices.github.io/AmbientServices/)
 
 AmbientServices is a .NET library that provides abstractions for services which are both ubiquitous and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those services.
 

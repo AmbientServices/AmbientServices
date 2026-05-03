@@ -14,8 +14,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
     - name: Setup .NET 10.0
       uses: actions/setup-dotnet@v5
       with:
@@ -56,6 +60,21 @@ jobs:
         license: ''
         customSettings: ''
         toolpath: 'reportgeneratortool'
+    - name: Sync line coverage badge for README / NuGet (raw.githubusercontent.com)
+      run: |
+        mkdir -p docs
+        cp coveragereport/badge_shieldsio_linecoverage_green.svg docs/line-coverage.svg
+    - name: Commit line coverage badge if changed
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add docs/line-coverage.svg
+        if git diff --staged --quiet; then
+          echo "Line coverage badge unchanged."
+        else
+          git commit -m "Update docs/line-coverage.svg [skip ci]"
+          git push
+        fi
     - name: Upload GitHub Pages artifact (coverage HTML + badges)
       uses: actions/upload-pages-artifact@v5
       with:
