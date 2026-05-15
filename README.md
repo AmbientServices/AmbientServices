@@ -138,49 +138,46 @@ BasicAmbientAtomicCache-MinimumItemCount: the minimum number of unexpired timed 
 ### Sample
 [//]: # (AmbientAtomicCacheSample)
 ```csharp
-namespace AmbientServices
+/// <summary>
+/// Example DTO for the atomic-cache README sample.
+/// </summary>
+public sealed class CachedReportSummary
 {
+    /// <summary>Logical report identifier.</summary>
+    public string ReportId { get; init; } = "";
+
+    /// <summary>Example field produced by an expensive computation.</summary>
+    public int LineCount { get; init; }
+}
+
+/// <summary>
+/// Demonstrates <see cref="IAmbientAtomicCache"/> for single-flight memoization: concurrent callers with the same key share one factory execution.
+/// </summary>
+public static class ReportSummaryCache
+{
+    private static IAmbientAtomicCache? Cache => Ambient.GetService<IAmbientAtomicCache>().Local;
+
     /// <summary>
-    /// Example DTO for the atomic-cache README sample.
+    /// Returns a cached <see cref="CachedReportSummary"/> for <paramref name="reportId"/>, or runs <paramref name="computeAsync"/> once to populate the cache.
     /// </summary>
-    public sealed class CachedReportSummary
+    public static async ValueTask<CachedReportSummary> GetSummaryAsync(string reportId, Func<ValueTask<CachedReportSummary>> computeAsync, CancellationToken cancel = default)
     {
-        /// <summary>Logical report identifier.</summary>
-        public string ReportId { get; init; } = "";
-
-        /// <summary>Example field produced by an expensive computation.</summary>
-        public int LineCount { get; init; }
-    }
-
-    /// <summary>
-    /// Demonstrates <see cref="IAmbientAtomicCache"/> for single-flight memoization: concurrent callers with the same key share one factory execution.
-    /// </summary>
-    public static class ReportSummaryCache
-    {
-        private static IAmbientAtomicCache? Cache => Ambient.GetService<IAmbientAtomicCache>().Local;
-
-        /// <summary>
-        /// Returns a cached <see cref="CachedReportSummary"/> for <paramref name="reportId"/>, or runs <paramref name="computeAsync"/> once to populate the cache.
-        /// </summary>
-        public static async ValueTask<CachedReportSummary> GetSummaryAsync(string reportId, Func<ValueTask<CachedReportSummary>> computeAsync, CancellationToken cancel = default)
+        IAmbientAtomicCache? cache = Cache;
+        if (cache is null)
         {
-            IAmbientAtomicCache? cache = Cache;
-            if (cache is null)
-            {
-                return await computeAsync().ConfigureAwait(false);
-            }
-
-            string key = nameof(CachedReportSummary) + "-" + reportId;
-            return await cache.GetOrAdd<CachedReportSummary>(
-                key,
-                async () =>
-                {
-                    CachedReportSummary built = await computeAsync().ConfigureAwait(false);
-                    return (built, DateTime.UtcNow.AddMinutes(30));
-                },
-                timeout: TimeSpan.FromMinutes(2),
-                cancel: cancel).ConfigureAwait(false);
+            return await computeAsync().ConfigureAwait(false);
         }
+
+        string key = nameof(CachedReportSummary) + "-" + reportId;
+        return await cache.GetOrAdd<CachedReportSummary>(
+            key,
+            async () =>
+            {
+                CachedReportSummary built = await computeAsync().ConfigureAwait(false);
+                return (built, DateTime.UtcNow.AddMinutes(30));
+            },
+            timeout: TimeSpan.FromMinutes(2),
+            cancel: cancel).ConfigureAwait(false);
     }
 }
 ```
@@ -1259,15 +1256,52 @@ In addition, it's syntactically extremely clumsy to return tuples where one or m
 Wrapping the output from the function in a `DisposeResponsibility` is not only a more visible indicator that the result needs disposal, but it will also notify callers if the instance is not disposed of properly.
 `DisposeResponsibility` will automatically look inside tuples for disposables and dispose any or all of those items as needed.
 For functions that return disposable instances where the caller is expected to dispose of the instance (as would usually be the case), switching to return a `DisposeResponsibility` instance will cause a notification if the instance is not disposed.
-That notification can come in several forms.  First, the `DisposeResponsiblity.ResponsibilityNotDisposed` event can be subscribed to notifications.
-If there are no subscribers to that event, if running under the debugger, the notification will cause an assertion failure (using System.Diagnostics.Trace).
-If not running under the debugger, both an `AmbientLogger` log message and a system diagnosticts trace message will be written.
+That notification can come in several forms.  First, the `DisposeResponsiblity.ResponsibilityNotDisposed` event can be subscribed to for immediate handling (for example `Debugger.Break()` during interactive debugging).
+If there are no subscribers to that event, an `AmbientLogger` warning is written and the leak is recorded for `DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc()` (intended for test assembly cleanup after a full GC and finalizer drain).
 The notification will include the stack trace indicating where the disposable instance was created, so that the developer can determine why the instance wasn't disposed.
 Care should be taken in the event handler for the `DisposeResponsiblity.ResponsibilityNotDisposed` event to avoid throwing exceptions, as this could cause the application to crash because it is called by the garbage collector during finalization.
 In most cases `DisposeResponsibility` instances returned from functions should be disposed of using a `using` block in the scope where the call is made, but sometimes the instances are returned higher up the stack, or stored inside another object for later disposal.
 `DisposeResponsibility` ensures that responsibility for disposing of the instance is not lost.  
 The responsibility can be transferred to another caller or scope, but won't be lost unintentionally as often is the case without it.
 Someday, it would be nice if C# incorporated this kind of explicit dispose responsibilty tracking and transfer into the language, as it could greatly improve the readability and performance, and could eliminate all numerous false positive code analysis warnings.
+
+### MSTest (VSTest / Visual Studio test explorer)
+Finalization is non-deterministic, so a forgotten `using` may not surface until a GC runs. Test hosts (including Microsoft Testing Platform) are also poor places for `Trace.Assert` in finalizers. Instead, undisposed wrappers record a diagnostic when finalized (when there is no handler on `DisposeResponsibility.ResponsibilityNotDisposed`), and you assert during **assembly cleanup** after forcing collection and waiting for finalizers (`DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc`).
+
+Add **one** `[AssemblyCleanup]` per test assembly, or merge that call into an existing cleanup method. Prefer running it **after** other teardown that must complete first (for example flushing trace or log buffers). This repository's main test assembly calls `DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly()` from `TestAmbientService.AssemblyCleanup` after `TraceBuffer.Flush`.
+
+For interactive debugging, subscribe to `DisposeResponsibility.ResponsibilityNotDisposed` (for example from `[AssemblyInitialize]`) and use `System.Diagnostics.Debugger.Break()`; do not throw from that handler.
+
+### MSTest sample
+The snippet below is generated from `AmbientServices.Samples/Samples.cs` (region `DisposeResponsibilityMstestSample`) when you build the samples project. It relies on `using Microsoft.VisualStudio.TestTools.UnitTesting;` (normally already present in MSTest projects). The same helper is exercised under `dotnet test` by `AmbientServices.Test/Helpers/TestDisposeResponsibilityMstestReadme.cs`.
+
+[//]: # (DisposeResponsibilityMstestSample)
+```csharp
+/// <summary>
+/// Optional MSTest integration for <see cref="DisposeResponsibility{T}"/>: run a full GC, wait for finalizers,
+/// then fail the run if any wrapper was finalized without disposal (and without a <see cref="DisposeResponsibility.ResponsibilityNotDisposed"/> handler).
+/// Call <see cref="AfterAllTestsInAssembly"/> once per test assembly, typically from a method marked <see cref="AssemblyCleanupAttribute"/>.
+/// </summary>
+public static class DisposeResponsibilityMstestVerification
+{
+    /// <summary>
+    /// Runs <see cref="DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc"/>. Intended for <c>[AssemblyCleanup]</c>.
+    /// </summary>
+    public static void AfterAllTestsInAssembly() =>
+        DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc();
+}
+
+/// <summary>
+/// Copy this pattern into your test assembly (one class is enough). Alternatively, call
+/// <see cref="DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly"/> from an existing <c>[AssemblyCleanup]</c> method after any other teardown you need (for example flushing logs).
+/// </summary>
+[TestClass]
+public static class DisposeResponsibilityMstestAssemblyCleanupSample
+{
+    [AssemblyCleanup]
+    public static void AssemblyCleanup() => DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly();
+}
+```
 
 ### Sample
 [//]: # (DisposeResponsibilitySample)

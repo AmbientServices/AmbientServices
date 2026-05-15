@@ -1,3 +1,4 @@
+using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Reflection;
@@ -36,6 +37,7 @@ public class TestAmbientService
     {
         System.Threading.Tasks.ValueTask t = TraceBuffer.Flush();
         t.GetAwaiter().GetResult();
+        DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly();
     }
 
     [TestMethod]

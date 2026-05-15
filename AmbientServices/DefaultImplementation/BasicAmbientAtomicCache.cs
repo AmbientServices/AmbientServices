@@ -470,12 +470,30 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
     private async ValueTask EjectIfNeeded()
     {
         int callFrequencyToEject = _callFrequencyToEject.Value;
+        if (callFrequencyToEject <= 0)
+            callFrequencyToEject = 1;
+
         int countToEject = _countToEject.Value;
-        // time to eject?
-        while ((Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
+        // One increment per cache operation (not per inner eject round): the previous loop incremented on every
+        // pressure-driven iteration which inflated the cadence counter and could spin unbounded under concurrency
+        // when queue bookkeeping lagged cache entries (ConcurrentQueue.Count is approximate) or ejection could not
+        // shrink the queues in one pass.
+        int opSerial = Interlocked.Increment(ref _expireCount);
+        bool onCadence = (opSerial % callFrequencyToEject) == 0;
+        int queueSum = _untimedQueue.Count + _timedQueue.Count;
+        bool overCapacity = queueSum > countToEject;
+        if (!onCadence && !overCapacity)
+            return;
+
+        int maxRounds = Math.Max(32, Math.Min(131072, 4 + 2 * Math.Max(queueSum, countToEject + 1)));
+        for (int round = 0; round < maxRounds; round++)
         {
             await EjectOneTimed();
             await EjectOneUntimed();
+
+            queueSum = _untimedQueue.Count + _timedQueue.Count;
+            if (queueSum <= countToEject)
+                break;
         }
     }
 

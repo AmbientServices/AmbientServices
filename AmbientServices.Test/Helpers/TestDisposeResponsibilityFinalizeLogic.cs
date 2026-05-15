@@ -1,6 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 
@@ -79,13 +78,8 @@ public class TestDisposeResponsibilityFinalizeLogic
     }
 
     [TestMethod]
-    public void FinalizeLogic_WithoutSubscribers_NonNullContained_DoesNotThrow_WhenNoDebuggerAttached()
+    public void FinalizeLogic_WithoutSubscribers_NonNullContained_DoesNotThrow()
     {
-        if (Debugger.IsAttached)
-        {
-            Assert.Inconclusive("Under the debugger, FinalizeLogic uses Trace.Assert when contained is non-null and no handlers are registered.");
-            return;
-        }
         FieldInfo field = GetResponsibilityNotDisposedBackingField();
         object? previous = field.GetValue(null);
         field.SetValue(null, null);
@@ -116,5 +110,54 @@ public class TestDisposeResponsibilityFinalizeLogic
                 return fi;
         }
         throw new InvalidOperationException("Could not find static backing field for DisposeResponsibility.ResponsibilityNotDisposed.");
+    }
+
+    [TestMethod]
+    public void AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc_ThrowsWhenLeakedAndNoHandler()
+    {
+        FieldInfo field = GetResponsibilityNotDisposedBackingField();
+        object? previous = field.GetValue(null);
+        field.SetValue(null, null);
+        try
+        {
+            LeakUndisposedDisposeResponsibility();
+            try
+            {
+                DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc();
+                Assert.Fail("Expected InvalidOperationException.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                StringAssert.Contains(ex.Message, "Undisposed DisposeResponsibility");
+            }
+        }
+        finally
+        {
+            field.SetValue(null, previous);
+        }
+    }
+
+    [TestMethod]
+    public void AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc_NoThrow_WhenDisposed()
+    {
+        FieldInfo field = GetResponsibilityNotDisposedBackingField();
+        object? previous = field.GetValue(null);
+        field.SetValue(null, null);
+        try
+        {
+            using (DisposeResponsibility<MemoryStream> dr = new(new MemoryStream())) { }
+            DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc();
+        }
+        finally
+        {
+            field.SetValue(null, previous);
+        }
+    }
+
+    private static void LeakUndisposedDisposeResponsibility()
+    {
+#pragma warning disable CA2000 // Intentional leak: finalizer must run without Dispose for this test.
+        _ = new DisposeResponsibility<MemoryStream>(new MemoryStream());
+#pragma warning restore CA2000
     }
 }

@@ -82,16 +82,20 @@ public class AmbientCancellationTokenSource : IDisposable
 
     private void ScheduleCancellation(TimeSpan timeout)
     {
-        _ambientTimer = new AmbientEventTimer(timeout);
+        AmbientEventTimer timer = new AmbientEventTimer(timeout);
+        _ambientTimer = timer;
         void handler(object? source, System.Timers.ElapsedEventArgs e)
         {
-            _ambientTimer.Elapsed -= handler;
+            // Use the captured timer: Dispose() may null _ambientTimer concurrently while SkipAhead raises Elapsed.
+            timer.Elapsed -= handler;
             _tokenSource?.Cancel();
-            _ambientTimer.Dispose();
+            timer.Dispose();
+            if (ReferenceEquals(_ambientTimer, timer))
+                _ambientTimer = null;
         }
 
-        _ambientTimer.Elapsed += handler;   // note that the handler will keep the timer and the token source alive until the event is raised, but the event is only raised once anyway, and there is no need to unsubscribe because the owner of the event is disposed when the event is triggered anyway
-        _ambientTimer.Enabled = true;
+        timer.Elapsed += handler;   // note that the handler will keep the timer and the token source alive until the event is raised, but the event is only raised once anyway, and there is no need to unsubscribe because the owner of the event is disposed when the event is triggered anyway
+        timer.Enabled = true;
     }
 
     /// <summary>

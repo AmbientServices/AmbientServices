@@ -12,6 +12,7 @@ namespace AmbientServices.Test;
 /// Tests for <see cref="IAmbientAtomicCache"/> / <see cref="BasicAmbientAtomicCache"/>.
 /// </summary>
 [TestClass]
+[DoNotParallelize]
 public sealed class TestAtomicCache
 {
     private static readonly Dictionary<string, string> TestAtomicCacheSettingsDictionary = new()
