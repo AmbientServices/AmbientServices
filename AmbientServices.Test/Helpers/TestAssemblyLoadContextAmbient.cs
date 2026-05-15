@@ -1,4 +1,3 @@
-using AmbientServices;
 using AmbientServices.TestSupport.Alc;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;

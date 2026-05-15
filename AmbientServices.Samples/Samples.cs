@@ -170,10 +170,53 @@ class UserManager
 }
 #endregion
 
+#region AmbientAtomicCacheSample
+namespace AmbientServices
+{
+    /// <summary>
+    /// Example DTO for the atomic-cache README sample.
+    /// </summary>
+    public sealed class CachedReportSummary
+    {
+        /// <summary>Logical report identifier.</summary>
+        public string ReportId { get; init; } = "";
 
+        /// <summary>Example field produced by an expensive computation.</summary>
+        public int LineCount { get; init; }
+    }
 
+    /// <summary>
+    /// Demonstrates <see cref="IAmbientAtomicCache"/> for single-flight memoization: concurrent callers with the same key share one factory execution.
+    /// </summary>
+    public static class ReportSummaryCache
+    {
+        private static IAmbientAtomicCache? Cache => Ambient.GetService<IAmbientAtomicCache>().Local;
 
+        /// <summary>
+        /// Returns a cached <see cref="CachedReportSummary"/> for <paramref name="reportId"/>, or runs <paramref name="computeAsync"/> once to populate the cache.
+        /// </summary>
+        public static async ValueTask<CachedReportSummary> GetSummaryAsync(string reportId, Func<ValueTask<CachedReportSummary>> computeAsync, CancellationToken cancel = default)
+        {
+            IAmbientAtomicCache? cache = Cache;
+            if (cache is null)
+            {
+                return await computeAsync().ConfigureAwait(false);
+            }
 
+            string key = nameof(CachedReportSummary) + "-" + reportId;
+            return await cache.GetOrAdd<CachedReportSummary>(
+                key,
+                async () =>
+                {
+                    CachedReportSummary built = await computeAsync().ConfigureAwait(false);
+                    return (built, DateTime.UtcNow.AddMinutes(30));
+                },
+                timeout: TimeSpan.FromMinutes(2),
+                cancel: cancel).ConfigureAwait(false);
+        }
+    }
+}
+#endregion
 
 #region AmbientLoggerSample
 /// <summary>

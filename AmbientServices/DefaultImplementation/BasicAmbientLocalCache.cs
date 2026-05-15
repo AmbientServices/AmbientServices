@@ -57,7 +57,7 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
             if (DisposeWhenDiscarding)
             {
                 // if the entry is disposable, dispose it after removing it
-                if (Entry is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync().ConfigureAwait(true);
+                if (Entry is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync();
                 if (Entry is IDisposable disposable) disposable.Dispose();
             }
         }
@@ -68,7 +68,7 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
             { 
                 // if the entry is disposable, dispose it after removing it
                 if (Entry is IDisposable disposable) disposable.Dispose();
-                await Task.CompletedTask.ConfigureAwait(true);
+                await Task.CompletedTask;
             }
         }
 #endif
@@ -87,18 +87,18 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
                 entry.Expiration = newExpiration;
                 _timedQueue.Enqueue(new TimedQueueEntry { Key = key, Expiration = newExpiration });
             }
-            await EjectIfNeeded().ConfigureAwait(true);
+            await EjectIfNeeded();
             // no expiration or NOT expired? return the item now
             if (!(entry.Expiration < now))
             {
                 return entry.Entry as T;
             }
             // else this item is expired so remove it from the cache
-            await EjectEntry(entry, cancel).ConfigureAwait(true);
+            await EjectEntry(entry, cancel);
         }
         else
         {
-            await EjectIfNeeded().ConfigureAwait(true);
+            await EjectIfNeeded();
         }
         return null;
     }
@@ -129,7 +129,7 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
             // else this item is expired so dispose of it as if we had put it into the cache and then it expired
             if (item is IDisposable disposable) disposable.Dispose();
         }
-        await EjectIfNeeded().ConfigureAwait(true);
+        await EjectIfNeeded();
     }
 
     private async ValueTask EjectIfNeeded()
@@ -139,8 +139,8 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
         // time to eject?
         while ((Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
         {
-            await EjectOneTimed().ConfigureAwait(true);
-            await EjectOneUntimed().ConfigureAwait(true);
+            await EjectOneTimed();
+            await EjectOneUntimed();
         }
     }
 
@@ -161,7 +161,7 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
                 if (qEntry.Expiration == entry.Expiration)
                 {
                     // remove it from the cache, even though it may not have expired yet because it's time to eject something
-                    await EjectEntry(entry, cancel).ConfigureAwait(true);
+                    await EjectEntry(entry, cancel);
                     // fall through and check to wee if the next item is already expired
                     unexpiredItemEjected = true;
                 }
@@ -204,7 +204,7 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
                 if (entry.Expiration == null)
                 {
                     // remove it from the cache
-                    await EjectEntry(entry, cancel).ConfigureAwait(true);
+                    await EjectEntry(entry, cancel);
                     // fall through and stop looping
                 }
                 else // else the item was refreshed, so we should ignore this entry and go around again to remove another entry
@@ -238,7 +238,7 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
         // race to remove the item from the cache--did we win the race?
         if (_cache.TryRemove(entry.Key, out disposeEntry))
         {
-            await disposeEntry!.Dispose().ConfigureAwait(true);  // if it was successfully removed, it can't be null
+            await disposeEntry!.Dispose();  // if it was successfully removed, it can't be null
         }
     }
 
@@ -250,7 +250,7 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
         {
             foreach (CacheEntry entry in _cache.Values)
             {
-                await EjectEntry(entry, cancel).ConfigureAwait(true);
+                await EjectEntry(entry, cancel);
             }
         }
     }

@@ -377,7 +377,7 @@ internal class TimeWindowServiceProfiler : IDisposable
                 ProcessOrSingleTimeWindowServiceProfiler? oldAccumulator = Rotate(metrics, windowPeriod, systemGroupTransform);
                 if (oldAccumulator != null)
                 {
-                    await onWindowComplete(oldAccumulator).ConfigureAwait(true);
+                    await onWindowComplete(oldAccumulator);
                 }
             };
         _timeWindowRotator.AutoReset = true;

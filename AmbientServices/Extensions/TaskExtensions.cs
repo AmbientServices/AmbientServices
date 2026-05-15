@@ -27,8 +27,8 @@ public static class TaskExtensions
     /// <returns>A <see cref="ValueTask"/> that completes when the <see cref="CancellationToken"/> get cancelled.</returns>
     public static async ValueTask AsValueTask(this CancellationToken cancellationToken)
     {
-        await cancellationToken.AsTask().ConfigureAwait(true);
-//            await Task.Delay(-1, cancellationToken).ContinueWith(_ => { }, default, TaskContinuationOptions.OnlyOnCanceled, TaskScheduler.Current).ConfigureAwait(true);
+        await cancellationToken.AsTask();
+//            await Task.Delay(-1, cancellationToken).ContinueWith(_ => { }, default, TaskContinuationOptions.OnlyOnCanceled, TaskScheduler.Current);
     }
 #else
     /// <summary>
@@ -38,7 +38,7 @@ public static class TaskExtensions
     /// <returns>A <see cref="ValueTask"/> that gets cancelled when the <see cref="CancellationToken"/> get cancelled.</returns>
     public static async ValueTask AsValueTask(this CancellationToken cancellationToken)
     {
-        await cancellationToken.AsTask().ConfigureAwait(true);
+        await cancellationToken.AsTask();
     }
 #endif
 }

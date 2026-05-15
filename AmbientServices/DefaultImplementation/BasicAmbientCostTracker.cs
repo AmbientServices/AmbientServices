@@ -337,7 +337,7 @@ internal class TimeWindowCostTracker : IDisposable
                 using ProcessOrSingleTimeWindowCostTracker? oldAccumulator = Rotate(metrics, windowPeriod);
                 if (oldAccumulator != null)
                 {
-                    await onWindowComplete(oldAccumulator).ConfigureAwait(true);
+                    await onWindowComplete(oldAccumulator);
                 }
             };
         _timeWindowRotator.AutoReset = true;

@@ -82,7 +82,7 @@ public class AmbientLocalCache
     {
         IAmbientLocalCache? cache = _explicitCache ?? _Cache.Local;
         if (cache == null) return default;
-        return await cache.Remove<T>(_cacheKeyPrefix + itemKey, cancel).ConfigureAwait(true);
+        return await cache.Remove<T>(_cacheKeyPrefix + itemKey, cancel);
     }
     /// <summary>
     /// Flushes everything from the cache.

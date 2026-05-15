@@ -108,11 +108,11 @@ public class AmbientLogSplitter : IAmbientLogger, IAmbientStructuredLogger
     {
         foreach (IAmbientLogger logger in _ambientLoggers)
         {
-            await logger.Flush(cancel).ConfigureAwait(true);
+            await logger.Flush(cancel);
         }
         foreach (IAmbientStructuredLogger structuredLogger in _ambientStructuredLoggers)
         {
-            await structuredLogger.Flush(cancel).ConfigureAwait(true);
+            await structuredLogger.Flush(cancel);
         }
     }
     /// <summary>

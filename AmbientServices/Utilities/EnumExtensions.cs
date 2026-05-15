@@ -1,40 +1,36 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace AmbientServices.Utilities
+namespace AmbientServices.Utilities;
+
+/// <summary>
+/// A static class that holds extensions to the system <see cref="Enum"/> class.
+/// </summary>
+internal static class EnumUtilities
 {
     /// <summary>
-    /// A static class that holds extensions to the system <see cref="Enum"/> class.
+    /// Returns the highest possible value for an enum.
     /// </summary>
-    internal static class EnumUtilities
+    /// <typeparam name="T">The enum to get the maximum value for.</typeparam>
+    /// <returns>The highest enum value.</returns>
+    public static T MaxEnumValue<T>() where T : Enum
     {
-        /// <summary>
-        /// Returns the highest possible value for an enum.
-        /// </summary>
-        /// <typeparam name="T">The enum to get the maximum value for.</typeparam>
-        /// <returns>The highest enum value.</returns>
-        public static T MaxEnumValue<T>() where T : Enum
-        {
-            return EnumMax<T>.Max;
-        }
+        return EnumMax<T>.Max;
     }
+}
 
-    /// <summary>
-    /// A static class that holds onto the computed max enum value.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    internal static class EnumMax<T> where T : Enum
+/// <summary>
+/// A static class that holds onto the computed max enum value.
+/// </summary>
+/// <typeparam name="T"></typeparam>
+internal static class EnumMax<T> where T : Enum
+{
+    private static T Init()
     {
-        private static T Init()
-        {
-            Array a = Enum.GetValues(typeof(T))!;   // I don't think it's possible to have a System.Enum for which Enum.GetValues returns null
-            return a.Length == 0
-                ? default!                          // apparently the compiler isn't smart enough to know that even though System.Enum is a class, any derived types are value types
-                : a.Cast<T>().Max()!;
-        }
-        public static T Max { get; } = Init();
+        Array a = Enum.GetValues(typeof(T))!;   // I don't think it's possible to have a System.Enum for which Enum.GetValues returns null
+        return a.Length == 0
+            ? default!                          // apparently the compiler isn't smart enough to know that even though System.Enum is a class, any derived types are value types
+            : a.Cast<T>().Max()!;
     }
+    public static T Max { get; } = Init();
 }

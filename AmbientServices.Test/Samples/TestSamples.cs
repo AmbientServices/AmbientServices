@@ -2,285 +2,310 @@
 using AmbientServices.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace AmbientServices.Test.Samples
+namespace AmbientServices.Test.Samples;
+
+/// <summary>
+/// A class that holds tests for sample code.
+/// </summary>
+[TestClass]
+public class TestSamples
 {
     /// <summary>
-    /// A class that holds tests for sample code.
+    /// Performs tests on the ambient call stack sample code.
     /// </summary>
-    [TestClass]
-    public class TestSamples
+    [TestMethod]
+    public void AmbientCallStack()
     {
-        /// <summary>
-        /// Performs tests on the ambient call stack sample code.
-        /// </summary>
-        [TestMethod]
-        public void AmbientCallStack()
-        {
-            CallStackTest.OuterFunc();
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public void DiskInformation()
-        {
-            string tempPath = Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
-            string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
-            if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
-            if (systemPath?[0] == '/') systemDrive = "/";
-            string systemPathRelative = systemPath!.Substring(systemDrive.Length);
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public void GetTempPathRoot()
-        {
-            string tempPath = Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public void DiskAuditorTempSetup()
-        {
-            string tempPath = Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DiskAuditor da = new(tempDrive, tempPathRelative, false);
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public void TempDiskAuditorEmulateMetadata()
-        {
-            string tempPath = Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DriveInfo _driveInfo = new(tempDrive);
-            string name = _driveInfo.Name;
-            string volumeLabel = _driveInfo.VolumeLabel;
-            string driveFormat = _driveInfo.DriveFormat;
-            DriveType driveType = _driveInfo.DriveType;
-            long availableFreeSpace = _driveInfo.AvailableFreeSpace;
-            long totalFreeBytes = _driveInfo.TotalFreeSpace;
-            long totalBytes = _driveInfo.TotalSize;
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public void TempDiskAuditorEmulateEnumerate()
-        {
-            string tempPath = Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DriveInfo _driveInfo = new(tempDrive);
-            StringBuilder sb = new();
+        CallStackTest.OuterFunc();
+    }
 
-            if (!string.IsNullOrEmpty(tempPath))
+    /// <summary>
+    /// Exercises README sample code for <see cref="IAmbientAtomicCache"/> (<c>AmbientAtomicCacheSample</c> region in <c>Samples.cs</c>).
+    /// </summary>
+    [TestMethod]
+    public async Task AmbientAtomicCacheReadmeSample()
+    {
+        int factoryCalls = 0;
+        using (new ScopedLocalServiceOverride<IAmbientAtomicCache>(new BasicAmbientAtomicCache()))
+        {
+            CachedReportSummary first = await ReportSummaryCache.GetSummaryAsync("readme-doc-test", async () =>
             {
-                StatusResultsBuilder readBuilder = new("Read");
-                try
-                {
-                    // attempt to read a file (if one exists)
-                    foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, tempPath)))
-                    {
-                        sb.Append(file);
-                    }
-                }
-                catch (Exception e)
-                {
-                    readBuilder.AddException(e);
-                }
-            }
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public async Task TempDiskAuditorEmulateWrite()
-        {
-            string tempPath = Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DriveInfo _driveInfo = new(tempDrive);
+                _ = Interlocked.Increment(ref factoryCalls);
+                await Task.Yield();
+                return new CachedReportSummary { ReportId = "readme-doc-test", LineCount = 10 };
+            });
 
-            StatusResultsBuilder writeBuilder = new("Write");
+            Assert.AreEqual(10, first.LineCount);
+            Assert.AreEqual(1, factoryCalls);
+
+            CachedReportSummary second = await ReportSummaryCache.GetSummaryAsync("readme-doc-test", async () =>
+            {
+                _ = Interlocked.Increment(ref factoryCalls);
+                return new CachedReportSummary { ReportId = "readme-doc-test", LineCount = 999 };
+            });
+
+            Assert.AreEqual(10, second.LineCount);
+            Assert.AreEqual(1, factoryCalls, "GetOrAdd should return the cached instance without re-running the factory.");
+        }
+    }
+
+    /// <summary>
+    /// Performs tests on the DiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public void DiskInformation()
+    {
+        string tempPath = Path.GetTempPath()!;
+        string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+        if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+        if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+        string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+        string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
+        string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
+        if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
+        if (systemPath?[0] == '/') systemDrive = "/";
+        string systemPathRelative = systemPath!.Substring(systemDrive.Length);
+    }
+    /// <summary>
+    /// Performs tests on the DiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public void GetTempPathRoot()
+    {
+        string tempPath = Path.GetTempPath()!;
+        string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+        if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+        if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+        string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+    }
+    /// <summary>
+    /// Performs tests on the DiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public void DiskAuditorTempSetup()
+    {
+        string tempPath = Path.GetTempPath()!;
+        string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+        if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+        if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+        string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+        DiskAuditor da = new(tempDrive, tempPathRelative, false);
+    }
+    /// <summary>
+    /// Performs tests on the DiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public void TempDiskAuditorEmulateMetadata()
+    {
+        string tempPath = Path.GetTempPath()!;
+        string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+        if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+        if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+        string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+        DriveInfo _driveInfo = new(tempDrive);
+        string name = _driveInfo.Name;
+        string volumeLabel = _driveInfo.VolumeLabel;
+        string driveFormat = _driveInfo.DriveFormat;
+        DriveType driveType = _driveInfo.DriveType;
+        long availableFreeSpace = _driveInfo.AvailableFreeSpace;
+        long totalFreeBytes = _driveInfo.TotalFreeSpace;
+        long totalBytes = _driveInfo.TotalSize;
+    }
+    /// <summary>
+    /// Performs tests on the DiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public void TempDiskAuditorEmulateEnumerate()
+    {
+        string tempPath = Path.GetTempPath()!;
+        string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+        if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+        if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+        string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+        DriveInfo _driveInfo = new(tempDrive);
+        StringBuilder sb = new();
+
+        if (!string.IsNullOrEmpty(tempPath))
+        {
+            StatusResultsBuilder readBuilder = new("Read");
             try
             {
-                // attempt to write a temporary file
-                string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
-                AmbientStopwatch s = AmbientStopwatch.StartNew();
-                using FileStream fs = new(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
-                byte[] b = new byte[1];
-                await fs.WriteAsync(b, 0, 1);
-                await fs.FlushAsync();
-                writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
-                writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
+                // attempt to read a file (if one exists)
+                foreach (string file in Directory.EnumerateFiles(Path.Combine(_driveInfo.RootDirectory.FullName, tempPath)))
+                {
+                    sb.Append(file);
+                }
             }
             catch (Exception e)
             {
-                writeBuilder.AddException(e);
-            }
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public async Task DiskAuditorTempReadWrite()
-        {
-            string tempPath = Path.GetTempPath()!;
-            string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
-            if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
-            if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
-            string tempPathRelative = tempPath!.Substring(tempDrive.Length);
-            DiskAuditor da = new(tempDrive, tempPathRelative, false);
-            StatusResultsBuilder builder = new("TempDisk");
-            await da.Audit(builder);
-            StatusAuditAlert alert = builder.WorstAlert;
-            Assert.IsNull(alert, alert?.ToString());
-        }
-        /// <summary>
-        /// Performs tests on the DiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public async Task DiskAuditorSystem()
-        {
-            string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
-            string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
-            if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
-            if (systemPath?[0] == '/') systemDrive = "/";
-            string systemPathRelative = systemPath!.Substring(systemDrive.Length);
-            DiskAuditor da = new(systemDrive, systemPath, false);
-            StatusResultsBuilder builder = new("TempDisk");
-            await da.Audit(builder);
-            StatusAuditAlert alert = builder.WorstAlert;
-            Assert.IsNull(alert, alert?.ToString());
-        }
-        private static string GetApplicationCodePath()
-        {
-            AppDomain current = AppDomain.CurrentDomain;
-            return (current.RelativeSearchPath ?? current.BaseDirectory?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
-        }
-        /// <summary>
-        /// Performs tests on the LocalDiskAuditor sample code.
-        /// </summary>
-        [TestMethod]
-        public async Task LocalDiskAuditor()
-        {
-            using LocalDiskAuditor lda = new();
-            StatusResultsBuilder builder = new(lda);
-            await lda.Audit(builder);
-            StatusAuditAlert alert = builder.WorstAlert;
-            Assert.IsNull(alert, alert?.ToString());
-        }
-        /// <summary>
-        /// Performs tests on the Status sample code.
-        /// </summary>
-        [TestMethod]
-        public async Task Status()
-        {
-            using (AmbientClock.Pause())
-            {
-                Status s = new(false);
-                using DisposeResponsibility<LocalDiskAuditor> lda = new();
-                using AmbientCancellationTokenSource cts = new(5000);
-                try
-                {
-#pragma warning disable CA2000
-                    lda.AssumeResponsibility(new LocalDiskAuditor());
-#pragma warning restore CA2000
-                    s.AddCheckerOrAuditor(lda.Contained);
-                    await s.Start(cts.Token);
-                    // run all the tests (just the one here) right now
-                    await s.RefreshAsync(cts.Token);
-                    StatusAuditAlert a = s.Summary;
-                    Assert.AreEqual(StatusRatingRange.Okay, StatusRating.FindRange(a.Rating));
-                }
-                finally
-                {
-                    await s.Stop();
-                    if (lda.ContainsDisposable) s.RemoveCheckerOrAuditor(lda.Contained);     // note that lda could be null if the constructor throws!
-                }
+                readBuilder.AddException(e);
             }
         }
     }
-    class CallStackTest
+    /// <summary>
+    /// Performs tests on the DiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public async Task TempDiskAuditorEmulateWrite()
     {
-        private static readonly AmbientService<IAmbientCallStack> _AmbientCallStack = Ambient.GetService<IAmbientCallStack>();
+        string tempPath = Path.GetTempPath()!;
+        string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+        if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+        if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+        string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+        DriveInfo _driveInfo = new(tempDrive);
 
-        private static readonly IAmbientCallStack _CallStack = _AmbientCallStack.Global ?? new BasicAmbientCallStack();    // it's rare but sometimes this seems to return null at the moment, so I'm adding in the fallback here
-        public static void OuterFunc()
+        StatusResultsBuilder writeBuilder = new("Write");
+        try
         {
+            // attempt to write a temporary file
+            string targetPath = Path.Combine(_driveInfo.RootDirectory.FullName, Guid.NewGuid().ToString("N"));
+            AmbientStopwatch s = AmbientStopwatch.StartNew();
+            using FileStream fs = new(targetPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.DeleteOnClose);
+            byte[] b = new byte[1];
+            await fs.WriteAsync(b, 0, 1);
+            await fs.FlushAsync();
+            writeBuilder.AddProperty("ResponseMs", s.ElapsedMilliseconds);
+            writeBuilder.AddOkay("Ok", "Success", "The write operation succeeded.");
+        }
+        catch (Exception e)
+        {
+            writeBuilder.AddException(e);
+        }
+    }
+    /// <summary>
+    /// Performs tests on the DiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public async Task DiskAuditorTempReadWrite()
+    {
+        string tempPath = Path.GetTempPath()!;
+        string tempDrive = Path.GetPathRoot(tempPath) ?? "/";
+        if (string.IsNullOrEmpty(tempPath) || string.IsNullOrEmpty(tempDrive)) tempDrive = tempPath = "/";
+        if (tempPath?[0] == '/') tempDrive = "/";    // on linux, the only "drive" is /
+        string tempPathRelative = tempPath!.Substring(tempDrive.Length);
+        DiskAuditor da = new(tempDrive, tempPathRelative, false);
+        StatusResultsBuilder builder = new("TempDisk");
+        await da.Audit(builder);
+        StatusAuditAlert alert = builder.WorstAlert;
+        Assert.IsNull(alert, alert?.ToString());
+    }
+    /// <summary>
+    /// Performs tests on the DiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public async Task DiskAuditorSystem()
+    {
+        string systemPath = Environment.GetFolderPath(Environment.SpecialFolder.System)!;
+        string systemDrive = Path.GetPathRoot(systemPath) ?? GetApplicationCodePath() ?? "/";   // use the application code path if we can't find the system root, if we can't get that either, try to use the root.  on linux, we should get the application code path
+        if (string.IsNullOrEmpty(systemPath) || string.IsNullOrEmpty(systemDrive)) systemDrive = systemPath = "/";
+        if (systemPath?[0] == '/') systemDrive = "/";
+        string systemPathRelative = systemPath!.Substring(systemDrive.Length);
+        DiskAuditor da = new(systemDrive, systemPath, false);
+        StatusResultsBuilder builder = new("TempDisk");
+        await da.Audit(builder);
+        StatusAuditAlert alert = builder.WorstAlert;
+        Assert.IsNull(alert, alert?.ToString());
+    }
+    private static string GetApplicationCodePath()
+    {
+        AppDomain current = AppDomain.CurrentDomain;
+        return (current.RelativeSearchPath ?? current.BaseDirectory?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) + Path.DirectorySeparatorChar;
+    }
+    /// <summary>
+    /// Performs tests on the LocalDiskAuditor sample code.
+    /// </summary>
+    [TestMethod]
+    public async Task LocalDiskAuditor()
+    {
+        using LocalDiskAuditor lda = new();
+        StatusResultsBuilder builder = new(lda);
+        await lda.Audit(builder);
+        StatusAuditAlert alert = builder.WorstAlert;
+        Assert.IsNull(alert, alert?.ToString());
+    }
+    /// <summary>
+    /// Performs tests on the Status sample code.
+    /// </summary>
+    [TestMethod]
+    public async Task Status()
+    {
+        using (AmbientClock.Pause())
+        {
+            Status s = new(false);
+            using DisposeResponsibility<LocalDiskAuditor> lda = new();
+            using AmbientCancellationTokenSource cts = new(5000);
+            try
+            {
+#pragma warning disable CA2000
+                lda.AssumeResponsibility(new LocalDiskAuditor());
+#pragma warning restore CA2000
+                s.AddCheckerOrAuditor(lda.Contained);
+                await s.Start(cts.Token);
+                // run all the tests (just the one here) right now
+                await s.RefreshAsync(cts.Token);
+                StatusAuditAlert a = s.Summary;
+                Assert.AreEqual(StatusRatingRange.Okay, StatusRating.FindRange(a.Rating));
+            }
+            finally
+            {
+                await s.Stop();
+                if (lda.ContainsDisposable) s.RemoveCheckerOrAuditor(lda.Contained);     // note that lda could be null if the constructor throws!
+            }
+        }
+    }
+}
+class CallStackTest
+{
+    private static readonly AmbientService<IAmbientCallStack> _AmbientCallStack = Ambient.GetService<IAmbientCallStack>();
+
+    private static readonly IAmbientCallStack _CallStack = _AmbientCallStack.Global ?? new BasicAmbientCallStack();    // it's rare but sometimes this seems to return null at the moment, so I'm adding in the fallback here
+    public static void OuterFunc()
+    {
 //            BasicAmbientCallStack test = new();   // note that this didn't seem to have any effect on the occasional issue below
-            if (_CallStack != null) Debug.WriteLine(string.Join(Environment.NewLine, _CallStack.Entries));
-            // somehow _CallStack is null here occasionally--how is this possible?!  Fail with more information in order to narrow it down
-            if (_CallStack == null)
-            {
-                // this showed that when _CallStack is null, everything was null
-                //                Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{GlobalServiceReference<IAmbientCallStack>.DefaultImplementation()},{_AmbientCallStack.GlobalReference.LateAssignedDefaultServiceImplementation()},{DefaultAmbientServices.TryFind(typeof(IAmbientCallStack))?.Name},{new StackTrace()}");
-                // this shows that AssemblyExtensions.GetLoadableTypes sometimes fails to return any types, at least on the samples assembly
-                // and that in AssemblyExtensions.GetLoadableTypes, the line before:
-                // types = assembly.GetTypes();
-                // runs, but lines after that do not, nor do any catch blocks or finally blocks, and yet the function returns an empty array somehow
-                // add the following to help diagnose the issue: bool testSamples = (assembly.GetName().Name == "AmbientServices.Samples");
-                //Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{DefaultAmbientServices.TestSamplesLoaded},{DefaultAmbientServices.TestSamplesDependent},{DefaultAmbientServices.TestSamplesTypes},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoading},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedOtherException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedFinally},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedTypes},{new StackTrace()}");
-                Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{typeof(BasicAmbientCallStack).Assembly.GetLoadableTypes().Length},{new StackTrace()}");
-            }
-            Assert.DoesNotContain("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-            Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-            using (_CallStack?.Scope("OuterFunc"))
-            {
-                Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-                Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-                InnerFunc();
-                Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-                Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-            }
-            Assert.DoesNotContain("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-            Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+        if (_CallStack != null) Debug.WriteLine(string.Join(Environment.NewLine, _CallStack.Entries));
+        // somehow _CallStack is null here occasionally--how is this possible?!  Fail with more information in order to narrow it down
+        if (_CallStack == null)
+        {
+            // this showed that when _CallStack is null, everything was null
+            //                Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{GlobalServiceReference<IAmbientCallStack>.DefaultImplementation()},{_AmbientCallStack.GlobalReference.LateAssignedDefaultServiceImplementation()},{DefaultAmbientServices.TryFind(typeof(IAmbientCallStack))?.Name},{new StackTrace()}");
+            // this shows that AssemblyExtensions.GetLoadableTypes sometimes fails to return any types, at least on the samples assembly
+            // and that in AssemblyExtensions.GetLoadableTypes, the line before:
+            // types = assembly.GetTypes();
+            // runs, but lines after that do not, nor do any catch blocks or finally blocks, and yet the function returns an empty array somehow
+            // add the following to help diagnose the issue: bool testSamples = (assembly.GetName().Name == "AmbientServices.Samples");
+            //Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{DefaultAmbientServices.TestSamplesLoaded},{DefaultAmbientServices.TestSamplesDependent},{DefaultAmbientServices.TestSamplesTypes},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoading},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedLoaded},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedOtherException},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedFinally},{AmbientServices.Utilities.AssemblyUtilities.TestSamplesLoadedTypes},{new StackTrace()}");
+            Assert.Fail($"{_AmbientCallStack.Global},{_AmbientCallStack.Override},{_AmbientCallStack.Local},{typeof(BasicAmbientCallStack).Assembly.GetLoadableTypes().Length},{new StackTrace()}");
         }
-        private static void InnerFunc()
+        Assert.DoesNotContain("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+        Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+        using (_CallStack?.Scope("OuterFunc"))
         {
             Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
             Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-            using (_CallStack?.Scope("InnerFunc"))
-            {
-                Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-                Assert.Contains("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
-            }
+            InnerFunc();
             Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
             Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
         }
+        Assert.DoesNotContain("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+        Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+    }
+    private static void InnerFunc()
+    {
+        Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+        Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+        using (_CallStack?.Scope("InnerFunc"))
+        {
+            Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+            Assert.Contains("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+        }
+        Assert.Contains("OuterFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
+        Assert.DoesNotContain("InnerFunc", string.Join(Environment.NewLine, _CallStack?.Entries ?? Array.Empty<string>()));
     }
 }

@@ -605,13 +605,13 @@ public class AmbientLogger
     {
         if (_useAmbientLocalLogger || !onlyUsedLoggers)
         {
-            if (_AmbientSimpleLogger.Local != null) await _AmbientSimpleLogger.Local.Flush().ConfigureAwait(true);
-            if (_AmbientLogger.Local != null) await _AmbientLogger.Local.Flush().ConfigureAwait(true);
+            if (_AmbientSimpleLogger.Local != null) await _AmbientSimpleLogger.Local.Flush();
+            if (_AmbientLogger.Local != null) await _AmbientLogger.Local.Flush();
         }
         if (!_useAmbientLocalLogger || !onlyUsedLoggers)
         {
-            if (_logger != null) await _logger.Flush().ConfigureAwait(true);
-            if (_simpleLogger != null) await _simpleLogger.Flush().ConfigureAwait(true);
+            if (_logger != null) await _logger.Flush();
+            if (_simpleLogger != null) await _simpleLogger.Flush();
         }
     }
 }

@@ -6,7 +6,7 @@
 AmbientServices is a .NET library that provides abstractions for services which are both ubiquitous and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those services.
 
 ## Basic Services
-The basic ambient services include caching, clock, logging, progress/cancellation, and settings.  Interfaces for those services are provided here.
+The basic ambient services include local caching, an atomic cache, clock, logging, progress/cancellation, and settings.  Interfaces for those services are provided here.
 By accessing these services through the interfaces provided here, library authors can utilize new basic services as they become available without changing their external interface, and library consumers can use those libraries without having to provide dependencies for systems that they may or may not use.
 If consumers want the added benefits provided by a more complicated implementation of one or more of those services, they can provide a bridge to their own implementations of these basic services and register them with the AmbientServices service.
 With one simple registration, the services will automatically be utilized by every library that uses AmbientServices.
@@ -121,6 +121,72 @@ class UserManager
 ```
 ### Default Implementation
 The default implementation has a small local-only cache using a very simple implementation.
+
+## AmbientAtomicCache
+The ambient atomic cache is an in-memory service for add-or-update style caching with optimistic concurrency.  
+Callers supply async factories; under contention a factory may run more than once, but only one result is retained for a given key.  
+Optional UTC expirations and refresh behavior are supported, along with monotonic versioned keys for tiered or split-cache patterns (see extension helpers on `AmbientAtomicSplitCacheExtensions`).
+
+Use this service when several threads might compute the same expensive result at once and you want a single winning writer without taking a process-wide lock.  
+For simple retrieve-or-store caching without races on creation, `IAmbientLocalCache` is often enough.
+
+### Settings
+BasicAmbientAtomicCache-EjectFrequency: the number of cache calls between ejections where at least one timed and one untimed entry is ejected.  Default is 100.
+BasicAmbientAtomicCache-MaximumItemCount: the maximum combined timed and untimed bookkeeping rows before ejection pressure applies.  Default is 1000.
+BasicAmbientAtomicCache-MinimumItemCount: the minimum number of unexpired timed and untimed rows the implementation tries to retain.  Default is 1.
+
+### Sample
+[//]: # (AmbientAtomicCacheSample)
+```csharp
+namespace AmbientServices
+{
+    /// <summary>
+    /// Example DTO for the atomic-cache README sample.
+    /// </summary>
+    public sealed class CachedReportSummary
+    {
+        /// <summary>Logical report identifier.</summary>
+        public string ReportId { get; init; } = "";
+
+        /// <summary>Example field produced by an expensive computation.</summary>
+        public int LineCount { get; init; }
+    }
+
+    /// <summary>
+    /// Demonstrates <see cref="IAmbientAtomicCache"/> for single-flight memoization: concurrent callers with the same key share one factory execution.
+    /// </summary>
+    public static class ReportSummaryCache
+    {
+        private static IAmbientAtomicCache? Cache => Ambient.GetService<IAmbientAtomicCache>().Local;
+
+        /// <summary>
+        /// Returns a cached <see cref="CachedReportSummary"/> for <paramref name="reportId"/>, or runs <paramref name="computeAsync"/> once to populate the cache.
+        /// </summary>
+        public static async ValueTask<CachedReportSummary> GetSummaryAsync(string reportId, Func<ValueTask<CachedReportSummary>> computeAsync, CancellationToken cancel = default)
+        {
+            IAmbientAtomicCache? cache = Cache;
+            if (cache is null)
+            {
+                return await computeAsync().ConfigureAwait(false);
+            }
+
+            string key = nameof(CachedReportSummary) + "-" + reportId;
+            return await cache.GetOrAdd<CachedReportSummary>(
+                key,
+                async () =>
+                {
+                    CachedReportSummary built = await computeAsync().ConfigureAwait(false);
+                    return (built, DateTime.UtcNow.AddMinutes(30));
+                },
+                timeout: TimeSpan.FromMinutes(2),
+                cancel: cancel).ConfigureAwait(false);
+        }
+    }
+}
+```
+
+### Default Implementation
+The default implementation is `BasicAmbientAtomicCache`, a concurrent in-process cache that uses `AmbientClock` for expirations and optimistic retry budgets.
 
 ## AmbientLogger
 The ambient logger interface abstracts a simple logging system of the type that is universally applicable.  The logger simply receives strings to log and flushes them when called.

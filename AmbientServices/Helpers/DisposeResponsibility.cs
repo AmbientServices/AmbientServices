@@ -201,7 +201,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 
         if (contained is IAsyncDisposable asyncDisposable)
         {
-            await asyncDisposable.DisposeAsync().ConfigureAwait(true);
+            await asyncDisposable.DisposeAsync();
         }
         else if (contained is IDisposable disposable)
         {
@@ -212,7 +212,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
         {
             for (int i = 0; i < tuple.Length; i++)
             {
-                if (tuple[i] is IAsyncDisposable ad) await ad.DisposeAsync().ConfigureAwait(true);
+                if (tuple[i] is IAsyncDisposable ad) await ad.DisposeAsync();
                 else if (tuple[i] is IDisposable d) d.Dispose();
             }
         }
@@ -247,7 +247,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 #if DEBUG
             PendingDispose.OnDispose(_stackOnCreation);
 #endif
-            await DisposeContainedAsync(_contained).ConfigureAwait(true);
+            await DisposeContainedAsync(_contained);
             GC.SuppressFinalize(this);
             _contained = default;
         }

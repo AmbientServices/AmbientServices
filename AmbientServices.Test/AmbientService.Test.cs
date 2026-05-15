@@ -35,7 +35,7 @@ public class TestAmbientService
     public static void AssemblyCleanup()
     {
         System.Threading.Tasks.ValueTask t = TraceBuffer.Flush();
-        t.ConfigureAwait(true).GetAwaiter().GetResult();
+        t.GetAwaiter().GetResult();
     }
 
     [TestMethod]
@@ -279,7 +279,7 @@ public class TestAmbientService
     {
         ScopedLocalOverrideFlowTestStub stub = new();
         using IDisposable scope = _ScopedLocalOverrideFlow.ScopedLocalOverride(stub);
-        await Task.Delay(1).ConfigureAwait(false);
+        await Task.Delay(1);
         Assert.AreSame(stub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
     }
 
@@ -292,7 +292,7 @@ public class TestAmbientService
         {
             await Task.Yield();
             Assert.AreSame(stub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
-        }).ConfigureAwait(false);
+        });
         Assert.AreSame(stub, Ambient.GetService<IScopedLocalOverrideFlowTest>().Local);
     }
 

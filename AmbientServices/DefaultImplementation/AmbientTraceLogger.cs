@@ -139,7 +139,7 @@ public static class TraceBuffer
                 _FlusherThread.Priority = ThreadPriority.AboveNormal;
                 cancel.ThrowIfCancellationRequested();
                 // wait for the flush to happen
-                await _FlusherSemaphore.WaitAsync(cancel).ConfigureAwait(true);
+                await _FlusherSemaphore.WaitAsync(cancel);
             }
         }
         finally
@@ -157,7 +157,7 @@ public static class TraceBuffer
         // queue a flush command
         _Queue.Enqueue(_FlushString);
         // release the semaphore so the data gets processed
-        await Release(true, cancel).ConfigureAwait(true);
+        await Release(true, cancel);
     }
     /// <summary>
     /// Peeks at all unflushed messages synchronously (for diagnostic purposes only).
