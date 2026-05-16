@@ -125,7 +125,8 @@ The default implementation has a small local-only cache using a very simple impl
 ## AmbientAtomicCache
 The ambient atomic cache is an in-memory service for add-or-update style caching with optimistic concurrency.  
 Callers supply async factories; under contention a factory may run more than once, but only one result is retained for a given key.  
-Optional UTC expirations and refresh behavior are supported, along with monotonic versioned keys for tiered or split-cache patterns (see extension helpers on `AmbientAtomicSplitCacheExtensions`).
+Optional UTC expirations and refresh behavior are supported, along with monotonic versioned keys for tiered or split-cache patterns (see extension helpers on `AmbientAtomicSplitCacheExtensions`).  
+`Remove` affects only the unversioned slot for a logical key; `VersionedRemove` affects only the versioned slot, so both can coexist for the same key string.
 
 Use this service when several threads might compute the same expensive result at once and you want a single winning writer without taking a process-wide lock.  
 For simple retrieve-or-store caching without races on creation, `IAmbientLocalCache` is often enough.
@@ -165,7 +166,7 @@ public static class ReportSummaryCache
         IAmbientAtomicCache? cache = Cache;
         if (cache is null)
         {
-            return await computeAsync().ConfigureAwait(false);
+            return await computeAsync();
         }
 
         string key = nameof(CachedReportSummary) + "-" + reportId;
@@ -173,17 +174,19 @@ public static class ReportSummaryCache
             key,
             async () =>
             {
-                CachedReportSummary built = await computeAsync().ConfigureAwait(false);
+                CachedReportSummary built = await computeAsync();
                 return (built, DateTime.UtcNow.AddMinutes(30));
             },
             timeout: TimeSpan.FromMinutes(2),
-            cancel: cancel).ConfigureAwait(false);
+            cancel: cancel);
     }
 }
 ```
 
 ### Default Implementation
 The default implementation is `BasicAmbientAtomicCache`, a concurrent in-process cache that uses `AmbientClock` for expirations and optimistic retry budgets.
+
+`Clear` resets version counters and runs a small fixed number of snapshot-and-eject passes.  It does not block other threads from installing entries; the intent is to dispose items that were already in the cache when clearing started (and any caught in a later pass), not to wait until the dictionary is empty.  After a quiescent `Clear`, callers should see prior keys gone; under heavy concurrent caching, some new entries may remain.
 
 ## AmbientLogger
 The ambient logger interface abstracts a simple logging system of the type that is universally applicable.  The logger simply receives strings to log and flushes them when called.

@@ -198,7 +198,7 @@ public static class ReportSummaryCache
         IAmbientAtomicCache? cache = Cache;
         if (cache is null)
         {
-            return await computeAsync().ConfigureAwait(false);
+            return await computeAsync();
         }
 
         string key = nameof(CachedReportSummary) + "-" + reportId;
@@ -206,11 +206,11 @@ public static class ReportSummaryCache
             key,
             async () =>
             {
-                CachedReportSummary built = await computeAsync().ConfigureAwait(false);
+                CachedReportSummary built = await computeAsync();
                 return (built, DateTime.UtcNow.AddMinutes(30));
             },
             timeout: TimeSpan.FromMinutes(2),
-            cancel: cancel).ConfigureAwait(false);
+            cancel: cancel);
     }
 }
 #endregion

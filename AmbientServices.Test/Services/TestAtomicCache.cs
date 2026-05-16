@@ -276,7 +276,7 @@ public sealed class TestAtomicCache
             using SemaphoreSlim enteredUpdate = new(0, 1);
             using SemaphoreSlim finishUpdate = new(0, 1);
 
-            Task<DisposableCacheEntry> slow = Task.Run(async () => await cache.AddOrUpdate<DisposableCacheEntry>(key,
+            Task<DisposableCacheEntry> slow = RunBlockingCacheWorkOnDedicatedThreadAsync(() => cache.AddOrUpdate<DisposableCacheEntry>(key,
                 async () => (new DisposableCacheEntry(99), null),
                 async cur =>
                 {
@@ -285,7 +285,7 @@ public sealed class TestAtomicCache
                     var fresh = new DisposableCacheEntry(2);
                     offeredFromUpdate = fresh;
                     return (fresh, null);
-                }));
+                }).AsTask());
 
             await enteredUpdate.WaitAsync();
             await cache.Remove<DisposableCacheEntry>(key);
@@ -511,6 +511,71 @@ public sealed class TestAtomicCache
     }
 
     [TestMethod]
+    public async Task AtomicCache_Remove_AffectsOnlyUnversionedSlot()
+    {
+        AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_Remove_AffectsOnlyUnversionedSlot));
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+        {
+            IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
+            string key = nameof(AtomicCache_Remove_AffectsOnlyUnversionedSlot);
+            await cache.GetOrAdd<AtomicRefBox>(key, async () => (new AtomicRefBox(100), null));
+            await cache.VersionedPut(key, new AtomicRefBox(200), TimeSpan.FromHours(1));
+
+            await cache.Remove<AtomicRefBox>(key);
+
+            AtomicRefBox u = await cache.GetOrAdd<AtomicRefBox>(key, async () => (new AtomicRefBox(101), null));
+            (AtomicRefBox? v, long ver) = await cache.VersionedGet<AtomicRefBox>(key, minVersion: -1);
+            Assert.AreEqual(101, u.Id);
+            Assert.IsNotNull(v);
+            Assert.AreEqual(200, v!.Id);
+            Assert.AreEqual(1, ver);
+        }
+    }
+
+    [TestMethod]
+    public async Task AtomicCache_VersionedRemove_AffectsOnlyVersionedSlot()
+    {
+        AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_VersionedRemove_AffectsOnlyVersionedSlot));
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+        {
+            IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
+            string key = nameof(AtomicCache_VersionedRemove_AffectsOnlyVersionedSlot);
+            AtomicRefBox u = await cache.GetOrAdd<AtomicRefBox>(key, async () => (new AtomicRefBox(100), null));
+            await cache.VersionedPut(key, new AtomicRefBox(200), TimeSpan.FromHours(1));
+
+            await cache.VersionedRemove<AtomicRefBox>(key);
+            await cache.VersionedRemove<AtomicRefBox>(key);
+
+            Assert.AreSame(u, await cache.GetOrAdd<AtomicRefBox>(key, async () => (new AtomicRefBox(101), null)));
+            (AtomicRefBox? v, long ver) = await cache.VersionedGet<AtomicRefBox>(key, minVersion: -1);
+            Assert.IsNull(v);
+            Assert.AreEqual(0, ver);
+
+            long next = await cache.VersionedPut(key, new AtomicRefBox(300), TimeSpan.FromHours(1));
+            Assert.AreEqual(2, next, "VersionedRemove must not reset the monotonic revision counter.");
+        }
+    }
+
+    [TestMethod]
+    public async Task AtomicCache_Clear_DoesNotBlockConcurrentGetOrAdd()
+    {
+        AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_Clear_DoesNotBlockConcurrentGetOrAdd));
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+        {
+            IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
+            string existingKey = nameof(AtomicCache_Clear_DoesNotBlockConcurrentGetOrAdd) + "_existing";
+            string newKey = nameof(AtomicCache_Clear_DoesNotBlockConcurrentGetOrAdd) + "_new";
+            await cache.GetOrAdd<AtomicRefBox>(existingKey, async () => (new AtomicRefBox(1), null));
+
+            Task clearTask = cache.Clear().AsTask();
+            Task<AtomicRefBox> addTask = cache.GetOrAdd<AtomicRefBox>(newKey, async () => (new AtomicRefBox(99), null)).AsTask();
+            AtomicRefBox added = await addTask;
+            await clearTask;
+            Assert.AreEqual(99, added.Id);
+        }
+    }
+
+    [TestMethod]
     public async Task AtomicCache_Clear_RemovesUnversionedAndVersioned()
     {
         AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_Clear_RemovesUnversionedAndVersioned));
@@ -565,7 +630,11 @@ public sealed class TestAtomicCache
             string key = nameof(AtomicCache_ConcurrentGetOrAdd_OneSurvivorOthersDisposed);
             int createCalls = 0;
             ConcurrentBag<DisposableCacheEntry> allocated = new();
-            await Parallel.ForEachAsync(Enumerable.Range(0, 24), async (_, ct) =>
+            ParallelOptions parallelOptions = new()
+            {
+                MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount, 1, 8),
+            };
+            await Parallel.ForEachAsync(Enumerable.Range(0, 24), parallelOptions, async (_, ct) =>
             {
                 await cache.GetOrAdd<DisposableCacheEntry>(key, async () =>
                 {
@@ -648,12 +717,15 @@ public sealed class TestAtomicCache
         {
             IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
             int expiredCreates = 0;
-            Task task = Task.Run(async () => await cache.GetOrAdd<AtomicRefBox>(nameof(AtomicCache_GetOrAdd_TimeoutAfterRepeatExpiredCreate_UsesAmbientClock), async () =>
+            // Paused clock: the retry loop can run synchronously until create yields; yield so we can SkipAhead first.
+            Task task = cache.GetOrAdd<AtomicRefBox>(nameof(AtomicCache_GetOrAdd_TimeoutAfterRepeatExpiredCreate_UsesAmbientClock), async () =>
             {
+                await Task.Yield();
                 Interlocked.Increment(ref expiredCreates);
                 return (new AtomicRefBox(1), FarPastUtc);
-            }, timeout: TimeSpan.FromMilliseconds(150)));
-            await Task.Delay(30);
+            }, timeout: TimeSpan.FromMilliseconds(150)).AsTask();
+            await Task.Yield();
+            await Task.Delay(1);
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
             await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () => await task);
             Assert.IsTrue(expiredCreates >= 2);
@@ -669,15 +741,17 @@ public sealed class TestAtomicCache
         {
             IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
             int expiredCreates = 0;
-            Task task = Task.Run(async () => await cache.AddOrUpdate<AtomicRefBox>(nameof(AtomicCache_AddOrUpdate_TimeoutAfterRepeatExpiredCreate_UsesAmbientClock),
+            Task task = cache.AddOrUpdate<AtomicRefBox>(nameof(AtomicCache_AddOrUpdate_TimeoutAfterRepeatExpiredCreate_UsesAmbientClock),
                 async () =>
                 {
+                    await Task.Yield();
                     Interlocked.Increment(ref expiredCreates);
                     return (new AtomicRefBox(1), FarPastUtc);
                 },
                 async _ => throw new InvalidOperationException(),
-                timeout: TimeSpan.FromMilliseconds(150)));
-            await Task.Delay(30);
+                timeout: TimeSpan.FromMilliseconds(150)).AsTask();
+            await Task.Yield();
+            await Task.Delay(1);
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
             await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () => await task);
             Assert.IsTrue(expiredCreates >= 2);
@@ -883,6 +957,10 @@ public sealed class TestAtomicCache
                 await cache.VersionedPut(key, new AtomicRefBox(1), TimeSpan.FromHours(1), cancel: cts.Token).AsTask());
         }
     }
+
+    /// <summary>Starts cache work that may block on a synchronization primitive (not for paused-clock tests).</summary>
+    private static Task<T> RunBlockingCacheWorkOnDedicatedThreadAsync<T>(Func<Task<T>> work) =>
+        Task.Factory.StartNew(work, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
 
     private sealed class AtomicRefBox
     {

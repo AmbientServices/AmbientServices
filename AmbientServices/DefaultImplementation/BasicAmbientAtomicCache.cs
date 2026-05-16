@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,6 +12,7 @@ namespace AmbientServices;
 /// <remarks>
 /// <para>Bounded size is enforced by ejecting timed and untimed bookkeeping rows on a configurable cadence.  Settings use the prefix <c>BasicAmbientAtomicCache-</c> with keys <c>EjectFrequency</c>, <c>MaximumItemCount</c>, and <c>MinimumItemCount</c> (see <see cref="AmbientSettings"/>).</para>
 /// <para>Expiration comparisons and optimistic retry deadlines use <see cref="AmbientClock"/> so tests can pause or skip virtual time deterministically.</para>
+/// <para><see cref="Clear"/> snapshots the cache and ejects each entry in a bounded number of passes.  Concurrent installs are not blocked; the goal is to dispose entries that were present when clearing began (and maybe some caught during the attempt to clear everything), not to guarantee an empty dictionary afterward.</para>
 /// </remarks>
 [DefaultAmbientService]
 internal class BasicAmbientAtomicCache : IAmbientAtomicCache
@@ -25,6 +27,12 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
     private static readonly TimeSpan MaxOptimisticRetryDuration = TimeSpan.FromSeconds(30);
 
     private const string OptimisticRetryBudgetExceededMessage = "The atomic cache optimistic retry budget was exceeded.";
+
+    /// <summary>Caps stale-queue draining per eject call so a pathological queue cannot spin unbounded in one async continuation.</summary>
+    private const int MaxEjectQueueDrainSteps = 65536;
+
+    /// <summary>Maximum snapshot-and-eject passes in <see cref="Clear"/> before giving up on reaching an empty cache.</summary>
+    private const int MaxClearPasses = 8;
 
     private static readonly AmbientService<IAmbientSettingsSet> _Settings = Ambient.GetService<IAmbientSettingsSet>();
 
@@ -400,6 +408,14 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         }
     }
 
+    public async ValueTask VersionedRemove<T>(string itemKey, CancellationToken cancel = default)
+    {
+        if (_cache.TryRemove(GetVersionedStorageKey(itemKey), out CacheEntry? disposeEntry))
+        {
+            await disposeEntry!.Dispose();
+        }
+    }
+
     public async ValueTask<(T? Value, long Version)> VersionedGet<T>(string itemKey, long minVersion = -1, TimeSpan? refresh = null, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class
     {
         string storageKey = GetVersionedStorageKey(itemKey);
@@ -503,7 +519,8 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         if (_timedQueue.Count <= _minCacheEntries.Value) return;
         // removing at least one timed item (as well as any expired items we come across)
         bool unexpiredItemEjected = false;
-        while (_timedQueue.TryDequeue(out TimedQueueEntry qEntry))
+        int steps = 0;
+        while (steps++ < MaxEjectQueueDrainSteps && _timedQueue.TryDequeue(out TimedQueueEntry qEntry))
         {
             // Eject only when the cache still has this key with the same expiration as when the row was enqueued (otherwise the row is stale after a refresh, or orphaned after removal).
             if (_cache.TryGetValue(qEntry.Key, out CacheEntry? entry) && qEntry.Expiration == entry.Expiration)
@@ -535,7 +552,8 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         // have we hit the minimum number of items?
         if (_untimedQueue.Count <= _minCacheEntries.Value) return;
         // remove one untimed entry
-        while (_untimedQueue.TryDequeue(out string? key))
+        int steps = 0;
+        while (steps++ < MaxEjectQueueDrainSteps && _untimedQueue.TryDequeue(out string? key))
         {
             // can we find this item in the cache?
             if (_cache.TryGetValue(key, out CacheEntry? entry))
@@ -576,12 +594,21 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         Interlocked.Exchange(ref _untimedQueue, new ConcurrentQueue<string>());
         Interlocked.Exchange(ref _timedQueue, new ConcurrentQueue<TimedQueueEntry>());
         _versionCounters.Clear();
-        while (!_cache.IsEmpty)
+
+        for (int pass = 0; pass < MaxClearPasses; pass++)
         {
-            foreach (CacheEntry entry in _cache.Values)
+            KeyValuePair<string, CacheEntry>[] snapshot = _cache.ToArray();
+            if (snapshot.Length == 0)
+                break;
+
+            foreach (KeyValuePair<string, CacheEntry> kv in snapshot)
             {
-                await EjectEntry(entry);
+                cancel.ThrowIfCancellationRequested();
+                await EjectEntry(kv.Value);
             }
+
+            if (_cache.IsEmpty)
+                break;
         }
     }
 }

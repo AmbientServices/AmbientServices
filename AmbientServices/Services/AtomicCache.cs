@@ -9,7 +9,7 @@ namespace AmbientServices;
 /// </summary>
 /// <remarks>
 /// <para>The default ambient implementation is <see cref="BasicAmbientAtomicCache"/>.  It is thread-safe and uses optimistic concurrency: <see cref="GetOrAdd{T}"/> and <see cref="AddOrUpdate{T}"/> may invoke factories more than once under contention, and implementations may discard a created or updated value if it loses a race to install the entry.</para>
-/// <para>Unversioned operations (<see cref="GetOrAdd{T}"/>, <see cref="AddOrUpdate{T}"/>, <see cref="Remove{T}"/>) and versioned operations (<see cref="VersionedGet{T}"/>, <see cref="VersionedPut{T}"/>) use distinct storage for the same logical key string, so callers may use both families side by side without colliding.</para>
+/// <para>Unversioned operations (<see cref="GetOrAdd{T}"/>, <see cref="AddOrUpdate{T}"/>, <see cref="Remove{T}"/>) and versioned operations (<see cref="VersionedGet{T}"/>, <see cref="VersionedPut{T}"/>, <see cref="VersionedRemove{T}"/>) use distinct storage for the same logical key string, so callers may use both families side by side without colliding.</para>
 /// <para>Optional <c>timeout</c> and <c>cancel</c> parameters combine cooperative cancellation with an ambient-scoped time budget.  When <c>timeout</c> is null, no ambient timeout source is linked.  When <c>timeout</c> is zero or negative, the effective token is cancelled immediately (without using a zero-interval system timer).  When both are supplied and <c>cancel</c> can be canceled, the implementation links the caller token to that budget.  For <see cref="GetOrAdd{T}"/> and <see cref="AddOrUpdate{T}"/>, implementations also cap optimistic retries using <see cref="AmbientClock"/>; exceeding that budget throws <see cref="InvalidOperationException"/> rather than <see cref="OperationCanceledException"/> so policy timeouts are not mistaken for caller-initiated cancellation.</para>
 /// <para>Monotonic split-cache helpers (versioned head plus unversioned payload per revision) live on <see cref="AmbientAtomicSplitCacheExtensions"/> so every target framework, including .NET Standard 2.0, exposes the same API without default interface members.</para>
 /// </remarks>
@@ -84,8 +84,23 @@ public interface IAmbientAtomicCache
     /// <exception cref="OperationCanceledException">The operation was canceled via <paramref name="cancel"/> or the linked timeout token.</exception>
     ValueTask<long> VersionedPut<T>(string itemKey, T value, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class;
     /// <summary>
-    /// Removes every unversioned and versioned entry from the cache.
+    /// Removes the specified versioned item from the cache if present.
+    /// </summary>
+    /// <typeparam name="T">The type of the item being removed (used only for API symmetry).</typeparam>
+    /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
+    /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
+    /// <remarks>
+    /// <para>Removes only the versioned slot for <paramref name="itemKey"/>; unversioned entries installed via <see cref="GetOrAdd{T}"/> are unchanged.</para>
+    /// <para>Implementations remove the live cache entry but may leave older timed bookkeeping rows in internal queues until they are skipped or drained during ejection.  The monotonic revision counter for the logical key is typically left in place so a later <see cref="VersionedPut{T}"/> does not reuse a prior revision number.</para>
+    /// </remarks>
+    ValueTask VersionedRemove<T>(string itemKey, CancellationToken cancel = default);
+    /// <summary>
+    /// Disposes unversioned and versioned entries that were present when clearing began, using a bounded number of snapshot-and-eject passes.
     /// </summary>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
+    /// <remarks>
+    /// <para>Does not block concurrent installs (<see cref="GetOrAdd{T}"/>, <see cref="AddOrUpdate{T}"/>, <see cref="VersionedPut{T}"/>).  Entries added during a clear may remain afterward; the implementation does not guarantee an empty cache when it returns.</para>
+    /// <para>Version counters for logical keys are reset at the start of the operation.  In-process implementations typically cap how many full passes they attempt before returning.</para>
+    /// </remarks>
     ValueTask Clear(CancellationToken cancel = default);
 }
