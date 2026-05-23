@@ -96,6 +96,7 @@ public sealed class TestAtomicCache
         {
             BasicAmbientAtomicCache cache = new();
             Assert.IsNotNull(cache);
+            Assert.IsFalse(cache.IsShared);
         }
     }
 

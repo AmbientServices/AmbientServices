@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 namespace AmbientServices;
 
 /// <summary>
-/// An interface that abstracts an in-memory cache with atomic add-or-update semantics and optional monotonic versioned entries for tiered or split-cache scenarios.
+/// An interface that abstracts a cache with atomic add-or-update semantics and optional monotonic versioned entries for tiered or split-cache scenarios.
+/// The cache may be local or shared; see <see cref="IsShared"/>.  
 /// </summary>
 /// <remarks>
 /// <para>The default ambient implementation is <see cref="BasicAmbientAtomicCache"/>.  It is thread-safe and uses optimistic concurrency: <see cref="GetOrAdd{T}"/> and <see cref="AddOrUpdate{T}"/> may invoke factories more than once under contention, and implementations may discard a created or updated value if it loses a race to install the entry.</para>
@@ -15,6 +16,11 @@ namespace AmbientServices;
 /// </remarks>
 public interface IAmbientAtomicCache
 {
+    /// <summary>
+    /// Gets whether or not the cache is shared across multiple processes or machines.  
+    /// When false (ie. the cache is local), items must be time-limited to avoid stale entries, or the caller must use some other mechanism to avoid cache consistency issues across servers.
+    /// </summary>
+    bool IsShared { get; }
     /// <summary>
     /// Retrieves the item with the specified key from the cache when it is present and not expired; otherwise creates it using <paramref name="create"/> and returns the stored instance.
     /// </summary>

@@ -269,6 +269,10 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
 #endif
     }
 
+    /// <inheritdoc/>
+    public bool IsShared => false;
+
+    /// <inheritdoc/>
     public async ValueTask<T> GetOrAdd<T>(string itemKey, Func<ValueTask<(T Item, DateTime? Expires)>> create, TimeSpan? refresh = null, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class
     {
         using TimeoutCancellationRegistration timeoutRegistration = TimeoutCancellationRegistration.Create(timeout, cancel);
@@ -328,6 +332,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         throw new InvalidOperationException(OptimisticRetryBudgetExceededMessage);
     }
 
+    /// <inheritdoc/>
     public async ValueTask<T> AddOrUpdate<T>(string itemKey, Func<ValueTask<(T Item, DateTime? Expires)>> create, Func<T, ValueTask<(T UpdatedItem, DateTime? Expires)>> update, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class
     {
         using TimeoutCancellationRegistration timeoutRegistration = TimeoutCancellationRegistration.Create(timeout, cancel);
@@ -400,6 +405,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         throw new InvalidOperationException(OptimisticRetryBudgetExceededMessage);
     }
 
+    /// <inheritdoc/>
     public async ValueTask Remove<T>(string itemKey, CancellationToken cancel = default)
     {
         if (_cache.TryRemove(GetUnversionedStorageKey(itemKey), out CacheEntry? disposeEntry))
@@ -408,6 +414,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         }
     }
 
+    /// <inheritdoc/>
     public async ValueTask VersionedRemove<T>(string itemKey, CancellationToken cancel = default)
     {
         if (_cache.TryRemove(GetVersionedStorageKey(itemKey), out CacheEntry? disposeEntry))
@@ -416,6 +423,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         }
     }
 
+    /// <inheritdoc/>
     public async ValueTask<(T? Value, long Version)> VersionedGet<T>(string itemKey, long minVersion = -1, TimeSpan? refresh = null, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class
     {
         string storageKey = GetVersionedStorageKey(itemKey);
@@ -449,6 +457,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         return ((T)entry.Entry, entry.MonotonicRevision);
     }
 
+    /// <inheritdoc/>
     public async ValueTask<long> VersionedPut<T>(string itemKey, T value, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class
     {
         if (maxCacheDuration < TimeSpan.FromTicks(0))
@@ -589,6 +598,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         }
     }
 
+    /// <inheritdoc/>
     public async ValueTask Clear(CancellationToken cancel = default)
     {
         Interlocked.Exchange(ref _untimedQueue, new ConcurrentQueue<string>());
