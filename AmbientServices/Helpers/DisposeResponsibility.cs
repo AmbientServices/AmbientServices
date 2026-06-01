@@ -124,6 +124,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 
     private void NotifyUndisposedResponsibilityLeak(bool recordForDeferredAssemblyVerification)
     {
+        if (string.IsNullOrEmpty(_stackOnCreation)) return;  // responsibility has been shirked; no leak to report
         if (DisposeResponsibility.NotifyEvent(this, new ResponsibilityNotDisposedEventArgs(_contained, _stackOnCreation))) return;
 
         string notice = $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.";
@@ -312,7 +313,10 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     void IShirkResponsibility.ShirkResponsibility()
     {
         _contained = default;
-        // note that this instance must still be disposed--those are the rules
+        _stackOnCreation = "";      // clear so FinalizeLogic won't report a false leak
+#pragma warning disable CA1816     // intentional: shirking transfers ownership away, so no finalizer needed
+        GC.SuppressFinalize(this);
+#pragma warning restore CA1816
     }
     /// <summary>
     /// Returns a new instance to be returned from the containing function, with dispose responsibility transferred from this instance to that one.

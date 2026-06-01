@@ -154,6 +154,65 @@ public class TestDisposeResponsibilityFinalizeLogic
         }
     }
 
+    /// <summary>
+    /// After <see cref="IShirkResponsibility.ShirkResponsibility"/> is called (via the transfer constructor),
+    /// <see cref="DisposeResponsibility{T}.FinalizeLogic"/> must not report a leak — the object intentionally
+    /// gave up its responsibility and there is nothing left to dispose.
+    /// </summary>
+    [TestMethod]
+    public void FinalizeLogic_AfterShirk_DoesNotRaiseLeak()
+    {
+        bool eventFired = false;
+        void Handler(object? sender, ResponsibilityNotDisposedEventArgs e) => eventFired = true;
+        DisposeResponsibility.ResponsibilityNotDisposed += Handler;
+        try
+        {
+            MemoryStream ms = new();
+#pragma warning disable CA2000 // dr1 is intentionally not in a using — we verify no leak fires
+            DisposeResponsibility<MemoryStream> dr1 = new(ms);
+#pragma warning restore CA2000
+            using DisposeResponsibility<MemoryStream> dr2 = new(dr1); // transfer — shirks dr1
+            dr1.FinalizeLogic(); // must be silent: dr1 was shirked, not leaked
+            Assert.IsFalse(eventFired, "FinalizeLogic must not report a leak for a shirked DisposeResponsibility.");
+        }
+        finally
+        {
+            DisposeResponsibility.ResponsibilityNotDisposed -= Handler;
+        }
+    }
+
+    /// <summary>
+    /// A DR that is shirked via the transfer constructor but never explicitly disposed must not
+    /// surface as an undisposed leak after a full GC, because <see cref="IShirkResponsibility.ShirkResponsibility"/>
+    /// now suppresses the finalizer.
+    /// </summary>
+    [TestMethod]
+    public void AssertNoUndisposedLeaksAfterFullGc_ShirkedWithoutExplicitDispose_DoesNotThrow()
+    {
+        FieldInfo field = GetResponsibilityNotDisposedBackingField();
+        object? previous = field.GetValue(null);
+        field.SetValue(null, null);
+        try
+        {
+            ShirkWithoutExplicitDispose();
+            DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc();
+        }
+        finally
+        {
+            field.SetValue(null, previous);
+        }
+    }
+
+    private static void ShirkWithoutExplicitDispose()
+    {
+        MemoryStream ms = new();
+#pragma warning disable CA2000 // dr1 intentionally not disposed — the test verifies no leak fires after shirk
+        DisposeResponsibility<MemoryStream> dr1 = new(ms);
+#pragma warning restore CA2000
+        using DisposeResponsibility<MemoryStream> dr2 = new(dr1); // transfer — shirks dr1; dr2 is properly disposed
+        // dr1 is NOT explicitly disposed, but ShirkResponsibility now calls GC.SuppressFinalize
+    }
+
     private static void LeakUndisposedDisposeResponsibility()
     {
 #pragma warning disable CA2000 // Intentional leak: finalizer must run without Dispose for this test.
