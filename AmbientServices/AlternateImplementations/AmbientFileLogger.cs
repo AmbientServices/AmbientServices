@@ -58,7 +58,7 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
         string startingSuffix = PeriodString(_periodNumber);
         _fileBuffers = new RotatingFileBuffer(filePrefix, startingSuffix + _fileExtension, TimeSpan.FromSeconds(autoFlushSeconds));
     }
-    private static string GetExecutableName()
+    internal static string GetExecutableName()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             || RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
@@ -135,6 +135,11 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
         path = CompleteProgramDataFolderPath(path, RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
         return path + Path.DirectorySeparatorChar;
     }
+
+    /// <summary>
+    /// Exposes <see cref="GetProgramDataFolderLocation"/> for overflow log path construction (internal use).
+    /// </summary>
+    internal static string GetProgramDataFolderLocationInternal() => GetProgramDataFolderLocation();
     /// <summary>
     /// Gets the file prefix.
     /// </summary>
@@ -218,13 +223,16 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
     /// If they cannot be deleted, they are skipped.
     /// </summary>
     /// <param name="filePathPrefix">The file prefix (the same one that would be passed as the filePrefix parameter to the constructor).</param>
+    /// <param name="fileExtension">The file extension (with leading dot) used when the logger was constructed. Defaults to <c>.log</c>.</param>
     /// <param name="cancel">A <see cref="CancellationToken"/> to cancel the operation before it finishes.</param>
-    public static ValueTask TryDeleteAllFiles(string filePathPrefix, CancellationToken cancel = default)
+    public static ValueTask TryDeleteAllFiles(string filePathPrefix, string? fileExtension = null, CancellationToken cancel = default)
     {
         string? directory = Path.GetDirectoryName(filePathPrefix) ?? throw new ArgumentException("The specified file path must be non-null and a non-root path!", nameof(filePathPrefix));
         string filename = Path.GetFileName(filePathPrefix)!;
-        // clean up the files
-        foreach (string file in Directory.GetFiles(directory, filename + "*.log"))
+        fileExtension ??= ".log";
+        if (fileExtension.Length > 0 && fileExtension[0] != '.') fileExtension = "." + fileExtension;
+        // clean up the files (suffix is a period number before the extension, e.g. prefix0001.log)
+        foreach (string file in Directory.GetFiles(directory, filename + "*" + fileExtension))
         {
             if (cancel.IsCancellationRequested) break;
             try
@@ -338,7 +346,7 @@ internal class RotatingFileBuffer : IDisposable
 #else
         if (_disposedValue) throw new ObjectDisposedException(_baselineFilename);
 #endif
-        _queue.Enqueue(line);
+        AmbientLogBufferLimits.EnqueueOrOverflow(_queue, line);
     }
     /// <summary>
     /// Buffers an instruction to rotate files.

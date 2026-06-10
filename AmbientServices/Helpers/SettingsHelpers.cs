@@ -5,10 +5,39 @@ using System.Collections.Generic;
 namespace AmbientServices;
 
 /// <summary>
+/// Event arguments for a failed ambient setting string-to-typed conversion.
+/// </summary>
+/// <param name="key">The setting key.</param>
+/// <param name="rawValue">The raw string value that could not be converted.</param>
+/// <param name="exception">The exception thrown by the conversion delegate.</param>
+/// <param name="defaultValue">The default value that will be used instead.</param>
+public class SettingConversionFailedEventArgs(string key, string rawValue, Exception exception, object? defaultValue) : EventArgs
+{
+    /// <summary>The setting key.</summary>
+    public string Key { get; } = key;
+    /// <summary>The raw string value that could not be converted.</summary>
+    public string RawValue { get; } = rawValue;
+    /// <summary>The exception thrown by the conversion delegate.</summary>
+    public Exception Exception { get; } = exception;
+    /// <summary>The default value that will be used instead.</summary>
+    public object? DefaultValue { get; } = defaultValue;
+}
+
+/// <summary>
 /// An static class that utilizes the <see cref="IAmbientClock"/> if one is registered, or the system clock if not.
 /// </summary>
 public static class AmbientSettings
 {
+    /// <summary>
+    /// Raised when a registered setting's conversion delegate throws. The default value is used instead.
+    /// Subscribers must not call back into ambient logging or settings retrieval for the same key, as that may recurse.
+    /// </summary>
+    public static event EventHandler<SettingConversionFailedEventArgs>? ConversionFailed;
+
+    internal static void NotifyConversionFailed(string key, string rawValue, Exception exception, object? defaultValue)
+    {
+        ConversionFailed?.Invoke(null, new SettingConversionFailedEventArgs(key, rawValue, exception, defaultValue));
+    }
     /// <summary>
     /// Gets an enumeration of <see cref="IAmbientSettingInfo"/> with descriptions and the last time used for all ambient settings.
     /// </summary>
@@ -405,9 +434,10 @@ internal class SettingInfo<T> : IAmbientSettingInfo
             ret = _convert(value);
         }
 #pragma warning disable CA1031 // this is a "do your best" kind of function, so we really do want to catch all exceptions here
-        catch
+        catch (Exception ex)
 #pragma warning restore CA1031 
         {
+            AmbientSettings.NotifyConversionFailed(Key, value, ex, DefaultValue);
             ret = DefaultValue;
         }
         // is this settings set the one for this setting or is it the global settings set?

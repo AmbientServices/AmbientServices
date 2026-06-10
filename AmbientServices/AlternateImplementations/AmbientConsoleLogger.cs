@@ -106,8 +106,8 @@ public static class ConsoleBuffer
     }
     private static void Buffer(string s)
     {
-        // enqueue the string given to us
-        _Queue.Enqueue(s);
+        // enqueue the string given to us (or spill to the standard local overflow log when the buffer is full)
+        AmbientLogBufferLimits.EnqueueOrOverflow(_Queue, s);
         // release the semaphore so the data gets processed
         Release(false).Wait();
     }

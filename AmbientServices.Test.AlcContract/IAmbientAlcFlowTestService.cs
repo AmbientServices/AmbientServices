@@ -1,3 +1,5 @@
+[assembly: System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
+
 namespace AmbientServices.TestSupport.Alc;
 
 /// <summary>

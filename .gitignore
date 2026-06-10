@@ -162,3 +162,4 @@ $RECYCLE.BIN/
 /.vs
 /coveragereport
 /AmbientServices/AmbientServices.xml
+docs/SecurityConsiderations.md

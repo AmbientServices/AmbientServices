@@ -1,6 +1,7 @@
 ﻿using AmbientServices.Utilities;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +10,12 @@ namespace AmbientServices;
 [DefaultAmbientService]
 internal class BasicAmbientLocalCache : IAmbientLocalCache
 {
+    /// <summary>Caps stale-queue draining per eject call so a pathological queue cannot spin unbounded in one async continuation.</summary>
+    private const int MaxEjectQueueDrainSteps = 65536;
+
+    /// <summary>Maximum snapshot-and-eject passes in <see cref="Clear"/> before giving up on reaching an empty cache.</summary>
+    private const int MaxClearPasses = 8;
+
     private static readonly AmbientService<IAmbientSettingsSet> _Settings = Ambient.GetService<IAmbientSettingsSet>();
 
     private readonly IAmbientSetting<int> _callFrequencyToEject;
@@ -135,12 +142,26 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
     private async ValueTask EjectIfNeeded()
     {
         int callFrequencyToEject = _callFrequencyToEject.Value;
+        if (callFrequencyToEject <= 0)
+            callFrequencyToEject = 1;
+
         int countToEject = _countToEject.Value;
-        // time to eject?
-        while ((Interlocked.Increment(ref _expireCount) % callFrequencyToEject) == 0 || (_untimedQueue.Count + _timedQueue.Count) > countToEject)
+        int opSerial = Interlocked.Increment(ref _expireCount);
+        bool onCadence = (opSerial % callFrequencyToEject) == 0;
+        int queueSum = _untimedQueue.Count + _timedQueue.Count;
+        bool overCapacity = queueSum > countToEject;
+        if (!onCadence && !overCapacity)
+            return;
+
+        int maxRounds = Math.Max(32, Math.Min(131072, 4 + 2 * Math.Max(queueSum, countToEject + 1)));
+        for (int round = 0; round < maxRounds; round++)
         {
             await EjectOneTimed();
             await EjectOneUntimed();
+
+            queueSum = _untimedQueue.Count + _timedQueue.Count;
+            if (queueSum <= countToEject)
+                break;
         }
     }
 
@@ -150,8 +171,8 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
         if (_timedQueue.Count <= _minCacheEntries.Value) return;
         // removing at least one timed item (as well as any expired items we come across)
         bool unexpiredItemEjected = false;
-        TimedQueueEntry qEntry;
-        while (_timedQueue.TryDequeue(out qEntry))
+        int steps = 0;
+        while (steps++ < MaxEjectQueueDrainSteps && _timedQueue.TryDequeue(out TimedQueueEntry qEntry))
         {
             // can we find this item in the cache?
             CacheEntry? entry;
@@ -193,8 +214,8 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
         // have we hit the minimum number of items?
         if (_untimedQueue.Count <= _minCacheEntries.Value) return;
         // remove one untimed entry
-        string? key;
-        while (_untimedQueue.TryDequeue(out key))
+        int steps = 0;
+        while (steps++ < MaxEjectQueueDrainSteps && _untimedQueue.TryDequeue(out string? key))
         {
             // can we find this item in the cache?
             CacheEntry? entry;
@@ -246,12 +267,21 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
     {
         Interlocked.Exchange(ref _untimedQueue, new ConcurrentQueue<string>());
         Interlocked.Exchange(ref _timedQueue, new ConcurrentQueue<TimedQueueEntry>());
-        while (!_cache.IsEmpty)
+
+        for (int pass = 0; pass < MaxClearPasses; pass++)
         {
-            foreach (CacheEntry entry in _cache.Values)
+            KeyValuePair<string, CacheEntry>[] snapshot = _cache.ToArray();
+            if (snapshot.Length == 0)
+                break;
+
+            foreach (KeyValuePair<string, CacheEntry> kv in snapshot)
             {
-                await EjectEntry(entry, cancel);
+                cancel.ThrowIfCancellationRequested();
+                await EjectEntry(kv.Value, cancel);
             }
+
+            if (_cache.IsEmpty)
+                break;
         }
     }
 }

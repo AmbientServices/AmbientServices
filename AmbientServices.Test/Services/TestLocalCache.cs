@@ -123,7 +123,7 @@ public class TestLocalCache
             Assert.IsTrue(dce5.Disposed);
             Assert.IsTrue(dce6.Disposed);
             Assert.IsFalse(dce7.Disposed);  // we put this in the cache, but told the cache not to dispose of it, so it should *not* have been disposed
-            await cache.Store("Test8", dce7, true);
+            await cache.Store("Test8", dce8, true);
             ret = await cache.Remove<DisposableCacheEntry>("Test8");
             Assert.IsFalse(dce8.Disposed);  // we put this in the cache, but removed it before it was disposed, so it should *not* have been disposed
             Assert.IsFalse(dce9.Disposed);  // we never put this into the cache, so it should *not* have been disposed

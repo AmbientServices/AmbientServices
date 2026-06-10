@@ -296,14 +296,14 @@ public class AmbientLogger
         {
             foreach (KeyValuePair<string, object?> kvp in sddo)
             {
-                dictionary[kvp.Key] = kvp.Value;
+                dictionary[kvp.Key] = AmbientLogSensitiveFieldFilters.MaskValueIfSensitive(kvp.Key, kvp.Value);
             }
         }
         else if (structuredData is Dictionary<string, string?> sdds)
         {
             foreach (KeyValuePair<string, string?> kvp in sdds)
             {
-                dictionary[kvp.Key] = kvp.Value;
+                dictionary[kvp.Key] = AmbientLogSensitiveFieldFilters.MaskValueIfSensitive(kvp.Key, kvp.Value);
             }
         }
         else
@@ -311,7 +311,10 @@ public class AmbientLogger
             foreach (PropertyInfo property in structuredData.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
                 object? propertyValue = property.GetValue(structuredData);
-                if (logNullValues || propertyValue != null) dictionary[property.Name] = propertyValue;
+                if (logNullValues || propertyValue != null)
+                {
+                    dictionary[property.Name] = AmbientLogSensitiveFieldFilters.MaskValueIfSensitive(property.Name, propertyValue);
+                }
             }
         }
         return dictionary;

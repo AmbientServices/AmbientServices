@@ -17,7 +17,7 @@ public class TestTimeSpanUtilities
         Assert.AreEqual(5UL, TimeSpanUtilities.GCD(35, 15));
     }
     /// <summary>
-    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// Performs tests on <see cref="TimeSpanUtilities"/>.
     /// </summary>
     [TestMethod]
     public void TimeSpanTicksToStopwatchTicks()
@@ -34,6 +34,15 @@ public class TestTimeSpanUtilities
             s.AppendLine($"TimeSpanExtensions.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks) = {TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks)}");
             Assert.AreEqual(TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(millisecondsToSleep).Ticks), millisecondsToSleep * Stopwatch.Frequency / 1000, s.ToString());
         }
+    }
+    /// <summary>
+    /// Performs tests on <see cref="TimeSpanUtilities"/>.
+    /// </summary>
+    [TestMethod]
+    public void TimeSpanTicksAndStopwatchOverflowHandling()
+    {
+        TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(long.MaxValue);
+        TimeSpanUtilities.StopwatchTicksToTimeSpanTicks(long.MaxValue);
     }
     [TestMethod]
     public void TimeSpanStopwatchTicksRoundTrip()
