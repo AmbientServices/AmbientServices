@@ -67,3 +67,20 @@ public interface IAmbientStructuredLogger
     /// </summary>
     ValueTask Flush(CancellationToken cancel = default);
 }
+/// <summary>
+/// Writes log lines that exceeded in-memory buffer capacity.
+/// Override locally with <see cref="AmbientService{T}.ScopedLocalOverride"/> (or <see cref="ScopedLocalServiceOverride{T}"/>) in unit tests, or replace the global implementation for custom sinks.
+/// </summary>
+public interface IAmbientLogOverflowWriter
+{
+    /// <summary>
+    /// Appends a single overflow log line. Implementations must not throw back to logging callers.
+    /// </summary>
+    /// <param name="line">The line to append.</param>
+    void WriteOverflowLine(string line);
+
+    /// <summary>
+    /// Flushes buffered output. File-based implementations also close their open writer so the file can be read.
+    /// </summary>
+    void Flush();
+}

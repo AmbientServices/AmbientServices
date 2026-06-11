@@ -97,6 +97,17 @@ public class TestStatistics
 
         Assert.IsFalse(AmbientStatistics.RemoveStatistic(runTime.Id));
     }
+
+    [TestMethod]
+    public void ProcessExecutionTimeStatistic_Properties()
+    {
+        BasicAmbientStatistics statisticsSet = new();
+        ProcessExecutionTimeStatistic executionTime = new(statisticsSet);
+        Assert.AreSame(statisticsSet, executionTime.StatisticsSet);
+        Assert.AreEqual(AmbientStatisticType.Cumulative, executionTime.StatisicType);
+        Assert.AreEqual("Execution Time", executionTime.Name);
+        Assert.AreEqual("ExecutionTime", executionTime.Id);
+    }
     [TestMethod]
     public void AmbientPerformanceMetricsProperties()
     {

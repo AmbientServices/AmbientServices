@@ -189,11 +189,44 @@ public class TestBasicAmbientLogger
         AmbientTraceLogger loggerBackend = AmbientTraceLogger.Instance;
         AmbientLogger logger = new(typeof(TestBasicAmbientLogger), loggerBackend, loggerBackend);
         AmbientLogContext.Reset("baselineKey", "baselineValue");
-        IDisposable kvpScope = AmbientLogContext.AddKeyValuePair(new("key1", System.Net.IPAddress.Any));
-        IDisposable kvpsScope = AmbientLogContext.AddKeyValuePairs(new LogContextEntry[] { new("key2", (System.Net.IPAddress?)null) });
-        logger.Filter()?.Log("test");
-        await logger.Flush(true);
-        await logger.Flush(false);
+        using (AmbientLogContext.AddKeyValuePair(new("key1", System.Net.IPAddress.Any)))
+        using (AmbientLogContext.AddKeyValuePairs(new LogContextEntry[] { new("key2", (System.Net.IPAddress?)null) }))
+        {
+            logger.Filter()?.Log("test");
+            await logger.Flush(true);
+            await logger.Flush(false);
+        }
+    }
+
+    [TestMethod]
+    public void AmbientLogContext_DisposeRestoresPreviousContext()
+    {
+        AmbientLogContext.Reset("baseline", "base");
+        List<LogContextEntry> Snapshot() => [.. AmbientLogContext.ContextLogPairs];
+
+        List<LogContextEntry> baseline = Snapshot();
+        Assert.AreEqual(1, baseline.Count);
+        Assert.AreEqual("baseline", baseline[0].Key);
+
+        using (AmbientLogContext.AddKeyValuePair(new("a", 1)))
+        {
+            List<LogContextEntry> withA = Snapshot();
+            Assert.AreEqual(2, withA.Count);
+            Assert.AreEqual("a", withA[0].Key);
+
+            using (AmbientLogContext.AddKeyValuePairs([new("b", 2), new("c", 3)]))
+            {
+                Assert.AreEqual(4, Snapshot().Count);
+            }
+
+            withA = Snapshot();
+            Assert.AreEqual(2, withA.Count);
+            Assert.AreEqual("a", withA[0].Key);
+        }
+
+        baseline = Snapshot();
+        Assert.AreEqual(1, baseline.Count);
+        Assert.AreEqual("baseline", baseline[0].Key);
     }
     class ExceptionWithExtraLoggingInformation : Exception, IExceptionLogInformation
     {
