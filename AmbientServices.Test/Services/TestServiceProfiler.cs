@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -384,6 +385,120 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
                         Assert.AreEqual("SQL/Database:My-database/Result:Failed", stats.Group);
                         Assert.AreEqual(TimeSpan.FromMilliseconds(3000), stats.TimeUsed);
                         Assert.AreEqual(1, stats.ExecutionCount);
+                    }
+                }
+            }
+        }
+    }
+    private static Dictionary<string, AmbientServiceProfilerAccumulator> ByGroup(IEnumerable<AmbientServiceProfilerAccumulator> stats)
+    {
+        Dictionary<string, AmbientServiceProfilerAccumulator> ret = new(StringComparer.Ordinal);
+        foreach (AmbientServiceProfilerAccumulator s in stats) ret[s.Group] = s;
+        return ret;
+    }
+    [TestMethod]
+    public void ServiceProfileUnionStopwatchTicks()
+    {
+        // empty and single
+        Assert.AreEqual(0, ServiceProfileSampleCollector.UnionStopwatchTicks(new List<StopwatchInterval>()));
+        Assert.AreEqual(10, ServiceProfileSampleCollector.UnionStopwatchTicks(new List<StopwatchInterval> { new(0, 10) }));
+        // disjoint (sequential) -> union equals the sum
+        Assert.AreEqual(20, ServiceProfileSampleCollector.UnionStopwatchTicks(new List<StopwatchInterval> { new(0, 10), new(20, 30) }));
+        // adjacent (touching) -> single merged span
+        Assert.AreEqual(20, ServiceProfileSampleCollector.UnionStopwatchTicks(new List<StopwatchInterval> { new(0, 10), new(10, 20) }));
+        // overlapping (parallel) -> union less than the sum
+        Assert.AreEqual(15, ServiceProfileSampleCollector.UnionStopwatchTicks(new List<StopwatchInterval> { new(0, 10), new(5, 15) }));
+        // fully nested -> outer span only
+        Assert.AreEqual(10, ServiceProfileSampleCollector.UnionStopwatchTicks(new List<StopwatchInterval> { new(0, 10), new(3, 7) }));
+        // input order must not matter
+        Assert.AreEqual(15, ServiceProfileSampleCollector.UnionStopwatchTicks(new List<StopwatchInterval> { new(5, 15), new(0, 10) }));
+    }
+    [TestMethod]
+    public void ServiceProfileSampleCollectorSequentialAdds()
+    {
+        ServiceProfileSampleCollector collector = new();
+        object callContext = new();
+        // one call context visits "X" twice with a gap: X[0,10) then X[20,30)
+        collector.RecordSwitch(callContext, 0, 0, "X", null);   // ends the default "" interval [0,0), X active at 0
+        collector.RecordSwitch(callContext, 0, 10, "", null);   // ends X [0,10), default active at 10
+        collector.RecordSwitch(callContext, 10, 20, "X", null); // ends "" [10,20), X active at 20
+        collector.RecordSwitch(callContext, 20, 30, "", null);  // ends X [20,30), default active at 30
+        Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 30));
+        // sequential repeats are disjoint, so they add into BOTH measures equally
+        Assert.AreEqual(20, stats["X"].TotalStopwatchTicksUsed);
+        Assert.AreEqual(20, stats["X"].WallClockStopwatchTicksUsed);
+        Assert.AreEqual(2, stats["X"].ExecutionCount);
+    }
+    [TestMethod]
+    public void ServiceProfileSampleCollectorParallelDiverges()
+    {
+        ServiceProfileSampleCollector collector = new();
+        object callContextA = new();
+        object callContextB = new();
+        // two call contexts use "X" with overlapping intervals: A X[0,20), B X[5,25)
+        collector.RecordSwitch(callContextA, 0, 0, "X", null);  // A: ends "" [0,0), X active at 0
+        collector.RecordSwitch(callContextB, 0, 5, "X", null);  // B: ends "" [0,5), X active at 5
+        collector.RecordSwitch(callContextA, 0, 20, "", null);  // A: ends X [0,20)
+        collector.RecordSwitch(callContextB, 5, 25, "", null);  // B: ends X [5,25)
+        Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 25));
+        // aggregate counts both intervals fully; wall-clock is the union [0,25)
+        Assert.AreEqual(40, stats["X"].TotalStopwatchTicksUsed);
+        Assert.AreEqual(25, stats["X"].WallClockStopwatchTicksUsed);
+        Assert.AreEqual(2, stats["X"].ExecutionCount);
+        Assert.IsLessThan(stats["X"].TotalStopwatchTicksUsed, stats["X"].WallClockStopwatchTicksUsed);
+    }
+    [TestMethod]
+    public void ServiceProfileSampleCollectorIncludesActive()
+    {
+        ServiceProfileSampleCollector collector = new();
+        object callContext = new();
+        collector.RecordSwitch(callContext, 0, 0, "X", null);   // X active at 0
+        // with includeActive, the in-flight X interval [0,10) is reported
+        Dictionary<string, AmbientServiceProfilerAccumulator> active = ByGroup(collector.GetStatistics(true, 10));
+        Assert.AreEqual(10, active["X"].TotalStopwatchTicksUsed);
+        Assert.AreEqual(10, active["X"].WallClockStopwatchTicksUsed);
+        Assert.AreEqual(1, active["X"].ExecutionCount);
+        // without includeActive, the still-running X is not reported
+        Dictionary<string, AmbientServiceProfilerAccumulator> completed = ByGroup(collector.GetStatistics(false, 10));
+        Assert.IsFalse(completed.ContainsKey("X"));
+    }
+    [TestMethod]
+    public void ServiceProfileSampleCollectorFinalizeActive()
+    {
+        ServiceProfileSampleCollector collector = new();
+        object callContext = new();
+        collector.RecordSwitch(callContext, 0, 0, "X", null);   // X active at 0
+        collector.FinalizeActive(10);                           // close in-flight X as [0,10)
+        Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 999));
+        Assert.AreEqual(10, stats["X"].TotalStopwatchTicksUsed);
+        Assert.AreEqual(10, stats["X"].WallClockStopwatchTicksUsed);
+        Assert.AreEqual(1, stats["X"].ExecutionCount);
+    }
+    [TestMethod]
+    public void ServiceProfilerWallClockSerialEqualsAggregate()
+    {
+        using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
+        using (AmbientClock.Pause())
+        using (AmbientServiceProfilerCoordinator coordinator = new())
+        using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerWallClockSerialEqualsAggregate)))
+        {
+            _ServiceProfiler.Local?.SwitchSystem("X");
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
+            _ServiceProfiler.Local?.SwitchSystem(null);
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(20));
+            _ServiceProfiler.Local?.SwitchSystem("X");
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(30));
+            _ServiceProfiler.Local?.SwitchSystem(null);
+            if (scopeProfile != null)
+            {
+                foreach (AmbientServiceProfilerAccumulator stats in scopeProfile.ProfilerStatistics)
+                {
+                    if (string.Equals(stats.Group, "X", StringComparison.Ordinal))
+                    {
+                        // two disjoint (sequential) visits add into both measures equally
+                        Assert.AreEqual(TimeSpan.FromMilliseconds(80), stats.TimeUsed);
+                        Assert.AreEqual(TimeSpan.FromMilliseconds(80), stats.WallClockTimeUsed);
+                        Assert.AreEqual(2, stats.ExecutionCount);
                     }
                 }
             }
