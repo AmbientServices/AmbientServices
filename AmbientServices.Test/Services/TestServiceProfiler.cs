@@ -419,10 +419,10 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         ServiceProfileSampleCollector collector = new();
         object callContext = new();
         // one call context visits "X" twice with a gap: X[0,10) then X[20,30)
-        collector.RecordSwitch(callContext, 0, 0, "X", null);   // ends the default "" interval [0,0), X active at 0
-        collector.RecordSwitch(callContext, 0, 10, "", null);   // ends X [0,10), default active at 10
-        collector.RecordSwitch(callContext, 10, 20, "X", null); // ends "" [10,20), X active at 20
-        collector.RecordSwitch(callContext, 20, 30, "", null);  // ends X [20,30), default active at 30
+        collector.RecordSwitch(callContext, 0, 0, "X", "", null);   // ends the default "" interval [0,0), X active at 0
+        collector.RecordSwitch(callContext, 0, 10, "", "X", null);   // ends X [0,10), default active at 10
+        collector.RecordSwitch(callContext, 10, 20, "X", "", null); // ends "" [10,20), X active at 20
+        collector.RecordSwitch(callContext, 20, 30, "", "X", null);  // ends X [20,30), default active at 30
         Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 30));
         // sequential repeats are disjoint, so they add into BOTH measures equally
         Assert.AreEqual(20, stats["X"].TotalStopwatchTicksUsed);
@@ -436,10 +436,10 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         object callContextA = new();
         object callContextB = new();
         // two call contexts use "X" with overlapping intervals: A X[0,20), B X[5,25)
-        collector.RecordSwitch(callContextA, 0, 0, "X", null);  // A: ends "" [0,0), X active at 0
-        collector.RecordSwitch(callContextB, 0, 5, "X", null);  // B: ends "" [0,5), X active at 5
-        collector.RecordSwitch(callContextA, 0, 20, "", null);  // A: ends X [0,20)
-        collector.RecordSwitch(callContextB, 5, 25, "", null);  // B: ends X [5,25)
+        collector.RecordSwitch(callContextA, 0, 0, "X", "", null);  // A: ends "" [0,0), X active at 0
+        collector.RecordSwitch(callContextB, 0, 5, "X", "", null);  // B: ends "" [0,5), X active at 5
+        collector.RecordSwitch(callContextA, 0, 20, "", "X", null);  // A: ends X [0,20)
+        collector.RecordSwitch(callContextB, 5, 25, "", "X", null);  // B: ends X [5,25)
         Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 25));
         // aggregate counts both intervals fully; wall-clock is the union [0,25)
         Assert.AreEqual(40, stats["X"].TotalStopwatchTicksUsed);
@@ -452,7 +452,7 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
     {
         ServiceProfileSampleCollector collector = new();
         object callContext = new();
-        collector.RecordSwitch(callContext, 0, 0, "X", null);   // X active at 0
+        collector.RecordSwitch(callContext, 0, 0, "X", "", null);   // X active at 0
         // with includeActive, the in-flight X interval [0,10) is reported
         Dictionary<string, AmbientServiceProfilerAccumulator> active = ByGroup(collector.GetStatistics(true, 10));
         Assert.AreEqual(10, active["X"].TotalStopwatchTicksUsed);
@@ -467,7 +467,7 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
     {
         ServiceProfileSampleCollector collector = new();
         object callContext = new();
-        collector.RecordSwitch(callContext, 0, 0, "X", null);   // X active at 0
+        collector.RecordSwitch(callContext, 0, 0, "X", "", null);   // X active at 0
         collector.FinalizeActive(10);                           // close in-flight X as [0,10)
         Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 999));
         Assert.AreEqual(10, stats["X"].TotalStopwatchTicksUsed);
@@ -502,6 +502,47 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
                     }
                 }
             }
+        }
+    }
+    [TestMethod]
+    public void ServiceProfilerForkedContextsAttributeToEndedSystem()
+    {
+        // Reproduces the forked-context attribution bug.  The main context sits in the default (CPU) system for 10s,
+        // then two parallel forks (which inherit the main context) each do a short stint in "S3".  The true S3 union
+        // is just the short overlap, but when concurrent forks share the creating context's inherited marker, the
+        // ended system used to be reconstructed from a single shared slot that the siblings thrash, leaking the stale
+        // default start into S3 and inflating both S3 measures toward the whole 10s.  Deterministic (no real threads):
+        // ExecutionContext.Capture/Run faithfully reproduce AsyncLocal inheritance on a single thread under a paused clock.
+        using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
+        using (AmbientClock.Pause())
+        using (AmbientServiceProfilerCoordinator coordinator = new())
+        using (IAmbientServiceProfile scope = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerForkedContextsAttributeToEndedSystem)))
+        {
+            IAmbientServiceProfiler profiler = _ServiceProfiler.Local ?? throw new InvalidOperationException("There must be an ambient service profiler for this test.");
+            // the main context enters the default (CPU) system and stays there for 10s before forking; this seeds the stale inherited start
+            profiler.SwitchSystem("");
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(10000));
+            // capture the main context as two independent forks would inherit it (default active since t=0)
+            ExecutionContext forkA = ExecutionContext.Capture() ?? throw new InvalidOperationException("There must be an execution context to capture.");
+            ExecutionContext forkB = ExecutionContext.Capture() ?? throw new InvalidOperationException("There must be an execution context to capture.");
+            // both forks switch into S3 at t=10000; capture each fork's post-switch context so it can be resumed (switched back) later
+            ExecutionContext? aInS3 = null;
+            ExecutionContext? bInS3 = null;
+            ExecutionContext.Run(forkA, _ => { profiler.SwitchSystem("S3"); aInS3 = ExecutionContext.Capture(); }, null);
+            ExecutionContext.Run(forkB, _ => { profiler.SwitchSystem("S3"); bInS3 = ExecutionContext.Capture(); }, null);
+            ExecutionContext aRunning = aInS3 ?? throw new InvalidOperationException("Fork A must have captured a running context.");
+            ExecutionContext bRunning = bInS3 ?? throw new InvalidOperationException("Fork B must have captured a running context.");
+            // A finishes its S3 work at t=10100 (100ms of S3)
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+            ExecutionContext.Run(aRunning, _ => profiler.SwitchSystem(""), null);
+            // B finishes its S3 work at t=10200 (200ms of S3, fully overlapping A's)
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+            ExecutionContext.Run(bRunning, _ => profiler.SwitchSystem(""), null);
+
+            Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(scope.ProfilerStatistics);
+            // S3 truly ran [10000,10100) on A and [10000,10200) on B: union (wall-clock) 200ms, aggregate (busy) 300ms.
+            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats["S3"].WallClockTimeUsed);
+            Assert.AreEqual(TimeSpan.FromMilliseconds(300), stats["S3"].TimeUsed);
         }
     }
     [TestMethod]

@@ -39,7 +39,7 @@ internal class BasicAmbientServiceProfiler : IAmbientServiceProfiler
         // call all the notification sinks
         foreach (IAmbientServiceProfilerNotificationSink notificationSink in _notificationSinks)
         {
-            notificationSink.OnSystemSwitched(newSystem.StartStopwatchTimestamp, newSystem.Group, oldSystem.StartStopwatchTimestamp, updatedPreviousSystem);
+            notificationSink.OnSystemSwitched(newSystem.StartStopwatchTimestamp, newSystem.Group, oldSystem.StartStopwatchTimestamp, oldSystem.Group, updatedPreviousSystem);
         }
     }
     public bool RegisterSystemSwitchedNotificationSink(IAmbientServiceProfilerNotificationSink sink)
@@ -117,7 +117,7 @@ internal readonly struct StopwatchInterval
 /// <remarks>
 /// <plan>
 /// Stores every completed interval per group in a <see cref="ConcurrentQueue{T}"/> keyed by group, plus the currently-active system per call context (keyed by an opaque context marker) so in-flight time can be attributed at read time or finalized at scope close.
-/// Completed intervals are reconstructed purely from each switch event's old/new start timestamps, so they are correct regardless of cross-context arrival order; only in-flight attribution depends on the per-context active map, which is best-effort when parallel children share an inherited context marker.
+/// Completed intervals are reconstructed purely from each switch event's old/new start timestamps and the ended-system identity delivered with the event, so both their extent and their attribution are correct regardless of cross-context arrival order, and even when parallel children share an inherited context marker.  Only in-flight attribution still depends on the per-context active map, which remains best-effort under such shared markers (a still-running child may be mis-snapshotted at read time, but is recorded correctly once it switches or the scope finalizes).
 /// At report time it copies each group's intervals into a list, optionally appends in-flight intervals ending at "now", and computes the aggregate as the simple sum of interval lengths (concurrent use counted multiply) and the wall-clock measure as the union via an order-independent sweep-line merge (concurrent use counted once).  Memory is proportional to the number of completed intervals, which is bounded for call-context and time-window scopes but grows for a whole-process scope.
 /// </plan>
 /// </remarks>
@@ -133,10 +133,11 @@ internal sealed class ServiceProfileSampleCollector
     /// <param name="oldStart">The stopwatch timestamp when the just-ended system became active.</param>
     /// <param name="newStart">The stopwatch timestamp when the new system became active (the end of the just-ended interval).</param>
     /// <param name="newGroup">The (already group-transformed) system that is now active.</param>
-    /// <param name="revisedEndedGroup">An optional (already group-transformed) replacement identity for the just-ended system, or null to use whichever system was active for this context.</param>
-    public void RecordSwitch(object contextKey, long oldStart, long newStart, string newGroup, string? revisedEndedGroup)
+    /// <param name="endedGroup">The (already group-transformed) system that just ended, as known to the call context that ran it.  Delivered with the event so concurrent forked contexts are attributed correctly even when they share an inherited <paramref name="contextKey"/>.</param>
+    /// <param name="revisedEndedGroup">An optional (already group-transformed) replacement identity for the just-ended system that overrides <paramref name="endedGroup"/>, or null to use <paramref name="endedGroup"/>.</param>
+    public void RecordSwitch(object contextKey, long oldStart, long newStart, string newGroup, string endedGroup, string? revisedEndedGroup)
     {
-        string justEndedGroup = revisedEndedGroup ?? (_activeByContext.TryGetValue(contextKey, out CallContextActiveSystemData active) ? active.Group : "");
+        string justEndedGroup = revisedEndedGroup ?? endedGroup;
         AddInterval(justEndedGroup, oldStart, newStart);
         _activeByContext[contextKey] = new CallContextActiveSystemData(newGroup, newStart);
     }
@@ -279,14 +280,16 @@ internal class ProcessOrSingleTimeWindowServiceProfiler : IAmbientServiceProfile
     /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
     /// <param name="newSystem">The identifier for the system that is starting to run.</param>
     /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
-    /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-    public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null)
+    /// <param name="oldSystem">The identifier for the system that has just finished running, as known to the call context that ran it; used to attribute the completed interval.</param>
+    /// <param name="revisedOldSystem">An optional revised name for the system that has just finished running that overrides <paramref name="oldSystem"/>, or null if the identifier for the old system does not need revising.</param>
+    public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string oldSystem, string? revisedOldSystem = null)
     {
         // assign a call context key for the current call context if we haven't assigned one yet
         if (_callContextKey.Value == null) _callContextKey.Value = new object();
         string newGroup = GroupSystem(_systemToGroupTransform, newSystem);
+        string endedGroup = GroupSystem(_systemToGroupTransform, oldSystem);
         string? revisedEndedGroup = (revisedOldSystem == null) ? null : GroupSystem(_systemToGroupTransform, revisedOldSystem);
-        _collector.RecordSwitch(_callContextKey.Value, oldSystemStartStopwatchTimestamp, newSystemStartStopwatchTimestamp, newGroup, revisedEndedGroup);
+        _collector.RecordSwitch(_callContextKey.Value, oldSystemStartStopwatchTimestamp, newSystemStartStopwatchTimestamp, newGroup, endedGroup, revisedEndedGroup);
     }
 
     protected virtual void Dispose(bool disposing)
@@ -348,12 +351,13 @@ internal class ScopeOnSystemSwitchedDistributor : IAmbientServiceProfilerNotific
     /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
     /// <param name="newSystem">The identifier for the system that is starting to run.</param>
     /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
-    /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-    public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null)
+    /// <param name="oldSystem">The identifier for the system that has just finished running, as known to the call context that ran it; used to attribute the completed interval.</param>
+    /// <param name="revisedOldSystem">An optional revised name for the system that has just finished running that overrides <paramref name="oldSystem"/>, or null if the identifier for the old system does not need revising.</param>
+    public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string oldSystem, string? revisedOldSystem = null)
     {
         foreach (IAmbientServiceProfilerNotificationSink notificationSink in _notificationSinks)
         {
-            notificationSink.OnSystemSwitched(newSystemStartStopwatchTimestamp, newSystem, oldSystemStartStopwatchTimestamp, revisedOldSystem);
+            notificationSink.OnSystemSwitched(newSystemStartStopwatchTimestamp, newSystem, oldSystemStartStopwatchTimestamp, oldSystem, revisedOldSystem);
         }
     }
 
@@ -374,7 +378,7 @@ internal class ScopeOnSystemSwitchedDistributor : IAmbientServiceProfilerNotific
 /// <pitch>The per-request view: profiles one operation and the parallel contexts it spawns, so a request that fans work out concurrently shows aggregate backend time above its wall-clock latency.</pitch>
 /// <pledge><see cref="IAmbientServiceProfile"/></pledge>
 /// <pledge>Reads of <see cref="ProfilerStatistics"/> include the currently-active (in-flight) system(s) as intervals ending "now", so the breakdown is meaningful before the scope ends.</pledge>
-/// <plan>Subscribes to a call-context-scoped <see cref="ScopeOnSystemSwitchedDistributor"/> and delegates to a <see cref="ServiceProfileSampleCollector"/>.  Completed intervals are reconstructed from self-contained switch events (correct under fork-based parallelism); a per-context <see cref="AsyncLocal{T}"/> marker attributes in-flight time, best-effort when forked children share the creating context's inherited marker.</plan>
+/// <plan>Subscribes to a call-context-scoped <see cref="ScopeOnSystemSwitchedDistributor"/> and delegates to a <see cref="ServiceProfileSampleCollector"/>.  Completed intervals are reconstructed from self-contained switch events that carry the ended system's identity, so they are attributed correctly under fork-based parallelism even though forked children share the creating context's inherited <see cref="AsyncLocal{T}"/> marker; that shared marker only limits the in-flight (not-yet-ended) snapshot.</plan>
 /// </remarks>
 internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServiceProfilerNotificationSink, IDisposable
 {
@@ -419,14 +423,16 @@ internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServ
     /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
     /// <param name="newSystem">The identifier for the system that is starting to run.</param>
     /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
-    /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-    public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null)
+    /// <param name="oldSystem">The identifier for the system that has just finished running, as known to the call context that ran it; used to attribute the completed interval.</param>
+    /// <param name="revisedOldSystem">An optional revised name for the system that has just finished running that overrides <paramref name="oldSystem"/>, or null if the identifier for the old system does not need revising.</param>
+    public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string oldSystem, string? revisedOldSystem = null)
     {
         // assign a call context key for the current call context if we haven't assigned one yet (forked children may inherit the creating context's key)
         if (_callContextKey.Value == null) _callContextKey.Value = new object();
         string newGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, newSystem);
+        string endedGroup = ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, oldSystem);
         string? revisedEndedGroup = (revisedOldSystem == null) ? null : ProcessOrSingleTimeWindowServiceProfiler.GroupSystem(_systemGroupTransform, revisedOldSystem);
-        _collector.RecordSwitch(_callContextKey.Value, oldSystemStartStopwatchTimestamp, newSystemStartStopwatchTimestamp, newGroup, revisedEndedGroup);
+        _collector.RecordSwitch(_callContextKey.Value, oldSystemStartStopwatchTimestamp, newSystemStartStopwatchTimestamp, newGroup, endedGroup, revisedEndedGroup);
     }
 
     protected virtual void Dispose(bool disposing)

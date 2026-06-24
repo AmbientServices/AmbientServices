@@ -66,11 +66,12 @@ The regular expression will attempt to match the system identifier, with the val
     /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
     /// <param name="newSystem">The identifier for the system that is starting to run.</param>
     /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
-    /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-    public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null)
+    /// <param name="oldSystem">The identifier for the system that has just finished running, as known to the call context that ran it; used to attribute the completed interval.</param>
+    /// <param name="revisedOldSystem">An optional revised name for the system that has just finished running that overrides <paramref name="oldSystem"/>, or null if the identifier for the old system does not need revising.</param>
+    public void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string oldSystem, string? revisedOldSystem = null)
     {
         _scopeDistributor.Value ??= new ScopeOnSystemSwitchedDistributor();
-        _scopeDistributor.Value.OnSystemSwitched(newSystemStartStopwatchTimestamp, newSystem, oldSystemStartStopwatchTimestamp, revisedOldSystem);
+        _scopeDistributor.Value.OnSystemSwitched(newSystemStartStopwatchTimestamp, newSystem, oldSystemStartStopwatchTimestamp, oldSystem, revisedOldSystem);
     }
     /// <summary>
     /// Creates a service profiler which profiles the current call context.

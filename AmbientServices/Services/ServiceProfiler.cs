@@ -9,7 +9,7 @@ namespace AmbientServices;
 /// <remarks>
 /// <pitch>The push side of profiling: implement this to receive every system switch as it happens and accumulate it however you like.  Collectors that build an <see cref="IAmbientServiceProfile"/> are the canonical implementers.</pitch>
 /// <pledge>
-/// <see cref="OnSystemSwitched"/> is called once per switch, after the switch has been applied.  Each call delivers a complete, self-contained interval: the just-ended system ran from <c>oldSystemStartStopwatchTimestamp</c> to <c>newSystemStartStopwatchTimestamp</c>, so a sink can reconstruct intervals without retaining prior per-context state.
+/// <see cref="OnSystemSwitched"/> is called once per switch, after the switch has been applied.  Each call delivers a complete, self-contained interval: the just-ended system (named by <c>oldSystem</c>, or by <c>revisedOldSystem</c> when supplied) ran from <c>oldSystemStartStopwatchTimestamp</c> to <c>newSystemStartStopwatchTimestamp</c>.  Because the ended system's identity travels with the event, a sink can both reconstruct and attribute the interval without retaining any per-context state — which is what lets concurrent forked contexts (which may share an inherited context marker) each be attributed to the system they actually ran, rather than to whichever sibling last wrote a shared slot.
 /// Calls may arrive concurrently from multiple call contexts and are not guaranteed to be ordered by timestamp across contexts; implementations must be thread-safe and must not assume arrival order matches chronological order.
 /// </pledge>
 /// </remarks>
@@ -26,8 +26,9 @@ public interface IAmbientServiceProfilerNotificationSink
     /// <param name="newSystemStartStopwatchTimestamp">The stopwatch timestamp when the new system started.</param>
     /// <param name="newSystem">The identifier for the system that is starting to run.</param>
     /// <param name="oldSystemStartStopwatchTimestamp">The stopwatch timestamp when the old system started running.</param>
-    /// <param name="revisedOldSystem">The (possibly-revised) name for the system that has just finished running, or null if the identifier for the old system does not need revising.</param>
-    void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string? revisedOldSystem = null);
+    /// <param name="oldSystem">The identifier for the system that has just finished running, as known to the call context that ran it (forked contexts carry their own correct value rather than a shared one); used to attribute the completed interval.</param>
+    /// <param name="revisedOldSystem">An optional revised name for the system that has just finished running that overrides <paramref name="oldSystem"/>, or null if the identifier for the old system does not need revising.</param>
+    void OnSystemSwitched(long newSystemStartStopwatchTimestamp, string newSystem, long oldSystemStartStopwatchTimestamp, string oldSystem, string? revisedOldSystem = null);
 }
 /// <summary>
 /// An interface that abstracts a service profiler service.
@@ -40,7 +41,7 @@ public interface IAmbientServiceProfilerNotificationSink
 /// <pledge>
 /// Within a single call context exactly one system is active at a time: <see cref="SwitchSystem"/> ends the currently-active system and begins the named one, attributing the elapsed interval to the system that just ended; the null or empty system denotes the default (unattributed) system.  Switching is mutually exclusive by construction — there is no enter/exit nesting and no way to make two systems simultaneously active in one context.
 /// Concurrency is expressed only by multiple call contexts, each internally sequential; an <see cref="System.Threading.AsyncLocal{T}"/>-style flow carries the active-system state into forked contexts.  The just-ended system may be retroactively renamed via <c>updatedPreviousSystem</c> (for example to fold in a success/failure outcome only known on completion).
-/// Registered <see cref="IAmbientServiceProfilerNotificationSink"/> instances are notified on every switch with the start timestamps of both the ending and beginning systems, which fully determine each completed interval.
+/// Registered <see cref="IAmbientServiceProfilerNotificationSink"/> instances are notified on every switch with the identities and start timestamps of both the ending and beginning systems, which fully determine each completed interval and its attribution.
 /// </pledge>
 /// </remarks>
 public interface IAmbientServiceProfiler
