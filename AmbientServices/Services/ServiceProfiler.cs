@@ -97,12 +97,13 @@ public interface IAmbientServiceProfiler
 /// </summary>
 /// <remarks>
 /// <pitch>The ergonomic way to mark a system active for the duration of a <c>using</c> block when the full system identifier is known up front — switch on construction, switch back to the default system on dispose.</pitch>
-/// <pledge>Construction calls <see cref="IAmbientServiceProfiler.SwitchSystem"/> with the given system; disposal switches back to the default (null) system.  Because the underlying model is mutually exclusive per call context, these scopes are meant to be used one-deep per await within a context, not opened for two different systems concurrently in the same context.</pledge>
-/// <plan>A thin wrapper that holds the <see cref="IAmbientServiceProfiler"/> and calls <c>SwitchSystem</c> on construction and disposal; it stores no timing state of its own.</plan>
+/// <pledge>Construction calls <see cref="IAmbientServiceProfiler.SwitchSystem"/> with the given system; disposal switches back to the default (null) system, replaying the scoped system as the revised previous system so the just-ended interval is labeled from the switch event itself rather than from per-context active-system state (which is unreliable when forked call contexts share an inherited context key).  Because the underlying model is mutually exclusive per call context, these scopes are meant to be used one-deep per await within a context, not opened for two different systems concurrently in the same context.</pledge>
+/// <plan>A thin wrapper that holds the <see cref="IAmbientServiceProfiler"/> and the system it switched to; it calls <c>SwitchSystem</c> on construction and, on disposal, switches to the default system while passing the scoped system as <c>updatedPreviousSystem</c>.  It stores no timing state of its own.</plan>
 /// </remarks>
 public sealed class ScopedSystemSwitch : IDisposable
 {
     private readonly IAmbientServiceProfiler _profiler;
+    private readonly string? _system;
 
     /// <summary>
     /// Constructs a scoped system switcher.
@@ -115,6 +116,7 @@ public sealed class ScopedSystemSwitch : IDisposable
     {
         if (profiler == null) throw new ArgumentNullException(nameof(profiler));
         _profiler = profiler;
+        _system = system;
         profiler.SwitchSystem(system, updatedPreviousSystem);
     }
     /// <summary>
@@ -122,6 +124,9 @@ public sealed class ScopedSystemSwitch : IDisposable
     /// </summary>
     public void Dispose()
     {
-        _profiler.SwitchSystem(null);
+        // Replay the system we opened as the revised previous system so the collector attributes this scope's
+        // interval from the self-contained switch event instead of the per-context active-system map, which
+        // last-writer-wins across fan-out children that share an inherited call-context key.
+        _profiler.SwitchSystem(null, _system);
     }
 }
