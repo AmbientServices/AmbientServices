@@ -68,6 +68,21 @@ public interface IAmbientServiceProfiler
     /// </remarks>
     void SwitchSystem(string? system, string? updatedPreviousSystem = null);
     /// <summary>
+    /// Re-baselines the current call context as a freshly-forked context: the active system becomes the default (null)
+    /// system starting now, and the interval the context inherited from its parent (the parent's active system, timed
+    /// since the parent last switched) is deliberately <em>not</em> recorded.
+    /// </summary>
+    /// <remarks>
+    /// Call this at the start of forked work (after execution has actually crossed onto the forked context, e.g. after
+    /// the first <c>await</c>).  A forked <see cref="System.Threading.ExecutionContext"/> inherits the parent's
+    /// active-system start timestamp via <see cref="System.Threading.AsyncLocal{T}"/> flow; when many forks share that
+    /// inherited start, each one's first <see cref="SwitchSystem"/> would close an interval reaching back to the parent's
+    /// start, so the parent's pre-fork time gets charged once per fork and the default group's aggregate (busy) time
+    /// balloons.  Unlike <see cref="SwitchSystem"/>, this records no interval — it only discards the inherited start, so
+    /// the parent (which keeps its own copy) still accounts for that span exactly once.  No notification sink is called.
+    /// </remarks>
+    void ResetForkedCallContext();
+    /// <summary>
     /// Registers a system switch notification sink with this ambient service profiler.
     /// </summary>
     /// <param name="sink">An <see cref="IAmbientServiceProfilerNotificationSink"/> that will receive notifications when the system is switched.</param>

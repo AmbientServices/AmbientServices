@@ -546,6 +546,50 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         }
     }
     [TestMethod]
+    public void ServiceProfilerResetForkedCallContextDiscardsInheritedInterval()
+    {
+        // Companion to ServiceProfilerForkedContextsAttributeToEndedSystem: same shape (main sits in the default system
+        // for 10s, then two forks each do overlapping S3 work), but each fork calls ResetForkedCallContext() on entry.
+        // Without it, each fork's first switch closes a ["", 0, 10000) interval inherited from the parent's start, so the
+        // default group's aggregate (busy) time balloons to 2x10000ms across the two forks.  ResetForkedCallContext
+        // discards that inherited start (recording nothing), so the forks contribute zero default time and S3 is
+        // unaffected.  Deterministic via ExecutionContext.Capture/Run under a paused clock (no real threads).
+        using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
+        using (AmbientClock.Pause())
+        using (AmbientServiceProfilerCoordinator coordinator = new())
+        using (IAmbientServiceProfile scope = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerResetForkedCallContextDiscardsInheritedInterval)))
+        {
+            IAmbientServiceProfiler profiler = _ServiceProfiler.Local ?? throw new InvalidOperationException("There must be an ambient service profiler for this test.");
+            // the main context enters the default (CPU) system and stays there for 10s before forking; this seeds the stale inherited start
+            profiler.SwitchSystem("");
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(10000));
+            // capture the main context as two independent forks would inherit it (default active since t=0)
+            ExecutionContext forkA = ExecutionContext.Capture() ?? throw new InvalidOperationException("There must be an execution context to capture.");
+            ExecutionContext forkB = ExecutionContext.Capture() ?? throw new InvalidOperationException("There must be an execution context to capture.");
+            // both forks re-baseline (discarding the inherited 10s default span) and then switch into S3 at t=10000
+            ExecutionContext? aInS3 = null;
+            ExecutionContext? bInS3 = null;
+            ExecutionContext.Run(forkA, _ => { profiler.ResetForkedCallContext(); profiler.SwitchSystem("S3"); aInS3 = ExecutionContext.Capture(); }, null);
+            ExecutionContext.Run(forkB, _ => { profiler.ResetForkedCallContext(); profiler.SwitchSystem("S3"); bInS3 = ExecutionContext.Capture(); }, null);
+            ExecutionContext aRunning = aInS3 ?? throw new InvalidOperationException("Fork A must have captured a running context.");
+            ExecutionContext bRunning = bInS3 ?? throw new InvalidOperationException("Fork B must have captured a running context.");
+            // A finishes its S3 work at t=10100 (100ms of S3)
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+            ExecutionContext.Run(aRunning, _ => profiler.SwitchSystem(""), null);
+            // B finishes its S3 work at t=10200 (200ms of S3, fully overlapping A's)
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(100));
+            ExecutionContext.Run(bRunning, _ => profiler.SwitchSystem(""), null);
+
+            Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(scope.ProfilerStatistics);
+            // S3 attribution is unchanged: union (wall-clock) 200ms, aggregate (busy) 300ms.
+            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats["S3"].WallClockTimeUsed);
+            Assert.AreEqual(TimeSpan.FromMilliseconds(300), stats["S3"].TimeUsed);
+            // The inherited 10s default span is NOT charged to either fork (it would be 20000ms of busy without the reset).
+            Assert.AreEqual(TimeSpan.Zero, stats[""].TimeUsed);
+            Assert.AreEqual(TimeSpan.Zero, stats[""].WallClockTimeUsed);
+        }
+    }
+    [TestMethod]
     public void AmbientServiceProfilerCoordinatorOverrideGroupTransform()
     {
         string system1Start = "DynamoDB/Table:My-table/Partition:342644";

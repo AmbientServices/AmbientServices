@@ -42,6 +42,13 @@ internal class BasicAmbientServiceProfiler : IAmbientServiceProfiler
             notificationSink.OnSystemSwitched(newSystem.StartStopwatchTimestamp, newSystem.Group, oldSystem.StartStopwatchTimestamp, oldSystem.Group, updatedPreviousSystem);
         }
     }
+    public void ResetForkedCallContext()
+    {
+        // Re-stamp the active system to the default, started now, with NO sink notification.  Not notifying is the whole
+        // point: it discards the inherited [parentStart, now) span (the parent keeps its own copy and records that span
+        // itself) instead of duplicating it onto every fork, which is what inflates the default group's aggregate time.
+        _activeSystem.Value = new CallContextActiveSystemData(null, AmbientClock.Ticks);
+    }
     public bool RegisterSystemSwitchedNotificationSink(IAmbientServiceProfilerNotificationSink sink)
     {
         return _notificationSinks.Add(sink);
