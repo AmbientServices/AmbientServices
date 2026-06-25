@@ -29,6 +29,8 @@ internal class BasicAmbientServiceProfiler : IAmbientServiceProfiler
         _activeSystem = new AsyncLocal<CallContextActiveSystemData>();
     }
 
+    public string? CurrentSystem => _activeSystem.Value.Group;
+
     public void SwitchSystem(string? system, string? updatedPreviousSystem = null)
     {
         CallContextActiveSystemData oldSystem = _activeSystem.Value;

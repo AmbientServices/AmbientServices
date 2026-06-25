@@ -397,6 +397,23 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         return ret;
     }
     [TestMethod]
+    public void AmbientServiceProfilerAccumulatorSerialConstructor()
+    {
+        // the serial constructor treats the group as never-overlapping, so the critical-path measure equals the aggregate
+        AmbientServiceProfilerAccumulator accumulator = new("X", 1234, 7);
+        Assert.AreEqual("X", accumulator.Group);
+        Assert.AreEqual(1234, accumulator.TotalStopwatchTicksUsed);
+        Assert.AreEqual(1234, accumulator.CriticalPathStopwatchTicksUsed);
+        Assert.AreEqual(accumulator.TimeUsed, accumulator.CriticalPathTimeUsed);
+        Assert.AreEqual(7, accumulator.ExecutionCount);
+        // the execution count defaults to one when omitted
+        AmbientServiceProfilerAccumulator defaulted = new("Y", 50);
+        Assert.AreEqual("Y", defaulted.Group);
+        Assert.AreEqual(50, defaulted.TotalStopwatchTicksUsed);
+        Assert.AreEqual(50, defaulted.CriticalPathStopwatchTicksUsed);
+        Assert.AreEqual(1, defaulted.ExecutionCount);
+    }
+    [TestMethod]
     public void ServiceProfileUnionStopwatchTicks()
     {
         // empty and single
@@ -587,6 +604,39 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
             // The inherited 10s default span is NOT charged to either fork (it would be 20000ms of busy without the reset).
             Assert.AreEqual(TimeSpan.Zero, stats[""].TimeUsed);
             Assert.AreEqual(TimeSpan.Zero, stats[""].CriticalPathTimeUsed);
+        }
+    }
+    [TestMethod]
+    public void ServiceProfilerScopedSwitchNestsAndRestoresPreviousSystem()
+    {
+        // A ScopedSystemSwitch must restore the system that was active when it opened (not the default), so an inner
+        // scope returns control to the enclosing system.  Outer "A" runs [0,40) and [70,100); inner "B" runs [40,70).
+        using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
+        using (AmbientClock.Pause())
+        using (AmbientServiceProfilerCoordinator coordinator = new())
+        using (IAmbientServiceProfile scope = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerScopedSwitchNestsAndRestoresPreviousSystem)))
+        {
+            IAmbientServiceProfiler profiler = _ServiceProfiler.Local ?? throw new InvalidOperationException("There must be an ambient service profiler for this test.");
+            using (profiler.ScopedSystemSwitch("A"))
+            {
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(40));       // A: [0,40)
+                using (profiler.ScopedSystemSwitch("B"))
+                {
+                    AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(30));   // B: [40,70)
+                }
+                // the inner scope must have returned us to "A", not the default system
+                Assert.AreEqual("A", profiler.CurrentSystem);
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(30));       // A: [70,100)
+            }
+            // the outer scope returns us to the default system
+            Assert.IsTrue(string.IsNullOrEmpty(profiler.CurrentSystem));
+
+            Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(scope.ProfilerStatistics);
+            // A ran two disjoint intervals totaling 70ms; B ran 30ms.  Before nesting-aware dispose, the inner scope
+            // reset to default, so the [70,100) tail would have landed in the default group and A would be only 40ms.
+            Assert.AreEqual(TimeSpan.FromMilliseconds(70), stats["A"].CriticalPathTimeUsed);
+            Assert.AreEqual(TimeSpan.FromMilliseconds(70), stats["A"].TimeUsed);
+            Assert.AreEqual(TimeSpan.FromMilliseconds(30), stats["B"].CriticalPathTimeUsed);
         }
     }
     [TestMethod]

@@ -39,13 +39,19 @@ public interface IAmbientServiceProfilerNotificationSink
 /// It deliberately does <em>not</em> measure CPU time, allocations, or call counts at finer than system-switch granularity, and it cannot mark two systems active at once within a single call context — that is what its limited, low-overhead model buys.
 /// </pitch>
 /// <pledge>
-/// Within a single call context exactly one system is active at a time: <see cref="SwitchSystem"/> ends the currently-active system and begins the named one, attributing the elapsed interval to the system that just ended; the null or empty system denotes the default (unattributed) system.  Switching is mutually exclusive by construction — there is no enter/exit nesting and no way to make two systems simultaneously active in one context.
+/// Within a single call context exactly one system is active at a time: <see cref="SwitchSystem"/> ends the currently-active system and begins the named one, attributing the elapsed interval to the system that just ended; the null or empty system denotes the default (unattributed) system.  The primitive itself performs no enter/exit nesting and two systems are never simultaneously active in one context; <see cref="ScopedSystemSwitch"/> layers stack-style nesting on top by capturing <see cref="CurrentSystem"/> on construction and restoring it on dispose.
 /// Concurrency is expressed only by multiple call contexts, each internally sequential; an <see cref="System.Threading.AsyncLocal{T}"/>-style flow carries the active-system state into forked contexts.  The just-ended system may be retroactively renamed via <c>updatedPreviousSystem</c> (for example to fold in a success/failure outcome only known on completion).
 /// Registered <see cref="IAmbientServiceProfilerNotificationSink"/> instances are notified on every switch with the identities and start timestamps of both the ending and beginning systems, which fully determine each completed interval and its attribution.
 /// </pledge>
 /// </remarks>
 public interface IAmbientServiceProfiler
 {
+    /// <summary>
+    /// Gets the identifier of the system currently active in this call context, or null/empty when the default
+    /// (unattributed) system is active.  Used by <see cref="ScopedSystemSwitch"/> to capture and restore the prior
+    /// system on dispose so that switch scopes nest correctly.
+    /// </summary>
+    string? CurrentSystem { get; }
     /// <summary>
     /// Switches the system that is executing in this call context.
     /// </summary>
@@ -111,14 +117,15 @@ public interface IAmbientServiceProfiler
 /// A disposable scoping class that lets the caller indicate when system usage is complete.
 /// </summary>
 /// <remarks>
-/// <pitch>The ergonomic way to mark a system active for the duration of a <c>using</c> block when the full system identifier is known up front — switch on construction, switch back to the default system on dispose.</pitch>
-/// <pledge>Construction calls <see cref="IAmbientServiceProfiler.SwitchSystem"/> with the given system; disposal switches back to the default (null) system, replaying the scoped system as the revised previous system so the just-ended interval is labeled from the switch event itself rather than from per-context active-system state (which is unreliable when forked call contexts share an inherited context key).  Because the underlying model is mutually exclusive per call context, these scopes are meant to be used one-deep per await within a context, not opened for two different systems concurrently in the same context.</pledge>
-/// <plan>A thin wrapper that holds the <see cref="IAmbientServiceProfiler"/> and the system it switched to; it calls <c>SwitchSystem</c> on construction and, on disposal, switches to the default system while passing the scoped system as <c>updatedPreviousSystem</c>.  It stores no timing state of its own.</plan>
+/// <pitch>The ergonomic way to mark a system active for the duration of a <c>using</c> block when the full system identifier is known up front — switch on construction, restore the previously-active system on dispose so the scopes nest.</pitch>
+/// <pledge>Construction captures the currently-active system (via <see cref="IAmbientServiceProfiler.CurrentSystem"/>) and calls <see cref="IAmbientServiceProfiler.SwitchSystem"/> with the given system; disposal restores the captured system rather than forcing the default, and replays the scoped system as the revised previous system so the just-ended interval is labeled from the switch event itself rather than from per-context active-system state (which is unreliable when forked call contexts share an inherited context key).  Scopes therefore nest correctly — an inner scope returns control to the enclosing system, not to the default — while the underlying model remains mutually exclusive (one system active at a time).  Opened from the default system (the common leaf case) this restores the default.</pledge>
+/// <plan>A thin wrapper that holds the <see cref="IAmbientServiceProfiler"/>, the system it switched to, and the system that was active before it; it captures the previous system and switches on construction, and on disposal switches back to that previous system while passing the scoped system as <c>updatedPreviousSystem</c>.  It stores no timing state of its own.</plan>
 /// </remarks>
 public sealed class ScopedSystemSwitch : IDisposable
 {
     private readonly IAmbientServiceProfiler _profiler;
     private readonly string? _system;
+    private readonly string? _previousSystem;
 
     /// <summary>
     /// Constructs a scoped system switcher.
@@ -132,16 +139,19 @@ public sealed class ScopedSystemSwitch : IDisposable
         if (profiler == null) throw new ArgumentNullException(nameof(profiler));
         _profiler = profiler;
         _system = system;
+        // capture the system active before this scope so disposal can restore it, allowing scopes to nest
+        _previousSystem = profiler.CurrentSystem;
         profiler.SwitchSystem(system, updatedPreviousSystem);
     }
     /// <summary>
-    /// Disposes of the instance.
+    /// Disposes of the instance, restoring the system that was active when the scope was constructed.
     /// </summary>
     public void Dispose()
     {
-        // Replay the system we opened as the revised previous system so the collector attributes this scope's
-        // interval from the self-contained switch event instead of the per-context active-system map, which
-        // last-writer-wins across fan-out children that share an inherited call-context key.
-        _profiler.SwitchSystem(null, _system);
+        // Restore the previously-active system (so scopes nest) and replay the system we opened as the revised
+        // previous system so the collector attributes this scope's interval from the self-contained switch event
+        // instead of the per-context active-system map, which last-writer-wins across fan-out children that share
+        // an inherited call-context key.
+        _profiler.SwitchSystem(_previousSystem, _system);
     }
 }
