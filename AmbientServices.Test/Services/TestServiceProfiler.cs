@@ -426,7 +426,7 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 30));
         // sequential repeats are disjoint, so they add into BOTH measures equally
         Assert.AreEqual(20, stats["X"].TotalStopwatchTicksUsed);
-        Assert.AreEqual(20, stats["X"].WallClockStopwatchTicksUsed);
+        Assert.AreEqual(20, stats["X"].CriticalPathStopwatchTicksUsed);
         Assert.AreEqual(2, stats["X"].ExecutionCount);
     }
     [TestMethod]
@@ -441,11 +441,11 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         collector.RecordSwitch(callContextA, 0, 20, "", "X", null);  // A: ends X [0,20)
         collector.RecordSwitch(callContextB, 5, 25, "", "X", null);  // B: ends X [5,25)
         Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 25));
-        // aggregate counts both intervals fully; wall-clock is the union [0,25)
+        // aggregate counts both intervals fully; critical-path is the union [0,25)
         Assert.AreEqual(40, stats["X"].TotalStopwatchTicksUsed);
-        Assert.AreEqual(25, stats["X"].WallClockStopwatchTicksUsed);
+        Assert.AreEqual(25, stats["X"].CriticalPathStopwatchTicksUsed);
         Assert.AreEqual(2, stats["X"].ExecutionCount);
-        Assert.IsLessThan(stats["X"].TotalStopwatchTicksUsed, stats["X"].WallClockStopwatchTicksUsed);
+        Assert.IsLessThan(stats["X"].TotalStopwatchTicksUsed, stats["X"].CriticalPathStopwatchTicksUsed);
     }
     [TestMethod]
     public void ServiceProfileSampleCollectorIncludesActive()
@@ -456,7 +456,7 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         // with includeActive, the in-flight X interval [0,10) is reported
         Dictionary<string, AmbientServiceProfilerAccumulator> active = ByGroup(collector.GetStatistics(true, 10));
         Assert.AreEqual(10, active["X"].TotalStopwatchTicksUsed);
-        Assert.AreEqual(10, active["X"].WallClockStopwatchTicksUsed);
+        Assert.AreEqual(10, active["X"].CriticalPathStopwatchTicksUsed);
         Assert.AreEqual(1, active["X"].ExecutionCount);
         // without includeActive, the still-running X is not reported
         Dictionary<string, AmbientServiceProfilerAccumulator> completed = ByGroup(collector.GetStatistics(false, 10));
@@ -471,16 +471,16 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
         collector.FinalizeActive(10);                           // close in-flight X as [0,10)
         Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(collector.GetStatistics(false, 999));
         Assert.AreEqual(10, stats["X"].TotalStopwatchTicksUsed);
-        Assert.AreEqual(10, stats["X"].WallClockStopwatchTicksUsed);
+        Assert.AreEqual(10, stats["X"].CriticalPathStopwatchTicksUsed);
         Assert.AreEqual(1, stats["X"].ExecutionCount);
     }
     [TestMethod]
-    public void ServiceProfilerWallClockSerialEqualsAggregate()
+    public void ServiceProfilerCriticalPathSerialEqualsAggregate()
     {
         using (ScopedLocalServiceOverride<IAmbientServiceProfiler> o = new(new BasicAmbientServiceProfiler()))
         using (AmbientClock.Pause())
         using (AmbientServiceProfilerCoordinator coordinator = new())
-        using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerWallClockSerialEqualsAggregate)))
+        using (IAmbientServiceProfile scopeProfile = coordinator.CreateCallContextProfiler(nameof(ServiceProfilerCriticalPathSerialEqualsAggregate)))
         {
             _ServiceProfiler.Local?.SwitchSystem("X");
             AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
@@ -497,7 +497,7 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
                     {
                         // two disjoint (sequential) visits add into both measures equally
                         Assert.AreEqual(TimeSpan.FromMilliseconds(80), stats.TimeUsed);
-                        Assert.AreEqual(TimeSpan.FromMilliseconds(80), stats.WallClockTimeUsed);
+                        Assert.AreEqual(TimeSpan.FromMilliseconds(80), stats.CriticalPathTimeUsed);
                         Assert.AreEqual(2, stats.ExecutionCount);
                     }
                 }
@@ -540,8 +540,8 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
             ExecutionContext.Run(bRunning, _ => profiler.SwitchSystem(""), null);
 
             Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(scope.ProfilerStatistics);
-            // S3 truly ran [10000,10100) on A and [10000,10200) on B: union (wall-clock) 200ms, aggregate (busy) 300ms.
-            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats["S3"].WallClockTimeUsed);
+            // S3 truly ran [10000,10100) on A and [10000,10200) on B: union (critical-path) 200ms, aggregate (busy) 300ms.
+            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats["S3"].CriticalPathTimeUsed);
             Assert.AreEqual(TimeSpan.FromMilliseconds(300), stats["S3"].TimeUsed);
         }
     }
@@ -581,12 +581,12 @@ Thread:9,Context:00000000000000000000000000000000,Previous:AsyncLocalTest1,Curre
             ExecutionContext.Run(bRunning, _ => profiler.SwitchSystem(""), null);
 
             Dictionary<string, AmbientServiceProfilerAccumulator> stats = ByGroup(scope.ProfilerStatistics);
-            // S3 attribution is unchanged: union (wall-clock) 200ms, aggregate (busy) 300ms.
-            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats["S3"].WallClockTimeUsed);
+            // S3 attribution is unchanged: union (critical-path) 200ms, aggregate (busy) 300ms.
+            Assert.AreEqual(TimeSpan.FromMilliseconds(200), stats["S3"].CriticalPathTimeUsed);
             Assert.AreEqual(TimeSpan.FromMilliseconds(300), stats["S3"].TimeUsed);
             // The inherited 10s default span is NOT charged to either fork (it would be 20000ms of busy without the reset).
             Assert.AreEqual(TimeSpan.Zero, stats[""].TimeUsed);
-            Assert.AreEqual(TimeSpan.Zero, stats[""].WallClockTimeUsed);
+            Assert.AreEqual(TimeSpan.Zero, stats[""].CriticalPathTimeUsed);
         }
     }
     [TestMethod]

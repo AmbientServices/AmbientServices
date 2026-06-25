@@ -119,13 +119,13 @@ internal readonly struct StopwatchInterval
 }
 
 /// <summary>
-/// A thread-safe collector that turns the self-contained switch intervals broadcast by an <see cref="IAmbientServiceProfiler"/> into per-group aggregate (busy) and wall-clock (union) statistics.
+/// A thread-safe collector that turns the self-contained switch intervals broadcast by an <see cref="IAmbientServiceProfiler"/> into per-group aggregate (busy) and critical-path (union) statistics.
 /// </summary>
 /// <remarks>
 /// <plan>
 /// Stores every completed interval per group in a <see cref="ConcurrentQueue{T}"/> keyed by group, plus the currently-active system per call context (keyed by an opaque context marker) so in-flight time can be attributed at read time or finalized at scope close.
 /// Completed intervals are reconstructed purely from each switch event's old/new start timestamps and the ended-system identity delivered with the event, so both their extent and their attribution are correct regardless of cross-context arrival order, and even when parallel children share an inherited context marker.  Only in-flight attribution still depends on the per-context active map, which remains best-effort under such shared markers (a still-running child may be mis-snapshotted at read time, but is recorded correctly once it switches or the scope finalizes).
-/// At report time it copies each group's intervals into a list, optionally appends in-flight intervals ending at "now", and computes the aggregate as the simple sum of interval lengths (concurrent use counted multiply) and the wall-clock measure as the union via an order-independent sweep-line merge (concurrent use counted once).  Memory is proportional to the number of completed intervals, which is bounded for call-context and time-window scopes but grows for a whole-process scope.
+/// At report time it copies each group's intervals into a list, optionally appends in-flight intervals ending at "now", and computes the aggregate as the simple sum of interval lengths (concurrent use counted multiply) and the critical-path measure as the union via an order-independent sweep-line merge (concurrent use counted once).  Memory is proportional to the number of completed intervals, which is bounded for call-context and time-window scopes but grows for a whole-process scope.
 /// </plan>
 /// </remarks>
 internal sealed class ServiceProfileSampleCollector
@@ -236,7 +236,7 @@ internal sealed class ServiceProfileSampleCollector
 /// A class that tracks service profile statistics across multiple call contexts in a process or a single time window.
 /// </summary>
 /// <remarks>
-/// <pitch>The process-wide / time-window view: every call context's switches roll into one breakdown, so concurrent backend use across the whole process shows up as aggregate &gt; wall-clock.</pitch>
+/// <pitch>The process-wide / time-window view: every call context's switches roll into one breakdown, so concurrent backend use across the whole process shows up as aggregate &gt; critical-path.</pitch>
 /// <pledge><see cref="IAmbientServiceProfile"/></pledge>
 /// <pledge>Live reads of <see cref="ProfilerStatistics"/> include only completed intervals; in-flight systems are folded in only when <see cref="CloseSampling"/> is called (which the time-window rotator does on each window).</pledge>
 /// <plan>Subscribes to the whole-process <see cref="IAmbientServiceProfiler"/> and delegates accumulation to a <see cref="ServiceProfileSampleCollector"/>, tagging each context with an <see cref="AsyncLocal{T}"/> marker so in-flight time can be attributed per context.</plan>
@@ -382,7 +382,7 @@ internal class ScopeOnSystemSwitchedDistributor : IAmbientServiceProfilerNotific
 /// A class that tracks service profile statistics for a specific call context (and the contexts it forks).
 /// </summary>
 /// <remarks>
-/// <pitch>The per-request view: profiles one operation and the parallel contexts it spawns, so a request that fans work out concurrently shows aggregate backend time above its wall-clock latency.</pitch>
+/// <pitch>The per-request view: profiles one operation and the parallel contexts it spawns, so a request that fans work out concurrently shows aggregate backend time above its critical-path latency.</pitch>
 /// <pledge><see cref="IAmbientServiceProfile"/></pledge>
 /// <pledge>Reads of <see cref="ProfilerStatistics"/> include the currently-active (in-flight) system(s) as intervals ending "now", so the breakdown is meaningful before the scope ends.</pledge>
 /// <plan>Subscribes to a call-context-scoped <see cref="ScopeOnSystemSwitchedDistributor"/> and delegates to a <see cref="ServiceProfileSampleCollector"/>.  Completed intervals are reconstructed from self-contained switch events that carry the ended system's identity, so they are attributed correctly under fork-based parallelism even though forked children share the creating context's inherited <see cref="AsyncLocal{T}"/> marker; that shared marker only limits the in-flight (not-yet-ended) snapshot.</plan>

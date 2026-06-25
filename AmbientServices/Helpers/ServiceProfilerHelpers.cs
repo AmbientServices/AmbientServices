@@ -20,7 +20,7 @@ namespace AmbientServices;
 /// The system-to-group transform is a <see cref="Regex"/> whose successful capture groups are concatenated to form the reported group; a null/empty transform passes the system identifier through unchanged.  An explicit transform argument overrides the ambient settings default.
 /// </pledge>
 /// <plan>
-/// Registers itself as a sink on the ambient <see cref="IAmbientServiceProfiler"/> and fans switch events out through a call-context-scoped <c>ScopeOnSystemSwitchedDistributor</c> (held in an <see cref="System.Threading.AsyncLocal{T}"/>) so that a call-context profile only observes the subtree of contexts that descend from where it was created, while time-window and process profiles observe every context.  The group transform <see cref="Regex"/> is compiled once (<see cref="RegexOptions.Compiled"/>) per profile.  Wall-clock-vs-aggregate computation lives in the collectors the factory methods construct, not here.
+/// Registers itself as a sink on the ambient <see cref="IAmbientServiceProfiler"/> and fans switch events out through a call-context-scoped <c>ScopeOnSystemSwitchedDistributor</c> (held in an <see cref="System.Threading.AsyncLocal{T}"/>) so that a call-context profile only observes the subtree of contexts that descend from where it was created, while time-window and process profiles observe every context.  The group transform <see cref="Regex"/> is compiled once (<see cref="RegexOptions.Compiled"/>) per profile.  Critical-path-vs-aggregate computation lives in the collectors the factory methods construct, not here.
 /// </plan>
 /// </remarks>
 public class AmbientServiceProfilerCoordinator : IAmbientServiceProfilerNotificationSink, IDisposable
@@ -165,11 +165,11 @@ The regular expression will attempt to match the system identifier, with the val
 /// </summary>
 /// <remarks>
 /// <pitch>
-/// The read side of profiling.  Hand it a scope (a call context, a time window, or a whole process) and it tells you, per system or system group, how much time that scope spent in each — both as aggregate busy time and as wall-clock occupancy, so you can see backend resource cost and request latency from the same sample.
+/// The read side of profiling.  Hand it a scope (a call context, a time window, or a whole process) and it tells you, per system or system group, how much time that scope spent in each — both as aggregate busy time and as critical-path occupancy, so you can see backend resource cost and request latency from the same sample.
 /// </pitch>
 /// <pledge>
-/// Each system or system group active during the scope appears as exactly one <see cref="AmbientServiceProfilerAccumulator"/>; the empty/null group represents <em>unattributed</em> wall-clock time (time not inside any <see cref="IAmbientServiceProfiler.SwitchSystem"/> scope, which mixes on-CPU work and idle waiting — the profile does not distinguish or measure CPU time).
-/// For each group the profile reports an aggregate measure (the sum of that group's active intervals across every call context in scope, counting concurrent use multiply) and a wall-clock measure (the union of those intervals, counting concurrent use once); the two are equal for serial scopes and the aggregate is never smaller.
+/// Each system or system group active during the scope appears as exactly one <see cref="AmbientServiceProfilerAccumulator"/>; the empty/null group represents <em>unattributed</em> critical-path time (time not inside any <see cref="IAmbientServiceProfiler.SwitchSystem"/> scope, which mixes on-CPU work and idle waiting — the profile does not distinguish or measure CPU time).
+/// For each group the profile reports an aggregate measure (the sum of that group's active intervals across every call context in scope, counting concurrent use multiply) and a critical-path measure (the union of those intervals, counting concurrent use once); the two are equal for serial scopes and the aggregate is never smaller.
 /// A scope that spans multiple call contexts (a process, a time window, or an operation and the contexts it forks) merges intervals across all of them.
 /// Reading <see cref="ProfilerStatistics"/> is a snapshot and may be read more than once; whether the currently-executing (not-yet-ended) systems are included in that snapshot is realization-specific.
 /// </pledge>
@@ -181,7 +181,7 @@ public interface IAmbientServiceProfile : IDisposable
     /// </summary>
     string ScopeName { get; }
     /// <summary>
-    /// Gets an enumeration of <see cref="AmbientServiceProfilerAccumulator"/> instances indicating the time spent executing in each of the systems in the associated scope, with both aggregate and wall-clock measures.
+    /// Gets an enumeration of <see cref="AmbientServiceProfilerAccumulator"/> instances indicating the time spent executing in each of the systems in the associated scope, with both aggregate and critical-path measures.
     /// </summary>
     IEnumerable<AmbientServiceProfilerAccumulator> ProfilerStatistics { get; }
 }
@@ -191,13 +191,13 @@ public interface IAmbientServiceProfile : IDisposable
 /// <remarks>
 /// <pitch>
 /// The per-group row reported by an <see cref="IAmbientServiceProfile"/>.  Carries two distinct time measures so a caller can tell resource cost apart from latency:
-/// <see cref="TotalStopwatchTicksUsed"/> (aggregate busy time, parallel use counted multiply) and <see cref="WallClockStopwatchTicksUsed"/> (wall-clock occupancy, parallel use counted once).
+/// <see cref="TotalStopwatchTicksUsed"/> (aggregate busy time, parallel use counted multiply) and <see cref="CriticalPathStopwatchTicksUsed"/> (critical-path occupancy, parallel use counted once).
 /// </pitch>
 /// <pledge>
 /// A pure data carrier; it performs no measurement of its own and simply reports what a collector computed.
-/// The two measures obey <c>WallClockStopwatchTicksUsed</c> &lt;= <c>TotalStopwatchTicksUsed</c> for any valid set of intervals: they are equal when the group's executions never overlapped in time (the serial case) and diverge in proportion to how much concurrent use overlapped.
-/// Their difference (<see cref="TotalStopwatchTicksUsed"/> - <see cref="WallClockStopwatchTicksUsed"/>) is the time saved by concurrency; combined with <see cref="ExecutionCount"/> it lets a consumer distinguish sequential repeats (which add into both measures) from parallel overlap (which adds into the aggregate but collapses in the wall-clock measure) without any per-execution flag.
-/// Both measures are reported in stopwatch ticks; the <c>TimeUsed</c>/<c>WallClockTimeUsed</c> properties convert to <see cref="TimeSpan"/>.
+/// The two measures obey <c>CriticalPathStopwatchTicksUsed</c> &lt;= <c>TotalStopwatchTicksUsed</c> for any valid set of intervals: they are equal when the group's executions never overlapped in time (the serial case) and diverge in proportion to how much concurrent use overlapped.
+/// Their difference (<see cref="TotalStopwatchTicksUsed"/> - <see cref="CriticalPathStopwatchTicksUsed"/>) is the time saved by concurrency; combined with <see cref="ExecutionCount"/> it lets a consumer distinguish sequential repeats (which add into both measures) from parallel overlap (which adds into the aggregate but collapses in the critical-path measure) without any per-execution flag.
+/// Both measures are reported in stopwatch ticks; the <c>TimeUsed</c>/<c>CriticalPathTimeUsed</c> properties convert to <see cref="TimeSpan"/>.
 /// </pledge>
 /// </remarks>
 public class AmbientServiceProfilerAccumulator
@@ -217,42 +217,42 @@ public class AmbientServiceProfilerAccumulator
     /// </summary>
     public long TotalStopwatchTicksUsed { get; }
     /// <summary>
-    /// Gets the wall-clock number of stopwatch ticks during which this system group was in use, counting time when two or more of its executions overlapped only once (the union of the executions' intervals).
+    /// Gets the critical-path number of stopwatch ticks during which this system group was in use, counting time when two or more of its executions overlapped only once (the union of the executions' intervals).
     /// This is the latency-contribution measure.  Equals <see cref="TotalStopwatchTicksUsed"/> when no executions of this group overlapped.
     /// </summary>
-    public long WallClockStopwatchTicksUsed { get; }
+    public long CriticalPathStopwatchTicksUsed { get; }
     /// <summary>
     /// Gets the aggregate (busy) amount of time used by this system group.  See <see cref="TotalStopwatchTicksUsed"/>.
     /// </summary>
     public TimeSpan TimeUsed => new(TimeSpanUtilities.StopwatchTicksToTimeSpanTicks(TotalStopwatchTicksUsed));
     /// <summary>
-    /// Gets the wall-clock amount of time during which this system group was in use.  See <see cref="WallClockStopwatchTicksUsed"/>.
+    /// Gets the critical-path amount of time during which this system group was in use.  See <see cref="CriticalPathStopwatchTicksUsed"/>.
     /// </summary>
-    public TimeSpan WallClockTimeUsed => new(TimeSpanUtilities.StopwatchTicksToTimeSpanTicks(WallClockStopwatchTicksUsed));
+    public TimeSpan CriticalPathTimeUsed => new(TimeSpanUtilities.StopwatchTicksToTimeSpanTicks(CriticalPathStopwatchTicksUsed));
 
     /// <summary>
-    /// Constructs an AmbientServiceProfilerAccumulator for the specified system, treating it as a serial group whose wall-clock time equals its aggregate time.
+    /// Constructs an AmbientServiceProfilerAccumulator for the specified system, treating it as a serial group whose critical-path time equals its aggregate time.
     /// </summary>
     /// <param name="group">The system.</param>
     /// <param name="totalStopwatchTicksUsed">The number of stopwatch ticks used by this system.</param>
     /// <param name="executionCount">The initial execution count.  Defaults to one.</param>
-    /// <remarks>This overload assumes no concurrent use within the group; use the overload that takes a separate wall-clock value when executions may have overlapped.</remarks>
+    /// <remarks>This overload assumes no concurrent use within the group; use the overload that takes a separate critical-path value when executions may have overlapped.</remarks>
     public AmbientServiceProfilerAccumulator(string group, long totalStopwatchTicksUsed, long executionCount = 1)
         : this(group, totalStopwatchTicksUsed, totalStopwatchTicksUsed, executionCount)
     {
     }
     /// <summary>
-    /// Constructs an AmbientServiceProfilerAccumulator for the specified system with explicit aggregate and wall-clock measures.
+    /// Constructs an AmbientServiceProfilerAccumulator for the specified system with explicit aggregate and critical-path measures.
     /// </summary>
     /// <param name="group">The system.</param>
     /// <param name="totalStopwatchTicksUsed">The aggregate (busy) number of stopwatch ticks used by this system, with concurrent use counted multiply.</param>
-    /// <param name="wallClockStopwatchTicksUsed">The wall-clock number of stopwatch ticks during which this system was in use, with concurrent use counted once.  Must not exceed <paramref name="totalStopwatchTicksUsed"/>.</param>
+    /// <param name="criticalPathStopwatchTicksUsed">The critical-path number of stopwatch ticks during which this system was in use, with concurrent use counted once.  Must not exceed <paramref name="totalStopwatchTicksUsed"/>.</param>
     /// <param name="executionCount">The execution count.</param>
-    public AmbientServiceProfilerAccumulator(string group, long totalStopwatchTicksUsed, long wallClockStopwatchTicksUsed, long executionCount)
+    public AmbientServiceProfilerAccumulator(string group, long totalStopwatchTicksUsed, long criticalPathStopwatchTicksUsed, long executionCount)
     {
         Group = group;
         ExecutionCount = executionCount;
         TotalStopwatchTicksUsed = totalStopwatchTicksUsed;
-        WallClockStopwatchTicksUsed = wallClockStopwatchTicksUsed;
+        CriticalPathStopwatchTicksUsed = criticalPathStopwatchTicksUsed;
     }
 }
