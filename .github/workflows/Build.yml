@@ -122,12 +122,20 @@ jobs:
   publish-nuget:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # enable GitHub OIDC token issuance so NuGet Trusted Publishing can mint a short-lived API key
     steps:
       - uses: actions/download-artifact@v8
         with:
           name: nuget-packages
           path: packages
+      # Exchange the GitHub OIDC token for a short-lived NuGet API key (valid 1 hour); must run shortly before the push.
+      - name: NuGet login (OIDC -> temporary API key)
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ secrets.NUGET_USER }}  # nuget.org profile/username (NOT email); must match the Trusted Publishing policy owner
       - name: Publish to NuGet
         run: |
-          dotnet nuget push packages/*.nupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
-          dotnet nuget push packages/*.snupkg -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+          dotnet nuget push packages/*.nupkg -k ${{ steps.nuget-login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json
+          dotnet nuget push packages/*.snupkg -k ${{ steps.nuget-login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
