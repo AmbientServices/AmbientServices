@@ -1,1 +1,17 @@
+# This is a Windows/.NET project standardized on CRLF line endings (see .editorconfig: end_of_line = crlf).
+# Auto-detect text files, normalize them in the repository, and always check them out with CRLF.
+* text=auto eol=crlf
+
+# Enable textual diffs for project files.
 *.csproj diff
+
+# Binary files: never modify their bytes or line endings.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.snk  binary
+*.dll  binary
+*.exe  binary
+*.pdf  binary
