@@ -17,6 +17,7 @@ Sharing is per-layer, not a tree: realizations of one Pledge may still have diff
 - A change to any of the 3 Ps is **agreed in prose first**, then code and tests follow.
 - Decide **fix / enhance / branch** using the constraints at *every* layer: code-vs-description mismatch → fix; within all layers → enhance; outside any layer → new unit, or a deliberate, agreed change to that layer.
 - This is a warning-free project.  All except for temporarily lingering Obsoletion warnings should be resolved before committing.
+- Sample portions of the README.md are auto-injected from the sample code using the dotnet-markdown-sample-code tool
 - This project uses the latest version of C# allowed by two month old releases of Visual Studio.
 - This project uses the latest C# coding styles except for the following:
 	* Avoid using var (please replace any instances of it you find)
