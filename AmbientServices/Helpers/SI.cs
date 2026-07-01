@@ -112,7 +112,7 @@ public static class SI
     /// <param name="maxCharacters">The maximum number of characters to use to represent the numeric part (if possible), including the decimal point.  Defaults to 4 (three significant digits).  When less than 4, the number may not be able to be represented in the specified number of characters (57 in 1 character, for example), in which case, it will use the minimum possible number of characters.</param>
     /// <param name="postfix">A postfix string (for example, "B").</param>
     /// <param name="longName">Whether or not to use the long version of the Si prefix (kilo, mega, etc.)</param>
-    /// <param name="positiveSign">Whether or not to includ a positive sign on positive numbers.</param>
+    /// <param name="positiveSign">Whether or not to include a positive sign on positive numbers.</param>
     /// <param name="culture">The <see cref="System.Globalization.CultureInfo"/> to use to format the number, defaults to the current thread culture.</param>
     /// <returns>The SI representation of the number, for example for 5342432, the return value might be "5.34MB".</returns>
     public static string ToSi(this double number, int maxCharacters = 4, string? postfix = null, bool longName = false, bool positiveSign = false, System.Globalization.CultureInfo? culture = null)
@@ -147,7 +147,7 @@ public static class SI
                 --magnitude;
             }
             System.Diagnostics.Debug.Assert(number > -999.5 && number < 999.5);
-            int digitsAfterDecimal = Math.Max(0, maxCharacters - (int)Math.Log10(Math.Abs(number)) - 2);     // Log10 give us the number of digits *before* the decimal point minus one, but we have to compensate for the decimal point itself as well
+            int digitsAfterDecimal = Math.Max(0, maxCharacters - (int)Math.Log10(Math.Abs(number)) - 2);     // Log10 gives us the number of digits *before* the decimal point minus one, but we have to compensate for the decimal point itself as well
             return ((positiveSign && number > 0.0) ? "+" : "") + number.ToString("N0" + digitsAfterDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture), culture.NumberFormat) + (longName ? (" ") : "") + prefixes[magnitude - 1] + extraQuectos + postfix;
         }
         // large number?
@@ -167,15 +167,15 @@ public static class SI
             {
                 number /= 1000.0;
             }
-            // note that the rounding issue in the corresponding algorithm above doesn't happen when we're going this direction because we're dividing here and will naturally end up with the smaller number (which is what we want because a number that's too large will result in three digits to the LEFT of the decimal point, which is what we're tyring to avoid)
+            // note that the rounding issue in the corresponding algorithm above doesn't happen when we're going this direction because we're dividing here and will naturally end up with the smaller number (which is what we want because a number that's too large will result in three digits to the LEFT of the decimal point, which is what we're trying to avoid)
             System.Diagnostics.Debug.Assert(number > -999.5 && number < 999.5);
-            int digitsAfterDecimal = Math.Max(0, maxCharacters - (int)Math.Log10(Math.Abs(number)) - 2);     // Log10 give us the number of digits *before* the decimal point minus one, but we have to compensate for the decimal point itself as well
+            int digitsAfterDecimal = Math.Max(0, maxCharacters - (int)Math.Log10(Math.Abs(number)) - 2);     // Log10 gives us the number of digits *before* the decimal point minus one, but we have to compensate for the decimal point itself as well
             return ((positiveSign && number > 0.0) ? "+" : "") + number.ToString("N0" + digitsAfterDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture), culture.NumberFormat) + (longName ? (" ") : "") + (longName ? sLargeSiPrefixes : sShortLargeSiPrefixes)[magnitude - 1] + extraQuettas + postfix;
         }
         else // just a normal number!
         {
             System.Diagnostics.Debug.Assert(number > -999.5 && number < 999.5);
-            int digitsAfterDecimal =  Math.Max(0, maxCharacters - ((number == 0) ? 0 : (int)Math.Log10(Math.Abs(number))) - 2);     // Log10 give us the number of digits *before* the decimal point minus one, but we have to compensate for the decimal point itself as well
+            int digitsAfterDecimal =  Math.Max(0, maxCharacters - ((number == 0) ? 0 : (int)Math.Log10(Math.Abs(number))) - 2);     // Log10 gives us the number of digits *before* the decimal point minus one, but we have to compensate for the decimal point itself as well
             return ((positiveSign && number > 0.0) ? "+" : "") + number.ToString("N0" + digitsAfterDecimal.ToString(System.Globalization.CultureInfo.InvariantCulture), culture.NumberFormat) + (longName ? " " : "") + postfix;
         }
     }
@@ -187,7 +187,7 @@ public static class SI
     /// <param name="maxCharacters">The maximum number of characters to use to represent the numeric part (if possible), including the decimal point.  Defaults to 4 (three significant digits).  When less than 4, the number may not be able to be represented in the specified number of characters (57 in 1 character, for example), in which case, it will use the minimum possible number of characters.</param>
     /// <param name="postfix">A postfix string (for example, "B").</param>
     /// <param name="longName">Whether or not to use the long version of the Si prefix (kilo, mega, etc.)</param>
-    /// <param name="positiveSign">Whether or not to includ a positive sign on positive numbers.</param>
+    /// <param name="positiveSign">Whether or not to include a positive sign on positive numbers.</param>
     /// <param name="culture">The <see cref="System.Globalization.CultureInfo"/> to use to format the number, defaults to the current thread culture.</param>
     /// <returns>The SI representation of the number, for example for 5342432, the return value might be "5.34MB".</returns>
     public static string ToSi(this float number, int maxCharacters = 4, string? postfix = null, bool longName = false, bool positiveSign = false, System.Globalization.CultureInfo? culture = null)

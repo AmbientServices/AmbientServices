@@ -536,7 +536,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
             {
                 // remove it from the cache, even though it may not have expired yet because it's time to eject something
                 await EjectEntry(entry);
-                // fall through and check to wee if the next item is already expired
+                // fall through and check to see if the next item is already expired
                 unexpiredItemEjected = true;
             }
             // stale queue row or missing cache entry: if we have already ejected an unexpired item, check for another expired item; otherwise dequeue the next row immediately

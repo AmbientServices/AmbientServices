@@ -1,7 +1,7 @@
 ﻿namespace AmbientServices;
 
 /// <summary>
-/// A interface that abstracts a set of ambient settings.
+/// An interface that abstracts a set of ambient settings.
 /// </summary>
 public interface IAmbientSettingsSet
 {

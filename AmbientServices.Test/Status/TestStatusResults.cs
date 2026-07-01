@@ -27,7 +27,7 @@ public class TestStatusResults
     {
         StatusResults results;
 
-        results = new StatusResults("Source", "StatusTarget", AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
+        results = new StatusResults("Source", "StatusTarget", AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogeneous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
         Assert.AreEqual("Source", results.SourceSystem);
         Assert.AreEqual("Source", results.SourceSystemDisplayName);
         Assert.AreEqual("StatusTarget", results.TargetSystem);
@@ -35,7 +35,7 @@ public class TestStatusResults
         Assert.Contains("Source", results.ToString());
         Assert.Contains("StatusTarget", results.ToString());
 
-        results = new StatusResults("Source", "/", AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
+        results = new StatusResults("Source", "/", AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogeneous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
         Assert.AreEqual("Source", results.SourceSystem);
         Assert.AreEqual("Source", results.SourceSystemDisplayName);
         Assert.AreEqual("/", results.TargetSystem);
@@ -43,7 +43,7 @@ public class TestStatusResults
         Assert.Contains("Source", results.ToString());
         Assert.Contains("Overall", results.ToString());
 
-        results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
+        results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogeneous, new StatusResults[] { new StatusResults("Source", "Target", Array.Empty<StatusResults>()) });
         Assert.IsNull(results.SourceSystem);
         Assert.AreEqual("Localhost", results.SourceSystemDisplayName);
         Assert.AreEqual("", results.TargetSystem);
@@ -58,10 +58,10 @@ public class TestStatusResults
     {
         StatusResults results;
 
-        results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogenous,
+        results = new StatusResults(null, null, AmbientClock.UtcNow, 1, new StatusProperty[] { new StatusProperty("Property", "Value") }, StatusNatureOfSystem.ChildrenHomogeneous,
             new StatusResults[]
             {
-                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] {
                     new StatusResults("Source1", "Target1", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.Leaf, new StatusResults[] {
                         new StatusResults("Source1.1", "Target1.1", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.Leaf, new StatusResults[0]),
                         }),
@@ -75,7 +75,7 @@ public class TestStatusResults
                     new StatusResults("Source5", "Target5", AmbientClock.UtcNow, 1, new StatusProperty[] { },
                         new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5), AmbientClock.UtcNow.AddMinutes(1), new StatusAuditAlert(StatusRating.Alert, "Alert", "Terse", "Details"))
                         ),
-                    new StatusResults("Source6", "Target6", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] {
+                    new StatusResults("Source6", "Target6", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHomogeneous, new StatusResults[] {
                         new StatusResults("Source6.1", "Target6.1", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.Leaf, new StatusResults[0]),
                         new StatusResults("Source6.2", "Target6.2", AmbientClock.UtcNow, 1, new StatusProperty[] { },
                             new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5), AmbientClock.UtcNow.AddMinutes(1), new StatusAuditAlert(StatusRating.Fail, "Fail", "Terse", "Details"))
@@ -87,10 +87,10 @@ public class TestStatusResults
                             new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5), AmbientClock.UtcNow.AddMinutes(1), new StatusAuditAlert(StatusRating.Alert, "Alert", "Terse", "Details"))
                             ),
                         }),
-                    new StatusResults("Source7", "Target7", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { }),
+                    new StatusResults("Source7", "Target7", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] { }),
                     new StatusResults("Source8", "Target8", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenIrrelevant, new StatusResults[] { }),
                 }),
-                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
+                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] {
                     new StatusResults("Source1", "Target1", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.Leaf, new StatusResults[] {
                         new StatusResults("Source1.1", "Target1.1", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.Leaf, new StatusResults[0]),
                         }),
@@ -104,10 +104,10 @@ public class TestStatusResults
                     new StatusResults("Source5", "Target5", AmbientClock.UtcNow, 1, new StatusProperty[] { },
                         new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5), null, new StatusAuditAlert(StatusRating.Alert, "Alert", "Terse", "Details"))
                         ),
-                    new StatusResults("Source6", "Target6", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[] { }),
-                    new StatusResults("Source7", "Target7", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { }),
+                    new StatusResults("Source6", "Target6", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHomogeneous, new StatusResults[] { }),
+                    new StatusResults("Source7", "Target7", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] { }),
                     new StatusResults("Source8", "Target8", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenIrrelevant, new StatusResults[] {
-                        new StatusResults("Source8.1", "Target8.1", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHomogenous, new StatusResults[0]),
+                        new StatusResults("Source8.1", "Target8.1", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHomogeneous, new StatusResults[0]),
                         new StatusResults("Source8.2", "Target8.2", AmbientClock.UtcNow, 1, new StatusProperty[] { },
                             new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5), AmbientClock.UtcNow.AddMinutes(1), new StatusAuditAlert(StatusRating.Fail, "Fail", "Terse", "Details"))
                             ),
@@ -139,14 +139,14 @@ public class TestStatusResults
     {
         StatusResults results;
 
-        results = new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
-            new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
-                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { }),
-                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { }),
+        results = new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] {
+            new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] {
+                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] { }),
+                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] { }),
             }),
-            new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] {
-                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { }),
-                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogenous, new StatusResults[] { }),
+            new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] {
+                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] { }),
+                new StatusResults(nameof(StatusResultsGetSummaryAlertsNoTime), "/", AmbientClock.UtcNow, 1, new StatusProperty[] { }, StatusNatureOfSystem.ChildrenHeterogeneous, new StatusResults[] { }),
             }),
         });
         StatusAuditAlert alert;

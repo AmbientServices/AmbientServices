@@ -300,7 +300,7 @@ public class DotNetDocumentation
     /// Gets the type of the specified type, or a proxy type if the type has a JSON proxy type.
     /// </summary>
     /// <param name="type">The actual runtime type.</param>
-    /// <returns>The <see cref="Type"/> that was passed in, or a proxy <see cref="Type"/> if there is a custom serializer that renders the specified type as if it where the proxy type.</returns>
+    /// <returns>The <see cref="Type"/> that was passed in, or a proxy <see cref="Type"/> if there is a custom serializer that renders the specified type as if it were the proxy type.</returns>
     public static Type GetTypeOrProxy(Type type)
     {
         return type.GetCustomAttribute<ProxyTypeAttribute>()?.Type ?? type;
@@ -453,7 +453,7 @@ public class DotNetDocumentation
     }
 #if LATER
     /// <summary>
-    /// Recontructs documentation for a method previously retrieved.
+    /// Reconstructs documentation for a method previously retrieved.
     /// </summary>
     /// <param name="linePrefix">A prefix for the line, including spaces to tab in the comments and the comment characters, for example "    ///".</param>
     /// <param name="method">The <see cref="MethodInfo"/> for the method to get documentation for.</param>
@@ -500,7 +500,7 @@ public class DotNetDocumentation
         return output.ToString();
     }
     /// <summary>
-    /// Recontructs documentation for a type previously retrieved.
+    /// Reconstructs documentation for a type previously retrieved.
     /// </summary>
     /// <param name="linePrefix">A prefix for the comment lines, including spaces to tab in the comments and the comment characters, for example "    ///".</param>
     /// <param name="type">The <see cref="Type"/> being documented.</param>
@@ -552,7 +552,7 @@ public class DotNetDocumentation
     }
 
     /// <summary>
-    /// Recontructs documentation parts.
+    /// Reconstructs documentation parts.
     /// </summary>
     /// <param name="linePrefix">A prefix for the comment lines, including spaces to tab in the comments and the comment characters, for example "    ///".</param>
     /// <param name="blockType">The block type (the xml element name).</param>
@@ -784,7 +784,7 @@ public class ParameterDocumentation
     public string? Description { get; private set; }
 
     /// <summary>
-    /// Constructs a ParameterDocumentation wit the specified name and description.
+    /// Constructs a ParameterDocumentation with the specified name and description.
     /// </summary>
     /// <param name="name">The name of the parameter.</param>
     /// <param name="description">The description of the parameter.</param>
@@ -829,7 +829,7 @@ public class MethodDocumentation
     /// Constructs a MethodDocumentation with the specified parameters.
     /// </summary>
     /// <param name="name">The name of the method.</param>
-    /// <param name="parameters">An enumeration of the paramaeters of the method.  Optional.</param>
+    /// <param name="parameters">An enumeration of the parameters of the method.  Optional.</param>
     /// <param name="summary">The summary of the method.  Optional.</param>
     /// <param name="remarks">The remarks about the method.  Optional.</param>
     /// <param name="returnDescription">A description of the return value.  Optional.</param>

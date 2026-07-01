@@ -97,7 +97,7 @@ The regular expression will attempt to match the system identifier, with the val
     /// <param name="scopeNamePrefix">A <see cref="TimeSpan"/> indicating the size of the window.</param>
     /// <param name="windowPeriod">A <see cref="TimeSpan"/> indicating how often reports are desired.</param>
     /// <param name="onWindowComplete">An async delegate that receives a <see cref="IAmbientServiceProfile"/> at the end of each time window.</param>
-    /// <param name="overrideSystemGroupTransformRegex">A <see cref="Regex"/> string to transform the procesor into a processor group.</param>
+    /// <param name="overrideSystemGroupTransformRegex">A <see cref="Regex"/> string to transform the processor into a processor group.</param>
     /// <returns>A <see cref="IDisposable"/> that scopes the collection of the profiles.</returns>
     public IDisposable? CreateTimeWindowProfiler(string scopeNamePrefix, TimeSpan windowPeriod, Func<IAmbientServiceProfile, Task> onWindowComplete, string? overrideSystemGroupTransformRegex = null)
     {
@@ -112,8 +112,8 @@ The regular expression will attempt to match the system identifier, with the val
     /// Note that this is only useful to determine the distribution for an entire process from start to finish, which is not very useful if the process is very long-lived.
     /// <see cref="CreateTimeWindowProfiler"/> is a better match in most situations.
     /// </summary>
-    /// <param name="scopeName">A name for the contxt to attach to the analyzer.</param>
-    /// <param name="overrideSystemGroupTransformRegex">A <see cref="Regex"/> string to transform the procesor into a processor group.</param>
+    /// <param name="scopeName">A name for the context to attach to the analyzer.</param>
+    /// <param name="overrideSystemGroupTransformRegex">A <see cref="Regex"/> string to transform the processor into a processor group.</param>
     /// <returns>A <see cref="IAmbientServiceProfile"/> containing a service profile for the entire process.  Note that the returned object is NOT thread-safe.</returns>
     /// <remarks>
     /// This is different from using <see cref="CreateCallContextProfiler"/> because that will only analyze the call context it's called from, 
@@ -208,7 +208,7 @@ public class AmbientServiceProfilerAccumulator
     /// </summary>
     public string Group { get; }
     /// <summary>
-    /// Gest the number of times systems in this group were executed.
+    /// Gets the number of times systems in this group were executed.
     /// </summary>
     public long ExecutionCount { get; }
     /// <summary>

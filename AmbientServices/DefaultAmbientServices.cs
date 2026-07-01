@@ -85,7 +85,7 @@ internal static class DefaultAmbientServices
         return dictionary;
     }
     /// <summary>
-    /// Enuemrates all the types in all currently loaded assemblies that refer to this assembly (they can't possibly have the appropriate attribute without referencing this assembly).
+    /// Enumerates all the types in all currently loaded assemblies that refer to this assembly (they can't possibly have the appropriate attribute without referencing this assembly).
     /// </summary>
     /// <returns>An enumeration of <see cref="Type"/>s.</returns>
     private static IEnumerable<Type> AllLoadedReferringTypes()
@@ -110,7 +110,7 @@ internal static class DefaultAmbientServices
     /// Adds the default implementation for the specified interface type.
     /// </summary>
     /// <param name="dictionary">The dictionary to add to (usually <see cref="_DefaultImplementations"/>).</param>
-    /// <param name="type">The interface type whose default implemenation type is to be added.</param>
+    /// <param name="type">The interface type whose default implementation type is to be added.</param>
     private static void AddDefaultImplementation(ConcurrentDictionary<Type, Type> dictionary, Type type)
     {
         DefaultAmbientServiceAttribute? attribute = type.GetCustomAttribute<DefaultAmbientServiceAttribute>();

@@ -88,7 +88,7 @@ public static class ConsoleBuffer
     private static Thread FlusherThread()
     {
         // fire up a background thread to flush the console data
-        Thread thread = new(new ThreadStart(ConsoleBufferBackgoundFlusher)) {
+        Thread thread = new(new ThreadStart(ConsoleBufferBackgroundFlusher)) {
             IsBackground = true,
             Name = "ConsoleBuffer.FlusherThread",
             Priority = ThreadPriority.BelowNormal,
@@ -178,7 +178,7 @@ public static class ConsoleBuffer
             return ret.ToString();
         }
     }
-    private static void ConsoleBufferBackgoundFlusher()
+    private static void ConsoleBufferBackgroundFlusher()
     {
         // loop forever!
         while (true)

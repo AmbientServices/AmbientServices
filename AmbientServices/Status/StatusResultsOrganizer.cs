@@ -24,7 +24,7 @@ internal class StatusResultsOrganizer
     /// </summary>
     public float? OverallRating { get; private set; }
     /// <summary>
-    /// Gets whether or not some of the descandant nodes indicate that status tests have not yet been completed.
+    /// Gets whether or not some of the descendant nodes indicate that status tests have not yet been completed.
     /// </summary>
     public bool SomeRatingsPending { get; private set; }
     /// <summary>
@@ -81,14 +81,14 @@ internal class StatusResultsOrganizer
     {
         _thresholds = thresholds;
         Target = "/";
-        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
     }
 
     public StatusResultsOrganizer(StatusResults results, string? source = null, IStatusThresholdsRegistry? thresholds = null)
     {
         _thresholds = thresholds;
         Target = "/";
-        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         Add(results, source);
     }
     /// <summary>
@@ -192,7 +192,7 @@ internal class StatusResultsOrganizer
 
     private void MergeProperties(StatusResults results)
     {
-        // merge any attibutes into the matching node
+        // merge any attributes into the matching node
         foreach (StatusProperty property in results.Properties)
         {
             StatusPropertyRange? range = _propertyRanges.Where(ar => ar.Name == property.Name).FirstOrDefault();
@@ -286,7 +286,7 @@ internal class StatusResultsOrganizer
                 OverallRating = assignedRating;
                 break;
             default:
-            case StatusNatureOfSystem.ChildrenHeterogenous:
+            case StatusNatureOfSystem.ChildrenHeterogeneous:
                 // find the worst child rating
                 foreach (StatusResultsOrganizer child in _children)
                 {
@@ -311,7 +311,7 @@ internal class StatusResultsOrganizer
                 }
                 OverallRating = assignedRating = worstRating ?? StatusRating.Okay;
                 break;
-            case StatusNatureOfSystem.ChildrenHomogenous:
+            case StatusNatureOfSystem.ChildrenHomogeneous:
                 // compute both ways because we don't know up front what the distribution of status rating ranges is
                 float ratingSum = 0.0f;
                 float clampedRatingSum = 0.0f;

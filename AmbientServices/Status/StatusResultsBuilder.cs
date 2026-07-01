@@ -35,7 +35,7 @@ public class StatusResultsBuilder
         TargetSystem = targetSystem;
         AuditStartTime = AmbientClock.UtcNow;
         RelativeDetailLevel = 1;
-        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
     }
     /// <summary>
     /// Constructs a StatusResultsBuilder from the specified <see cref="StatusResults"/>.
@@ -60,7 +60,7 @@ public class StatusResultsBuilder
     }
     /// <summary>
     /// Constructs an empty StatusResultsBuilder, ready to fill with properties, children, and alerts.
-    /// <see cref="NatureOfSystem"/> start with a value of <see cref="StatusNatureOfSystem.ChildrenHeterogenous"/>.
+    /// <see cref="NatureOfSystem"/> start with a value of <see cref="StatusNatureOfSystem.ChildrenHeterogeneous"/>.
     /// </summary>
     /// <param name="checker">The <see cref="StatusChecker"/> we are going to build results for.</param>
     public StatusResultsBuilder(StatusChecker checker)
@@ -73,14 +73,14 @@ public class StatusResultsBuilder
         TargetSystem = checker.TargetSystem;
         AuditStartTime = AmbientClock.UtcNow;
         RelativeDetailLevel = 1;
-        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
     }
     /// <summary>
     /// Constructs a StatusResultsBuilder with a set of baseline properties.
-    /// <see cref="NatureOfSystem"/> start with a value of <see cref="StatusNatureOfSystem.ChildrenHeterogenous"/>.
+    /// <see cref="NatureOfSystem"/> start with a value of <see cref="StatusNatureOfSystem.ChildrenHeterogeneous"/>.
     /// </summary>
     /// <param name="checker">The <see cref="StatusChecker"/> we are going to build results for.</param>
-    /// <param name="baselineProperties">An enumeration of baseline <see cref="StatusProperty"/>s to initalize the property list with.</param>
+    /// <param name="baselineProperties">An enumeration of baseline <see cref="StatusProperty"/>s to initialize the property list with.</param>
     public StatusResultsBuilder(StatusChecker checker, IEnumerable<StatusProperty> baselineProperties)
         : this(checker)
     {
@@ -91,7 +91,7 @@ public class StatusResultsBuilder
     /// </summary>
     /// <remarks>
     /// Defaults to null, which indicates that the measurement was done on the local system.
-    /// The source system name can be used to sumarize multiple results from different sources for the same target.
+    /// The source system name can be used to summarize multiple results from different sources for the same target.
     /// When results are gathered from a remote system, a node will be inserted indicating the system the results originated from, and that node should set the source system name.
     /// Only the last (closest) source system name in the tree will be used.
     /// </remarks>
@@ -109,7 +109,7 @@ public class StatusResultsBuilder
     /// </remarks>
     public string? TargetSystem { get; }
     /// <summary>
-    /// Gets or sets the audit start time for this node.  Defaults to the time the constuctor was called.
+    /// Gets or sets the audit start time for this node.  Defaults to the time the constructor was called.
     /// </summary>
     public DateTime AuditStartTime { get; set; }
     /// <summary>
@@ -124,7 +124,7 @@ public class StatusResultsBuilder
     public int RelativeDetailLevel { get; set; }
     /// <summary>
     /// Gets or sets the <see cref="StatusNatureOfSystem"/> value indicating what type of node this is relative to its children.
-    /// Defaults to <see cref="StatusNatureOfSystem.ChildrenHeterogenous"/>.
+    /// Defaults to <see cref="StatusNatureOfSystem.ChildrenHeterogeneous"/>.
     /// </summary>
     public StatusNatureOfSystem NatureOfSystem { get; set; }
     /// <summary>

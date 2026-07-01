@@ -17,7 +17,7 @@ public interface IAmbientProgress
     /// <summary>
     /// Resets the associated cancellation token source to one from a framework source.
     /// </summary>
-    /// <param name="cancellationTokenSource">A <see cref="CancellationTokenSource"/> from which to construct an ambient cancellation token source.  If not specified, creates a new cancellation token source that much be cancelled manually.</param>
+    /// <param name="cancellationTokenSource">A <see cref="CancellationTokenSource"/> from which to construct an ambient cancellation token source.  If not specified, creates a new cancellation token source that must be cancelled manually.</param>
     void ResetCancellation(CancellationTokenSource? cancellationTokenSource = null);
     /// <summary>
     /// Checks <see cref="CancellationToken"/> and throws the <see cref="OperationCanceledException"/> if the operation should be cancelled.

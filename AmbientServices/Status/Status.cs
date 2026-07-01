@@ -224,7 +224,7 @@ public class Status
             DateTime now = AmbientClock.UtcNow;
             List<StatusResults> results = new(_checkers.Select(checker => checker.LatestResults));
             results.Sort((a, b) => RatingCompare(a, b));
-            StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
+            StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogeneous, results);
             return overallResults;
         }
     }
@@ -238,7 +238,7 @@ public class Status
             DateTime now = AmbientClock.UtcNow;
             List<StatusResults> results = new(_checkers.Select(checker => checker.LatestResults));
             results.Sort((a, b) => RatingCompare(a, b));
-            StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
+            StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogeneous, results);
             StatusAuditAlert alerts = overallResults.GetSummaryAlerts(true, float.MaxValue, false);
             return alerts;
         }
@@ -253,7 +253,7 @@ public class Status
             DateTime now = AmbientClock.UtcNow;
             List<StatusResults> results = new(_checkers.Select(checker => checker.LatestResults));
             results.Sort((a, b) => RatingCompare(a, b));
-            StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
+            StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogeneous, results);
             StatusAuditAlert alerts = overallResults.GetSummaryAlerts(true, StatusRating.Alert, false);
             return alerts;
         }
@@ -268,7 +268,7 @@ public class Status
             DateTime now = AmbientClock.UtcNow;
             List<StatusResults> results = new(_checkers.Select(checker => checker.LatestResults));
             results.Sort((a, b) => RatingCompare(a, b));
-            StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogenous, results);
+            StatusResults overallResults = new(null, "/", now, 0, Array.Empty<StatusProperty>(), StatusNatureOfSystem.ChildrenHeterogeneous, results);
             StatusAuditAlert alerts = overallResults.GetSummaryAlerts(true, StatusRating.Fail, false);
             return alerts;
         }
@@ -286,7 +286,7 @@ public class Status
         }
     }
     /// <summary>
-    /// Checks to see if the secified type represents a testable status checker class (ie. one with a public constructor that takes no parameters).
+    /// Checks to see if the specified type represents a testable status checker class (ie. one with a public constructor that takes no parameters).
     /// </summary>
     /// <param name="type">The type to check.</param>
     /// <returns>true if the specified type is a testable status checker class.</returns>

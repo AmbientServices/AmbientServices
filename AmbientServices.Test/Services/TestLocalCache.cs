@@ -268,7 +268,7 @@ public class TestLocalCache
             Assert.IsNotNull(ret);
             ret = await cache.Retrieve<TestLocalCache>(keyName3);
             Assert.IsNotNull(ret);
-            await Eject(cache, 1);  // this should skip 2 because it's bee refershed again and eject 3 because it's the LRU timed
+            await Eject(cache, 1);  // this should skip 2 because it's bee refreshed again and eject 3 because it's the LRU timed
             ret = await cache.Retrieve<TestLocalCache>(keyName1);
             Assert.IsNull(ret);
             ret = await cache.Retrieve<TestLocalCache>(keyName2);

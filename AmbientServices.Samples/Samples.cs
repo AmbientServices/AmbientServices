@@ -1,4 +1,4 @@
-﻿using AmbientServices;
+using AmbientServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Concurrent;
@@ -122,9 +122,9 @@ class UserManager
     private static readonly AmbientLocalCache<UserManager> Cache = new();
 
     /// <summary>
-    /// Finds the user with the specified emali address.
+    /// Finds the user with the specified email address.
     /// </summary>
-    /// <param name="email">The emali address for the user.</param>
+    /// <param name="email">The email address for the user.</param>
     /// <returns>The <see cref="User"/>, if one was found, or null if the user was not found.</returns>
     public static async ValueTask<User?> FindUser(string email)
     {
@@ -235,7 +235,7 @@ public static class AssemblyLoggingExtensions
     /// Logs that there was an assembly load exception.
     /// </summary>
     /// <param name="assembly">The <see cref="AssemblyName"/> for the assembly that failed to load.</param>
-    /// <param name="ex">The <see cref="Exception"/> that occured during the failed load.</param>
+    /// <param name="ex">The <see cref="Exception"/> that occurred during the failed load.</param>
     /// <param name="operation">The operation that needed the assembly.</param>
     public static void LogLoadException(this AssemblyName assemblyName, Exception ex, string operation)
     {
@@ -459,7 +459,7 @@ class BufferPool
 public interface IAmbientCallStack
 {
     /// <summary>
-    /// Creates a call stack scope for the specified fuction name, keeping it on the stack until it is disposed.
+    /// Creates a call stack scope for the specified function name, keeping it on the stack until it is disposed.
     /// </summary>
     /// <param name="function">The name of the function being executed.</param>
     /// <returns>A disposable object that will remove the function at the end of its execution scope.</returns>
@@ -921,7 +921,7 @@ class EbsAccessor
                 f.Position = fileOffset;
                 bytesRead = f.Read(buffer, bufferOffset, bytes);
             }
-            access?.SetUsage(1, (bytesRead + IopsPageSize - 1) / IopsPageSize); // note that this approximation of IOPS won't be correct if the file is fragmented, and the lookup and opening of the file will likely use some IOPS as well--more accurate estmates can be obtained after long-term usage and comparison to AWS metrics
+            access?.SetUsage(1, (bytesRead + IopsPageSize - 1) / IopsPageSize); // note that this approximation of IOPS won't be correct if the file is fragmented, and the lookup and opening of the file will likely use some IOPS as well--more accurate estimates can be obtained after long-term usage and comparison to AWS metrics
         }
         return bytesRead;
     }
@@ -1321,7 +1321,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
     protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
     public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         await _tempAuditor.Audit(statusBuilder.AddChild("Temp"));
         await _systemAuditor.Audit(statusBuilder.AddChild("System"));
     }
@@ -1368,14 +1368,14 @@ public class TimeDependentServiceTest
         using AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
         await Assert.ThrowsAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token).AsTask());
 
-        // switch the current call context to the artifically-paused ambient clock and try again
+        // switch the current call context to the artificially-paused ambient clock and try again
         using (AmbientClock.Pause())
         {
             using AmbientCancellationTokenSource cts2 = new(TimeSpan.FromSeconds(1));
             // this should *not* throw because the clock has been paused
             await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
 
-            // this skips the artifical paused clock ahead, raising the cancellation
+            // this skips the artificial paused clock ahead, raising the cancellation
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(1));
             // make sure the cancellation got raised
             Assert.Throws<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());

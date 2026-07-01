@@ -47,7 +47,7 @@ public class AmbientBottleneck
     /// </summary>
     /// <param name="id">The string identifier for the bottleneck.</param>
     /// <param name="utilizationAlgorithm">An <see cref="AmbientBottleneckUtilizationAlgorithm"/> indicating the algorithm to use to calculate the utilization.</param>
-    /// <param name="automatic">Whether or not the bottleneck's usage is measured automaticall or using <see cref="AmbientBottleneckAccessor.SetUsage"/> or <see cref="AmbientBottleneckAccessor.AddUsage"/>.</param>
+    /// <param name="automatic">Whether or not the bottleneck's usage is measured automatically or using <see cref="AmbientBottleneckAccessor.SetUsage"/> or <see cref="AmbientBottleneckAccessor.AddUsage"/>.</param>
     /// <param name="description">A description of the bottleneck.</param>
     /// <param name="limit">An optional limit (for automatic bottlenecks, in units of stopwatch ticks).</param>
     /// <param name="limitPeriod">A <see cref="TimeSpan"/> indicating the period during which the limit is applied.</param>

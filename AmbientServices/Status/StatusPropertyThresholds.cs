@@ -318,7 +318,7 @@ public sealed class DefaultPropertyThresholdsAttribute : Attribute
 public interface IStatusThresholdsRegistry
 {
     /// <summary>
-    /// Gets the <see cref="StatusPropertyThresholds"/> instance for the specified path, or null if no overrding thresholds are configured.
+    /// Gets the <see cref="StatusPropertyThresholds"/> instance for the specified path, or null if no overriding thresholds are configured.
     /// </summary>
     /// <param name="path">The target system path whose thresholds are desired.</param> 
     /// <returns>A <see cref="StatusPropertyThresholds"/> instance containing the status rating thresholds, or null if there were no thresholds for the specified path.</returns>

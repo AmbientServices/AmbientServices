@@ -34,7 +34,7 @@ public static class InternalPressurePoints
     public static IEnumerable<IPressurePoint> List => _PressurePoints.Select(p => p.Value);
 
     /// <summary>
-    /// Regsiters the specified <see cref="IPressurePoint"/> for inclusion in <see cref="PressureMonitor.ExternalPressure"/> and <see cref="PressureMonitor.OverallPressure"/>.
+    /// Registers the specified <see cref="IPressurePoint"/> for inclusion in <see cref="PressureMonitor.ExternalPressure"/> and <see cref="PressureMonitor.OverallPressure"/>.
     /// </summary>
     /// <param name="pp">The <see cref="IPressurePoint"/> to register.</param>
     /// <returns>true if the pressure point was successfully registered, false if there was already a pressure point with that name registered.</returns>
@@ -57,7 +57,7 @@ public static class ExternalPressurePoints
     public static IEnumerable<IPressurePoint> List => _PressurePoints.Select(p => p.Value);
 
     /// <summary>
-    /// Regsiters the specified <see cref="IPressurePoint"/> for inclusion in <see cref="PressureMonitor.ExternalPressure"/> and <see cref="PressureMonitor.OverallPressure"/>.
+    /// Registers the specified <see cref="IPressurePoint"/> for inclusion in <see cref="PressureMonitor.ExternalPressure"/> and <see cref="PressureMonitor.OverallPressure"/>.
     /// </summary>
     /// <param name="pp">The <see cref="IPressurePoint"/> to register.</param>
     /// <returns>true if the pressure point was successfully registered, false if there was already a pressure point with that name registered.</returns>

@@ -32,14 +32,14 @@ public class Pseudorandom : IEquatable<Pseudorandom>
     private ulong _seed;
 
     /// <summary>
-    /// Constructs a pseduorandom with a zero seed.
+    /// Constructs a pseudorandom with a zero seed.
     /// </summary>
     public Pseudorandom()
     {
         _seed = 0;
     }
     /// <summary>
-    /// Constructs a pseduorandom with the specified seed value.
+    /// Constructs a pseudorandom with the specified seed value.
     /// </summary>
     /// <param name="seed">The seed to use.</param>
     public Pseudorandom(long seed)
@@ -47,7 +47,7 @@ public class Pseudorandom : IEquatable<Pseudorandom>
         _seed = (ulong)seed;
     }
     /// <summary>
-    /// Constructs a pseduorandom with the specified seed value.
+    /// Constructs a pseudorandom with the specified seed value.
     /// </summary>
     /// <param name="seed">The seed to use.</param>
     [CLSCompliant(false)]
@@ -64,7 +64,7 @@ public class Pseudorandom : IEquatable<Pseudorandom>
         return new Pseudorandom(_seed);
     }
     /// <summary>
-    /// Constructs a pseduorandom with a seed generated from the system time combined with a global rotating number.
+    /// Constructs a pseudorandom with a seed generated from the system time combined with a global rotating number.
     /// </summary>
     /// <param name="generateSeed">Whether or not to create a seed using the current system time combined with a global rotating number.  If not true, uses a seed of zero.</param>
     public Pseudorandom(bool generateSeed)

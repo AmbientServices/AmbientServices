@@ -9,7 +9,7 @@ namespace AmbientServices;
 
 /// <summary>
 /// A abstract base class containing logic to compute status results for a particular part of the system.
-/// Any non-abstract derivitave of this class with an empty constructor will be automatically instantiated by the system and retained in a system-wide list to track status.
+/// Any non-abstract derivative of this class with an empty constructor will be automatically instantiated by the system and retained in a system-wide list to track status.
 /// Derived classes do not have to be immutable, but they must be threadsafe.
 /// StatusTestNode is disposable because derived classes often contain things like mutexes and timers that require disposal.
 /// </summary>
@@ -73,7 +73,7 @@ public abstract class StatusChecker : IDisposable
     {
         if (newResults != null)
         {
-            if (!string.Equals(TargetSystem, newResults.TargetSystem, StringComparison.Ordinal)) throw new ArgumentException("The target system for the specified status results and must match the this StatusChecker's target system!", nameof(newResults));
+            if (!string.Equals(TargetSystem, newResults.TargetSystem, StringComparison.Ordinal)) throw new ArgumentException("The target system for the specified status results must match this StatusChecker's target system!", nameof(newResults));
             if (newResults.Report != null) Status.Logger.Filter("Results", newResults.Report.Alert?.Rating < StatusRating.Okay ? AmbientLogLevel.Warning : AmbientLogLevel.Verbose)?.Log(new { Action = "NewStatusResults", TargetSystem = newResults.TargetSystemDisplayName, newResults.Report.Alert });
             _resultsTracker.SetLatestResults(newResults);
         }

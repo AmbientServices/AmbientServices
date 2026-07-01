@@ -24,7 +24,7 @@ public class SettingConversionFailedEventArgs(string key, string rawValue, Excep
 }
 
 /// <summary>
-/// An static class that utilizes the <see cref="IAmbientClock"/> if one is registered, or the system clock if not.
+/// A static class that utilizes the <see cref="IAmbientClock"/> if one is registered, or the system clock if not.
 /// </summary>
 public static class AmbientSettings
 {
@@ -47,7 +47,7 @@ public static class AmbientSettings
     /// If a non-null settings set is specified, the setting will be attached to that, otherwise the ambient settings set will be used.
     /// Never returns a setting whose value is always the default value.
     /// </summary>
-    /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, returns an setting attached to the ambient settings set.</param>
+    /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, returns a setting attached to the ambient settings set.</param>
     /// <param name="key">A key string identifying the setting.</param>
     /// <param name="description">A description of the setting.</param>
     /// <param name="convert">A delegate that takes a string and returns the type.</param>
@@ -61,7 +61,7 @@ public static class AmbientSettings
     /// If a non-null settings set is specified, the setting will be attached to that, otherwise the ambient settings set will be used.
     /// Never returns a setting whose value is always the default value.
     /// </summary>
-    /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, returns an setting attached to the ambient settings set.</param>
+    /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, returns a setting attached to the ambient settings set.</param>
     /// <param name="key">A key string identifying the setting.</param>
     /// <param name="description">A description of the setting.</param>
     /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.</param>
@@ -457,7 +457,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
         // loop attempting to put it in until we win the race
         while (accessTime > oldValue)
         {
-            // Coverate note: this loop is nondeterministic when running with multiple threads, so code coverage may not cover these lines, and it's not possible to force this condition
+            // Coverage note: this loop is nondeterministic when running with multiple threads, so code coverage may not cover these lines, and it's not possible to force this condition
             // try to put in our value--did we win the race?
             if (oldValue == System.Threading.Interlocked.CompareExchange(ref _lastUsedTicks, accessTime, oldValue))
             {

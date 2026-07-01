@@ -204,7 +204,7 @@ public class AmbientService<
         }
     }
     /// <summary>
-    /// Gets or sets the call-context-local service impelementation.
+    /// Gets or sets the call-context-local service implementation.
     /// If set to null, suppresses any local or global service (and begins ignoring changes to the global service).
     /// Otherwise sets the local override to the specified implementation.
     /// Thread-safe without caller synchronization: local values use <see cref="AsyncLocal{T}"/> and <see cref="ExecutionContext"/> flow (see also <see cref="SetRawLocalOverride"/>).

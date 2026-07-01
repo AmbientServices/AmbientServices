@@ -15,76 +15,76 @@ public class TestInterlockedUtilities
     public void InterlockedMaxLong()
     {
         long x = 0;
-        Assert.AreEqual(0, InterlockedUtilities.TryOptomisticMax(ref x, -1));
+        Assert.AreEqual(0, InterlockedUtilities.TryOptimisticMax(ref x, -1));
 
         x = 0;
-        Assert.AreEqual(1, InterlockedUtilities.TryOptomisticMax(ref x, 1));
+        Assert.AreEqual(1, InterlockedUtilities.TryOptimisticMax(ref x, 1));
     }
 
     [TestMethod]
     public void InterlockedMinLong()
     {
         long x = 0;
-        Assert.AreEqual(0, InterlockedUtilities.TryOptomisticMin(ref x, 1));
+        Assert.AreEqual(0, InterlockedUtilities.TryOptimisticMin(ref x, 1));
 
         x = 0;
-        Assert.AreEqual(-1, InterlockedUtilities.TryOptomisticMin(ref x, -1));
+        Assert.AreEqual(-1, InterlockedUtilities.TryOptimisticMin(ref x, -1));
     }
     [TestMethod]
-    public void TryAgainAfterOptomisticMissDelay()
+    public void TryAgainAfterOptimisticMissDelay()
     {
-        Assert.IsTrue(InterlockedUtilities.TryAgainAfterOptomisticMissDelay(0));
-        Assert.IsTrue(InterlockedUtilities.TryAgainAfterOptomisticMissDelay(3));
-        Assert.IsTrue(InterlockedUtilities.TryAgainAfterOptomisticMissDelay(5));
-        Assert.IsFalse(InterlockedUtilities.TryAgainAfterOptomisticMissDelay(10));
+        Assert.IsTrue(InterlockedUtilities.TryAgainAfterOptimisticMissDelay(0));
+        Assert.IsTrue(InterlockedUtilities.TryAgainAfterOptimisticMissDelay(3));
+        Assert.IsTrue(InterlockedUtilities.TryAgainAfterOptimisticMissDelay(5));
+        Assert.IsFalse(InterlockedUtilities.TryAgainAfterOptimisticMissDelay(10));
     }
     [TestMethod]
     public void InterlockedMaxDouble()
     {
         double x = 0;
-        Assert.AreEqual(0, InterlockedUtilities.TryOptomisticMax(ref x, -1));
+        Assert.AreEqual(0, InterlockedUtilities.TryOptimisticMax(ref x, -1));
 
         x = 0;
-        Assert.AreEqual(1, InterlockedUtilities.TryOptomisticMax(ref x, 1));
+        Assert.AreEqual(1, InterlockedUtilities.TryOptimisticMax(ref x, 1));
     }
 
     [TestMethod]
     public void InterlockedMinDouble()
     {
         double x = 0;
-        Assert.AreEqual(0, InterlockedUtilities.TryOptomisticMin(ref x, 1));
+        Assert.AreEqual(0, InterlockedUtilities.TryOptimisticMin(ref x, 1));
 
         x = 0;
-        Assert.AreEqual(-1, InterlockedUtilities.TryOptomisticMin(ref x, -1));
+        Assert.AreEqual(-1, InterlockedUtilities.TryOptimisticMin(ref x, -1));
     }
     [TestMethod]
     public void InterlockedAddDouble()
     {
         double x = double.MaxValue - 5;
-        Assert.AreEqual(double.MaxValue, InterlockedUtilities.TryOptomisticAdd(ref x, 5));
+        Assert.AreEqual(double.MaxValue, InterlockedUtilities.TryOptimisticAdd(ref x, 5));
     }
     [TestMethod]
     public void InterlockedExponentialMovingAverage()
     {
         double x = 0;
-        Assert.AreEqual(0.0, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 0.0, 1.0));
-        Assert.AreEqual(0.5, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 1.0, 1.0));
-        Assert.AreEqual(0.5, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 0.0, 1.0));
-        Assert.AreEqual(0.75, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 1.0, 1.0));
-        Assert.AreEqual(0.75, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 0.0, 1.0));
-        Assert.AreEqual(0.875, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 1.0, 1.0));
-        Assert.AreEqual(0.875, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 0.0, 1.0));
+        Assert.AreEqual(0.0, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 0.0, 1.0));
+        Assert.AreEqual(0.5, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 1.0, 1.0));
+        Assert.AreEqual(0.5, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 0.0, 1.0));
+        Assert.AreEqual(0.75, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 1.0, 1.0));
+        Assert.AreEqual(0.75, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 0.0, 1.0));
+        Assert.AreEqual(0.875, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 1.0, 1.0));
+        Assert.AreEqual(0.875, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 0.0, 1.0));
 
         x = 0;
-        Assert.AreEqual(0.75, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 2.0, 1.0));
-        Assert.AreEqual(0.9375, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, 2.0, 1.0));
+        Assert.AreEqual(0.75, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 2.0, 1.0));
+        Assert.AreEqual(0.9375, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, 2.0, 1.0));
 
         x = 0;
         double halfHalfLife = Math.Log(4.0 / 3.0) / Math.Log(2.0);
-        Assert.AreEqual(0.25, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, halfHalfLife, 1.0));
-        Assert.AreEqual(0.4375, InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, halfHalfLife, 1.0));
+        Assert.AreEqual(0.25, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, halfHalfLife, 1.0));
+        Assert.AreEqual(0.4375, InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, halfHalfLife, 1.0));
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => InterlockedUtilities.TryOptomisticAddExponentialMovingAverageSample(ref x, -0.0000001, 1.0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => InterlockedUtilities.TryOptimisticAddExponentialMovingAverageSample(ref x, -0.0000001, 1.0));
     }
     const int ThreadCount = 10;
     const int LoopCount = 10000;
@@ -96,7 +96,7 @@ public class TestInterlockedUtilities
         {
             for (double i = 0; i < LoopCount; ++i)
             {
-                double newDouble = InterlockedUtilities.TryOptomisticAdd(ref addDouble, 1);
+                double newDouble = InterlockedUtilities.TryOptimisticAdd(ref addDouble, 1);
                 if (newDouble < 0 || newDouble > LoopCount * ThreadCount + 1) return $"{newDouble}";
             }
             return null;
@@ -106,7 +106,7 @@ public class TestInterlockedUtilities
         {
             for (double i = 0; i < LoopCount; ++i)
             {
-                double newMaxDouble = InterlockedUtilities.TryOptomisticMax(ref maxDouble, i);
+                double newMaxDouble = InterlockedUtilities.TryOptimisticMax(ref maxDouble, i);
                 if (newMaxDouble < 0 || newMaxDouble > LoopCount) return $"{newMaxDouble}";
             }
             return null;
@@ -116,7 +116,7 @@ public class TestInterlockedUtilities
         {
             for (double i = 0; i < LoopCount; ++i)
             {
-                double newMinDouble = InterlockedUtilities.TryOptomisticMin(ref minDouble, LoopCount - i);
+                double newMinDouble = InterlockedUtilities.TryOptimisticMin(ref minDouble, LoopCount - i);
                 if (newMinDouble < 0 || newMinDouble > LoopCount) return $"{newMinDouble}";
             }
             return null;
@@ -126,7 +126,7 @@ public class TestInterlockedUtilities
         {
             for (long i = 0; i < LoopCount; ++i)
             {
-                long newMaxInt64 = InterlockedUtilities.TryOptomisticMax(ref maxInt64, i);
+                long newMaxInt64 = InterlockedUtilities.TryOptimisticMax(ref maxInt64, i);
                 if (newMaxInt64 < 0 || newMaxInt64 > LoopCount) return $"{newMaxInt64}";
             }
             return null;
@@ -136,7 +136,7 @@ public class TestInterlockedUtilities
         {
             for (long i = 0; i < LoopCount; ++i)
             {
-                long newMinInt64 = InterlockedUtilities.TryOptomisticMin(ref minInt64, LoopCount - i);
+                long newMinInt64 = InterlockedUtilities.TryOptimisticMin(ref minInt64, LoopCount - i);
                 if (newMinInt64 < 0 || newMinInt64 > LoopCount) return $"{newMinInt64}";
             }
             return null;

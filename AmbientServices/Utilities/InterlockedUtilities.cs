@@ -7,7 +7,7 @@ namespace AmbientServices.Utilities;
 /// </summary>
 /// <remarks>
 /// Note that we could increase the code coverage by making a single function with a delegate to reduce the uncovered lines to two,
-/// but this would likely have a significant performance impace without affecting the actual testabilty or reliability of the code.
+/// but this would likely have a significant performance impact without affecting the actual testability or reliability of the code.
 /// </remarks>
 public static class InterlockedUtilities
 {
@@ -18,7 +18,7 @@ public static class InterlockedUtilities
     /// <param name="valueReference">A reference to the value being manipulated.</param>
     /// <param name="possibleNewMin">The value to replace the value with if it is greater.</param>
     /// <returns>The new minimum value.</returns>
-    public static long TryOptomisticMin(ref long valueReference, long possibleNewMin)
+    public static long TryOptimisticMin(ref long valueReference, long possibleNewMin)
     {
         int attempt = 0;
         // loop attempting to put it in until we win the race or timeout
@@ -33,7 +33,7 @@ public static class InterlockedUtilities
                 // we're done and we were the new min
                 return possibleNewMin;
             // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
-            if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
+            if (!TryAgainAfterOptimisticMissDelay(attempt++)) return oldValue;
         }
     }
     /// <summary>
@@ -43,7 +43,7 @@ public static class InterlockedUtilities
     /// <param name="valueReference">A reference to the value being manipulated.</param>
     /// <param name="possibleNewMax">The value to replace the value with if it is greater.</param>
     /// <returns>The new maximum value.</returns>
-    public static long TryOptomisticMax(ref long valueReference, long possibleNewMax)
+    public static long TryOptimisticMax(ref long valueReference, long possibleNewMax)
     {
         int attempt = 0;
         // loop attempting to put it in until we win the race or timeout
@@ -58,7 +58,7 @@ public static class InterlockedUtilities
                 // we're done and we were the new max
                 return possibleNewMax;
             // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
-            if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
+            if (!TryAgainAfterOptimisticMissDelay(attempt++)) return oldValue;
         }
     }
     /// <summary>
@@ -68,7 +68,7 @@ public static class InterlockedUtilities
     /// <param name="valueReference">A reference to the value being manipulated.</param>
     /// <param name="possibleNewMin">The value to replace the value with if it is greater.</param>
     /// <returns>The new minimum value.</returns>
-    public static double TryOptomisticMin(ref double valueReference, double possibleNewMin)
+    public static double TryOptimisticMin(ref double valueReference, double possibleNewMin)
     {
         int attempt = 0;
         // loop attempting to put it in until we win the race or timeout
@@ -83,7 +83,7 @@ public static class InterlockedUtilities
                 // we're done and we were the new min
                 return possibleNewMin;
             // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
-            if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
+            if (!TryAgainAfterOptimisticMissDelay(attempt++)) return oldValue;
         }
     }
     /// <summary>
@@ -93,7 +93,7 @@ public static class InterlockedUtilities
     /// <param name="valueReference">A reference to the value being manipulated.</param>
     /// <param name="possibleNewMax">The value to replace the value with if it is greater.</param>
     /// <returns>The new maximum value.</returns>
-    public static double TryOptomisticMax(ref double valueReference, double possibleNewMax)
+    public static double TryOptimisticMax(ref double valueReference, double possibleNewMax)
     {
         int attempt = 0;
         // loop attempting to put it in until we win the race or timeout
@@ -108,7 +108,7 @@ public static class InterlockedUtilities
                 // we're done and we were the new max
                 return possibleNewMax;
             // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
-            if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
+            if (!TryAgainAfterOptimisticMissDelay(attempt++)) return oldValue;
         }
     }
     /// <summary>
@@ -118,7 +118,7 @@ public static class InterlockedUtilities
     /// <param name="valueReference">A reference to the value being manipulated.</param>
     /// <param name="toAdd">The value to add to the value.</param>
     /// <returns>The new value.</returns>
-    public static double TryOptomisticAdd(ref double valueReference, double toAdd)
+    public static double TryOptimisticAdd(ref double valueReference, double toAdd)
     {
         int attempt = 0;
         // loop attempting to put it in until we win the race or timeout
@@ -131,7 +131,7 @@ public static class InterlockedUtilities
                 // return the new value
                 return oldValue + toAdd;
             // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
-            if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldValue;
+            if (!TryAgainAfterOptimisticMissDelay(attempt++)) return oldValue;
         }
     }
     /// <summary>
@@ -144,7 +144,7 @@ public static class InterlockedUtilities
     /// <param name="decayHalfLives">The number of half-lives the old value should be discounted due to age.</param>
     /// <param name="sampleValue">The sample value to add to the moving average.</param>
     /// <returns>The new minimum value.</returns>
-    public static double TryOptomisticAddExponentialMovingAverageSample(ref double valueReference, double decayHalfLives, double sampleValue)
+    public static double TryOptimisticAddExponentialMovingAverageSample(ref double valueReference, double decayHalfLives, double sampleValue)
     {
         if (decayHalfLives < 0) throw new ArgumentOutOfRangeException(nameof(decayHalfLives), "The number of half lives must not be negative!");
         if (decayHalfLives == 0) return valueReference;
@@ -160,15 +160,15 @@ public static class InterlockedUtilities
                 // we're done--return the new average
                 return newAverage;
             // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
-            if (!TryAgainAfterOptomisticMissDelay(attempt++)) return oldAverage;
+            if (!TryAgainAfterOptimisticMissDelay(attempt++)) return oldAverage;
         }
     }
-    internal static bool TryAgainAfterOptomisticMissDelay(int attempt)
+    internal static bool TryAgainAfterOptimisticMissDelay(int attempt)
     {
         // don't delay at all on the first miss (other than this function call and if)
         if (attempt > 0)
         {
-            // if we hit ten attempts, bail out and just ingore the attempted operation
+            // if we hit ten attempts, bail out and just ignore the attempted operation
             if (attempt >= 10) return false;
             int delay;
             // between five and ten misses, sleep for a random amount before continuing

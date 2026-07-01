@@ -26,21 +26,21 @@ public enum StatusNatureOfSystem
     ChildrenIrrelevant,
     /// <summary>
     /// Indicates that a node is a system of children of varying functionality or nature, each of which must be working for the overall system to be working.
-    /// These nodes may also contain properties, but will primarily rely on the rating determined by by descendants.
+    /// These nodes may also contain properties, but will primarily rely on the rating determined by descendants.
     /// </summary>
     /// <remarks>
     /// Nodes of this nature will always return the worst (least) status rating gathered or computed from all of their children.
     /// </remarks>
-    ChildrenHeterogenous,
+    ChildrenHeterogeneous,
     /// <summary>
     /// Indicates that a node is the parent node of children which are all identical, only one of which has to be working in order for the system to function without errors.
-    /// These nodes may also contain properties, but will primarily rely on the rating determined by by descendants.
+    /// These nodes may also contain properties, but will primarily rely on the rating determined by descendants.
     /// </summary>
     /// <remarks>
     /// When all the children have status ratings in the same range, nodes of this nature will use the average rating from all the children.
     /// When one or more children have status ratings in ranges different from the other children, the overall rating will be in the <see cref="StatusRating.Alert"/> range, with the status dropping towards <see cref="StatusRating.Fail"/> according to how badly the children rate.
     /// </remarks>
-    ChildrenHomogenous,
+    ChildrenHomogeneous,
 }
 /// <summary>
 /// An immutable class that contains properties describing the nature or state of a status node.
@@ -112,7 +112,7 @@ public sealed class StatusResults
     }
 #if LATER
     /// <summary>
-    /// Cosntructs a <see cref="StatusResults"/> from the specified property data (for serialization).
+    /// Constructs a <see cref="StatusResults"/> from the specified property data (for serialization).
     /// </summary>
     /// <param name="sourceSystem">The name of the source system (if known).</param>
     /// <param name="targetSystem">The name of the target system (if any).</param>
@@ -144,7 +144,7 @@ public sealed class StatusResults
     }
 #endif
     /// <summary>
-    /// Cosntructs a <see cref="StatusResults"/> from the specified property data.
+    /// Constructs a <see cref="StatusResults"/> from the specified property data.
     /// </summary>
     /// <param name="sourceSystem">The name of the source system (if known).</param>
     /// <param name="targetSystem">The name of the target system, or null or an empty string if these results are not associated with any particular named subsystem of the parent.</param>
@@ -165,7 +165,7 @@ public sealed class StatusResults
         _children = ImmutableArrayUtilities.FromEnumerable(children);
     }
     /// <summary>
-    /// Cosntructs a <see cref="StatusResults"/> from the specified property data.
+    /// Constructs a <see cref="StatusResults"/> from the specified property data.
     /// </summary>
     /// <param name="sourceSystem">The name of the source system (if known).</param>
     /// <param name="targetSystem">The name of the target system, or an empty string if these results are not associated with any particular named subsystem of the parent.</param>
@@ -185,7 +185,7 @@ public sealed class StatusResults
         _children = ImmutableArray<StatusResults>.Empty;
     }
     /// <summary>
-    /// Cosntructs a <see cref="StatusResults"/> including a summary report from the specified children.
+    /// Constructs a <see cref="StatusResults"/> including a summary report from the specified children.
     /// </summary>
     /// <param name="sourceSystem">The name of the source system (if known).</param>
     /// <param name="targetSystem">The name of the target system, or an empty string if these results are not associated with any particular named subsystem of the parent.</param>
@@ -197,7 +197,7 @@ public sealed class StatusResults
         Time = AmbientClock.UtcNow;
         RelativeDetailLevel = 0;
         _properties = ImmutableArray<StatusProperty>.Empty;
-        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         _children = ImmutableArrayUtilities.FromEnumerable(children);
         Report = null;
     }

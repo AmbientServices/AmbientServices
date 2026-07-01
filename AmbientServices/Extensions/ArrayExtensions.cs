@@ -11,7 +11,7 @@ public static class ArrayExtensions
     /// <summary>
     /// Compares two arrays of arbitrary type to see if the contents are the same.
     /// </summary>
-    /// <typeparam name="TYPE">The type of item in the arary.</typeparam>
+    /// <typeparam name="TYPE">The type of item in the array.</typeparam>
     /// <param name="array1">The first array to compare.</param>
     /// <param name="array2">The second array to compare.</param>
     /// <returns><b>true</b> if the contents of the arrays are the same, <b>false</b> if the contents of the arrays are different.</returns>
@@ -36,7 +36,7 @@ public static class ArrayExtensions
         // loop through each element and compare
         for (int offset = 0; offset < array.Length; ++offset)
         {
-            int elemhashcode = array[offset]?.GetHashCode() ?? 0;   // Note here that even though TYPE is not TYPE?, it is nullable because we haven't added a notnull generic type contraint (where TYPE: notnull)
+            int elemhashcode = array[offset]?.GetHashCode() ?? 0;   // Note here that even though TYPE is not TYPE?, it is nullable because we haven't added a notnull generic type constraint (where TYPE: notnull)
             code ^= (elemhashcode >> (32 - (offset % 32)) ^ (elemhashcode << (offset % 32)) ^ 0x1A7FCA3B);
         }
         return code;

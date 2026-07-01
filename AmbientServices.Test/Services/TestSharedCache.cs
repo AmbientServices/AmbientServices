@@ -196,7 +196,7 @@ public class TestSharedCache
             Assert.IsNotNull(ret);
             ret = await cache.Retrieve<TestSharedCache>(keyName3);
             Assert.IsNotNull(ret);
-            await Eject(cache, 1);  // this should skip 2 because it's bee refershed again and eject 3 because it's the LRU timed
+            await Eject(cache, 1);  // this should skip 2 because it's bee refreshed again and eject 3 because it's the LRU timed
             ret = await cache.Retrieve<TestSharedCache>(keyName1);
             Assert.IsNull(ret);
             ret = await cache.Retrieve<TestSharedCache>(keyName2);
@@ -594,7 +594,7 @@ internal class BasicAmbientCache : IAmbientSharedCache
                 {
                     // remove it from the cache, even though it may not have expired yet because it's time to eject something
                     await EjectEntry(entry, cancel);
-                    // fall through and check to wee if the next item is already expired
+                    // fall through and check to see if the next item is already expired
                     unexpiredItemEjected = true;
                 }
                 // the item was refreshed, so we should ignore this entry-- if we have already ejected an unexpired item, we need to check for another expired item, otherwise we still haven't ejected anything, so go around again immediately

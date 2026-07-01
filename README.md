@@ -52,7 +52,7 @@ For .NET Core environments, use:
 ## AmbientLocalCache
 The ambient cache interface abstracts a very simple cache of the type that is universally applicable.  Some items are cached for a specific amount of time, others are cached indefinitely.  Items cached temporarily may have their expiration time extended or shortened each time they are retrieved or updated.  Both types of items may expire from the cache at any time according to cache limits and/or memory capacity.  Items may be removed from the cache manually at any time.  
 
-In order to prevent unexpected alteration of outputs, care must be taken to ensure that cached items are based entierly on the inputs.  For functions that are not "pure" (database queries for example), the results should always be based entirely on the inputs and either the current state of the database or some previous state (when it uses cached results).  For example, if the cache key does not contain all the inputs identifying the item being cached, completely different results could be obtained depending on the order in which calls to the cache were made.  This is true of all caches and naturally every cache user and implementor understands that this type of usage is erroneous and must be avoided.
+In order to prevent unexpected alteration of outputs, care must be taken to ensure that cached items are based entirely on the inputs.  For functions that are not "pure" (database queries for example), the results should always be based entirely on the inputs and either the current state of the database or some previous state (when it uses cached results).  For example, if the cache key does not contain all the inputs identifying the item being cached, completely different results could be obtained depending on the order in which calls to the cache were made.  This is true of all caches and naturally every cache user and implementor understands that this type of usage is erroneous and must be avoided.
 
 ### Helpers
 The `AmbientLocalCache<TOWNER>` generic class provides a wrapper of the ambient cache that attaches the owner type name as a prefix for each cache key to prevent cross-class cache key conflicts, and ignores calls when there is no ambient cache or it has been suppressed.
@@ -72,7 +72,7 @@ class UserManager
     private static readonly AmbientLocalCache<UserManager> Cache = new();
 
     /// <summary>
-    /// Finds the user with the specified emali address.
+    /// Finds the user with the specified email address.
     /// </summary>
     /// <param name="email">The emali address for the user.</param>
     /// <returns>The <see cref="User"/>, if one was found, or null if the user was not found.</returns>
@@ -227,7 +227,7 @@ public static class AssemblyLoggingExtensions
     /// Logs that there was an assembly load exception.
     /// </summary>
     /// <param name="assembly">The <see cref="AssemblyName"/> for the assembly that failed to load.</param>
-    /// <param name="ex">The <see cref="Exception"/> that occured during the failed load.</param>
+    /// <param name="ex">The <see cref="Exception"/> that occurred during the failed load.</param>
     /// <param name="operation">The operation that needed the assembly.</param>
     public static void LogLoadException(this AssemblyName assemblyName, Exception ex, string operation)
     {
@@ -378,9 +378,9 @@ The default implementation tracks progress and provides access to the data, but 
 
 ## AmbientClock
 
-The ambient clock interface abstracts a system clock.  Artificial clock control can be important in testing, especially to efficiently and quickly exercise timeout conditions and to avoid timeouts when tests run under heavy CPU load (as you would ususally want them to run in order to get through them as quickly as possible).  Ideally, the underlying platform would provide some kind of thread or execution-context-specific clock for use by timeout logic, but unfortunatly most platforms do not provide this functionality.  This service provides that missing functionality, at least for the purposes of testing.
+The ambient clock interface abstracts a system clock.  Artificial clock control can be important in testing, especially to efficiently and quickly exercise timeout conditions and to avoid timeouts when tests run under heavy CPU load (as you would usually want them to run in order to get through them as quickly as possible).  Ideally, the underlying platform would provide some kind of thread or execution-context-specific clock for use by timeout logic, but unfortunately most platforms do not provide this functionality.  This service provides that missing functionality, at least for the purposes of testing.
 
-Clocks, of course, are generally counter to the goals of purely functional programming, and even in imperative programming, it makes sense that functions that aren't obviously time-dependent should not have their outputs unexpectedly affected by the clock.  One such acceptable usage is logging with timestamps.  Another acceptable usage is timeouts.  For all programs, clocks could indirectly appear to be frozen if the CPU is unexpectedly fast or the system clock has an unexpectedly low resolution.  Correspondingly, clocks could appear to skip ahead if the system CPU is overloaded and the thread doesn't get scheduled or if the system goes to sleep or hibernates and then later resumes.  The artificial clock AmbientClock provides simply allows an upstream service consumer to simulate those conditions for both unit and integration testing purposes.  These are important edge cases to test for systems that need a high degree of reliability and graceful degredation.  
+Clocks, of course, are generally counter to the goals of purely functional programming, and even in imperative programming, it makes sense that functions that aren't obviously time-dependent should not have their outputs unexpectedly affected by the clock.  One such acceptable usage is logging with timestamps.  Another acceptable usage is timeouts.  For all programs, clocks could indirectly appear to be frozen if the CPU is unexpectedly fast or the system clock has an unexpectedly low resolution.  Correspondingly, clocks could appear to skip ahead if the system CPU is overloaded and the thread doesn't get scheduled or if the system goes to sleep or hibernates and then later resumes.  The artificial clock AmbientClock provides simply allows an upstream service consumer to simulate those conditions for both unit and integration testing purposes.  These are important edge cases to test for systems that need a high degree of reliability and graceful degradation.  
 
 Clocks should never go backwards.  Ambient clock service implementors must ensure this holds true.
 
@@ -422,14 +422,14 @@ public class TimeDependentServiceTest
         using AmbientCancellationTokenSource cts = new(TimeSpan.FromSeconds(1));
         await Assert.ThrowsAsync<OperationCanceledException>(() => AsyncFunctionThatShouldCancelAfterOneSecond(cts.Token).AsTask());
 
-        // switch the current call context to the artifically-paused ambient clock and try again
+        // switch the current call context to the artificially-paused ambient clock and try again
         using (AmbientClock.Pause())
         {
             using AmbientCancellationTokenSource cts2 = new(TimeSpan.FromSeconds(1));
             // this should *not* throw because the clock has been paused
             await AsyncFunctionThatShouldCancelAfterOneSecond(cts2.Token);
 
-            // this skips the artifical paused clock ahead, raising the cancellation
+            // this skips the artificial paused clock ahead, raising the cancellation
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(1));
             // make sure the cancellation got raised
             Assert.Throws<OperationCanceledException>(() => cts2.Token.ThrowIfCancellationRequested());
@@ -476,7 +476,7 @@ Settings set implementations may or may not provide post-initialization settings
 
 Among other things, the ambient settings system is designed to provide sensible access to settings and notification of changes during system startup and shutdown.  
 For example, at the beginning of startup, the settings just use default values.  
-At some point, the global settings set can be replaced with a settings set implementatoin that reads from a local configuration, and then later on with an implementation that reads settings from a centralized settings store.  
+At some point, the global settings set can be replaced with a settings set implementation that reads from a local configuration, and then later on with an implementation that reads settings from a centralized settings store.  
 Users of settings don't need to bother with knowing where the settings come from, only that they might change during system startup.  
 This is especially useful for things like logging.  
 Errors that occur before the location of shared logs is determined (that location might be stored in a central database) can be stored in the event log or local file system as desired.  
@@ -570,13 +570,13 @@ class BufferPool
 }
 ```
 ### Default Implementation
-The default implementation just uses a local initally-empty ConcurrentDictionary to keep track of settings values, so the default settings values will be used unless the default settings set is altered.  
+The default implementation just uses a local initially-empty ConcurrentDictionary to keep track of settings values, so the default settings values will be used unless the default settings set is altered.  
 Some analysis tools encourage splitting `IAmbientSettingsSet` into a base interface that only reads and a derived interface that adds writing.
 This turns out to greatly complicate the system.  For example, with derived interfaces, how do you handle the ambient instance? 
 Do you force both to use the same instance?  Is that what you always want?  What if you have an implementation that only implements the base interface?
 If you allow separate instances, you end up with settings that write to one instance but read from another, which is usually not what you want.
 Following the example of .NET Stream, I've chosen to use a single interface that provides both reading and writing, but only if the implementation supports it.
-I at least povide a function that let you know whether you can write or not, so you don't have to attempt to write and get an exception.
+I at least provide a function that lets you know whether you can write or not, so you don't have to attempt to write and get an exception.
 Implementations are provided for settings backed by the system environment (AmbientEnvironmentSettingsSet), an in-memory set (BasicAmbientSettingsSet), an immutable in-memory set (AmbientImmutableSettingsSet), app.config settings (AppConfigSettingsSet), a fake settings set attached to default settings (DefaultSettingsSet), and a layered settings set that allows you to combine multiple settings sets into a single set (AmbientSettingsLayers).
 
 # Customizing Ambient Services
@@ -590,7 +590,7 @@ Implementations are provided for settings backed by the system environment (Ambi
 public interface IAmbientCallStack
 {
     /// <summary>
-    /// Creates a call stack scope for the specified fuction name, keeping it on the stack until it is disposed.
+    /// Creates a call stack scope for the specified function name, keeping it on the stack until it is disposed.
     /// </summary>
     /// <param name="function">The name of the function being executed.</param>
     /// <returns>A disposable object that will remove the function at the end of its execution scope.</returns>
@@ -963,11 +963,11 @@ public static class StatisticsReporter
 The default implementation uses thread-safe lock-free statistics instances, keeping all the information associated with each statistic.
 
 ## AmbientServiceProfiler
-The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on course-grained profiling.
+The `AmbientServiceProfiler` interface abstracts a low-overhead service profiler with performance designed for always-on coarse-grained profiling.
 This profiling can be used to determine how the time for a request, program, or time window was used.
 The code being profiled calls into the `IAmbientServiceProfiler` each time the system that is executing switches (only one system can be active per call context at a time).
 A system identifier contains a main system name followed by various subsystem and result identifiers (of course results aren't available until the next system begins executing, so the profiler allows the service to update the system identifier after execution completes).
-The consumer of the service profiler may want to ignore some or all of the susbsystem and result parts of the identifier and can do so using the system group transform setting, which is a regular expression that matches only the desired pieces of the identifier, causing statistics from one or more subsystems and/or results to be grouped together.
+The consumer of the service profiler may want to ignore some or all of the subsystem and result parts of the identifier and can do so using the system group transform setting, which is a regular expression that matches only the desired pieces of the identifier, causing statistics from one or more subsystems and/or results to be grouped together.
 For example, a system identifier might be `SQL/Database:My-database/Table:User/Result:Failed`.
 The fully-detailed system identifier would allow the service profile consumer to distinguish how much time was spent waiting for SQL results that failed from those that timed out or succeeded, and those from one database and/or table from another.
 This level of information is usually too-detailed, so the consumer may want to group everything to just the top-level system, in which case, all SQL access, no matter which database or table, and no matter whether the operation was successful, timed out, or threw an exception, would all be grouped into a single profile entry.
@@ -1096,7 +1096,7 @@ The default implementation uses thread-safe lock-free instances.
 Each system switch is transformed according to the setting and then distributed to all the profilers the switch applies to.
 
 ## AmbientBottleneckDetector
-The `IAmbientBottleneckDetector` interface provides access to a function to measure access to a bottleneck and events that the are used to track usage over time.  
+The `IAmbientBottleneckDetector` interface provides access to a function to measure access to a bottleneck and events that are used to track usage over time.  
 The gathered data can be used to determine how close that part of the system is to maxing-out, so that scalability limits can be more accurately estimated.  
 
 ### Helpers
@@ -1206,7 +1206,7 @@ class EbsAccessor
                 f.Position = fileOffset;
                 bytesRead = f.Read(buffer, bufferOffset, bytes);
             }
-            access?.SetUsage(1, (bytesRead + IopsPageSize - 1) / IopsPageSize); // note that this approximation of IOPS won't be correct if the file is fragmented, and the lookup and opening of the file will likely use some IOPS as well--more accurate estmates can be obtained after long-term usage and comparison to AWS metrics
+            access?.SetUsage(1, (bytesRead + IopsPageSize - 1) / IopsPageSize); // note that this approximation of IOPS won't be correct if the file is fragmented, and the lookup and opening of the file will likely use some IOPS as well--more accurate estimates can be obtained after long-term usage and comparison to AWS metrics
         }
         return bytesRead;
     }
@@ -1249,7 +1249,7 @@ class BottleneckReporter
 
 ### Default Implementation
 The default implementation uses thread-safe lock-free instances.  
-In order to effectively users must strike a balance between conservative estimates of bottleneck saturation vs. having only inaccurate top bottlenecks in summaries.
+In order to use this effectively, users must strike a balance between conservative estimates of bottleneck saturation vs. having only inaccurate top bottlenecks in summaries.
 
 
 ## DisposeResponsibility
@@ -1266,7 +1266,7 @@ Care should be taken in the event handler for the `DisposeResponsiblity.Responsi
 In most cases `DisposeResponsibility` instances returned from functions should be disposed of using a `using` block in the scope where the call is made, but sometimes the instances are returned higher up the stack, or stored inside another object for later disposal.
 `DisposeResponsibility` ensures that responsibility for disposing of the instance is not lost.  
 The responsibility can be transferred to another caller or scope, but won't be lost unintentionally as often is the case without it.
-Someday, it would be nice if C# incorporated this kind of explicit dispose responsibilty tracking and transfer into the language, as it could greatly improve the readability and performance, and could eliminate all numerous false positive code analysis warnings.
+Someday, it would be nice if C# incorporated this kind of explicit dispose responsibility tracking and transfer into the language, as it could greatly improve the readability and performance, and could eliminate all numerous false positive code analysis warnings.
 
 ### MSTest (VSTest / Visual Studio test explorer)
 Finalization is non-deterministic, so a forgotten `using` may not surface until a GC runs. Test hosts (including Microsoft Testing Platform) are also poor places for `Trace.Assert` in finalizers. Instead, undisposed wrappers record a diagnostic when finalized (when there is no handler on `DisposeResponsibility.ResponsibilityNotDisposed`), and you assert during **assembly cleanup** after forcing collection and waiting for finalizers (`DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc`).
@@ -1361,7 +1361,7 @@ The status for these systems is gathered by a class that inherits from the abstr
 StatusChecker and StatusAuditor classes with empty public constructors are automatically detected, constructed, and added to the global list of checkers.
 Lazy construction and registration of status checkers is generally not a good idea, as detecting status issues as soon as possible during startup is preferable to detecting them only when the backend systems get initialized.
 Even so, such classes with non-empty or non-public constructors can be registered manually if desired.
-The status of each system is rated with a `StatusRating` floting-point number.
+The status of each system is rated with a `StatusRating` floating-point number.
 Systems are rated in one of four ranges, `StatusRating.Fail`, `StatusRating.Alert`, `StatusRating.Okay`, and `StatusRating.Superlative`.
 Status rating numbers less than or equal to zero indicate that the corresponding system is in some degree of failure.
 Status rating numbers greater than zero and less than or equal to one indicate that the corresponding system is not failing, but is in a state that needs attention such that a system administrator should be alerted.
@@ -1594,7 +1594,7 @@ public sealed class LocalDiskAuditor : StatusAuditor
     protected override bool Applicable => _ready; // if S3 were optional (for example, if an alternative could be configured), this would check the configuration
     public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         await _tempAuditor.Audit(statusBuilder.AddChild("Temp"));
         await _systemAuditor.Audit(statusBuilder.AddChild("System"));
     }
@@ -1643,13 +1643,13 @@ If you want to share ambient services across assembly contexts, you need to ensu
 If you fail to do this you'll be perplexed when the ambient services all of a sudden revert to the defaults when you call across assembly load contexts or when you give some information to the ambient service inside the loaded assembly and then when you get back to the main program, it acts as if that never happened.
 It will appear as if the ExecutionContext got corrupted, but in reality it's just that there are two separate ambient services.
 This can be especially confusing when the two separate ambient services don't just implement the same interface, but are separate instances of the same singleton type.
-The key being that even singeltons are only singletons within their assembly load context.
+The key being that even singletons are only singletons within their assembly load context.
 
 Having separate ambient services in different assembly load contexts can be useful when the loaded assembly is not completely trusted by the caller, or doesn't share coding styles and conventions, so if you override the assembly loading to share assemblies, you also need to ensure that no ambient services are inappropriately leaked across these boundaries.
 In systems where some plugins are trusted and written by the same team, ambient services may need to flow across these boundaries, so the code may have to know which plugins to trust with some ambient services and which to not trust at all and use different assembly loading overrides to control the sharing appropriately.
 
 When assemblies are partially-trusted, the controlling code may need to suppress *some* ambient services and flow others.
-This can be done by in either of two ways.  The first way would be to *not* share AmbientServices assemblies in the assembly load context and to explicitly pass the needed ambient services to the partially-trusted assembly explicitly, at which point it can either use those explicit dependencies directly or store them it its separate ambient context.
+This can be done by in either of two ways.  The first way would be to *not* share AmbientServices assemblies in the assembly load context and to explicitly pass the needed ambient services to the partially-trusted assembly explicitly, at which point it can either use those explicit dependencies directly or store them in its separate ambient context.
 The second approach is to share ambient services by default, but selectively suppress specific ambient services when calling into the partially-trusted assembly like this:
 ```csharp
 private static AmbientService<IMyService> MySensitiveService;

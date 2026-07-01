@@ -84,7 +84,7 @@ public static class MissingSampleHandlingExtensions
                     yield return sample ?? 0;
                 }
                 break;
-            case MissingSampleHandling.LinearEstimation:            // for leading null samples, extrapolate linarly from the first two non-null samples using MiddleLinerarExtrapolation, for leading samples between two non-null samples, extrapolate linearly using LeadingExtrapolation, for leading samples at the end of the list, extrapolate linearly from the last two non-null samples using TrailingExtrapolation, if there is only one non-null sample, use that same value for every sample, if there are no non-null samples, return a null sample
+            case MissingSampleHandling.LinearEstimation:            // for leading null samples, extrapolate linearly from the first two non-null samples using MiddleLinerarExtrapolation, for leading samples between two non-null samples, extrapolate linearly using LeadingExtrapolation, for leading samples at the end of the list, extrapolate linearly from the last two non-null samples using TrailingExtrapolation, if there is only one non-null sample, use that same value for every sample, if there are no non-null samples, return a null sample
                 foreach (long? sample in Extrapolate(samples, LinearExtrapolator.Instance))
                 {
                     yield return sample;
@@ -139,7 +139,7 @@ public static class MissingSampleHandlingExtensions
                         // save this as a non-null sample, but keep looking for samples
                         previousNonNullSample = lastNonNullSample;
                         lastNonNullSample = sample;
-                        // we're no longer buffering--we hit a non-null sample without null samples preceeding it
+                        // we're no longer buffering--we hit a non-null sample without null samples preceding it
                         needAnotherNonNullSample = false;
                     }
                     // was there a non-null sample before this one?

@@ -8,7 +8,7 @@ namespace AmbientServices;
 public interface IAmbientCostTrackerNotificationSink
 {
     /// <summary>
-    /// Notifies the notification sink that a charges have accrued.
+    /// Notifies the notification sink that charges have accrued.
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
@@ -28,7 +28,7 @@ public interface IAmbientCostTrackerNotificationSink
 public interface IAmbientCostTracker
 {
     /// <summary>
-    /// Notifies the notification sink that a charges have accrued.
+    /// Notifies the notification sink that charges have accrued.
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>

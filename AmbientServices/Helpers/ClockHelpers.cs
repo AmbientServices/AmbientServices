@@ -374,7 +374,7 @@ public sealed class AmbientStopwatch
     {
     }
     /// <summary>
-    /// Constructs an AmbientStopwatch using a specfied <see cref="IAmbientClock"/>.  This overload is mainly for testing functionality without depending on the ambient environment.
+    /// Constructs an AmbientStopwatch using a specified <see cref="IAmbientClock"/>.  This overload is mainly for testing functionality without depending on the ambient environment.
     /// </summary>
     /// <param name="clock">The <see cref="IAmbientClock"/> to use, or null to use the system clock.</param>
     /// <param name="run">Whether or not the stopwatch should start in a running state (as opposed to a paused state).</param>
@@ -1033,7 +1033,7 @@ public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTime
     /// Disposes of the timer, signaling an optional <see cref="WaitHandle"/> when the disposal is complete (meaning that the callback is not in progress and will not be subsequently called).
     /// </summary>
     /// <param name="waitHandle">The <see cref="WaitHandle"/> to signal when the disposal is complete, or null if no notification is needed.</param>
-    /// <returns>true if the disposal was successful and neede, otherwise false.</returns>
+    /// <returns>true if the disposal was successful and needed, otherwise false.</returns>
     public bool Dispose(WaitHandle waitHandle)
     {
         bool ret = false;

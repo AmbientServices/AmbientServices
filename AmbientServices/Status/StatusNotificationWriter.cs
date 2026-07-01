@@ -6,7 +6,7 @@ using System.Text;
 namespace AmbientServices;
 
 /// <summary>
-/// A class that mananges writing status notificatoins.
+/// A class that manages writing status notifications.
 /// </summary>
 internal class StatusNotificationWriter
 {
@@ -30,7 +30,7 @@ internal class StatusNotificationWriter
     private DateTime? _notificationTime;
 
     /// <summary>
-    /// Get the detailed notificaton (so far).
+    /// Get the detailed notification (so far).
     /// </summary>
     public string Details => _details.ToString();
     /// <summary>
@@ -85,8 +85,8 @@ internal class StatusNotificationWriter
         _details.Append(HtmlTabEnd);
     }
     /// <summary>
-    /// Enters the html and body elements, with a backround color set if the overall rating is specified.  
-    /// Should be matched my a subsequent to <see cref="LeaveBodyAndHtml"/>.
+    /// Enters the html and body elements, with a background color set if the overall rating is specified.  
+    /// Should be matched by a subsequent call to <see cref="LeaveBodyAndHtml"/>.
     /// </summary>
     /// <param name="overallRating">The overall rating to use for the background color.</param>
     public void EnterHtmlAndBody(float? overallRating = null)

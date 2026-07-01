@@ -204,7 +204,7 @@ public enum MissingSampleHandling
     LogarithmicEstimation,
 }
 /// <summary>
-/// An interface that give read access to a single statistic.
+/// An interface that gives read access to a single statistic.
 /// Note that many user-facing statistics will naturally be a ratio of the samples of two statistics or the changes in those samples over time.
 /// </summary>
 public interface IAmbientStatisticReader
@@ -223,7 +223,7 @@ public interface IAmbientStatisticReader
     /// </summary>
     string Id { get; }
     /// <summary>
-    /// Gets a human-readable name, presumbly for the chart title.  Should describe the adjusted values, not the raw values.  Immutable.
+    /// Gets a human-readable name, presumably for the chart title.  Should describe the adjusted values, not the raw values.  Immutable.
     /// </summary>
     string Name { get; }
     /// <summary>
@@ -243,7 +243,7 @@ public interface IAmbientStatisticReader
     /// </summary>
     long? ExpectedMaximumRawValue { get; }
     /// <summary>
-    /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  
+    /// Gets an optional human-readable units name, presumably for the y-axis of the chart.  
     /// Assumes that the numbers in the axis have already been divided by <see cref="FixedFloatingPointAdjustment"/>.
     /// Immutable.
     /// </summary>
@@ -341,7 +341,7 @@ public interface IAmbientRatioStatistic : IDisposable
     /// </summary>
     string Id { get; }
     /// <summary>
-    /// Gets a human-readable name, presumbly for the chart title.  Should describe the adjusted values, not the raw values.  Immutable.
+    /// Gets a human-readable name, presumably for the chart title.  Should describe the adjusted values, not the raw values.  Immutable.
     /// </summary>
     string Name { get; }
     /// <summary>
@@ -349,7 +349,7 @@ public interface IAmbientRatioStatistic : IDisposable
     /// </summary>
     string Description { get; }
     /// <summary>
-    /// Gets an optional human-readable units name, presumbly for the y-axis of the chart.  
+    /// Gets an optional human-readable units name, presumably for the y-axis of the chart.  
     /// Immutable.
     /// </summary>
     string? AdjustedUnits { get; }

@@ -16,7 +16,7 @@ public static partial class StringExtensions
     /// Compares two strings naturally, so that numeric sequences embedded in the strings are sorted numerically instead of based on the characters.
     /// For example, a regular string sort would sort "a100b" before "a99b", but a natural string sort would not.
     /// Numeric sequences with more leading zeros sort after those with fewer (or no) leading zeros.
-    /// Floating-point numbers and negatives are supported, but sequences od numbers separated by single dashes are treated as positive.
+    /// Floating-point numbers and negatives are supported, but sequences of numbers separated by single dashes are treated as positive.
     /// </summary>
     /// <param name="a">The first string to compare.</param>
     /// <param name="b">The second string to compare.</param>
@@ -30,7 +30,7 @@ public static partial class StringExtensions
     /// Compares two strings naturally, so that numeric sequences embedded in the strings are sorted numerically instead of based on the characters.
     /// For example, a regular string sort would sort "a100b" before "a99b", but a natural string sort would not.
     /// Numeric sequences with more leading zeros sort after those with fewer (or no) leading zeros.
-    /// Floating-point numbers and negatives are supported, but sequences od numbers separated by single dashes are treated as positive.
+    /// Floating-point numbers and negatives are supported, but sequences of numbers separated by single dashes are treated as positive.
     /// </summary>
     /// <param name="a">The first string to compare.</param>
     /// <param name="b">The second string to compare.</param>

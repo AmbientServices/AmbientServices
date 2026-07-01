@@ -184,7 +184,7 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
                 break;
             }
             // note that it's very difficult to test a miss here--you really have to pound it with multiple threads, so this next line (and the not equal condition on the "if" above are not likely to get covered
-            if (!InterlockedUtilities.TryAgainAfterOptomisticMissDelay(attempt++)) break;
+            if (!InterlockedUtilities.TryAgainAfterOptimisticMissDelay(attempt++)) break;
         }
         if (!_disposedValue) _fileBuffers.BufferLine(message);
     }
@@ -328,7 +328,7 @@ internal class RotatingFileBuffer : IDisposable
         {
             await FlushInternal();
         }
-        // Coverage note: this code is pretty-much impossible to test because the time has to go off AFTER this instance is marked as disposed but before the timer is disposed (or at least before it's last invocation happens)
+        // Coverage note: this code is pretty-much impossible to test because the time has to go off AFTER this instance is marked as disposed but before the timer is disposed (or at least before its last invocation happens)
         catch (ObjectDisposedException)
         {
             // ignore this error (it can happen during the race to dispose)

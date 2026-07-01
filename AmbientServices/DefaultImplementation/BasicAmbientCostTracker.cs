@@ -17,7 +17,7 @@ internal class BasicAmbientCostTracker : IAmbientCostTracker
     }
 
     /// <summary>
-    /// Notifies the notification sink that a charges have accrued.
+    /// Notifies the notification sink that charges have accrued.
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
@@ -35,7 +35,7 @@ internal class BasicAmbientCostTracker : IAmbientCostTracker
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMonth">The change in coste (in picodollars per minute).</param> 
+    /// <param name="changePerMonth">The change in cost (in picodollars per minute).</param> 
     public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         // call all the notification sinks
@@ -94,7 +94,7 @@ internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedChargesAndC
         _profiler.RegisterCostTrackerNotificationSink(this);
     }
     /// <summary>
-    /// Notifies the notification sink that a charges have accrued.
+    /// Notifies the notification sink that charges have accrued.
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
@@ -171,7 +171,7 @@ internal class ScopeOnChargesAccruedDistributor : IAmbientCostTrackerNotificatio
 {
     private readonly ConcurrentHashSet<IAmbientCostTrackerNotificationSink> _notificationSinks = new();
     /// <summary>
-    /// Notifies the notification sink that a charges have accrued.
+    /// Notifies the notification sink that charges have accrued.
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
@@ -232,7 +232,7 @@ internal class CallContextCostTracker : IAmbientAccruedChargesAndCostChanges, IA
     /// Constructs a CallContextCostTracker.
     /// </summary>
     /// <param name="distributor">A <see cref="ScopeOnChargesAccruedDistributor"/> to hook into to receive system change events.</param>
-    /// <param name="scopeName">The name of the call contxt being tracked.</param>
+    /// <param name="scopeName">The name of the call context being tracked.</param>
     public CallContextCostTracker(ScopeOnChargesAccruedDistributor distributor, string scopeName)
     {
         _distributor = distributor;
@@ -240,7 +240,7 @@ internal class CallContextCostTracker : IAmbientAccruedChargesAndCostChanges, IA
         distributor.RegisterSystemSwitchedNotificationSink(this);
     }
     /// <summary>
-    /// Notifies the notification sink that a charges have accrued.
+    /// Notifies the notification sink that charges have accrued.
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
@@ -444,7 +444,7 @@ public class CostAccumulator
     }
 
     /// <summary>
-    /// Adds a cost changes to the accumulator.
+    /// Adds a cost change to the accumulator.
     /// </summary>
     /// <param name="costPerMinuteChange">The cost change (in picodollars per minute).</param>
     public void AddCostChange(long costPerMinuteChange)

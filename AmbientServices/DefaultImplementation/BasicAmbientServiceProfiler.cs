@@ -405,8 +405,8 @@ internal class CallContextServiceProfiler : IAmbientServiceProfile, IAmbientServ
     /// Constructs a CallContextServiceProfiler.
     /// </summary>
     /// <param name="distributor">A <see cref="ScopeOnSystemSwitchedDistributor"/> to hook into to receive system change events.</param>
-    /// <param name="scopeName">The name of the call contxt being tracked.</param>
-    /// <param name="systemGroupTransform">A <see cref="Regex"/> string to transform the procesor into a system group.</param>
+    /// <param name="scopeName">The name of the call context being tracked.</param>
+    /// <param name="systemGroupTransform">A <see cref="Regex"/> string to transform the processor into a system group.</param>
     /// <param name="startSystem">The optional starting system.</param>
     public CallContextServiceProfiler(ScopeOnSystemSwitchedDistributor distributor, string scopeName, Regex? systemGroupTransform, string startSystem = "")
     {

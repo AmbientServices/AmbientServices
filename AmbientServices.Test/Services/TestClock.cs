@@ -1745,7 +1745,7 @@ public class TestClock
                 are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
                 Thread.Sleep(400);
                 //            Assert.IsTrue(signaledInvocations == 1, signaledInvocations.ToString());
-                //            Assert.IsTrue(timedOutInvocations == 1);  // since the signal occured, a timeout should *not* have in the subsequent 400ms
+                //            Assert.IsTrue(timedOutInvocations == 1);  // since the signal occurred, a timeout should *not* have in the subsequent 400ms
                 registered.Unregister(are);
                 // if we get here, we succeeded
                 break;
@@ -1781,7 +1781,7 @@ public class TestClock
                 are.Set();  // this should signal us ONCE but probably asynchronously, and we can't control when an asynchronous signal happens so we'll sleep several times in the hope that one of them will cause the signaling thread to execute
                 Thread.Sleep(400);
                 Assert.AreEqual(1, signaledInvocations);
-                //            Assert.IsTrue(timedOutInvocations == 1); // since the signal occured, a timeout should *not* have in the subsequent 400ms
+                //            Assert.IsTrue(timedOutInvocations == 1); // since the signal occurred, a timeout should *not* have in the subsequent 400ms
                 // if we get here, we succeeded
                 break;
             }

@@ -263,7 +263,7 @@ public sealed class StatusAuditReport : IEquatable<StatusAuditReport>
 }
 /// <summary>
 /// An abstract class that manages periodic status auditing of a system.
-/// Any derivitave of this class will be automatically instantiated by the system retained in a system-wide list to track status.
+/// Any derivative of this class will be automatically instantiated by the system retained in a system-wide list to track status.
 /// </summary>
 public abstract class StatusAuditor : StatusChecker
 {

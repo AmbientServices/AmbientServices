@@ -71,7 +71,7 @@ internal class BasicAmbientProgress : IAmbientProgressService
                 }
                 // else just keep walking up the stack
             }
-            // pop all the way up the the specified item (if needed)
+            // pop all the way up to the specified item (if needed)
             if (pop != null) Pop(pop);
             // the best we can do at this point is to just pop like normal and hope that the correct number of pops occur?
             throw new InvalidOperationException("The SubProgress object stack is corrupt!");

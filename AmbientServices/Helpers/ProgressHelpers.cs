@@ -127,7 +127,7 @@ public class AmbientCancellationTokenSource : IDisposable
     /// <param name="throwOnFirstException">true if exceptions should immediately propagate, otherwise false.</param>
     public void Cancel(bool throwOnFirstException) { _tokenSource?.Cancel(throwOnFirstException); }
     /// <summary>
-    /// Schedules a cancellation after the sepecified time.
+    /// Schedules a cancellation after the specified time.
     /// </summary>
     /// <param name="millisecondsDelay">The number of milliseconds to delay before cancelling.</param>
     public void CancelAfter(int millisecondsDelay)
@@ -136,7 +136,7 @@ public class AmbientCancellationTokenSource : IDisposable
         ScheduleCancellation(TimeSpan.FromMilliseconds(millisecondsDelay));
     }
     /// <summary>
-    /// Schedules a cancellation after the sepecified time.
+    /// Schedules a cancellation after the specified time.
     /// </summary>
     /// <param name="delay">A <see cref="TimeSpan"/> indicating how long to delay before cancelling.</param>
     public void CancelAfter(TimeSpan delay)
@@ -173,7 +173,7 @@ public class AmbientCancellationTokenSource : IDisposable
         }
     }
     /// <summary>
-    /// Disposes of ths instance.
+    /// Disposes of this instance.
     /// </summary>
     public void Dispose()
     {

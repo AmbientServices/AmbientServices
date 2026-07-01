@@ -222,7 +222,7 @@ public class FilteredStackTrace : StackTrace
         return _NamespacesToErase.TryAdd(namespaceToErase);
     }
     /// <summary>
-    /// Adds the specified namespace as one that indicates that the corresponding stack frame should be removed from the stack alogether during filtered stack trace generation.
+    /// Adds the specified namespace as one that indicates that the corresponding stack frame should be removed from the stack altogether during filtered stack trace generation.
     /// This is usually used to remove wrapper methods that are irrelevant to diagnosing problems.
     /// Defaults include AmbientServices.Async.
     /// </summary>

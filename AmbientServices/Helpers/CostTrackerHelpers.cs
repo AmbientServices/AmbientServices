@@ -38,7 +38,7 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     }
 
     /// <summary>
-    /// Notifies the notification sink that a charges have accrued.
+    /// Notifies the notification sink that charges have accrued.
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
@@ -53,7 +53,7 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMonth">The change in coste (in picodollars per minute).</param> 
+    /// <param name="changePerMonth">The change in cost (in picodollars per minute).</param> 
     public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         _scopeDistributor.Value ??= new ScopeOnChargesAccruedDistributor();
@@ -96,7 +96,7 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// Note that this is only useful to determine the distribution for an entire process from start to finish, which is not very useful if the process is very long-lived.
     /// <see cref="CreateTimeWindowProfiler"/> is a better match in most situations.
     /// </summary>
-    /// <param name="scopeName">A name for the contxt to attach to the analyzer.</param>
+    /// <param name="scopeName">A name for the context to attach to the analyzer.</param>
     /// <returns>A <see cref="IAmbientAccruedChargesAndCostChanges"/> containing a service profile for the entire process.  Note that the returned object is NOT thread-safe.</returns>
     /// <remarks>
     /// This is different from using <see cref="CreateCallContextProfiler"/> because that will only analyze the call context it's called from, 

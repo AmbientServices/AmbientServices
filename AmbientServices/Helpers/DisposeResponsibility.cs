@@ -129,7 +129,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 
         string notice = $"Disposable object was not disposed.  Object was constructed at {_stackOnCreation}.";
         Logger.Filter(AmbientLogLevel.Warning)?.Log(new { Action = "UndisposedDisposeResponsibility", Message = notice });
-        // stop/notify *if we can*, but if not, queue up a record of this that someone can query later, presumbaly during cleanup
+        // stop/notify *if we can*, but if not, queue up a record of this that someone can query later, presumably during cleanup
 		if (System.Diagnostics.Debugger.IsAttached) System.Diagnostics.Debugger.Break();
 		else System.Diagnostics.Trace.WriteLine(notice);
 		if (recordForDeferredAssemblyVerification) DisposeResponsibility.RecordDeferredUndisposedLeak(notice);
@@ -169,7 +169,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// <summary>
     /// Constructs a dispose responsibility object that takes responsibility from the specified responsibility object.
     /// </summary>
-    /// <param name="other">Another dispose responsibility object to taks responsibility from.</param>
+    /// <param name="other">Another dispose responsibility object to take responsibility from.</param>
     public DisposeResponsibility(IDisposeResponsibility<T> other)
     {
 #if NET5_0_OR_GREATER
@@ -251,7 +251,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     }
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
     /// <summary>
-    /// Asynchornously disposes of this instance by disposing of the contained instance.
+    /// Asynchronously disposes of this instance by disposing of the contained instance.
     /// </summary>
     public async ValueTask DisposeAsync()
     {
@@ -264,7 +264,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
             GC.SuppressFinalize(this);
             _contained = default;
         }
-        else // no need to dispse synchronously or asynchronously, but we were disposed, so no need to finalize
+        else // no need to dispose synchronously or asynchronously, but we were disposed, so no need to finalize
         {
             GC.SuppressFinalize(this);
         }
@@ -291,7 +291,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// <summary>
     /// Transfers the responsibility from a specified instance into this instance.
     /// </summary>
-    /// <param name="sourceOwnership">The <see cref="IDisposeResponsibility{T}"/> instance whose contained disposable will will hereafter be owned by this instance.</param>
+    /// <param name="sourceOwnership">The <see cref="IDisposeResponsibility{T}"/> instance whose contained disposable will hereafter be owned by this instance.</param>
     public void TransferResponsibilityFrom(IDisposeResponsibility<T> sourceOwnership)
     {
 #if NET5_0_OR_GREATER
@@ -338,14 +338,14 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     }
 }
 /// <summary>
-/// A class containins the arguments for the <see cref="DisposeResponsibility.ResponsibilityNotDisposed"/> event.
+/// A class containing the arguments for the <see cref="DisposeResponsibility.ResponsibilityNotDisposed"/> event.
 /// </summary>
 public class ResponsibilityNotDisposedEventArgs : EventArgs
 {
     /// <summary>
     /// Constructs a new <see cref="ResponsibilityNotDisposedEventArgs"/> with the specified stack on creation.
     /// </summary>
-    /// <param name="contained">The instance constained in the <see cref="DisposeResponsibility{T}"/>.</param>
+    /// <param name="contained">The instance contained in the <see cref="DisposeResponsibility{T}"/>.</param>
     /// <param name="stackOnCreation">The stack trace captured when the instance was created.</param>
     public ResponsibilityNotDisposedEventArgs(object? contained, string stackOnCreation)
     {

@@ -100,7 +100,7 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
     /// <summary>
     /// Constructs a pressure point that measures thread pool pressure.
     /// </summary>
-    /// <param name="maxProcessThreads">The maxiumum number of threads to allow for this process.</param>
+    /// <param name="maxProcessThreads">The maximum number of threads to allow for this process.</param>
     /// <param name="maxPoolThreads">The maximum number of threads to allow for the thread pool.</param>
     /// <param name="maxThreadPerSecond">The maximum number of threads being created per second to allow.</param>
     /// <param name="maxBufferedThreadPoolActions">The maximum number of buffered thread pool actions to allow.</param>
@@ -115,7 +115,7 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
     /// <summary>
     /// Constructs a pressure point that measures thread pool pressure.
     /// </summary>
-    /// <param name="maxProcessThreads">The maxiumum number of threads to allow for this process.</param>
+    /// <param name="maxProcessThreads">The maximum number of threads to allow for this process.</param>
     /// <param name="maxPoolThreads">The maximum number of threads to allow for the thread pool.</param>
     public ThreadPoolPressurePoint(int maxProcessThreads = 64 * 1024, int maxPoolThreads = 64 * 1024)
     {

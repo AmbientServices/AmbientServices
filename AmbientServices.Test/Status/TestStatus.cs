@@ -28,7 +28,7 @@ public class TestStatus
 
             Assert.AreEqual("/", overallStatus.TargetSystem);
             Assert.AreEqual(0, overallStatus.RelativeDetailLevel);
-            Assert.AreEqual(StatusNatureOfSystem.ChildrenHeterogenous, overallStatus.NatureOfSystem);
+            Assert.AreEqual(StatusNatureOfSystem.ChildrenHeterogeneous, overallStatus.NatureOfSystem);
             Assert.AreEqual(0, overallStatus.Properties.Count());
             Assert.IsGreaterThan(0, overallStatus.Children.Count());
             Assert.IsFalse(string.IsNullOrEmpty(overallStatus.ToString()));
@@ -47,7 +47,7 @@ public class TestStatus
             Assert.IsFalse(String.IsNullOrEmpty(att!.Value));
 
             HashSet<StatusResults> test = new();
-            StatusResults c1 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestHeterogenousExplicitRating));
+            StatusResults c1 = overallStatus.Children.FirstOrDefault(c => c.TargetSystem == nameof(TestHeterogeneousExplicitRating));
             Assert.IsNotNull(c1);
             Assert.IsNotNull(c1!.Report);
             Assert.IsNotNull(c1!.Report?.Alert?.Rating);
@@ -443,22 +443,22 @@ class SampleDiskAuditor : StatusAuditor
         }
     }
 }
-internal class TestHeterogenousNoExplicitRating : StatusAuditor
+internal class TestHeterogeneousNoExplicitRating : StatusAuditor
 {
     private readonly SampleVolumeAuditor[] _diskAuditors = new SampleVolumeAuditor[] {
         new SampleVolumeAuditor ("UserDocuments", @"C:\Documents"),
         new SampleVolumeAuditor ("SystemDefaultTemp", @"C:\Temp"),
     };
 
-    public TestHeterogenousNoExplicitRating()
-        : base(nameof(TestHeterogenousNoExplicitRating), TimeSpan.FromSeconds(3))
+    public TestHeterogeneousNoExplicitRating()
+        : base(nameof(TestHeterogeneousNoExplicitRating), TimeSpan.FromSeconds(3))
     {
     }
 
     protected internal override bool Applicable => true;
     public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         foreach (SampleVolumeAuditor da in _diskAuditors)
         {
             try
@@ -473,21 +473,21 @@ internal class TestHeterogenousNoExplicitRating : StatusAuditor
         }
     }
 }
-internal class TestHeterogenousExplicitRating : StatusAuditor
+internal class TestHeterogeneousExplicitRating : StatusAuditor
 {
     private readonly SampleVolumeAuditor[] _diskAuditors = new SampleVolumeAuditor[] {
         new SampleVolumeAuditor ("UserDocuments", @"C:\Documents"),
         new SampleVolumeAuditor ("SystemDefaultTemp", @"C:\Temp"),
     };
 
-    public TestHeterogenousExplicitRating()
-        : base(nameof(TestHeterogenousExplicitRating), TimeSpan.FromSeconds(3))
+    public TestHeterogeneousExplicitRating()
+        : base(nameof(TestHeterogeneousExplicitRating), TimeSpan.FromSeconds(3))
     {
     }
     protected internal override bool Applicable => true;
     public override async ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         foreach (SampleVolumeAuditor da in _diskAuditors)
         {
             try
@@ -506,16 +506,16 @@ internal class TestHeterogenousExplicitRating : StatusAuditor
         statusBuilder.AddAlert("TestAlertCode", "test-terseAlert", "This is the detailed alert message", 0.1f);
     }
 }
-internal class TestHeterogenousOnlyExplicit : StatusAuditor
+internal class TestHeterogeneousOnlyExplicit : StatusAuditor
 {
-    public TestHeterogenousOnlyExplicit()
-        : base(nameof(TestHeterogenousOnlyExplicit), TimeSpan.FromSeconds(3))
+    public TestHeterogeneousOnlyExplicit()
+        : base(nameof(TestHeterogeneousOnlyExplicit), TimeSpan.FromSeconds(3))
     {
     }
     protected internal override bool Applicable => true;
     public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         statusBuilder.AddProperty("wc1", "a");
         statusBuilder.AddProperty("wc2", "b");
         statusBuilder.AddProperty("wc2", AmbientClock.UtcNow.AddMinutes(-10));
@@ -532,21 +532,21 @@ internal class TestSuperlativeExplicit : StatusAuditor
     protected internal override bool Applicable => true;
     public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         statusBuilder.AddSuperlative("test-superlative", "superlative terse", "superlative details");
         return default;
     }
 }
-internal class TestHeterogenousNoExplicit : StatusAuditor
+internal class TestHeterogeneousNoExplicit : StatusAuditor
 {
-    public TestHeterogenousNoExplicit()
-        : base(nameof(TestHeterogenousNoExplicit), TimeSpan.FromSeconds(3))
+    public TestHeterogeneousNoExplicit()
+        : base(nameof(TestHeterogeneousNoExplicit), TimeSpan.FromSeconds(3))
     {
     }
     protected internal override bool Applicable => true;
     public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
         return default;
     }
 }
@@ -564,7 +564,7 @@ internal class TestHomogeneousExplicitFailure : StatusAuditor
     protected internal override bool Applicable => true;
     public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogeneous;
         statusBuilder.AddProperty("ChildCount", _diskAuditors.Count());
         statusBuilder.AddFailure("TestFailCode", "TEST-FAIL!", "This is the detailed fail message", 0.0f);
         return default;
@@ -589,7 +589,7 @@ internal class TestHomogeneousWithFailure : StatusAuditor
     protected internal override bool Applicable => true;
     public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogeneous;
         statusBuilder.AddChild(_alwaysSuperlative);
         statusBuilder.AddChild(_alwaysOkay);
         statusBuilder.AddChild(_alwaysAlerting);
@@ -611,7 +611,7 @@ internal class TestHomogeneousWithMultipleFailure : StatusAuditor
     protected internal override bool Applicable => true;
     public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogeneous;
         statusBuilder.AddChild(_alwaysFailing1);
         statusBuilder.AddChild(_alwaysFailing2);
         return default;
@@ -630,7 +630,7 @@ internal class TestHomogeneousWithMultipleAlert : StatusAuditor
     protected internal override bool Applicable => true;
     public override ValueTask Audit(StatusResultsBuilder statusBuilder, CancellationToken cancel = default)
     {
-        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogenous;
+        statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHomogeneous;
         statusBuilder.AddChild(_alwaysAlerting1);
         statusBuilder.AddChild(_alwaysAlerting2);
         return default;
@@ -726,7 +726,7 @@ internal class TestDeepMultipleSource : StatusAuditor
         }
         else
         {
-            if (level % 2 == 0) statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogenous;
+            if (level % 2 == 0) statusBuilder.NatureOfSystem = StatusNatureOfSystem.ChildrenHeterogeneous;
             StatusResultsBuilder child = new("Level" + level.ToString());
             child.AddProperty("Level", level);
             child.AddProperty("SourceNumber", sourceNumber);

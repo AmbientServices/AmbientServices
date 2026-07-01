@@ -195,11 +195,11 @@ internal class Statistic : IAmbientStatistic
     }
     public long SetRawMin(long newPossibleMinValue)
     {
-        return InterlockedUtilities.TryOptomisticMin(ref _currentValue, newPossibleMinValue);
+        return InterlockedUtilities.TryOptimisticMin(ref _currentValue, newPossibleMinValue);
     }
     public long SetRawMax(long newPossibleMaxValue)
     {
-        return InterlockedUtilities.TryOptomisticMax(ref _currentValue, newPossibleMaxValue);
+        return InterlockedUtilities.TryOptimisticMax(ref _currentValue, newPossibleMaxValue);
     }
     public void Dispose()
     {

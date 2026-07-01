@@ -57,7 +57,7 @@ public class AmbientLocalCache
     /// <typeparam name="T">The type of the item to be cached.</typeparam>
     /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
     /// <param name="item">The item to be cached.</param>
-    /// <param name="disposeWhenDiscarding">Whether or not to dispose <see cref="IDisposable"/> items when discarding items from the cache.  If true, this will result in <see cref="ObjectDisposedException"/>s if the items are still in use when they get discarded, so when true, items will be automatically removed from the cache when they are retrieved.  This results in items only being availble to one client at a time.</param>
+    /// <param name="disposeWhenDiscarding">Whether or not to dispose <see cref="IDisposable"/> items when discarding items from the cache.  If true, this will result in <see cref="ObjectDisposedException"/>s if the items are still in use when they get discarded, so when true, items will be automatically removed from the cache when they are retrieved.  This results in items only being available to one client at a time.</param>
     /// <param name="maxCacheDuration">An optional <see cref="TimeSpan"/> indicating the maximum amount of time to keep the item in the cache.</param>
     /// <param name="expiration">An optional <see cref="DateTime"/> indicating a fixed time for when the item should expire from the cache.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>

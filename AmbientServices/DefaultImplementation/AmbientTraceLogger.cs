@@ -22,7 +22,7 @@ namespace AmbientServices;
 public class AmbientTraceLogger : IAmbientLogger, IAmbientStructuredLogger
 {
     /// <summary>
-    /// Gets the default instance of the ambient debut/trace logger.
+    /// Gets the default instance of the ambient debug/trace logger.
     /// </summary>
     public static AmbientTraceLogger Instance { get; } = new();
 
@@ -88,7 +88,7 @@ public static class TraceBuffer
     private static Thread FlusherThread()
     {
         // fire up a background thread to flush the trace data
-        Thread thread = new(new ThreadStart(TraceBufferBackgoundFlusher)) {
+        Thread thread = new(new ThreadStart(TraceBufferBackgroundFlusher)) {
             IsBackground = true,
             Name = "TraceBuffer.FlusherThread",
             Priority = ThreadPriority.BelowNormal,
@@ -178,7 +178,7 @@ public static class TraceBuffer
             return ret.ToString();
         }
     }
-    private static void TraceBufferBackgoundFlusher()
+    private static void TraceBufferBackgroundFlusher()
     {
         // loop forever!
         while (true)

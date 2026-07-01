@@ -56,7 +56,7 @@ public interface IExceptionLogInformation
 /// This avoids using generating complicated log data when the messages are set to be filtered anyway by returning a null <see cref="AmbientFilteredLogger"/> when the log is going to be filtered anyway.
 /// For example, in C#, you simply write something like this:
 /// <code>Logger.Filtered()?.Log(string.Join(",", MessageListToLog()), new { List = StructuredListToLog() });</code>
-/// In this scenraio, MessageListToLog() and StructuredListToLog() will not be called at all when the logging is being filtered because the Filtered() function will return null, and the compiler automatically builds code that conditionally bypasses the construction of the parameters for Log() because of that null.
+/// In this scenario, MessageListToLog() and StructuredListToLog() will not be called at all when the logging is being filtered because the Filtered() function will return null, and the compiler automatically builds code that conditionally bypasses the construction of the parameters for Log() because of that null.
 /// </summary>
 public class AmbientLogger
 {
@@ -225,8 +225,8 @@ public class AmbientLogger
     /// Logs an exception with standard structured data.
     /// </summary>
     /// <param name="ex">The <see cref="Exception"/> that caused the error and whose information should be added to the structured data before logging..</param>
-    /// <param name="contextDescription">A message to identify the context of where the exception occured.</param>
-    /// <param name="level">The <see cref="AmbientLogLevel"/> identifiying the severity of the information.</param>
+    /// <param name="contextDescription">A message to identify the context of where the exception occurred.</param>
+    /// <param name="level">The <see cref="AmbientLogLevel"/> identifying the severity of the information.</param>
     public void Error(Exception ex, string? contextDescription = null, AmbientLogLevel level = AmbientLogLevel.Error)
     {
 #if NET5_0_OR_GREATER
@@ -519,7 +519,7 @@ public class AmbientLogger
     /// <param name="message">The message to log.</param>
     /// <param name="category">The (optional) category to attach to the message.</param>
     /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
-    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    [Obsolete("Use more natural and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(string message, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
     {
         if (DynamicSimpleLogger == null) return;
@@ -531,7 +531,7 @@ public class AmbientLogger
     /// <param name="messageLambda">A delegate that creates a message.</param>
     /// <param name="category">The (optional) category to attach to the message.</param>
     /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
-    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    [Obsolete("Use more natural and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(Func<string> messageLambda, string? category = null, AmbientLogLevel level = AmbientLogLevel.Information)
     {
         if (DynamicSimpleLogger == null) return;
@@ -548,7 +548,7 @@ public class AmbientLogger
     /// <param name="ex">An <see cref="Exception"/> to log.</param>
     /// <param name="category">The (optional) category to attach to the message.</param>
     /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
-    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    [Obsolete("Use more natural and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
     {
         if (DynamicSimpleLogger == null) return;
@@ -566,7 +566,7 @@ public class AmbientLogger
     /// <param name="ex">An <see cref="Exception"/> to log.  The exception will be appended after the message.</param>
     /// <param name="category">The (optional) category to attach to the message.</param>
     /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
-    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    [Obsolete("Use more natural and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(string message, Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
     {
         if (DynamicSimpleLogger == null) return;
@@ -584,7 +584,7 @@ public class AmbientLogger
     /// <param name="ex">An <see cref="Exception"/> to log.  The exception will be appended after the message.</param>
     /// <param name="category">The (optional) category to attach to the message.</param>
     /// <param name="level">The <see cref="AmbientLogLevel"/> for the message.</param>
-    [Obsolete("Use more natrual and efficient Filter(...).Log(...) or a custom extension method now")]
+    [Obsolete("Use more natural and efficient Filter(...).Log(...) or a custom extension method now")]
     public void Log(Func<string> messageLambda, Exception ex, string? category = null, AmbientLogLevel level = AmbientLogLevel.Error)
     {
 #if NET5_0_OR_GREATER

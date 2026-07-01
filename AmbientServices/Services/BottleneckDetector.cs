@@ -30,7 +30,7 @@ public interface IAmbientBottleneckEnterNotificationSink
 /// </summary>
 /// <remarks>
 /// Each time a bottleneck is used, the caller informs this interface, telling it when the bottleneck is entered and exited, as well as how much usage has occurred.
-/// An survey that ranks the bottlenecks by how close to (or how much over) their limits they are may then be accessed.
+/// A survey that ranks the bottlenecks by how close to (or how much over) their limits they are may then be accessed.
 /// </remarks>
 public interface IAmbientBottleneckDetector
 {
@@ -174,7 +174,7 @@ public sealed class AmbientBottleneckAccessor : IComparable<AmbientBottleneckAcc
     }
 
     /// <summary>
-    /// Adds to the the access count and limit used.
+    /// Adds to the access count and limit used.
     /// </summary>
     /// <param name="additionalAccessCount">The additional number of access counts.</param>
     /// <param name="additionalLimitUsed">The additional amount towards the associated limit that has been used.</param>
@@ -182,7 +182,7 @@ public sealed class AmbientBottleneckAccessor : IComparable<AmbientBottleneckAcc
     {
         if (Bottleneck.Automatic) throw new InvalidOperationException("SetUsage cannot be used on Automatic bottlenecks!");
         System.Threading.Interlocked.Add(ref _accessCount, additionalAccessCount);
-        InterlockedUtilities.TryOptomisticAdd(ref _limitUsed, additionalLimitUsed);
+        InterlockedUtilities.TryOptimisticAdd(ref _limitUsed, additionalLimitUsed);
         UpdateUtilization();
     }
 
@@ -255,7 +255,7 @@ public sealed class AmbientBottleneckAccessor : IComparable<AmbientBottleneckAcc
         long beginTicks = Math.Min(AccessBeginStopwatchTimestamp, accessBeginTicks);
         long endTicks = Math.Max(_accessEndStopwatchTimestamp, accessEndTicks);
         double sumLimitUsed = _limitUsed + limitUsed;
-        // if the access hasn't finished, compute everthing as if it finished right now
+        // if the access hasn't finished, compute everything as if it finished right now
         long totalStopwatchTicks = (endTicks >= long.MaxValue) ? (AmbientClock.Ticks - beginTicks) : (endTicks - beginTicks);
         if (totalStopwatchTicks == 0) totalStopwatchTicks = 1;    // make sure total ticks is not zero to avoid a divide by zero exception (note that we allow negative values--they shouldn't be possible for time, but we have a test case that at least makes sure they don't crash)
         double limitProportionUsed = // if the usage is equal to the limit and the range is equal to the period, 1.0 should be the result
