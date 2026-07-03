@@ -215,6 +215,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
         }
         else if (contained is IAsyncDisposable asyncDisposable)
         {
+            // since we've been called synchronously but the contained object only has an async disposer, we have to wait synchronously
             asyncDisposable.DisposeAsync().AsTask().Wait();
         }
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP || NET5_0_OR_GREATER

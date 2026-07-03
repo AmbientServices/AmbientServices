@@ -135,7 +135,27 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
             if (expiration != null && expiration.Value.Kind == DateTimeKind.Local) expiration = expiration.Value.ToUniversalTime();
             if (expiration < actualExpiration) actualExpiration = expiration;
             CacheEntry entry = new(itemKey, actualExpiration, item, disposeWhenDiscarding);
-            _cache.AddOrUpdate(itemKey, entry, (k, v) => { CacheEntry c = v; if (c != null) c.Dispose().AsTask().Wait(); return entry; });
+            // ConcurrentDictionary has no async update delegate, and its update delegate may run more than
+            // once under contention — so a disposing side effect there can double-dispose. Do the compare-and-swap
+            // ourselves: this displaces exactly one entry, which we then dispose once, awaited, outside the dictionary.
+            CacheEntry? displaced = null;
+            while (true)
+            {
+                if (_cache.TryGetValue(itemKey, out CacheEntry? old))
+                {
+                    if (_cache.TryUpdate(itemKey, entry, old))
+                    {
+                        displaced = old;
+                        break;
+                    }
+                }
+                else if (_cache.TryAdd(itemKey, entry))
+                {
+                    break;
+                }
+                // another writer changed the slot first; re-read and retry
+            }
+            if (displaced != null) await displaced.Dispose();
             if (actualExpiration == null)
             {
                 _untimedQueue.Enqueue(itemKey);

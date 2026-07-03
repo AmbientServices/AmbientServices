@@ -172,7 +172,7 @@ public static class ConsoleBuffer
     /// Asynchronously flushes any queued console lines.
     /// </summary>
     /// <param name="cancel">A <see cref="CancellationToken"/> that the caller can use to interrupt the operation before completion.</param>
-    public static async Task Flush(CancellationToken cancel = default)
+    public static async ValueTask Flush(CancellationToken cancel = default)
     {
         // queue a flush command
         _Queue.Enqueue(_FlushString);
