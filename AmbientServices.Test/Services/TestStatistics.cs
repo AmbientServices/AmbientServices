@@ -104,7 +104,7 @@ public class TestStatistics
         BasicAmbientStatistics statisticsSet = new();
         ProcessExecutionTimeStatistic executionTime = new(statisticsSet);
         Assert.AreSame(statisticsSet, executionTime.StatisticsSet);
-        Assert.AreEqual(AmbientStatisticType.Cumulative, executionTime.StatisicType);
+        Assert.AreEqual(AmbientStatisticType.Cumulative, executionTime.StatisticType);
         Assert.AreEqual("Execution Time", executionTime.Name);
         Assert.AreEqual("ExecutionTime", executionTime.Id);
     }

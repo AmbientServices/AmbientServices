@@ -24,13 +24,6 @@ namespace AmbientServices;
 public class StatusResultsBuilder
 {
 
-    /* Unmerged change from project 'AmbientServices (netstandard2.0)'
-    Before:
-            private StatusAuditAlert? _worstAlert;
-            private readonly List<StatusProperty> _properties = new();
-    After:
-            private readonly List<StatusProperty> _properties = new();
-    */
     private readonly List<StatusProperty> _properties = new();
     private readonly List<StatusResultsBuilder> _children = new();
 

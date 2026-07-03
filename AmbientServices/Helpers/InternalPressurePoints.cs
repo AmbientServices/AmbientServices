@@ -64,7 +64,7 @@ public sealed class CpuPressurePoint : IPressurePoint
 #endif
             CpuSample newSample = CpuSample.GetSample();
             CpuSample oldSample = (CpuSample)Interlocked.Exchange(ref _previousSample, newSample);
-            float newPressure = 0.02f + CpuSample.CpuUtilization(oldSample, newSample);   // _cpuMonitor is *process* usage, so we'll add a little extra to account for the rest of the system
+            float newPressure = 0.02f + CpuSample.CpuUtilization(oldSample, newSample);   // CpuUtilization is *process* usage, so we'll add a little extra to account for the rest of the system
             _cpuPressure?.SetValue(newPressure);
             return newPressure;
         }
@@ -279,7 +279,6 @@ public sealed class MemoryPressurePoint : IPressurePoint
             }
 #endif
             float linearPressure = Math.Max(loadMemoryPressure, workingSetMemoryPressure);
-            int linearPressureOffset = (int)(linearPressure * 100);
             float memoryPressure = LinearPressureToMemoryPressure(linearPressure);
             _memoryPressure?.SetValue(memoryPressure);
             return memoryPressure;

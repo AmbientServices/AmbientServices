@@ -7,8 +7,7 @@ using System.Threading.Tasks;
 namespace AmbientServices;
 
 /// <summary>
-/// A basic implementation of <see cref="IAmbientLogger"/> that writes log messages to a rotating set of files.
-/// Turn the logger off for maximum performance.
+/// A basic implementation of <see cref="IAmbientLogger"/> and <see cref="IAmbientStructuredLogger"/> that fans each log message out to any number of registered loggers.
 /// </summary>
 /// <remarks>
 /// <pitch>Fan-out: register it as the one ambient logger and it forwards every entry to any number of underlying loggers — for example, files for durability <em>and</em> console for visibility — without the log sources knowing there is more than one target.</pitch>

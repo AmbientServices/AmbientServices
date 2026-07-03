@@ -60,13 +60,13 @@ public interface IAmbientCostTracker
     /// <param name="changePerMonth">The change in cost (in picodollars per month).</param> 
     void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth);  // S3 is $0.023/GB/month, so in picodollars per kilobyte per month, that's $0.023 GB*m * 10^12p$/$ * 1GB/10^9B * 30.4375d/m = 0.023 * 10^3 * 1000 = ~23000 picodollars per kilobyte per month, which seems like a reasonable resolution
     /// <summary>
-    /// Registers a cost tracker notification sink with this ambient service profiler.
+    /// Registers a cost tracker notification sink with this ambient cost tracker.
     /// </summary>
     /// <param name="sink">An <see cref="IAmbientCostTrackerNotificationSink"/> that will receive notifications as charges accrue.</param>
     /// <returns>true if the registration was successful, false if the specified sink was already registered.</returns>
     bool RegisterCostTrackerNotificationSink(IAmbientCostTrackerNotificationSink sink);
     /// <summary>
-    /// Deregisters a cost tracker notification sink with this ambient service profiler.
+    /// Deregisters a cost tracker notification sink with this ambient cost tracker.
     /// </summary>
     /// <param name="sink">An <see cref="IAmbientCostTrackerNotificationSink"/> that will receive notifications as charges accrue.</param>
     /// <returns>true if the deregistration was successful, false if the specified sink was not registered.</returns>

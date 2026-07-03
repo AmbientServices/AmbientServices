@@ -235,7 +235,7 @@ public interface IAmbientStatisticReader
     /// <summary>
     /// Gets the <see cref="AmbientStatisticType"/> for the statistic.  Immutable.
     /// </summary>
-    AmbientStatisticType StatisicType { get; }
+    AmbientStatisticType StatisticType { get; }
     /// <summary>
     /// Gets the identifier for the statistic.
     /// The identifier should be a dash-delimited path identifying the data.  Immutable.
@@ -457,7 +457,7 @@ public static class IAmbientStatisticsExtensions
     {
         if (reader == null) throw new ArgumentNullException(nameof(reader));
         AggregationTypes types = reader.PreferredTemporalAggregationType;
-        if (types == AggregationTypes.None) types = DefaultTemporalAggregation(reader.StatisicType);
+        if (types == AggregationTypes.None) types = DefaultTemporalAggregation(reader.StatisticType);
         return types.Aggregate(samples);
     }
     /// <summary>
@@ -470,7 +470,7 @@ public static class IAmbientStatisticsExtensions
     {
         if (reader == null) throw new ArgumentNullException(nameof(reader));
         AggregationTypes types = reader.PreferredSpatialAggregationType;
-        if (types == AggregationTypes.None) types = DefaultSpatialAggregation(reader.StatisicType);
+        if (types == AggregationTypes.None) types = DefaultSpatialAggregation(reader.StatisticType);
         return types.Aggregate(samples);
     }
     /// <summary>
