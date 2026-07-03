@@ -291,7 +291,7 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
     {
         long? usage = GetCgroupCpuUsage();
         double? limit = GetCgroupCpuLimit();
-        DateTime now = DateTime.UtcNow;
+        DateTime now = AmbientClock.UtcNow;
 
         if (usage == null || limit == null)
         {
@@ -329,7 +329,7 @@ internal sealed class LinuxContainerCpuSampler : ICpuSampler
     {
         long? usage = GetCgroupCpuUsage();
         double? limit = GetCgroupCpuLimit();
-        DateTime now = DateTime.UtcNow;
+        DateTime now = AmbientClock.UtcNow;
 
         if (usage == null || limit == null || _lastUsage == null || _lastSampleTime == null)
             return 0f;

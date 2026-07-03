@@ -19,10 +19,9 @@ namespace AmbientServices;
 /// Applying the attribute to a class with a parameterless constructor registers that class as the default implementation of each interface it directly implements (or only the interfaces listed in the attribute, when given), in every assembly that references AmbientServices.  First registration per interface wins; later-discovered candidates for an already-claimed interface are ignored.  Discovery is passive — registration does not construct the class; construction happens lazily on first request and the same instance is shared thereafter.
 /// A default is only a fallback: an explicit assignment to <see cref="AmbientService{T}.Global"/> always takes precedence, and suppression hides the default entirely.
 /// </pledge>
-/// When applied to a class with a public empty constructor in any assembly, causes each interface implemented by that class to be registered as the default ambient service implementation, unless one already exists.
+/// When applied to a class with a parameterless constructor (public or non-public) in any assembly, causes each interface implemented by that class to be registered as the default ambient service implementation, unless one already exists.
 /// If another implementation has already been registered, the new one will be ignored.
-/// The class instance implementing the service implementation will be constructed the first time it is requested.
-/// In some rare situations where multiple threads attempt the initialization simultaneously, the constructor may be called more than once.
+/// The class instance implementing the service implementation will be constructed the first time it is requested, at most once per concrete type even when multiple threads request it simultaneously.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class)]
 public sealed class DefaultAmbientServiceAttribute : Attribute
@@ -105,7 +104,7 @@ internal static class DefaultAmbientServices
         foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
             // is this assembly us or does it reference us?
-            if (assembly == _ThisAssembly || assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
+            if (assembly == _ThisAssembly || assembly.DoesAssemblyReferDirectlyToAssembly(_ThisAssembly))
             {
                 checkedAssemblies.Add(assembly);
                 foreach (Type type in assembly.GetLoadableTypes())
@@ -147,7 +146,7 @@ internal static class DefaultAmbientServices
     internal static void OnAssemblyLoad(Assembly assembly)
     {
         // does the being-loaded assembly reference THIS assembly?
-        if (assembly.DoesAssemblyReferToAssembly(_ThisAssembly))
+        if (assembly.DoesAssemblyReferDirectlyToAssembly(_ThisAssembly))
         {
             System.Diagnostics.Trace.WriteLine($"Late Loading Ambient Types From {assembly.FullName}");
             // check every type in the being-loaded assembly to see if the type indicates a default service implementation

@@ -31,30 +31,10 @@ Most items below were found while writing the initial library-wide 3P documentat
 
 ## Doc-only corrections (summaries/comments wrong; code fine)
 
-- [ ] `AmbientLogSplitter` class summary says "writes log messages to a rotating set of files" (copy-paste from `AmbientFileLogger`); it fans entries out to registered loggers.
-- [ ] `AmbientConsoleLogger` class summary says output is "effectively tossed unless running under a debugger" (copy-paste from the trace logger); console output goes to stdout regardless.
-- [ ] `AmbientSettings` class summary is a copy-paste from the clock helpers ("utilizes the IAmbientClock…").
-- [ ] `IAmbientSetting<T>` summary claims it "provides an event to notify the user of changes"; no such event exists.
-- [ ] `StringExtensions.ReplaceOrdinal` summary says "Checks if a string contains a character"; it replaces a substring.
-- [ ] `StringExtensions.CompareNaturalInvariant` summaries claim more leading zeros sort after fewer; the implementation zero-pads digit runs to a common width so "a007" and "a7" compare equal.
-- [ ] `AssemblyExtensions.DoesAssemblyReferToAssembly` reads as transitive vs. its "Directly" sibling but performs only the direct check (in-code comment acknowledges the abandoned recursion).
-- [ ] `StatusChecker` summary references "StatusTestNode", a stale former class name.
-- [ ] `Status.RefreshAsync` summary says it returns checkers that "did not complete before cancellation or catastrophically failed"; faulted checkers get exception results recorded and are not returned.
-- [ ] `DefaultPropertyThresholdsAttribute` ctor: `okayVsSuperlativeThreshold`/`alertVsOkayThreshold` param docs are swapped; the class ctor's "Default is LowIsGood" note sits on the wrong param; attribute default nature is `HighIsGood` while the class ctor default is `LowIsGood` — the inconsistency needs a deliberate decision. (`Status/StatusPropertyThresholds.cs` ~100, ~285)
-- [ ] `PressureMonitor` summary says "A static class"; it is an instantiable `IDisposable`.
-- [ ] `WindowScope` summary says it "extends System.DateTime"; it contains no extension methods and also operates on `TimeSpan`.
-- [ ] `Pseudorandom.Next` doc says "Because Pseudorandom is a value type"; it is a class.
-- [ ] `AmbientCostTrackerCoordinator.OnChargesAccrued` param doc reads "The charge (in s)" (truncated); its class summary and several cost/bottleneck registration summaries say "service profiler" (copy-paste).
-- [ ] `IAmbientBottleneckDetector.RegisterAccessNotificationSink` param doc says notifications occur "when a bottleneck is entered" for an exit sink.
-- [ ] `DefaultAmbientServiceAttribute` remarks claim "the constructor may be called more than once" under races — stale; `DefaultServiceImplementation<T>` constructs via a closed-generic static initializer, which the CLR runs once. Also says "public empty constructor" while non-public parameterless constructors are accepted.
-- [ ] `TemporaryContextMutator.Dispose` summary says it reverts changes "applied in the constructor"; changes are applied by `ApplyContextChanges`.
-- [ ] `IAmbientStatisticReader.StatisicType` is misspelled (public API — fixing requires an obsolete-alias migration).
-- [ ] `StatusResultsBuilder.cs:15–21` contains a leftover "Unmerged change from project" merge-artifact comment block.
-- [ ] `AmbientEventTimer.SchedulingClock` prefers `Override ?? Local`, but `AmbientService<T>.Local` already folds in the override — the code comment implies a distinction that doesn't exist.
-- [ ] `CpuPressurePoint` comment references a nonexistent `_cpuMonitor`; `MemoryPressurePoint` computes an unused `linearPressureOffset` local.
 
 ## Semantic decisions needed (which side is right is unclear)
 
+- [ ] `StatusPropertyThresholds` default threshold nature differs between constructors: `DefaultPropertyThresholdsAttribute(...)` defaults `thresholdNature` to `HighIsGood`, while `StatusPropertyThresholds(...)` defaults `nature` to `LowIsGood`. This only matters when fewer than two threshold values are supplied (otherwise nature is inferred from their ordering). Pick one canonical default. (`Status/StatusPropertyThresholds.cs` ~111, ~296)
 - [ ] Ongoing-cost units: `IAmbientCostTracker` says picodollars per **month**; `BasicAmbientCostTracker` param docs say per **minute** and `CostAccumulator` field names say per-minute. The 3P documents per-month (interface authority) pending a decision.
 - [ ] `AmbientImmutableSettingsSet` does not subscribe to `SettingsRegistry.SettingRegistered` (the mutable sets do), so settings registered after construction keep raw strings as typed values — possibly deliberate for immutability; confirm and document.
 - [ ] `AmbientSetting<T>` suppressed-service path is commented "use the default value" but `SettingInfo<T>.GlobalOrDefaultValue` can return the cached global-set value — decide whether suppression should yield the default.

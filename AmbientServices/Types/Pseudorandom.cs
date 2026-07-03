@@ -35,7 +35,7 @@ public class Pseudorandom : IEquatable<Pseudorandom>
     private static ulong NextGlobalSeed => (ulong)((_startTickCount + _stopwatch.ElapsedTicks) ^ System.Threading.Interlocked.Increment(ref _rotator));   // note that, yes, the stopwatch ticks are in different units than the environment ticks they're being added to, but we don't care about that here
     /// <summary>
     /// Gets a new <see cref="Pseudorandom"/> using a thread-safe seed generator.
-    /// Because <see cref="Pseudorandom"/> is a value type, even getting a single random number through this property is efficient.
+    /// Getting even a single random number through this property is very efficient.
     /// </summary>
     public static Pseudorandom Next => new((int)NextGlobalSeed);
 

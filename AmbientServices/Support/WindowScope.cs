@@ -3,7 +3,7 @@
 namespace AmbientServices;
 
 /// <summary>
-/// A static class that extends <see cref="System.DateTime"/>.
+/// A static class that provides utility functions for managing a time-based sampling window.
 /// </summary>
 /// <remarks>
 /// <pitch>Compact, human-readable labels for time windows: <see cref="WindowId"/> names which window a moment falls in at a chosen resolution, and <see cref="WindowSize"/> renders a duration as a short unit string — both intended for embedding in keys and report output rather than for parsing.</pitch>

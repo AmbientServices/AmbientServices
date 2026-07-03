@@ -150,7 +150,7 @@ internal class Statistic : IAmbientStatistic
     {
         StatisticsSet = statisticsSet;
         _removeRegistration = removeRegistration;
-        StatisicType = type;
+        StatisticType = type;
         Id = id;
         Name = name;
         Description = description;
@@ -168,7 +168,7 @@ internal class Statistic : IAmbientStatistic
 
     public IAmbientStatistics StatisticsSet { get; }
 
-    public AmbientStatisticType StatisicType { get; }
+    public AmbientStatisticType StatisticType { get; }
 
     public string Id { get; }
 
@@ -246,7 +246,7 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 
     public IAmbientStatistics StatisticsSet { get; }
 
-    public AmbientStatisticType StatisicType => AmbientStatisticType.Cumulative;
+    public AmbientStatisticType StatisticType => AmbientStatisticType.Cumulative;
 
     public string Id => "ExecutionTime";
 

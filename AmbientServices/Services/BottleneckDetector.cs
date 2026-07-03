@@ -66,13 +66,13 @@ public interface IAmbientBottleneckDetector
     /// <summary>
     /// Registers an access notification sink with this ambient bottleneck detector.
     /// </summary>
-    /// <param name="sink">An <see cref="IAmbientBottleneckExitNotificationSink"/> that will receive notifications when a bottleneck is entered.</param>
+    /// <param name="sink">An <see cref="IAmbientBottleneckExitNotificationSink"/> that will receive notifications when bottlenecks are entered.</param>
     /// <returns>true if the registration was successful, false if the specified sink was already registered.</returns>
     bool RegisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink);
     /// <summary>
     /// Deregisters an access notification sink with this ambient bottleneck detector.
     /// </summary>
-    /// <param name="sink">An <see cref="IAmbientBottleneckExitNotificationSink"/> that will receive notifications when a bottleneck is entered.</param>
+    /// <param name="sink">The previously-registered <see cref="IAmbientBottleneckExitNotificationSink"/> that received notifications when bottlenecks were entered.</param>
     /// <returns>true if the deregistration was successful, false if the specified sink was not registered.</returns>
     bool DeregisterAccessNotificationSink(IAmbientBottleneckExitNotificationSink sink);
 }

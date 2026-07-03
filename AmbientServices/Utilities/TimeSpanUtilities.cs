@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
 
 namespace AmbientServices.Utilities;
 
@@ -39,6 +40,7 @@ internal static class TimeSpanUtilities
 #if DEBUG   // delay this a little bit just in case it makes a difference
         System.Threading.Thread.Sleep(73);
 #endif
+        // we can't use AmbientClock here because it probably hasn't been fully initialized yet
         BaselineDateTimeTicks = DateTime.UtcNow.Ticks;
         // make sure that nobody else gets times before these
         System.Threading.Thread.MemoryBarrier();

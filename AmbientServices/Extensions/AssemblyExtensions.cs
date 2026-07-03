@@ -61,6 +61,7 @@ public static class AssemblyExtensions
 #endif
         return (assembly == referredToAssembly || assembly.GetReferencedAssemblies().FirstOrDefault(a => a.FullName == referredToAssembly.FullName) != null);
     }
+#if LATER
     /// <summary>
     /// Checks to see if this assembly refers to the specified assembly.
     /// </summary>
@@ -73,4 +74,5 @@ public static class AssemblyExtensions
         // and I'm beginning to doubt whether a recursive algorithm is needed to list indirectly-referenced assemblies
         return DoesAssemblyReferDirectlyToAssembly(assembly, referredToAssembly);
     }
+#endif
 }

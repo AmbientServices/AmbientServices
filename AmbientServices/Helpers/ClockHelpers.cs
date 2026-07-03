@@ -520,7 +520,7 @@ public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNo
 #endif
     private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
 
-    /// <summary>Prefer context <see cref="AmbientService{T}.Override"/> (e.g. a clock installed by <see cref="AmbientClock.Pause"/>) over <see cref="AmbientService{T}.Local"/> so scheduled timers observe virtual time skips.</summary>
+    /// <summary>The clock scheduled timers should observe.  <see cref="AmbientService{T}.Local"/> already folds in any context <see cref="AmbientService{T}.Override"/> (e.g. a clock installed by <see cref="AmbientClock.Pause"/>), so this yields that clock and scheduled timers observe virtual time skips.</summary>
     private static IAmbientClock? SchedulingClock => _Clock.Override ?? _Clock.Local;
 
     private readonly IAmbientClock? _clock;           // if this is null, everything falls through to the base class (ie. the system implementation)

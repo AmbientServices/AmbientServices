@@ -87,7 +87,7 @@ public class TestLinuxContainerCpuSampler
             WriteCgroupV2Layout(root, usageUsec: 0, cpuMaxLine: "100000 100000");
             LinuxContainerCpuSampler sampler = new(root);
             sampler.Sample();
-            SetNonPublicField(sampler, "_lastSampleTime", DateTime.UtcNow.AddHours(1));
+            SetNonPublicField(sampler, "_lastSampleTime", AmbientClock.UtcNow.AddHours(1));
             sampler.Sample();
             Assert.AreEqual(0f, sampler.GetUsage());
         }
@@ -106,7 +106,7 @@ public class TestLinuxContainerCpuSampler
             WriteCgroupV2Layout(root, usageUsec: 0, cpuMaxLine: "100000 100000");
             LinuxContainerCpuSampler sampler = new(root);
             sampler.Sample();
-            SetNonPublicField(sampler, "_lastSampleTime", DateTime.UtcNow.AddHours(1));
+            SetNonPublicField(sampler, "_lastSampleTime", AmbientClock.UtcNow.AddHours(1));
             Assert.AreEqual(0f, sampler.GetPendingUsage());
         }
         finally

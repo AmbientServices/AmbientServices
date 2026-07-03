@@ -14,7 +14,7 @@ namespace AmbientServices;
 
 /// <summary>
 /// A very basic ambient logger that just sends log data to a high-performance asynchronous wrapper on the system console output.
-/// This logger is higher performance than the default one that writes to files, but it also effectively tosses data unless running under a debugger,
+/// This logger is higher performance than the default one that writes to files, but its output persists only if something is capturing standard output,
 /// so using the file logger by default is better for diagnosing issues that occur before the user is able to switch loggers.
 /// Switch to this logger for better performance, but less persistent log data.
 /// Turn the logger off for maximum performance.

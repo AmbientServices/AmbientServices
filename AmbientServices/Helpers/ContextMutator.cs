@@ -68,7 +68,7 @@ public sealed class TemporaryContextMutator: IDisposable
         return this;
     }
     /// <summary>
-    /// Reverts the context changes applied in the constructor.
+    /// Reverts the context changes applied by <see cref="ApplyContextChanges"/>.
     /// </summary>
     public void Dispose()
     {

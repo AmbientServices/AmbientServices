@@ -104,10 +104,10 @@ public class StatusPropertyThresholds
     /// <summary>
     /// Constructs a <see cref="StatusPropertyThresholds"/> instance with the specified thresholds.
     /// </summary>
-    /// <param name="nature">A <see cref="StatusThresholdNature"/> indicating whether or not low values are good.</param>
+    /// <param name="nature">A <see cref="StatusThresholdNature"/> indicating whether or not low values are good.  Default is <see cref="StatusThresholdNature.LowIsGood"/>.</param>
     /// <param name="failVsAlertThreshold">The threshold which divides failures from alerts (at this value it counts as a failure).</param>
     /// <param name="alertVsOkayThreshold">The threshold which divides alerts from okays (at this value it counts as an alert).</param>
-    /// <param name="okayVsSuperlativeThreshold">The threshold which divides okays from superlatives (at this value it counts as an okay).  Default is <see cref="StatusThresholdNature.LowIsGood"/>.</param>
+    /// <param name="okayVsSuperlativeThreshold">The threshold which divides okays from superlatives (at this value it counts as an okay).</param>
     public StatusPropertyThresholds(float? failVsAlertThreshold, float? alertVsOkayThreshold, float? okayVsSuperlativeThreshold, StatusThresholdNature nature = StatusThresholdNature.LowIsGood)
     {
         StatusThresholdNature? computedNature = null;
@@ -290,8 +290,8 @@ public sealed class DefaultPropertyThresholdsAttribute : Attribute
     /// </summary>
     /// <param name="propertyPath">The path to the property with a default threshold.</param>
     /// <param name="failVsAlertThreshold">The first value that is a failure instead of an alert.  <see cref="float.NaN"/> if there is no such value.</param>
-    /// <param name="okayVsSuperlativeThreshold">The first value that is an alert instead of okay.  <see cref="float.NaN"/> if there is no such value.</param>
-    /// <param name="alertVsOkayThreshold">The first value that is okay instead of superlative.  <see cref="float.NaN"/> if there is no such value.</param>
+    /// <param name="alertVsOkayThreshold">The first value that is an alert instead of okay.  <see cref="float.NaN"/> if there is no such value.</param>
+    /// <param name="okayVsSuperlativeThreshold">The first value that is okay instead of superlative.  <see cref="float.NaN"/> if there is no such value.</param>
     /// <param name="thresholdNature">A <see cref="StatusThresholdNature"/> indicating whether low values are good or bad for this threshold.  Only used if less than two threshold values are specified.</param>
     public DefaultPropertyThresholdsAttribute(string propertyPath, float failVsAlertThreshold = float.NaN, float alertVsOkayThreshold = float.NaN, float okayVsSuperlativeThreshold = float.NaN, StatusThresholdNature thresholdNature = StatusThresholdNature.HighIsGood)
     {

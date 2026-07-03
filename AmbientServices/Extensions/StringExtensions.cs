@@ -25,7 +25,7 @@ public static partial class StringExtensions
     /// <summary>
     /// Compares two strings naturally, so that numeric sequences embedded in the strings are sorted numerically instead of based on the characters.
     /// For example, a regular string sort would sort "a100b" before "a99b", but a natural string sort would not.
-    /// Numeric sequences with more leading zeros sort after those with fewer (or no) leading zeros.
+    /// Numeric sequences sort numerically as if they were zero-padded.
     /// Floating-point numbers and negatives are supported, but sequences of numbers separated by single dashes are treated as positive.
     /// </summary>
     /// <param name="a">The first string to compare.</param>
@@ -39,7 +39,7 @@ public static partial class StringExtensions
     /// <summary>
     /// Compares two strings naturally, so that numeric sequences embedded in the strings are sorted numerically instead of based on the characters.
     /// For example, a regular string sort would sort "a100b" before "a99b", but a natural string sort would not.
-    /// Numeric sequences with more leading zeros sort after those with fewer (or no) leading zeros.
+    /// Numeric sequences sort numerically as if they were zero-padded.
     /// Floating-point numbers and negatives are supported, but sequences of numbers separated by single dashes are treated as positive.
     /// </summary>
     /// <param name="a">The first string to compare.</param>
@@ -189,12 +189,12 @@ public static partial class StringExtensions
 #endif
     }
     /// <summary>
-    /// Checks if a string contains a character using ordinal comparison.
+    /// Replaces all occurrences of a substring within a string using ordinal comparison.
     /// </summary>
     /// <param name="str">The string to search.</param>
     /// <param name="find">The string to find.</param>
     /// <param name="replacement">The string to put in in place of <paramref name="find"/>.</param>
-    /// <returns>true if the character is found in the string, false otherwise.</returns>
+    /// <returns>The resulting string with all occurrences of <paramref name="find"/> replaced by <paramref name="replacement"/>.</returns>
     public static string ReplaceOrdinal(this string str, string find, string replacement)
     {
         if (str == null) throw new ArgumentNullException(nameof(str));

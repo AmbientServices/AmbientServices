@@ -175,7 +175,7 @@ public static class ReportSummaryCache
             async () =>
             {
                 CachedReportSummary built = await computeAsync();
-                return (built, DateTime.UtcNow.AddMinutes(30));
+                return (built, AmbientClock.UtcNow.AddMinutes(30));
             },
             timeout: TimeSpan.FromMinutes(2),
             cancel: cancel);

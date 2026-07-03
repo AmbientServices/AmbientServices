@@ -8,7 +8,7 @@ namespace AmbientServices;
 
 #if NET5_0_OR_GREATER
 /// <summary>
-/// A class that coordinates service profilers.
+/// A class that coordinates cost trackers.
 /// </summary>
 /// <remarks>
 /// <pitch>The factory you use to turn the raw <see cref="IAmbientCostTracker"/> report stream into actual accumulations.  It builds three flavors of <see cref="IAmbientAccruedChargesAndCostChanges"/> — one scoped to the current call context (per request), one that rotates on a time window (per-window reporting), and one for the whole process.</pitch>
@@ -53,7 +53,7 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="charge">The charge (in s).</param>
+    /// <param name="charge">The charge (in picodollars).</param>
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
         _scopeDistributor.Value ??= new ScopeOnChargesAccruedDistributor();
@@ -74,7 +74,7 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// Creates a cost tracker which profiles the current call context.
     /// </summary>
     /// <param name="scopeName">A name of the call context to attach to the analyzer.</param>
-    /// <returns>A <see cref="IAmbientAccruedChargesAndCostChanges"/> that will profile systems executed in this call context, or null if there is no ambient service profiler event collector.  Note that the returned object is NOT thread-safe.</returns>
+    /// <returns>A <see cref="IAmbientAccruedChargesAndCostChanges"/> that will profile systems executed in this call context, or null if there is no ambient cost tracker event collector.  Note that the returned object is NOT thread-safe.</returns>
     public IAmbientAccruedChargesAndCostChanges? CreateCallContextProfiler(string scopeName)
     {
         IAmbientCostTracker? metrics = _AmbientCostTracker.Local;
@@ -87,7 +87,7 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
         return null;
     }
     /// <summary>
-    /// Creates a service profiler which profiles the entire process in sequential time units of the specified size.
+    /// Creates a cost tracker which profiles the entire process in sequential time units of the specified size.
     /// </summary>
     /// <param name="scopeNamePrefix">A <see cref="TimeSpan"/> indicating the size of the window.</param>
     /// <param name="windowPeriod">A <see cref="TimeSpan"/> indicating how often reports are desired.</param>
@@ -103,7 +103,7 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
         return tracker;
     }
     /// <summary>
-    /// Creates a service profiler which profiles the entire process for the entire (remaining) duration of execution.
+    /// Creates a cost tracker which profiles the entire process for the entire (remaining) duration of execution.
     /// Note that this is only useful to determine the distribution for an entire process from start to finish, which is not very useful if the process is very long-lived.
     /// <see cref="CreateTimeWindowProfiler"/> is a better match in most situations.
     /// </summary>

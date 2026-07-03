@@ -269,7 +269,7 @@ public class AmbientLogger
         if (logger != null)
         {
             // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
-            structuredData = entryRenderer(DateTime.UtcNow, level, structuredData, typeName, categoryName);
+            structuredData = entryRenderer(AmbientClock.UtcNow, level, structuredData, typeName, categoryName);
             logger.Log(structuredData);
         }
         // only log to the simple logger if it's not the same instance as the structured logger
@@ -351,7 +351,7 @@ public class AmbientLogger
     private static string ConvertStructuredDataIntoSimpleMessage(LogMessageRenderer renderer, string typeName, AmbientLogLevel level, string? categoryName, object structuredData)
     {
         // by the time we get here, we have already determined that no filtering should be done, so we can just log the data
-        string message = renderer(DateTime.UtcNow, level, structuredData, typeName, categoryName);
+        string message = renderer(AmbientClock.UtcNow, level, structuredData, typeName, categoryName);
         return message;
     }
     /// <summary>
@@ -525,7 +525,7 @@ public class AmbientLogger
         if (!_logFilter.IsBlocked(level, _typeName, category))
         {
             if (!string.IsNullOrEmpty(category)) category += ":";
-            message = string.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, DateTime.UtcNow, level, _typeName, category, message);
+            message = string.Format(System.Globalization.CultureInfo.InvariantCulture, _MessageFormatString.Value, AmbientClock.UtcNow, level, _typeName, category, message);
             DynamicSimpleLogger!.Log(message);  // the calling of this method is short-circuited when DynamicLogger is null
         }
     }

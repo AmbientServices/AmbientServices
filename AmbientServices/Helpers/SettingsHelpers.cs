@@ -24,7 +24,7 @@ public class SettingConversionFailedEventArgs(string key, string rawValue, Excep
 }
 
 /// <summary>
-/// A static class that utilizes the <see cref="IAmbientClock"/> if one is registered, or the system clock if not.
+/// A static factory class for declaring strongly-typed <see cref="IAmbientSetting{T}"/> settings and registering them for discovery.
 /// </summary>
 /// <remarks>
 /// <pitch>The factory callers use to declare typed settings: give it a key, description, conversion, and default and get back an <see cref="IAmbientSetting{T}"/> that always has a usable value — either following the ambient settings set or pinned to a specific set.  Declaring through it also makes the setting discoverable, so tooling can enumerate every setting the process uses via <see cref="AmbientSettingsInfo"/>.</pitch>
@@ -127,7 +127,7 @@ public static class AmbientSettings
 }
 
 /// <summary>
-/// An abstraction of a setting that holds a strongly-typed value and provides an event to notify the user of changes to the setting value.
+/// An abstraction of a setting that holds a strongly-typed value read from the ambient settings.
 /// </summary>
 /// <remarks>
 /// <pitch>A strongly-typed handle to one setting: read it at any time and get the current, already-converted value without touching raw strings or knowing which settings set supplies it.</pitch>

@@ -192,7 +192,7 @@ public class Status
         return (fb == null) ? 1 : fa.Value.CompareTo(fb.Value);
     }
     /// <summary>
-    /// Refreshes the status audits immediately, returning an enumeration of status checkers that did not complete before cancellation or catastrophically failed (no need for async enumerable here).
+    /// Refreshes the status audits immediately, returning an enumeration of status checkers that did not complete before cancellation (no need for async enumerable here).  Checkers that threw are recorded with an exception result rather than returned here.
     /// Normally audits will be refreshed automatically in the background, but in some circumstances, users may want to force an immediate update.
     /// </summary>
     /// <returns>An enumeration of <see cref="StatusChecker"/>s that did not complete refreshing before being cancelled.</returns>

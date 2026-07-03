@@ -85,7 +85,7 @@ public static class ExternalPressurePoints
     }
 }
 /// <summary>
-/// A static class that monitors and reports on system pressure so that background processing can be adjusted accordingly to prevent the system from getting overwhelmed and to prevent background processing from interfering with interactive processing.
+/// A disposable class that monitors and reports on system pressure so that background processing can be adjusted accordingly to prevent the system from getting overwhelmed and to prevent background processing from interfering with interactive processing.
 /// </summary>
 /// <remarks>
 /// <pitch>One cheap number answering "how loaded is this system right now?" so background work can throttle itself before it overwhelms the process or crowds out interactive work.  A shared <see cref="Default"/> instance makes adoption a one-liner.</pitch>

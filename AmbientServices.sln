@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.5.11801.241 oobstable
+VisualStudioVersion = 18.5.11801.241
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AmbientServices", "AmbientServices\AmbientServices.csproj", "{E7BADA3B-6CCA-4487-B56B-D123AD78BB1F}"
 EndProject
@@ -27,6 +27,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AmbientServices.Test.AlcPlu
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{EA287B86-2883-44D5-B5CF-BEDC7C77FDB3}"
 	ProjectSection(SolutionItems) = preProject
+		docs\DRIFT.md = docs\DRIFT.md
 		docs\GLOSSARY.md = docs\GLOSSARY.md
 		docs\line-coverage.svg = docs\line-coverage.svg
 		docs\line-coverage.template.svg = docs\line-coverage.template.svg
