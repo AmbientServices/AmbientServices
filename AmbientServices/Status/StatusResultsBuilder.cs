@@ -9,6 +9,18 @@ namespace AmbientServices;
 /// <summary>
 /// A mutable class that can make gathering data for a <see cref="StatusResults"/> object easier.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// The mutable scratchpad an <see cref="StatusAuditor.Audit"/> implementation fills in: add properties, child nodes, and alerts as a test proceeds, and <see cref="FinalResults"/> snapshots it all into an immutable <see cref="StatusResults"/>.  It also spares tests from timing bookkeeping by stamping the audit start time and measuring elapsed duration automatically.
+/// </pitch>
+/// <pledge>
+/// Worst-alert-wins: the alert recording methods (<see cref="AddException"/>, <see cref="AddFailure"/>, <see cref="AddAlert"/>, <see cref="AddOkay"/>, <see cref="AddSuperlative"/>) may be called any number of times, but only the worst-rated alert survives into the final report.  Each method anchors its rating to the corresponding <see cref="StatusRating"/> boundary minus the given severity, so severity expresses how far into that range the condition is; exceptions become failures with filtered, HTML-encoded details.
+/// <see cref="FinalResults"/> obeys the <see cref="StatusResults"/> report-or-children invariant: if any alert was recorded it produces a reported leaf node (children are dropped), otherwise a children-bearing node with each child snapshotted recursively.  The audit duration defaults to the time elapsed since construction unless set explicitly, and building is repeatable — each call produces a fresh snapshot of the current state.  Instances are not thread-safe; each audit fills its own builder.
+/// </pledge>
+/// <plan>
+/// A thin mutable shell: property and child lists, settable node metadata, and a running worst-alert comparison on <see cref="StatusAuditAlert.Rating"/>.  Timing comes from <see cref="AmbientClock.UtcNow"/>.  Construction from an existing <see cref="StatusResults"/> deep-copies it into builders so gathered results can be amended and re-emitted.
+/// </plan>
+/// </remarks>
 public class StatusResultsBuilder
 {
 

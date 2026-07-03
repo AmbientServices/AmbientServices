@@ -10,6 +10,21 @@ namespace AmbientServices;
 /// (versioned head + unversioned payload per revision). Implemented as extensions so netstandard2.0 and similar
 /// targets get the same API as modern runtimes without relying on default interface members.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// The monotonic split-cache pattern packaged as extension methods: publish a tiny versioned head plus a separately-keyed payload per revision, so readers can enforce a staleness floor by checking only the cheap head and fetch (or rebuild) the large payload at most once per revision.
+/// </pitch>
+/// <pledge>
+/// Head and payload keys are derived deterministically from a base logical key using a reserved separator character (<see cref="MonotonicSplitCacheKeySeparator"/>), which the base key must not contain.
+/// The head travels through the versioned operation family and the payload through the unversioned family keyed by the head's revision, so a payload written for one revision is never returned for another.
+/// A combined read resolves the head first and touches the payload only when the head is present, unexpired, and at least the requested minimum revision; a publish writes the head first and hands back the new revision for the caller to key the payload with.
+/// These methods add no storage or synchronization of their own — every behavioral guarantee is inherited from the underlying <see cref="IAmbientAtomicCache"/>.
+/// </pledge>
+/// <plan>
+/// Pure key composition and delegation: keys are concatenated from the base key, <see cref="MonotonicSplitCacheKeySeparator"/>, and fixed marker segments, revision numbers are formatted with the invariant culture, and each method forwards to the corresponding <see cref="IAmbientAtomicCache"/> member after argument validation.
+/// No state, no I/O, no locking — cost and durability are exactly those of the underlying cache, plus one extra cache round trip for the head on combined reads.
+/// </plan>
+/// </remarks>
 public static class AmbientAtomicSplitCacheExtensions
 {
     /// <summary>

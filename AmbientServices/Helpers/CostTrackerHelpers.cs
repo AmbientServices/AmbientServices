@@ -10,6 +10,17 @@ namespace AmbientServices;
 /// <summary>
 /// A class that coordinates service profilers.
 /// </summary>
+/// <remarks>
+/// <pitch>The factory you use to turn the raw <see cref="IAmbientCostTracker"/> report stream into actual accumulations.  It builds three flavors of <see cref="IAmbientAccruedChargesAndCostChanges"/> — one scoped to the current call context (per request), one that rotates on a time window (per-window reporting), and one for the whole process.</pitch>
+/// <pledge><see cref="IAmbientCostTrackerNotificationSink"/></pledge>
+/// <pledge>
+/// Returns null from every factory method when there is no ambient <see cref="IAmbientCostTracker"/> to observe.  Each returned tracker must be disposed to stop collecting; the call-context and process trackers are not thread-safe to read.
+/// A call-context tracker sees only costs reported from within its own call context; time-window and process trackers see costs from all contexts.
+/// </pledge>
+/// <plan>
+/// The coordinator registers itself with the ambient cost tracker (captured at construction) as a notification sink and re-dispatches each report into an <see cref="AsyncLocal{T}"/> per-call-context <see cref="ScopeOnChargesAccruedDistributor"/>, with which <see cref="CallContextCostTracker"/>s register — one coordinator registration serves any number of call-context trackers.  Process trackers (<see cref="ProcessOrSingleTimeWindowCostTracker"/>) and time-window trackers (<see cref="TimeWindowCostTracker"/>, which rotates a process tracker on an <see cref="AmbientEventTimer"/>) register with the cost tracker directly.  Disposal deregisters the coordinator's sink.
+/// </plan>
+/// </remarks>
 public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink, IDisposable
 {
     private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
@@ -147,6 +158,13 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
 /// <summary>
 /// An interface that abstracts accrued charges and cost changes.
 /// </summary>
+/// <remarks>
+/// <pitch>The read side of cost tracking: for one scope (a call context, a time window, or a whole process), the total one-time charges and total ongoing-cost-rate change accrued, with counts to distinguish many small costs from one big one.</pitch>
+/// <pledge>
+/// Charges and ongoing-cost changes accumulate separately and are never combined: the charge sum is a total amount (picodollars) while the cost-change sum is a net change to a recurring rate, and each has its own operation count.  Sums are signed, since ongoing costs can decrease.
+/// Values may be read while the scope is still collecting (a point-in-time snapshot) or after disposal ends the collection.
+/// </pledge>
+/// </remarks>
 public interface IAmbientAccruedChargesAndCostChanges : IDisposable
 {
     /// <summary>

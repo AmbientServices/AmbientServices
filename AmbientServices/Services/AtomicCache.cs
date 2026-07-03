@@ -9,6 +9,20 @@ namespace AmbientServices;
 /// The cache may be local or shared; see <see cref="IsShared"/>.  
 /// </summary>
 /// <remarks>
+/// <pitch>
+/// Add-or-update caching with optimistic concurrency: when several threads race to compute the same expensive value, exactly one result is retained per key without any process-wide lock.
+/// Monotonic versioned entries additionally support staleness floors and tiered or split-cache patterns.
+/// Factories may run more than once under contention, so it is unsuitable when creation has side effects that must happen exactly once; for simple retrieve-or-store caching without races on creation, <see cref="IAmbientLocalCache"/> is often enough.
+/// </pitch>
+/// <pledge>
+/// Every mutation is atomic per key: under contention competing values may be created, but only one is installed, callers always receive the value that actually ended up in the cache, and losing values are disposed when appropriate.
+/// Unversioned and versioned operations address distinct storage for the same logical key string, so the two families never collide and may be used side by side.
+/// Versioned writes return revisions that strictly increase per key, and a versioned read never yields a payload older than the caller's stated minimum revision — slightly stale is allowed, but going backwards is not.
+/// Entries may be evicted at any time, and expirations use the earlier of a relative duration and a fixed instant.
+/// A caller-supplied time budget produces two distinguishable outcomes: exhausting the optimistic-retry budget raises an invalid-operation error, while cooperative cancellation raises a cancellation error, so policy timeouts are never mistaken for caller-initiated cancellation.
+/// Whether entries are visible across processes is discoverable via <see cref="IsShared"/>; when they are not, callers must bound cross-server staleness with time limits or another mechanism.
+/// Clearing disposes what was present when it began without blocking concurrent installs, and does not guarantee an empty cache afterward.
+/// </pledge>
 /// <para>The default ambient implementation is <see cref="BasicAmbientAtomicCache"/>.  It is thread-safe and uses optimistic concurrency: <see cref="GetOrAdd{T}"/> and <see cref="AddOrUpdate{T}"/> may invoke factories more than once under contention, and implementations may discard a created or updated value if it loses a race to install the entry.</para>
 /// <para>Unversioned operations (<see cref="GetOrAdd{T}"/>, <see cref="AddOrUpdate{T}"/>, <see cref="Remove{T}"/>) and versioned operations (<see cref="VersionedGet{T}"/>, <see cref="VersionedPut{T}"/>, <see cref="VersionedRemove{T}"/>) use distinct storage for the same logical key string, so callers may use both families side by side without colliding.</para>
 /// <para>Optional <c>timeout</c> and <c>cancel</c> parameters combine cooperative cancellation with an ambient-scoped time budget.  When <c>timeout</c> is null, no ambient timeout source is linked.  When <c>timeout</c> is zero or negative, the effective token is cancelled immediately (without using a zero-interval system timer).  When both are supplied and <c>cancel</c> can be canceled, the implementation links the caller token to that budget.  For <see cref="GetOrAdd{T}"/> and <see cref="AddOrUpdate{T}"/>, implementations also cap optimistic retries using <see cref="AmbientClock"/>; exceeding that budget throws <see cref="InvalidOperationException"/> rather than <see cref="OperationCanceledException"/> so policy timeouts are not mistaken for caller-initiated cancellation.</para>

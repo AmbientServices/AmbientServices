@@ -11,6 +11,16 @@ namespace AmbientServices;
 /// This interface works with serializable objects.
 /// Objects that contain pointers or are disposable should not be used with this interface.
 /// For that kind of object, see <see cref="IAmbientLocalCache"/>.
+/// <pitch>
+/// A cache for serializable objects that may live outside the process — in another process or on another machine — so that every server sharing the backing store sees the same entries.
+/// Because entries may cross a process boundary, it only suits values that are fully serializable and carry no object references or dispose responsibilities; for those, use <see cref="IAmbientLocalCache"/>.
+/// </pitch>
+/// <pledge>
+/// A string-keyed item store: storing under a key replaces whatever that key held, and retrieval returns the most recent unexpired value stored under the key (possibly a deserialized copy rather than the original instance), or null when the key is missing, expired, or evicted.
+/// Entries are cache entries, not durable storage — an implementation may discard any entry at any time under capacity or memory pressure, so a miss is always a legal answer and callers must be able to rebuild the value from its inputs.
+/// Expiration may be given as a relative duration, a fixed instant, or both, in which case the earlier applies; retrieval may optionally extend an entry's lifespan, though implementations may ignore the extension.
+/// All operations are asynchronous and honor cooperative cancellation.  Clearing flushes every entry in the cache, not just the caller's.
+/// </pledge>
 /// </remarks>
 public interface IAmbientSharedCache
 {

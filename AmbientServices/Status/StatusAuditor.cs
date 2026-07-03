@@ -10,6 +10,13 @@ namespace AmbientServices;
 /// An immutable class that contains information about a status audit alert.
 /// Alerts with the same <see cref="StatusAuditAlert.Rating"/>, and <see cref="StatusAuditAlert.AuditAlertCode"/> are considered equivalent and will be combined during report aggregation.
 /// </summary>
+/// <remarks>
+/// <pitch>The atomic unit of alerting: one rating plus a stable alert code and paired terse (SMS-safe) and detailed (HTML-safe) messages, shaped so that the same condition reported by many servers collapses into one line in a summary.</pitch>
+/// <pledge>
+/// Equality — and therefore aggregatability — is defined by <see cref="Rating"/> and a case-insensitive <see cref="AuditAlertCode"/> only; the messages do not participate, so instances whose messages differ in incidental detail still combine.  For that collapsing to work, codes must be stable across occurrences (no embedded numbers or varying strings) and messages for a given code must be essentially the same.
+/// Neither the code nor the terse message may contain sensitive details, and the terse message must be free of line breaks and markup.  Instances are immutable.
+/// </pledge>
+/// </remarks>
 public sealed class StatusAuditAlert : IEquatable<StatusAuditAlert>
 {
     /// <summary>
@@ -136,6 +143,13 @@ public sealed class StatusAuditAlert : IEquatable<StatusAuditAlert>
 /// Separate from <see cref="StatusAuditAlert"/> because not all audits generate alerts.
 /// Reports with the same <see cref="StatusAuditReport.Alert"/> are considered equivalent and may be combined during report aggregation if they are reported by the same source or for the same target.
 /// </summary>
+/// <remarks>
+/// <pitch>The record of one audit run: when it started, how long it took, when the next one is expected, and the worst <see cref="StatusAuditAlert"/> it produced (if any).</pitch>
+/// <pledge>
+/// Equality is defined solely by <see cref="Alert"/> — the timing fields never prevent equivalent reports from being aggregated.  A null <see cref="Alert"/> means the audit found nothing to report and implies <see cref="StatusRating.Okay"/>.
+/// The shared <see cref="Pending"/> sentinel represents "the first audit has not run yet" and carries a <see cref="StatusRating.Pending"/> alert.  Instances are immutable.
+/// </pledge>
+/// </remarks>
 public sealed class StatusAuditReport : IEquatable<StatusAuditReport>
 {
     /// <summary>
@@ -265,6 +279,20 @@ public sealed class StatusAuditReport : IEquatable<StatusAuditReport>
 /// An abstract class that manages periodic status auditing of a system.
 /// Any derivative of this class will be automatically instantiated by the system retained in a system-wide list to track status.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// Derive from this instead of <see cref="StatusChecker"/> when a system's health must be actively tested: implement <see cref="Audit"/> and the framework runs it on a self-tuning background schedule, keeping ratings fresh when things go wrong without letting the tests themselves congest a struggling system.
+/// </pitch>
+/// <pledge><see cref="StatusChecker"/></pledge>
+/// <pledge>
+/// <see cref="Audit"/> is invoked once shortly after registration and then periodically; the audit frequency self-tunes between one quarter and ten times the baseline frequency given at construction.  Worse ratings raise the frequency (to notice recovery sooner) while longer audit durations lower it (so slow audits — including failing ones that time out — never consume significant resources); a zero, negative, or <see cref="TimeSpan.MaxValue"/> baseline disables periodic auditing entirely, leaving only the initial audit and on-demand calls.
+/// <see cref="GetStatus"/> always performs a fresh audit rather than returning cached results, and results are recorded automatically — implementations of <see cref="Audit"/> only fill in the provided <see cref="StatusResultsBuilder"/>.  Exceptions escaping <see cref="Audit"/> are captured into the results as failures, never propagated.  Timer-driven audits never overlap each other (the timer is suppressed while an audit runs), but an on-demand audit may run concurrently with a background one, so <see cref="Audit"/> must be thread-safe; due to unavoidable races, at most one additional audit may begin after stopping.
+/// </pledge>
+/// <plan>
+/// Two <see cref="AmbientEventTimer"/>s drive scheduling: a one-shot ~10ms timer for the initial audit (disposed after it fires) and a non-auto-resetting recurring timer that is stopped during each audit and restarted afterward with a recomputed interval, which is how overlapping timer firings are suppressed.  The interval computation multiplies the current interval by a rating factor (0.75 failing, 0.9 alerting, 1.1 okay, 1.5 superlative) and a duration factor ((1000 × duration / interval) raised to the 0.1 power, so duration influences the schedule more slowly than rating), then clamps to [baseline/10, baseline×4] interval ticks — the one-quarter-to-ten-times frequency window.
+/// All mutable scheduling state is interlocked; background audits observe an <see cref="AmbientCancellationTokenSource"/> canceled at <see cref="StatusChecker.BeginStop"/>.  Each audit assembles its results in a <see cref="StatusResultsBuilder"/>, stamps the next audit time into the report, and records via <see cref="StatusChecker.SetLatestResults"/>; an audit racing disposal yields a pending placeholder instead of throwing.  Timing flows through <see cref="AmbientClock"/> so tests can control it.
+/// </plan>
+/// </remarks>
 public abstract class StatusAuditor : StatusChecker
 {
     private readonly StatusResults _shutdownInProgress;     // may be returned if results are requested during shutdown

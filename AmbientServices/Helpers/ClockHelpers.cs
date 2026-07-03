@@ -10,6 +10,17 @@ namespace AmbientServices;
 /// <summary>
 /// A static class that utilizes the ambient <see cref="IAmbientClock"/> service if there is one, or the system clock if not.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// The way code in this library and its consumers should read time: <see cref="UtcNow"/>, <see cref="Now"/>, <see cref="Ticks"/>, and <see cref="Elapsed"/> observe the ambient <see cref="IAmbientClock"/> when one is registered and fall back to the system clock (at essentially zero overhead) when none is.  Test code uses <see cref="Pause"/> and the skip/sleep/delay members to control the passage of that time deterministically.
+/// </pitch>
+/// <pledge>
+/// With no ambient clock, every member mirrors the system clock exactly.  <see cref="Pause"/> freezes time for the current call context (and contexts it subsequently spawns) until the returned scope is disposed in that same call context; pause scopes nest, an inner disposal restoring the outer paused clock.  While paused, time moves only via <see cref="SkipAhead(TimeSpan)"/>, <see cref="ThreadSleep(TimeSpan)"/>, or <see cref="TaskDelay(TimeSpan)"/>, which advance the paused clock instantly instead of waiting — and ambient timers and timed cancellations scheduled against the paused clock fire synchronously, on the advancing thread, before the call returns.  The skip/sleep/delay members are for test code only: when the clock is not paused, skips do nothing and the sleep/delay members genuinely wait.
+/// </pledge>
+/// <plan>
+/// A static facade over <c>Ambient.GetService&lt;IAmbientClock&gt;()</c>: reads use the call-context-local service and fall back to <see cref="Stopwatch.GetTimestamp"/> and <see cref="DateTime.UtcNow"/>.  <see cref="Pause"/> installs a <see cref="PausedAmbientClock"/> as the call-context override through a disposable that restores the prior override; the skip/sleep/delay members act only when the current override is a <see cref="PausedAmbientClock"/>.  Tick math converts between stopwatch ticks and <see cref="TimeSpan"/> ticks using <see cref="Stopwatch.Frequency"/>.
+/// </plan>
+/// </remarks>
 public static class AmbientClock
 {
     private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
@@ -249,6 +260,12 @@ public static class AmbientClock
     /// <summary>
     /// An ambient clock which only moves time forward when explicitly told to do so.
     /// </summary>
+    /// <remarks>
+    /// <pitch>The controllable clock installed by <see cref="AmbientClock.Pause"/>: time stands perfectly still until the test says otherwise.</pitch>
+    /// <pledge><see cref="IAmbientClock"/></pledge>
+    /// <pledge>Time moves only through <see cref="SkipAhead(long)"/>, which applies the change and then notifies registered sinks synchronously on the calling thread; it must be called by only one thread at a time and never (directly or indirectly) from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> notification.</pledge>
+    /// <plan>Captures <see cref="Stopwatch.GetTimestamp"/> once at construction as the frozen base time and adds an <see cref="Interlocked"/>-maintained elapsed-tick counter; the UTC date-time is derived from the same tick value, so the two views always agree.  Sinks are held in a <see cref="ConcurrentHashSet{T}"/>.</plan>
+    /// </remarks>
     internal class PausedAmbientClock : IAmbientClock
     {
         private readonly ConcurrentHashSet<IAmbientClockTimeChangedNotificationSink> _notificationSinks = new();
@@ -346,6 +363,9 @@ public static class AmbientClock
 /// AmbientStopwatch is not thread-safe, but neither is <see cref="Stopwatch"/>.
 /// Threadsafe versions would be possible to implement but are much more complicated due to the race caused by the state, the start time, and the previously-accumulated ticks being stored separately.
 /// AmbientStopwatch does not support changing the clock implementation after construction.
+/// <pitch>A <see cref="Stopwatch"/> lookalike whose elapsed time follows the ambient clock, so duration-measuring code stays deterministically testable under a paused clock while behaving identically to <see cref="Stopwatch"/> when no ambient clock is registered.</pitch>
+/// <pledge>Behaves like <see cref="Stopwatch"/> under the running/paused state rules described above; the clock it observes is fixed at construction, and when that clock is virtual, elapsed time accumulates only as the virtual clock is advanced.  Like <see cref="Stopwatch"/>, instances are not thread-safe.</pledge>
+/// <plan>Stores the bound <see cref="IAmbientClock"/> (null meaning the system clock) plus two tick counters — ticks accumulated while previously running and the timestamp of the last resume; <see cref="ElapsedTicks"/> is computed from those on demand, so starting and stopping cost nothing beyond a clock read.</plan>
 /// </remarks>
 public sealed class AmbientStopwatch
 {
@@ -482,6 +502,10 @@ public sealed class AmbientStopwatch
 /// </summary>
 /// <remarks>
 /// AmbientEventTimer is thread-safe.
+/// <pitch>A drop-in <see cref="System.Timers.Timer"/> whose <see cref="Elapsed"/> event rides the ambient clock when one is registered at construction, so periodic logic can be driven deterministically from tests by skipping virtual time — and behaves identically to the system timer otherwise.</pitch>
+/// <pledge><see cref="IAmbientClockTimeChangedNotificationSink"/></pledge>
+/// <pledge>Which clock the timer observes is fixed at construction (a call-context clock such as one installed by <see cref="AmbientClock.Pause"/> is included).  Under an ambient clock, <see cref="Elapsed"/> is raised synchronously on the thread advancing the clock, once for every period boundary the skip crosses while <see cref="AutoReset"/> is set (at most once otherwise); no thread-pool thread is involved, and nothing ever fires while virtual time stands still.</pledge>
+/// <plan>When bound to an ambient clock, the base <see cref="System.Timers.Timer"/> stays permanently disabled and the instance instead registers itself as a time-changed sink, tracking its period and next-raise deadline in stopwatch ticks with <see cref="Interlocked"/> operations; each time-change notification loops, raising <see cref="Elapsed"/> for as long as the deadline falls within the skipped span.  Event arguments are manufactured through the framework's non-public <see cref="System.Timers.ElapsedEventArgs"/> constructor via reflection, and subscribers are kept in a private event holder rather than the base event.  Disposal deregisters the sink.  With no ambient clock, every member falls straight through to the base class.</plan>
 /// </remarks>
 public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNotificationSink
 {
@@ -787,6 +811,10 @@ public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNo
 /// </summary>
 /// <remarks>
 /// AmbientCallbackTimer is thread-safe.
+/// <pitch>A drop-in <see cref="System.Threading.Timer"/> whose callbacks ride the ambient clock when one is registered at construction, making callback-based scheduling deterministically testable through virtual time skips; identical to the system timer otherwise.</pitch>
+/// <pledge><see cref="IAmbientClockTimeChangedNotificationSink"/></pledge>
+/// <pledge>Which clock is observed is fixed at construction.  Under an ambient clock, the callback is invoked synchronously on the thread advancing the clock, once for every period boundary the skip crosses (once in total when the period is infinite, after which the timer disables itself); <see cref="Change(TimeSpan, TimeSpan)"/> discards all previous scheduling exactly like the system timer, and <see cref="Dispose(WaitHandle)"/> signals the handle immediately because ambient-clock callbacks are synchronous — there is never an in-flight callback to wait for.</pledge>
+/// <plan>Holds exactly one of an <see cref="IAmbientClock"/> or a real <see cref="System.Threading.Timer"/>: the ambient path registers as a time-changed sink and tracks due time, period, and next-raise deadline in stopwatch ticks, settling enable/disable races with <see cref="Interlocked"/> exchanges, while the system path forwards every member to the wrapped timer.  A static count of live ambient-clock timers backs <c>ActiveCount</c> alongside the framework's own count.  Disposal routes through <see cref="Change(TimeSpan, TimeSpan)"/> to deregister the sink.</plan>
 /// </remarks>
 public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTimeChangedNotificationSink,
 #if NETCOREAPP3_1 || NET5_0_OR_GREATER
@@ -1109,6 +1137,12 @@ public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTime
 /// <summary>
 /// A sealed class that emulates <see cref="RegisteredWaitHandle"/> but uses the ambient clock if one is registered.
 /// </summary>
+/// <remarks>
+/// <pitch>The ambient-clock counterpart of <see cref="RegisteredWaitHandle"/>, created through <see cref="AmbientThreadPool"/>: wait-handle callbacks whose timeout leg follows virtual time, so timeout paths can be exercised deterministically in tests.</pitch>
+/// <pledge><see cref="IAmbientClockTimeChangedNotificationSink"/></pledge>
+/// <pledge>Signal-triggered callbacks always come from a real thread-pool wait, regardless of clock.  With an ambient clock, timeout-triggered callbacks are instead invoked synchronously while virtual time is skipped, once per timeout interval the skip crosses; a signal reschedules the next timeout, execute-only-once registrations stop after their first invocation, and "safe" registrations run timeout callbacks in the <see cref="ExecutionContext"/> captured at registration.  <see cref="Unregister"/> stops both legs.</pledge>
+/// <plan>Always registers with the real <see cref="ThreadPool"/> for the signal leg — with an infinite timeout when an ambient clock will handle the timing — and registers as a time-changed sink for the timeout leg, tracking the next callback deadline in stopwatch ticks; the two legs coordinate through an <see cref="Interlocked"/>-updated deadline.  With no ambient clock, the whole object is a thin wrapper over the corresponding <see cref="ThreadPool"/> registration.</plan>
+/// </remarks>
 #if NET5_0_OR_GREATER
 [UnsupportedOSPlatform("browser")]
 #endif
@@ -1258,6 +1292,11 @@ public sealed class AmbientRegisteredWaitHandle : IAmbientClockTimeChangedNotifi
 /// <summary>
 /// A static class that contains ambient replacements for <see cref="ThreadPool"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Ambient-clock-aware stand-ins for the <see cref="ThreadPool"/> wait registration methods — use these where wait-timeout behavior must be testable under a paused clock.</pitch>
+/// <pledge>Each method mirrors its <see cref="ThreadPool"/> namesake's parameters and semantics, returning an <see cref="AmbientRegisteredWaitHandle"/> bound to the ambient clock in effect at the time of the call (system behavior when there is none).</pledge>
+/// <plan>Pure construction forwarding to <see cref="AmbientRegisteredWaitHandle"/>; no state of its own.</plan>
+/// </remarks>
 public static class AmbientThreadPool
 {
     /// <summary>

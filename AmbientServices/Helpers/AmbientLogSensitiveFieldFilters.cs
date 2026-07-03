@@ -11,6 +11,14 @@ namespace AmbientServices;
 /// Registry of per-caller regex filters used to mask sensitive field names in structured log output.
 /// Multiple unrelated assemblies may each register filters; all active filters are applied when rendering log data.
 /// </summary>
+/// <remarks>
+/// <pitch>Process-wide scrubbing of secrets from structured logs: register a field-name pattern ("password", "token", …) once and every structured entry rendered anywhere in the process masks matching values — each assembly can protect its own fields without coordinating with the others.</pitch>
+/// <pledge>
+/// Filters match field names, never values, and a match replaces the value with a fixed mask string.  Registrations are independent: disposing one never affects filters registered by other callers, and disposal is idempotent.  Null or empty field names never match.
+/// Registration, disposal, and mask checks are thread-safe and take effect immediately; each check consults the set of filters registered at that moment.
+/// </pledge>
+/// <plan>A <see cref="ConcurrentDictionary{TKey, TValue}"/> of <see cref="Regex"/>es keyed by an <see cref="Interlocked"/>-incremented id, with each registration's <see cref="IDisposable"/> removing only its own id.  A mask check scans every registered regex linearly, so per-field cost grows with the number of registered filters — fine for the expected handful; callers with many patterns should combine them into one regex.</plan>
+/// </remarks>
 public static class AmbientLogSensitiveFieldFilters
 {
     /// <summary>

@@ -6,6 +6,17 @@ using System.Diagnostics;
 
 namespace AmbientServices;
 
+/// <summary>
+/// A basic default implementation of <see cref="IAmbientStatistics"/> that keeps all statistics in memory.
+/// </summary>
+/// <remarks>
+/// <pitch>The zero-configuration, in-process statistics registry used unless overridden.  Registry operations are lock-free dictionary calls and sample updates are single interlocked operations, so statistics are cheap enough to update on every request.</pitch>
+/// <pledge><see cref="IAmbientStatistics"/></pledge>
+/// <plan>
+/// Two <see cref="ConcurrentDictionary{TKey,TValue}"/>s hold statistics and ratio-statistic descriptors keyed by ID; get-or-add races resolve through the dictionary (a losing creation is simply discarded), and each created statistic captures a removal callback so disposing it deregisters itself.  Get-or-add throws only when a requested ID is already taken by a read-only statistic, which cannot satisfy the writable return type.
+/// The built-in execution-time statistic is a read-only, computed statistic (elapsed <see cref="AmbientClock.Ticks"/> since construction) registered at construction and protected from removal.  Time-based statistics are regular statistics preconfigured with "seconds" units and a <see cref="Stopwatch.Frequency"/> adjustment.  Ratio units default from the operand statistics' units when not specified.  Nothing is persisted — all statistics reset with the process.
+/// </plan>
+/// </remarks>
 [DefaultAmbientService]
 internal class BasicAmbientStatistics : IAmbientStatistics
 {
@@ -114,6 +125,14 @@ internal class BasicAmbientStatistics : IAmbientStatistics
     }
 }
 
+/// <summary>
+/// The standard read-write statistic realization used by <see cref="BasicAmbientStatistics"/>.
+/// </summary>
+/// <remarks>
+/// <pitch>A single interlocked 64-bit sample plus immutable metadata — the cheapest possible statistic.</pitch>
+/// <pledge><see cref="IAmbientStatistic"/></pledge>
+/// <plan>The sample is one <see cref="long"/> field updated with <see cref="System.Threading.Interlocked"/> operations; min/max updates use <see cref="InterlockedUtilities"/> optimistic compare-exchange loops so they only ever move the value in their own direction.  Aggregation types left as <see cref="AggregationTypes.None"/> resolve to the type defaults at construction, a zero floating-point adjustment is coerced to 1.0, and disposal just invokes the removal callback captured from the registry (idempotent, never throws).</plan>
+/// </remarks>
 internal class Statistic : IAmbientStatistic
 {
     private readonly Action _removeRegistration;
@@ -207,6 +226,14 @@ internal class Statistic : IAmbientStatistic
     }
 }
 
+/// <summary>
+/// The built-in read-only execution-time statistic.
+/// </summary>
+/// <remarks>
+/// <pitch>The always-available "how long has this been running" statistic, and the standard denominator for per-second rate ratios.</pitch>
+/// <pledge><see cref="IAmbientStatisticReader"/></pledge>
+/// <plan>Stores only the <see cref="AmbientClock.Ticks"/> value at construction and computes the current raw value as elapsed ticks on every read — no updates, no storage, inherently thread-safe; the <see cref="Stopwatch.Frequency"/> adjustment presents it in seconds.</plan>
+/// </remarks>
 internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
 {
     private readonly long _startTime;
@@ -248,6 +275,14 @@ internal class ProcessExecutionTimeStatistic : IAmbientStatisticReader
     public MissingSampleHandling MissingSampleHandling => MissingSampleHandling.LinearEstimation;
 }
 
+/// <summary>
+/// The standard ratio-statistic descriptor used by <see cref="BasicAmbientStatistics"/>.
+/// </summary>
+/// <remarks>
+/// <pitch>A pure, immutable ratio descriptor — it holds the numerator/denominator IDs and delta flags and nothing else.</pitch>
+/// <pledge><see cref="IAmbientRatioStatistic"/></pledge>
+/// <plan>Immutable properties set at construction; disposal just invokes the removal callback captured from the registry.</plan>
+/// </remarks>
 internal sealed class RatioStatistic : IAmbientRatioStatistic
 {
     private readonly Action _removeRegistration;

@@ -6,6 +6,11 @@ namespace AmbientServices;
 /// <summary>
 /// A static class that holds a property used to more conveniently access the ambient <see cref="IAmbientProgress"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>The one-liner way to get the current operation's progress tracker without holding a service reference.</pitch>
+/// <pledge>Returns the calling execution context's progress from the local (or, for <see cref="GlobalProgress"/>, the global) ambient service, or null when the service is unregistered or suppressed — callers must tolerate null, which is what keeps progress tracking optional.</pledge>
+/// <plan>A static facade over <c>Ambient.GetService&lt;IAmbientProgressService&gt;()</c> delegating to <see cref="IAmbientProgressService.Progress"/>.</plan>
+/// </remarks>
 public static class AmbientProgressService
 {
     private static readonly AmbientService<IAmbientProgressService> _Progress = Ambient.GetService<IAmbientProgressService>();
@@ -24,6 +29,13 @@ public static class AmbientProgressService
 /// <summary>
 /// A cancellation token source that works with ambient timers in addition to system timers.
 /// </summary>
+/// <remarks>
+/// <pitch>A <see cref="CancellationTokenSource"/> stand-in whose scheduled cancellations follow the ambient clock, so timeout-driven cancellation can be tested by skipping virtual time rather than waiting for it; it also supports cancelling after a set number of cancellation checks, for fault-injection testing of error handling and recovery.  With no ambient clock it behaves like the system source.</pitch>
+/// <pledge>
+/// Which clock schedules timed cancellations is fixed at construction; under a paused clock, a scheduled cancellation fires synchronously when virtual time is skipped past the deadline.  After disposal the source is inert but safe: <see cref="Token"/> returns an already-cancelled token rather than throwing.  <see cref="CancelAfterChecks(int)"/> arms cancellation after the given number of <see cref="IsCancellationRequested"/> polls (replacing an already-cancelled underlying source with a fresh one) and leaves any time-based cancellation in place.
+/// </pledge>
+/// <plan>Wraps a system <see cref="CancellationTokenSource"/> and schedules timed cancellation with a one-shot <see cref="AmbientEventTimer"/> instead of the system source's built-in timer, which is what routes timeouts through the ambient clock.  Check-based cancellation counts polls with <see cref="Interlocked"/>.  A static pre-cancelled token serves the disposed state.</plan>
+/// </remarks>
 public class AmbientCancellationTokenSource : IDisposable
 {
     private static readonly AmbientService<IAmbientClock> _AmbientClock = Ambient.GetService<IAmbientClock>();

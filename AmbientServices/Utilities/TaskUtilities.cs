@@ -5,6 +5,9 @@ namespace AmbientServices.Utilities;
 /// <summary>
 /// A static class that contains extensions for <see cref="Task"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>A <see cref="ValueTask{TResult}"/>-from-value shim: the equivalent of <c>ValueTask.FromResult</c> on target frameworks that don't have it, so multi-targeted code can construct completed ValueTasks uniformly.</pitch>
+/// </remarks>
 public static class TaskUtilities
 {
 #if NET5_0_OR_GREATER

@@ -9,6 +9,14 @@ namespace AmbientServices;
 /// Note that since the framework does not provide an event for when environment variables change, changes after initialization will not be propagated unless those changes are made through <see cref="ChangeSetting(string, string?)"/> or <see cref="Refresh"/>.
 /// </summary>
 /// <remarks>
+/// <pitch>A settings set backed by the process environment variables — the natural source for container- and CI-style configuration.  Mutable, but writes go through to the process environment itself.  Because the framework raises no event when the environment changes, values changed directly in the environment are only seen lazily (for uncached keys) or via an explicit refresh.</pitch>
+/// <pledge><see cref="IAmbientSettingsSet"/></pledge>
+/// <pledge>
+/// Keys registered in <see cref="SettingsRegistry"/> (at construction or later) are snapshotted into memory; all other keys are read live from the environment on each get, so unregistered reads always see the current environment while snapshotted keys keep their cached value until changed through this set or refreshed.  Changing a setting writes through to the process environment — visible to child processes and to any code reading environment variables directly — before updating the snapshot.  A manual <see cref="Refresh"/> re-reads the environment for every registered, previously-observed, or previously-changed key; concurrent refreshes serialize rather than interleave.
+/// </pledge>
+/// <plan>
+/// Two <see cref="ConcurrentDictionary{TKey,TValue}"/> caches (raw and typed) hold only registered or explicitly-changed keys — deliberately not the whole environment, so unrelated secrets are not retained for the process lifetime — and a third records every key a getter has observed so <see cref="Refresh"/> knows what to re-read.  Late setting registrations arrive via <see cref="SettingsRegistry.SettingRegistered"/> through a <see cref="LazyUnsubscribeWeakEventListenerProxy{TTYPETOWEAKEN,TEVENTARG1,TEVENTARG2}"/>.  <see cref="Refresh"/> holds a monitor lock while diffing the environment against the cache (ordinal comparison) and funnels each difference through the same internal change path used by <see cref="ChangeSetting(string, string?)"/>.  Trade-off: minimal retained environment data and cheap registered-key reads, at the cost of staleness for snapshotted keys changed behind its back.
+/// </plan>
 /// <para><b>Security:</b> At construction time, only environment variables whose keys are already registered in <see cref="SettingsRegistry"/> are copied into memory.
 /// Settings registered later are imported when <see cref="SettingsRegistry.SettingRegistered"/> fires (see <c>NewSettingRegistered</c>).
 /// Other variables are read lazily from the process environment when requested via <see cref="GetRawValue(string)"/> or <see cref="GetTypedValue(string)"/>.

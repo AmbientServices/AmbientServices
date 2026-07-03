@@ -6,6 +6,10 @@ namespace AmbientServices;
 /// <summary>
 /// A class that holds extensions to the <see cref="StackTrace"/> class.
 /// </summary>
+/// <remarks>
+/// <pitch>One-call access to <see cref="FilteredStackTrace"/>'s noise filtering for any existing <see cref="StackTrace"/> instance.</pitch>
+/// <pledge>Filtering is idempotent: a trace that is already a <see cref="FilteredStackTrace"/> renders unchanged, and any other trace is rendered with the same frame-filtering rules <see cref="FilteredStackTrace"/> applies.</pledge>
+/// </remarks>
 public static class StackTraceExtensions
 {
     /// <summary>

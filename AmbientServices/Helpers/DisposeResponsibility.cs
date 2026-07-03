@@ -16,6 +16,14 @@ namespace AmbientServices;
 /// An interface that abstracts an object that contains an <see cref="IDisposable"/> and allows transfer of the disposal responsibility between instances (and the stack).
 /// Instances should ALWAYS be disposed.
 /// </summary>
+/// <remarks>
+/// <pitch>Makes ownership of a disposable explicit and transferable: instead of comments and conventions about who disposes what, the responsibility travels as a first-class object that can be handed between frames and containers — and that can tell you when someone dropped it.</pitch>
+/// <pledge>
+/// At any moment at most one responsibility instance owns a given disposable; a transfer empties the source (its <see cref="ContainsDisposable"/> becomes false and <see cref="Contained"/> throws <see cref="ObjectDisposedException"/>) and fills the destination, which alone will dispose the contained object.
+/// Disposing a responsibility disposes its contained object if it still owns one, and is safe to call regardless; every instance must be disposed exactly along its ownership chain — each holder disposes what it still holds.
+/// <see cref="StackOnCreation"/> identifies where the responsibility originated so leaks can be attributed to their creation site.
+/// </pledge>
+/// </remarks>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
 public interface IDisposeResponsibility<out T> : IDisposable
 #if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -57,6 +65,19 @@ internal interface IShirkResponsibility
 /// Instances of this class on the stack should ALWAYS be in a using statement.  
 /// The responsibility to dispose may be transferred out to another instance using <see cref="TransferResponsibilityToCaller"/> passed into a constructor, by calling <see cref="TransferResponsibilityFrom(IDisposeResponsibility{T})"/> on another instance and passing in this instance, or by returning an instance to a caller, but each instance of this class should always be disposed to prevent leaks.
 /// </summary>
+/// <remarks>
+/// <pitch>The standard realization of <see cref="IDisposeResponsibility{T}"/>, with leak detection built in: an instance that dies undisposed announces itself (log, debugger break, event, and deferred test-time assertion) along with the stack that created it.  Not for statics or non-disposable contents.</pitch>
+/// <pledge><see cref="IDisposeResponsibility{T}"/></pledge>
+/// <pledge>
+/// Beyond the transfer contract: <see cref="AssumeResponsibility"/> disposes any current contents before taking the new ones; disposal handles contents that are <see cref="IDisposable"/>, <see cref="IAsyncDisposable"/> (synchronously waited from <see cref="Dispose"/>, natively awaited from <c>DisposeAsync</c>), or tuples of disposables (each element disposed).
+/// An instance that is finalized while still owning responsibility reports a leak: through the <see cref="DisposeResponsibility.ResponsibilityNotDisposed"/> event when subscribed, otherwise via a warning log, a debugger break when attached, and a record that <see cref="DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc"/> later surfaces.  An emptied (transferred-from) instance never reports.
+/// Individual instances are not thread-safe; concurrent transfer and dispose require caller coordination.
+/// </pledge>
+/// <plan>
+/// Two fields — the contained object and the creation stack string — plus a finalizer that fires only on leaks: proper disposal and shirking both call <see cref="GC.SuppressFinalize"/> (and <see cref="AssumeResponsibility"/>/<see cref="TransferResponsibilityFrom"/> re-register), so the finalizer costs nothing on the happy path.  Transfer works through the internal <c>IShirkResponsibility</c> back-channel, which empties the source and clears its stack so it cannot double-dispose or false-report.
+/// Creation stacks come from <see cref="System.Diagnostics.StackTrace"/> (capped and centrally counted per unique stack by <c>PendingDispose</c> in DEBUG builds, exposed via <c>DisposeResponsibility.AllPendingDisposals</c>), trading capture cost for attributable leak reports.
+/// </plan>
+/// </remarks>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
 public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirkResponsibility
 {
@@ -366,6 +387,14 @@ public class ResponsibilityNotDisposedEventArgs : EventArgs
 /// A static class that contains utility functions applicable across all <see cref="DisposeResponsibility{T}"/> types.
 /// For example, it allows you to query <see cref="DisposeResponsibility{T}"/> instances to see how many outstanding disposals remain for each unique construction call stack.
 /// </summary>
+/// <remarks>
+/// <pitch>The cross-type leak-reporting surface for <see cref="DisposeResponsibility{T}"/>: subscribe to hear about undisposed instances as they finalize, or assert at test teardown that none leaked.</pitch>
+/// <pledge>
+/// <see cref="ResponsibilityNotDisposed"/> is raised from finalizer threads when a leaked instance is detected; while at least one handler is subscribed, the leak is considered handled and is not recorded for the deferred assertion.
+/// <see cref="AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc"/> forces full collections and finalizer drains, then throws <see cref="InvalidOperationException"/> listing every unhandled leak recorded since the last drain — intended for assembly-level test cleanup, where finalizer-time asserts would destabilize the test host.
+/// </pledge>
+/// <plan>Leak notices queue in a static <see cref="ConcurrentQueue{T}"/> as finalizers run; the assertion performs repeated <see cref="GC.Collect(int, GCCollectionMode)"/>/<see cref="GC.WaitForPendingFinalizers"/> passes before draining, since one pass cannot finalize objects that only became unreachable during finalization of others.</plan>
+/// </remarks>
 public static class DisposeResponsibility
 {
 #if DEBUG

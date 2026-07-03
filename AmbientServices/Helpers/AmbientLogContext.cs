@@ -9,6 +9,14 @@ namespace AmbientServices;
 /// A "static" class to track context-specific identifiers that should be appended to every log entry, for example a request identifier, a group identifier, a hostname, a user identifier, a session identifier, etc.
 /// The class isn't really static, as its members are <see cref="AsyncLocal{T}"/> instances, whose contents vary based on the current async context.
 /// </summary>
+/// <remarks>
+/// <pitch>Ambient log enrichment: attach key-value pairs (request id, user id, hostname, …) once at a scope boundary and every structured log entry made anywhere inside that async flow carries them — no parameter threading through the call stack.</pitch>
+/// <pledge>
+/// A pair added here applies to log entries made in the current async context and in contexts it subsequently forks, until the returned handle is disposed; sibling and parent contexts are unaffected.  Disposal restores the context to its exact state from when the handle was created — so disposing an outer scope's handle while an inner scope is still open reverts the inner scope's additions too, which is why scopes should be disposed innermost-first.
+/// Enumerating the pairs yields most-recently-added first; the default log renderer consumes them in reverse so that when keys collide, the value added latest wins.  Resetting replaces everything with a single baseline pair, for execution contexts that get recycled with stale state.
+/// </pledge>
+/// <plan>An <see cref="AsyncLocal{T}"/> holding an <see cref="System.Collections.Immutable.ImmutableStack{T}"/> of entries: adding pushes onto a new stack and stores it, the disposable lifetime keeps a snapshot of the prior stack and restores it on dispose, and immutability means no locking and free structural sharing across forked contexts.  Cost is one small allocation per added pair; reading is allocation-free stack enumeration.</plan>
+/// </remarks>
 public static class AmbientLogContext
 {
     private static readonly AsyncLocal<ImmutableStack<LogContextEntry>> aStack = new();

@@ -12,6 +12,20 @@ namespace AmbientServices;
 /// A basic implementation of <see cref="IAmbientLogger"/> that writes log messages to a rotating set of files.
 /// Turn the logger off for maximum performance.
 /// </summary>
+/// <remarks>
+/// <pitch>Durable, rotating on-disk logs that survive a process restart — the logger to use when you need to diagnose issues after the fact, including ones that happen before anyone can attach a debugger.  Slower in aggregate than <see cref="AmbientTraceLogger"/> or <see cref="AmbientConsoleLogger"/> because the data actually lands on disk, though the logging call itself never waits for I/O.</pitch>
+/// <pledge><see cref="IAmbientLogger"/></pledge>
+/// <pledge><see cref="IAmbientStructuredLogger"/></pledge>
+/// <pledge><see cref="IDisposable"/></pledge>
+/// <pledge>
+/// Log files are named by a path/filename prefix plus a four-digit rotation-period suffix plus an extension.  The prefix defaults to the executable name under the local application data folder; the period number is the count of whole rotation periods (default 60 minutes) elapsed since the current UTC midnight, so suffixes roll over to zero at midnight UTC every day and the same wall-clock window maps to the same suffix on every run.
+/// Logging buffers in memory and performs no file I/O on the logging call; buffered entries reach disk when a rotation occurs, when an explicit flush completes, or via timed auto-flush (default every 5 seconds; disabled by a non-positive setting, leaving only rotation and explicit flushes).  Entries are written to the file whose period was current when they were logged, in logging order.
+/// </pledge>
+/// <plan>
+/// All buffering and file I/O is delegated to an internal <see cref="RotatingFileBuffer"/>, which queues lines and in-band rotation commands and writes them under a single async writer lock, with an <see cref="AmbientEventTimer"/> driving auto-flush.  The logging path computes the current period from <see cref="AmbientClock.UtcNow"/> (so tests can steer rotation via a paused clock) and publishes period changes with an <see cref="Interlocked.CompareExchange(ref int, int, int)"/> race so exactly one concurrent logger enqueues each rotation command; losers retry with <see cref="Utilities.InterlockedUtilities"/> backoff.  Structured data is flattened to a summary-plus-JSON line via <see cref="AmbientLogger.ConvertStructuredDataIntoSimpleMessage(object, string)"/> before buffering, and buffer overflow spills to the ambient <see cref="IAmbientLogOverflowWriter"/>.
+/// Rotation reuses filenames day over day: opening a period's file truncates any previous day's content for that same period, keeping disk usage bounded to one day's worth of files per prefix without a separate retention job.  <see cref="TryDeleteAllFiles"/> is the best-effort cleanup for removing a prefix's files entirely.
+/// </plan>
+/// </remarks>
 public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisposable
 {
     private readonly string _fileExtension;
@@ -285,6 +299,17 @@ public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisp
 /// <summary>
 /// A class to buffer log messages and write them asynchronously.
 /// </summary>
+/// <remarks>
+/// <pitch>The buffering and file-writing engine behind <see cref="AmbientFileLogger"/>: enqueueing lines and rotation instructions is cheap and I/O-free; all disk work happens later, on whoever flushes.</pitch>
+/// <pledge>
+/// Buffering a line or a rotation instruction performs no I/O, may be called concurrently from any thread, and throws <see cref="ObjectDisposedException"/> after disposal.  A flush writes everything enqueued before it began (and nothing enqueued after) to disk, in enqueue order; because rotation instructions ride the same queue, each line lands in the file that was current when it was buffered, even when the flush happens much later.
+/// Flushing is safe to invoke concurrently (writers take turns); auto-flush, when enabled at construction, periodically flushes without caller involvement.
+/// </pledge>
+/// <plan>
+/// A single <see cref="ConcurrentQueue{T}"/> of strings carries both log lines and in-band commands, with GUID-prefixed sentinel strings distinguishing flush markers and file-switch instructions from real lines.  Flushing drains the queue up to its own sentinel under a <see cref="SemaphoreSlim"/> async writer lock, writing through a single <see cref="StreamWriter"/> that is closed and replaced on each file switch; files open with <see cref="FileMode.Create"/> and <see cref="FileShare.ReadWrite"/> so the current log remains externally readable.  An <see cref="AmbientEventTimer"/> drives auto-flush (and respects a paused ambient clock in tests).
+/// Trade-off profile: the logging path costs one enqueue; the price is that unflushed lines are lost on a crash, bounded by the auto-flush interval.
+/// </plan>
+/// </remarks>
 internal class RotatingFileBuffer : IDisposable
 {
     private static readonly string _FlushString = Guid.NewGuid().ToString();

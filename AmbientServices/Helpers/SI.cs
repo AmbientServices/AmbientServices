@@ -6,6 +6,14 @@ namespace AmbientServices.Utilities;
 /// A static class to hold units and unit conversions for the International System of Units (SI).
 /// See https://en.wikipedia.org/wiki/Metric_prefix for definitions.
 /// </summary>
+/// <remarks>
+/// <pitch>Named constants for every SI magnitude prefix (quecto through quetta) plus <see cref="ToSi(double, int, string?, bool, bool, System.Globalization.CultureInfo?)"/>, which renders any number as a compact human-readable magnitude string like <c>5.34MB</c> — built for dashboards, logs, and status output where column width matters more than exact digits.</pitch>
+/// <pledge>
+/// Formatting targets a fixed character budget for the numeric part (default 4, i.e. three significant digits), choosing the prefix that leaves one to three digits before the decimal point; short prefixes are the standard SI symbols (lower-case <c>k</c>, <c>μ</c>) and long names add a space before the prefix.
+/// Non-finite and extreme values render as sentinels (<c>NaN</c>, <c>INF</c>/<c>-INF</c>, <c>EPS</c>/<c>-EPS</c>, <c>MAX</c>/<c>-MAX</c>); magnitudes beyond the largest prefix repeat the outermost prefix rather than overflowing.  Digits are formatted with the supplied culture, defaulting to the current thread culture — callers wanting invariant output must pass it explicitly.
+/// </pledge>
+/// <plan>Prefix tables indexed by how many divide-or-multiply-by-1000 steps normalize the value into [1, 999.5), with explicit compensation for the floating-point edge where scaling lands exactly on 999.5; magnitudes beyond quetta/quecto loop, appending repeated outer prefixes.  Purely computational — no allocation beyond the produced strings.</plan>
+/// </remarks>
 public static class SI
 {
     /// <summary>

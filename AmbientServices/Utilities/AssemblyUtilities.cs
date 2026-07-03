@@ -9,6 +9,10 @@ namespace AmbientServices.Utilities;
 /// <summary>
 /// A static class with extension functions for <see cref="System.Reflection.Assembly"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Reflection salvage and source-location helpers: recover the loadable types carried by a <see cref="ReflectionTypeLoadException"/>, and discover the calling code's project folder so stack-trace renderings can strip machine-specific path prefixes.</pitch>
+/// <pledge><see cref="GetCallingCodeSourceFolder"/> depends on debug (PDB) file information being available for the calling stack frame and returns null when it is not; it must be called from code in the project whose folder is wanted, with <c>skipFrames</c> adjusted for any intermediate helpers.</pledge>
+/// </remarks>
 public static class AssemblyUtilities
 {
     /// <summary>

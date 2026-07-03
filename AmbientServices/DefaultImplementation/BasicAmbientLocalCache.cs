@@ -7,6 +7,20 @@ using System.Threading.Tasks;
 
 namespace AmbientServices;
 
+/// <summary>
+/// A basic default implementation of <see cref="IAmbientLocalCache"/> providing a small, bounded, in-process cache.
+/// </summary>
+/// <remarks>
+/// <pitch>The zero-configuration local cache used unless overridden: a small in-process store with bounded bookkeeping, suitable for smoothing repeated lookups within a single process.  It ejects on a call-count cadence rather than tracking memory, so it is a convenience cache, not a capacity-managed one.</pitch>
+/// <pledge><see cref="IAmbientLocalCache"/></pledge>
+/// <plan>
+/// Entries live in a <see cref="ConcurrentDictionary{TKey,TValue}"/>, with two <see cref="ConcurrentQueue{T}"/>s of bookkeeping rows — one for timed entries carrying their expiration, one for untimed keys — enqueued on every store or refresh (a refresh enqueues a superseding row; stale rows are recognized later because their recorded expiration no longer matches the entry's).
+/// Every cache call increments an <see cref="Interlocked"/> counter, and ejection runs when that counter hits the configured cadence or the queues exceed the configured capacity, removing at least one timed and one untimed entry per round plus any already-expired neighbors, with hard caps on rounds and per-round queue-drain steps so a pathological queue cannot spin one async continuation unbounded.
+/// Expiration comparisons use <see cref="AmbientClock"/> so tests control time deterministically.  The ejection cadence, capacity, and minimum retained count come from <see cref="AmbientSettings"/> under the <c>BasicAmbientLocalCache-</c> prefix.
+/// Entries stored with dispose-on-discard are disposed on ejection, replacement, and clear; <see cref="Clear"/> swaps in fresh queues and snapshot-ejects in a bounded number of passes without blocking concurrent stores.
+/// Trade-offs: constant-time operations and no background threads, in exchange for approximate size bounds (queue counts are approximate), insertion-order rather than least-recently-used ejection, and no reaction to actual memory pressure.
+/// </plan>
+/// </remarks>
 [DefaultAmbientService]
 internal class BasicAmbientLocalCache : IAmbientLocalCache
 {

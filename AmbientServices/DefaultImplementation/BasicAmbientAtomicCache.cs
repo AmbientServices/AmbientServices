@@ -10,6 +10,16 @@ namespace AmbientServices;
 /// Default in-process implementation of <see cref="IAmbientAtomicCache"/> using concurrent dictionaries and optimistic compare-and-swap style retries.
 /// </summary>
 /// <remarks>
+/// <pitch>The zero-configuration atomic cache used unless overridden: a single-process realization (<see cref="IsShared"/> is false) with lock-free steady-state reads and optimistic writes, cheap enough to sit in front of any expensive computation.  Because entries are per-process, callers must bound cross-server staleness with time limits or another mechanism.</pitch>
+/// <pledge><see cref="IAmbientAtomicCache"/></pledge>
+/// <pledge>Optimistic add/update retries are capped at thirty seconds of <see cref="AmbientClock"/> time, shortened further by any caller-supplied timeout; exhausting that budget throws <see cref="InvalidOperationException"/> even when no cancellation token fired.</pledge>
+/// <plan>
+/// One <see cref="ConcurrentDictionary{TKey,TValue}"/> holds both operation families, with single-character storage-key prefixes keeping unversioned and versioned entries in disjoint slots.
+/// Installs are compare-and-swap loops over TryAdd/TryUpdate: factories run outside any lock, losers are disposed via a shared discard helper, and monotonic revisions come from per-key counters advanced with <see cref="Interlocked"/>.
+/// Caller timeouts are realized by linking the caller's token to an <see cref="AmbientCancellationTokenSource"/> (an already-cancelled source for non-positive budgets, avoiding a zero-interval system timer), while the separate optimistic-retry deadline is computed from <see cref="AmbientClock"/> so a policy timeout stays distinguishable from cooperative cancellation.
+/// Size is bounded by the same timed/untimed queue bookkeeping, cadence-driven ejection, and bounded <see cref="Clear"/> passes as <see cref="BasicAmbientLocalCache"/>, configured under the <c>BasicAmbientAtomicCache-</c> settings prefix.
+/// Trade-offs: no cross-process sharing or durability, approximate size bounds, and duplicate factory work under contention, in exchange for lock-free steady-state reads and no background threads.
+/// </plan>
 /// <para>Bounded size is enforced by ejecting timed and untimed bookkeeping rows on a configurable cadence.  Settings use the prefix <c>BasicAmbientAtomicCache-</c> with keys <c>EjectFrequency</c>, <c>MaximumItemCount</c>, and <c>MinimumItemCount</c> (see <see cref="AmbientSettings"/>).</para>
 /// <para>Expiration comparisons and optimistic retry deadlines use <see cref="AmbientClock"/> so tests can pause or skip virtual time deterministically.</para>
 /// <para><see cref="Clear"/> snapshots the cache and ejects each entry in a bounded number of passes.  Concurrent installs are not blocked; the goal is to dispose entries that were present when clearing began (and maybe some caught during the attempt to clear everything), not to guarantee an empty dictionary afterward.</para>

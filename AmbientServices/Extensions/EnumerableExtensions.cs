@@ -6,6 +6,9 @@ namespace AmbientServices.Extensions;
 /// <summary>
 /// A class with extension methods for <see cref="IEnumerable{T}"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Nullable-annotation ergonomics for LINQ: filter the nulls out of an enumeration of nullable items and get back an enumeration typed as non-nullable, without a cast or a warning suppression at every call site.</pitch>
+/// </remarks>
 public static class EnumerableExtensions
 {
     /// <summary>

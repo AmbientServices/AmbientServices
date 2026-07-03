@@ -10,6 +10,14 @@ namespace AmbientServices;
 /// <summary>
 /// A class that contains immutable information about a bottleneck, something that could potentially limit performance as system use intensifies.
 /// </summary>
+/// <remarks>
+/// <pitch>The declaration of one potential scalability limit — its identity, its limit (if known), and how utilization against it is computed — typically created once as a static readonly field and used to bracket every access to the limited resource.</pitch>
+/// <pledge>
+/// Instances are immutable and safe to share process-wide; the dash-delimited identifier (most generic classification first) is what allow/block regex filters match against.
+/// An <see cref="Automatic"/> bottleneck measures usage as elapsed access time; a manual one records only what callers report through the accessor.  The declared limit is interpreted per <see cref="AmbientBottleneckUtilizationAlgorithm"/> as an amount usable per <see cref="LimitPeriod"/>; limits and periods must be positive when specified.
+/// <see cref="EnterBottleneck"/> is null-tolerant: with no ambient detector configured it returns null and the access simply goes unrecorded, so instrumented code needs no configuration guard.
+/// </pledge>
+/// </remarks>
 public class AmbientBottleneck
 {
     private static readonly AmbientService<IAmbientBottleneckDetector> _BottleneckDetector = Ambient.GetService<IAmbientBottleneckDetector>(out _BottleneckDetector);
@@ -82,6 +90,13 @@ public class AmbientBottleneck
 /// <summary>
 /// An interface that abstracts a survey of bottleneck statistics.
 /// </summary>
+/// <remarks>
+/// <pitch>The read side of bottleneck detection: for one surveyed scope (a call context, a thread, a time window, or a whole process), which declared limits came closest to being hit — the direct answer to "which bottleneck will we hit first as load grows?"</pitch>
+/// <pledge>
+/// Each bottleneck accessed within the scope appears as a single combined <see cref="AmbientBottleneckAccessor"/> aggregating all of that scope's accesses to it, ranked by <see cref="AmbientBottleneckAccessor.Utilization"/> (proximity to the declared limit), not by raw usage.
+/// Results may be read while the survey is still collecting; realizations are generally not thread-safe to read.
+/// </pledge>
+/// </remarks>
 public interface IAmbientBottleneckSurvey
 {
     /// <summary>
@@ -102,12 +117,26 @@ public interface IAmbientBottleneckSurvey
 /// <summary>
 /// An interface that combines <see cref="IAmbientBottleneckSurvey"/> and <see cref="IDisposable"/> in order to scope the duration of the survey.
 /// </summary>
+/// <remarks>
+/// <pitch>A survey whose collection window the caller brackets: construction starts collecting, disposal stops; results remain readable after disposal.</pitch>
+/// <pledge><see cref="IAmbientBottleneckSurvey"/></pledge>
+/// </remarks>
 public interface IAmbientBottleneckSurveyor : IAmbientBottleneckSurvey, IDisposable
 {
 }
 /// <summary>
 /// A class that manages bottleneck surveyors.
 /// </summary>
+/// <remarks>
+/// <pitch>The factory you use to turn the raw <see cref="IAmbientBottleneckDetector"/> access stream into actual surveys.  It builds four flavors of <see cref="IAmbientBottleneckSurvey"/> — per call context, per periodic time window, per thread, and whole-process — and applies configurable allow/block identifier filtering so only the bottlenecks you care about are tracked.</pitch>
+/// <pledge>
+/// Surveyors created by one coordinator observe accesses reported to the ambient bottleneck detector captured at the coordinator's construction; with no detector configured, creation still succeeds and the resulting surveys simply stay empty.
+/// Default allow/block filters come from the ambient settings set as regex strings matched against bottleneck identifiers (block beats allow); explicit per-call override strings take precedence over the settings defaults.  Returned surveys are not thread-safe to read, and each surveyor must be disposed to stop collecting.  Disposing the coordinator tears down the call-context and thread routing it manages.
+/// </pledge>
+/// <plan>
+/// Call-context and thread surveys are served by long-lived <see cref="CallContextSurveyManager"/> and <see cref="ThreadSurveyManager"/> instances (each a single detector registration routing through <see cref="System.Threading.AsyncLocal{T}"/>/<see cref="System.Threading.ThreadLocal{T}"/> distributors), so creating those surveyors adds no detector registrations; process and time-window surveyors register with the detector directly.  Filter settings are read through <see cref="AmbientSettings"/> as compiled <see cref="Regex"/>es named "<c>AmbientBottleneckSurveyorCoordinator-DefaultAllow</c>"/"<c>-DefaultBlock</c>", re-evaluated per surveyor creation, with null meaning allow-all/block-none.
+/// </plan>
+/// </remarks>
 public class AmbientBottleneckSurveyorCoordinator : IDisposable
 {
     private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();

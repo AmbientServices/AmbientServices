@@ -7,6 +7,13 @@ namespace AmbientServices;
 /// <summary>
 /// A basic settings set implementation that may be used for unit test dependency injection.
 /// </summary>
+/// <remarks>
+/// <pitch>The zero-configuration, in-memory mutable settings set used unless overridden — well suited to unit-test dependency injection and programmatic configuration.  Values live only as long as the process; nothing is persisted.</pitch>
+/// <pledge><see cref="IAmbientSettingsSet"/></pledge>
+/// <plan>
+/// Keeps raw values in one <see cref="ConcurrentDictionary{TKey,TValue}"/> and eagerly-converted typed values in a second, so both getters are single lock-free lookups.  Typed values are computed at construction and on every change using the conversion registered in <see cref="SettingsRegistry.DefaultRegistry"/>; to type values whose settings are declared later, it subscribes to <see cref="SettingsRegistry.SettingRegistered"/> through a <see cref="LazyUnsubscribeWeakEventListenerProxy{TTYPETOWEAKEN,TEVENTARG1,TEVENTARG2}"/> so the registry never keeps a discarded set alive.  Change detection compares ordinally so a same-value write reports no change.
+/// </plan>
+/// </remarks>
 [DefaultAmbientService(typeof(IAmbientSettingsSet))]
 public class BasicAmbientSettingsSet : IAmbientSettingsSet
 {

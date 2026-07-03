@@ -13,6 +13,14 @@ namespace AmbientServices;
 /// <summary>
 /// A class that is a stack trace that always filters the output to hide file paths and not-very-helpful system stack frames.
 /// </summary>
+/// <remarks>
+/// <pitch>A drop-in <see cref="StackTrace"/> (and <c>Environment.StackTrace</c>, via <see cref="Current"/>) replacement for logs and error reports: it hides framework/SDK frames below the trace's entry point, drops configured wrapper namespaces entirely, and strips machine-specific source-path prefixes and library namespaces — shorter traces that don't leak build-machine paths.</pitch>
+/// <pledge>
+/// Mirrors every <see cref="StackTrace"/> constructor form (frame skipping, exception sources, file info) while <see cref="FrameCount"/>, <see cref="GetFrame"/>, <see cref="GetFrames"/>, and <see cref="ToString()"/> all report the filtered view.  Filtering never throws into the caller — a failure building the string yields an error-describing string instead.
+/// Filter configuration is static and process-wide, add-only, and applies to traces rendered after the addition: namespaces to remove entirely (default <c>AmbientServices.Async.</c>), namespaces whose frames are dropped unless they are the very first frame of the trace (defaults <c>System.</c>, <c>Microsoft.</c>, <c>Amazon.</c>), namespace prefixes erased from names (default <c>AmbientServices.</c>), and source-path prefixes erased from file names (defaulting to this library's own build path, extendable via <see cref="EraseCallingSourcePath"/>).
+/// </pledge>
+/// <plan>Derives from <see cref="StackTrace"/> and lazily builds a filtered <see cref="StackFrame"/> array from the base frames on first read (<see cref="Lazy{T}"/>, publication-only), so capture cost matches the base class and filtering is paid once per rendered trace.  The four filter lists are static <see cref="ConcurrentHashSet{T}"/>s consulted by ordinal prefix match; caller source paths are inferred from <see cref="System.Runtime.CompilerServices.CallerFilePathAttribute"/> data captured through <c>AssemblyUtilities.GetCallingCodeSourceFolder</c>.  Frame text is rebuilt by the static <see cref="ToString(IEnumerable{StackFrame})"/> using invariant formatting.</plan>
+/// </remarks>
 public class FilteredStackTrace : StackTrace
 {
     /// <summary>

@@ -8,6 +8,16 @@ namespace AmbientServices;
 /// <summary>
 /// A class that provides caching using either a specified cache or the ambient cache.
 /// </summary>
+/// <remarks>
+/// <pitch>The front door library code uses for local caching: it namespaces every key with an owner prefix so unrelated classes never collide, and it degrades to a no-op when no local cache service is available, so callers need no null checks and no registration just to run.</pitch>
+/// <pledge>
+/// Every operation delegates to the explicit cache supplied at construction or, when none was, to whatever <see cref="IAmbientLocalCache"/> is currently in effect (re-resolved on every call, so registration changes and local overrides take effect immediately).
+/// When neither exists the call quietly succeeds without caching: retrieval and removal report not-found and stores are discarded.
+/// All keys are prefixed with the owner type's name (or the supplied prefix) before reaching the underlying cache, so distinct owners occupy distinct key namespaces.
+/// Clearing clears the entire underlying cache, not merely this owner's entries.
+/// </pledge>
+/// <plan>A stateless pass-through: it holds only the optional explicit cache and the computed key prefix, resolves the ambient service through a static <see cref="AmbientService{T}"/> accessor on each call, concatenates the prefix, and forwards.  All caching behavior, cost, and durability are those of the underlying <see cref="IAmbientLocalCache"/>.</plan>
+/// </remarks>
 public class AmbientLocalCache
 {
     private static readonly AmbientService<IAmbientLocalCache> _Cache = Ambient.GetService<IAmbientLocalCache>();
@@ -100,6 +110,11 @@ public class AmbientLocalCache
 /// A class that provides caching using either a specified cache or the ambient cache.
 /// </summary>
 /// <typeparam name="TOWNER">The type that owns the items to be cached.</typeparam>
+/// <remarks>
+/// <pitch>The usual way to declare a cache: the owner is a type parameter, so the key prefix is derived at compile time and each class gets its own key namespace from a single static field.</pitch>
+/// <pledge><see cref="AmbientLocalCache"/></pledge>
+/// <plan>Passes <c>typeof(TOWNER)</c> to the base class; adds no behavior of its own.</plan>
+/// </remarks>
 public class AmbientLocalCache<TOWNER> : AmbientLocalCache
 {
     /// <summary>

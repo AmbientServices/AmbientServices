@@ -11,6 +11,22 @@ namespace AmbientServices;
 /// <summary>
 /// A single-instance class that holds status for the entire system.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// The front door of the status subsystem: one instance (usually <see cref="DefaultInstance"/>) discovers every status checker and auditor in the process, runs them in the background once explicitly started, and answers "how healthy is this process?" as a results tree or as summarized terse/detailed alert text.
+/// It coordinates and summarizes; the actual testing logic lives in <see cref="StatusChecker"/> and <see cref="StatusAuditor"/> derivatives.
+/// </pitch>
+/// <pledge>
+/// Discovery: when constructed with automatic loading, every non-abstract <see cref="StatusChecker"/> derivative with a public parameterless constructor is constructed and registered at <see cref="Start"/> — from assemblies already loaded and from assemblies loaded later — provided the assembly directly references this one; <see cref="StatusIgnoreCheckerAttribute"/> opts a class out.  Nothing runs until <see cref="Start"/> is called, and Start may be called only once per Stop cycle; a second call throws.
+/// <see cref="Stop"/> stops scheduled audits, disposes every registered checker, and resets the instance so Start may be called again.  Checkers may also be added and removed individually at any time.
+/// The summary properties (<see cref="Results"/>, <see cref="Summary"/>, <see cref="SummaryAlertsAndFailures"/>, <see cref="SummaryFailures"/>) snapshot the most recently recorded results — they never trigger new audits; <see cref="RefreshAsync"/> forces an immediate re-audit of every checker and reports the checkers that failed to complete in time rather than throwing.
+/// Aggregation treats the registered checkers as heterogeneous children: the overall rating is the worst of their ratings, and results are ordered worst-first.  All members are safe to call concurrently.
+/// </pledge>
+/// <plan>
+/// Checkers live in a <see cref="ConcurrentHashSet{T}"/>.  Automatic discovery hooks <see cref="AppDomain.AssemblyLoad"/> and scans each assembly's loadable types, skipping assemblies that do not directly reference this one (they cannot contain derivatives).  Auditors get their initial audit scheduled ~10ms out on an <see cref="AmbientEventTimer"/> so tests can control timing through <see cref="AmbientClock"/>.
+/// The summary properties sort the checkers' latest results by rating, wrap them in a root "/" heterogeneous <see cref="StatusResults"/>, and delegate summarization to <see cref="StatusResults.GetSummaryAlerts"/> with per-property rating cutoffs.  <see cref="RefreshAsync"/> fans each checker out via <see cref="Task.Run(Func{Task})"/>, races the aggregate against the cancellation token, records faulted checkers' exceptions back into their results via <see cref="StatusResultsBuilder"/>, and returns the incomplete ones.  Start/shutdown state is a pair of interlocked flags; stopping is a three-phase pass (begin-stop, finish-stop, dispose) across all checkers.
+/// </plan>
+/// </remarks>
 public class Status
 {
     internal const string DefaultSource = "LOCALHOST";
