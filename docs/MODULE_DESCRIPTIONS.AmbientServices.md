@@ -1,6 +1,6 @@
 # Module Descriptions — AmbientServices
 
-The methodology — The **3P Protocol** (3P; **Pitch** = Value Proposition, **Pledge** = Contract, **Plan** = Implementation), why they exist, and how to use and maintain them — is defined generically in `docs/MODULE_DESCRIPTIONS.md`. Read that first. This companion adds only what is specific to PicMeServer: where the three layers physically live in C# source, and worked examples.
+The methodology — The **3P Protocol** (3P; **Pitch** = Value Proposition, **Pledge** = Contract, **Plan** = Implementation), why they exist, and how to use and maintain them — is defined generically in `docs/MODULE_DESCRIPTIONS.md`. Read that first. This companion adds only what is specific to AmbientServices: where the three layers physically live in C# source, and worked examples.
 
 ## Where they live in the code (C#)
 
