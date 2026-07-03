@@ -17,7 +17,7 @@ namespace AmbientServices;
 /// <pitch>A drop-in <see cref="StackTrace"/> (and <c>Environment.StackTrace</c>, via <see cref="Current"/>) replacement for logs and error reports: it hides framework/SDK frames below the trace's entry point, drops configured wrapper namespaces entirely, and strips machine-specific source-path prefixes and library namespaces — shorter traces that don't leak build-machine paths.</pitch>
 /// <pledge>
 /// Mirrors every <see cref="StackTrace"/> constructor form (frame skipping, exception sources, file info) while <see cref="FrameCount"/>, <see cref="GetFrame"/>, <see cref="GetFrames"/>, and <see cref="ToString()"/> all report the filtered view.  Filtering never throws into the caller — a failure building the string yields an error-describing string instead.
-/// Filter configuration is static and process-wide, add-only, and applies to traces rendered after the addition: namespaces to remove entirely (default <c>AmbientServices.Async.</c>), namespaces whose frames are dropped unless they are the very first frame of the trace (defaults <c>System.</c>, <c>Microsoft.</c>, <c>Amazon.</c>), namespace prefixes erased from names (default <c>AmbientServices.</c>), and source-path prefixes erased from file names (defaulting to this library's own build path, extendable via <see cref="EraseCallingSourcePath"/>).
+/// Filter configuration is static and process-wide, add-only, and applies to traces rendered after the addition: namespaces to remove entirely (default <c>AmbientServices.Async.</c>), namespaces whose frames are dropped except the first frame of each cluster of consecutive frames in that namespace, so each transition into that code stays visible (defaults <c>System.</c>, <c>Microsoft.</c>, <c>Amazon.</c>), namespace prefixes erased from names (default <c>AmbientServices.</c>), and source-path prefixes erased from file names (defaulting to this library's own build path, extendable via <see cref="EraseCallingSourcePath"/>).
 /// </pledge>
 /// <plan>Derives from <see cref="StackTrace"/> and lazily builds a filtered <see cref="StackFrame"/> array from the base frames on first read (<see cref="Lazy{T}"/>, publication-only), so capture cost matches the base class and filtering is paid once per rendered trace.  The four filter lists are static <see cref="ConcurrentHashSet{T}"/>s consulted by ordinal prefix match; caller source paths are inferred from <see cref="System.Runtime.CompilerServices.CallerFilePathAttribute"/> data captured through <c>AssemblyUtilities.GetCallingCodeSourceFolder</c>.  Frame text is rebuilt by the static <see cref="ToString(IEnumerable{StackFrame})"/> using invariant formatting.</plan>
 /// </remarks>
@@ -253,8 +253,8 @@ public class FilteredStackTrace : StackTrace
     }
 
     /// <summary>
-    /// Filters the specified enumeration of <see cref="StackFrame"/>s, removing all System and Microsoft
-    /// stack frames except the first one.
+    /// Filters the specified enumeration of <see cref="StackFrame"/>s, dropping always-filtered frames entirely and
+    /// collapsing each run of consecutive filter-after-first frames (e.g. System/Microsoft) down to just its first frame.
     /// </summary>
     /// <param name="frames">The <see cref="StackFrame"/>s to filter.</param>
     /// <returns>A filtered enumeration of <see cref="StackFrame"/>s.</returns>
@@ -262,21 +262,28 @@ public class FilteredStackTrace : StackTrace
     {
         if (frames != null)
         {
-            bool first = true;
+            string? currentClusterNamespace = null;   // the filter-after-first namespace of the cluster we're currently inside, or null if we're not in one
             foreach (StackFrame? frame in frames)
             {
                 if (frame == null) continue;
                 // the Method/Declaring type IS null in some situations!
                 string fullMethodName = (frame.GetMethod()?.DeclaringType ?? typeof(object)).FullName ?? "Unknown.Method";
-                if (
-                    !ShouldFilterMethod(fullMethodName) && (
-                        first || !ShouldFilterMethodAfterFirst(fullMethodName)
-                    )
-                )
+                // always-filtered frames are dropped entirely, and they end any current cluster
+                if (ShouldFilterMethod(fullMethodName)) { currentClusterNamespace = null; continue; }
+                string? afterFirstNamespace = MatchingAfterFirstNamespace(fullMethodName);
+                if (afterFirstNamespace == null)
                 {
+                    // an ordinary frame: emit it and end any cluster we were in
+                    currentClusterNamespace = null;
                     yield return frame;
                 }
-                first = false;
+                else if (afterFirstNamespace != currentClusterNamespace)
+                {
+                    // the first frame of a new filter-after-first cluster: keep it so the transition into that code stays visible
+                    currentClusterNamespace = afterFirstNamespace;
+                    yield return frame;
+                }
+                // else: a subsequent frame within the same cluster--drop it
             }
         }
     }
@@ -317,6 +324,25 @@ public class FilteredStackTrace : StackTrace
             }
         }
         return false;
+    }
+    /// <summary>
+    /// Gets the first configured "filter after first" namespace prefix that the specified method name belongs to, or null if none.
+    /// </summary>
+    /// <param name="methodName">The namespace-qualified name of the method.</param>
+    /// <returns>The matching namespace prefix, or null if the method is not in any filter-after-first namespace.</returns>
+    private static string? MatchingAfterFirstNamespace(string methodName)
+    {
+        if (methodName != null)
+        {
+            foreach (string namespaceToFilter in _NamespacesToFilterAfterFirst)
+            {
+                if (methodName.StartsWith(namespaceToFilter, StringComparison.Ordinal))
+                {
+                    return namespaceToFilter;
+                }
+            }
+        }
+        return null;
     }
     /// <summary>
     /// Erases any configured source paths from the specified filename.

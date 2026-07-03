@@ -163,9 +163,9 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
 
             int newThreadCount = ThreadPool.ThreadCount;
             int previousThreadCount = Interlocked.Exchange(ref _previousSampleThreadCount, newThreadCount);
-            int threadsAdded = Math.Max(0, newThreadCount - _previousSampleThreadCount);
-            float threadCountChangePressure = Math.Max(0.0f, (threadsAdded * 1.0f) / _maxThreadsPerSecond);
-            Interlocked.Exchange(ref _threadsAddedThisSample, newThreadCount);
+            int threadsAdded = Math.Max(0, newThreadCount - previousThreadCount);
+            float threadCountChangePressure = Math.Min(1.0f, (threadsAdded * 1.0f) / _maxThreadsPerSecond);
+            Interlocked.Exchange(ref _threadsAddedThisSample, threadsAdded);
             _threadCountChangePressure?.SetValue(threadCountChangePressure);
 #endif
             ThreadPool.GetMaxThreads(out int maxWorkerThreads, out int maxCompletionPortThreads);
@@ -174,7 +174,7 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
             int completionPortThreads = maxCompletionPortThreads - potentialAdditionalCompletionPortThreads;
             float workerPressure = (1.0f * workerThreads / maxWorkerThreads);
             float completionPortPressure = (1.0f * completionPortThreads / maxCompletionPortThreads);
-            float totalThreadPressure = Math.Min(0.0f, (workerThreads + completionPortThreads) * 1.0f / _maxPoolThreads);
+            float totalThreadPressure = Math.Min(1.0f, (workerThreads + completionPortThreads) * 1.0f / _maxPoolThreads);
             _workerPressure?.SetValue(workerPressure);
             _completionPortPressure?.SetValue(completionPortPressure);
             _totalThreadPressure?.SetValue(totalThreadPressure);

@@ -85,7 +85,7 @@ public static class StatusRating
     private static readonly string[] RangeNames = new string[] { "Pending", "Fail", "Alert", "Okay", "Superlative", };
     private static readonly string[] RangeSymbols = new string[] { "⌛", "🛑", "⚠️", "🟢", "💙", };
     private static readonly string[] RangeForegroundColors = new string[] { "grey", "red", "#ffdf00", "green", "blue", };
-    private static readonly string[] RangeBackgroundColors = new string[] { "#bfbfbf", "#ffdfdf", "#fff7df", "#efefef", "#dfefdf", "#dfdfef", };
+    private static readonly string[] RangeBackgroundColors = new string[] { "#bfbfbf", "#ffdfdf", "#fff7df", "#dfefdf", "#dfdfef", };
     //private static readonly int[,] RangeRgbForegroundColorParts = new int[,] { { 0xff, 0, 0 }, { 0x7f, 0, 0 }, { 0xff, 0xdf, 0 }, { 0, 0x7f, 0 }, { 0, 0, 0xff }, };
     //private static readonly int[,] RangeRgbBackgroundColorParts = new int[,] { { 0xff, 0xdf, 0xdf }, { 0xef, 0xdf, 0xdf }, { 0xff, 0xf7, 0xdf }, { 0xdf, 0xef, 0xdf }, { 0xdf, 0xdf, 0xef }, };
     internal const string StyleDefinition = @"

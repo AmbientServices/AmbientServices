@@ -112,6 +112,8 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
             // no expiration or NOT expired? return the item now
             if (!(entry.Expiration < now))
             {
+                // dispose-on-discard items are handed off to a single consumer, so remove (without disposing--ownership transfers to the caller) on retrieval; the KeyValuePair overload avoids removing an entry a concurrent Store just replaced
+                if (entry.DisposeWhenDiscarding) ((ICollection<KeyValuePair<string, CacheEntry>>)_cache).Remove(new KeyValuePair<string, CacheEntry>(key, entry));
                 return entry.Entry as T;
             }
             // else this item is expired so remove it from the cache
@@ -277,14 +279,17 @@ internal class BasicAmbientLocalCache : IAmbientLocalCache
         }
     }
 
-    public ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default) where T : class
+    public async ValueTask<T?> Remove<T>(string itemKey, CancellationToken cancel = default) where T : class
     {
         CacheEntry? disposeEntry;
         if (_cache.TryRemove(itemKey, out disposeEntry))
         {
-            if (disposeEntry.Entry is T) return TaskUtilities.ValueTaskFromResult((T?)disposeEntry.Entry);
+            // hand the item off to the caller if it's the requested type, transferring dispose responsibility
+            if (disposeEntry.Entry is T) return (T?)disposeEntry.Entry;
+            // otherwise the caller can't take ownership, so the cache disposes the discarded entry (no-op unless dispose-on-discard)
+            await disposeEntry.Dispose();
         }
-        return TaskUtilities.ValueTaskFromResult((T?)default);
+        return default;
     }
 
     private async ValueTask EjectEntry(CacheEntry entry, CancellationToken cancel = default)

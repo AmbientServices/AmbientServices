@@ -162,7 +162,8 @@ public static class MissingSampleHandlingExtensions
                         // were there leading samples before the two non-null samples?
                         for (int offset = 0; offset < missingSamplesBeforeLastNonNullSample; ++offset)
                         {
-                            yield return extrapolator.LeadingSampleExtrapolation(lastNonNullSample.Value, sample.Value, missingSamplesAfterLastNonNullSample, offset);
+                            // emit farthest-back first: the earliest output position is the most steps before the first known sample, so index by distance-from-known descending
+                            yield return extrapolator.LeadingSampleExtrapolation(lastNonNullSample.Value, sample.Value, missingSamplesAfterLastNonNullSample, missingSamplesBeforeLastNonNullSample - 1 - offset);
                             ++samplesOutput;
                         }
                         missingSamplesBeforeLastNonNullSample = 0;

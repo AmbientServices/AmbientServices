@@ -67,7 +67,7 @@ internal class BasicAmbientProgress : IAmbientProgressService
                 // did we find the expected progress up the chain from the specified one (popping the specified progress late)
                 if (specifiedPopperAncestor == tryFindExpected)
                 {
-                    // in this case, we've *already* popped an ancestor of the specified progress, so there is no need to do anything else (we should have already been disposed)
+                    // we've *already* popped an ancestor of the specified progress, so there's nothing left to pop off the stack here--but we still throw below on purpose: reaching this state means the caller disposed sub-progress scopes out of order (an improperly-scoped push/pop pattern), and it needs to be told rather than have the bad pattern silently ignored
                     pop = null;
                     // if we add dispose code below, we could also check to see if things are disposed here
                     break;
@@ -139,7 +139,7 @@ internal class Progress : IAmbientProgress, IDisposable
             if (parentCancellationSource != null)
             {
                 CancellationTokenSource = parentCancellationSource;
-                _ownCancelSource = true;
+                _ownCancelSource = false;       // this was true, but I believe false is correct because the parent progress instance owns this source and should be responsible for disposing it
             }
             else
             {
@@ -159,7 +159,7 @@ internal class Progress : IAmbientProgress, IDisposable
     {
         AmbientCancellationTokenSource cancelSource = new(timeout);
         // dispose of any previously-held cancellation token source and swap in the new one
-        if (!_ownCancelSource) CancellationTokenSource.Dispose();
+        if (_ownCancelSource) CancellationTokenSource.Dispose();
         _inheritedCancelSource = false;
         _ownCancelSource = true;
         CancellationTokenSource = cancelSource;
@@ -168,7 +168,7 @@ internal class Progress : IAmbientProgress, IDisposable
     {
         AmbientCancellationTokenSource? cancelSource = (cancellationTokenSource == null) ? new AmbientCancellationTokenSource(null) :  new AmbientCancellationTokenSource(cancellationTokenSource);
         // dispose of any previously-held cancellation token source and swap in the new one
-        if (!_ownCancelSource) CancellationTokenSource.Dispose();
+        if (_ownCancelSource) CancellationTokenSource.Dispose();
         _inheritedCancelSource = false;
         _ownCancelSource = true;
         CancellationTokenSource = cancelSource;
@@ -188,7 +188,7 @@ internal class Progress : IAmbientProgress, IDisposable
         if (itemCurrentlyBeingProcessed != null) Interlocked.Exchange(ref _currentItem, itemCurrentlyBeingProcessed);
         // have we been canceled?
         if ((!_inheritedCancelSource || Parent == null) && CancellationTokenSource.IsCancellationRequested) CancellationTokenSource.Token.ThrowIfCancellationRequested();
-        Parent?.Update(_startPortion + _portionPart * portionComplete, _prefix + itemCurrentlyBeingProcessed ?? "");
+        Parent?.Update(_startPortion + _portionPart * portionComplete, itemCurrentlyBeingProcessed == null ? null : _prefix + itemCurrentlyBeingProcessed);
     }
     public IDisposable TrackPart(float startPortion, float portionPart, string? prefix = null, bool inheritCancellationTokenSource = false)
     {
@@ -211,7 +211,7 @@ internal class Progress : IAmbientProgress, IDisposable
             Disposed = true;   // mark that we're disposed to help us make some kind of attempt to recover from progress stack corruptions above
 
             // only dispose of the cancel source if we own it
-            if (!_ownCancelSource) CancellationTokenSource.Dispose();   // note that this will cancel any associated tokens!
+            if (_ownCancelSource) CancellationTokenSource.Dispose();   // note that this will cancel any associated tokens!
         }
     }
     internal bool Disposed { get; private set; }

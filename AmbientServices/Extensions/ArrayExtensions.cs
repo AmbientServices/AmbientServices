@@ -8,7 +8,7 @@ namespace AmbientServices.Extensions;
 /// </summary>
 /// <remarks>
 /// <pitch>Value semantics for arrays: compare two arrays by their contents and hash an array by its contents, for use in equality implementations or as dictionary keys where reference identity is the wrong notion of sameness.</pitch>
-/// <pledge>Equality is deep: element order is significant, and elements that are themselves arrays are compared by value recursively (so jagged arrays compare by content).  The hash code mixes each element's own hash with its position, so arrays with the same elements in a different order generally hash differently; hash agreement with <see cref="ValueEquals{TYPE}(TYPE[], TYPE[])"/> holds only when the element type's own <see cref="object.GetHashCode"/> is value-based.</pledge>
+/// <pledge>Equality is deep: element order is significant, and elements that are themselves arrays are compared by value recursively (so jagged arrays compare by content).  The hash code mixes each element's own hash with its position (so arrays with the same elements in a different order generally hash differently) and recurses into nested arrays exactly as <see cref="ValueEquals{TYPE}(TYPE[], TYPE[])"/> does, so value-equal arrays — including jagged ones — produce equal hash codes, as long as the leaf (non-array) element type's own <see cref="object.GetHashCode"/> is value-based.</pledge>
 /// </remarks>
 public static class ArrayExtensions
 {
@@ -36,13 +36,7 @@ public static class ArrayExtensions
 #else
         if (array is null) throw new ArgumentNullException(nameof(array));
 #endif
-        int code = array.Length;
-        // loop through each element and compare
-        for (int offset = 0; offset < array.Length; ++offset)
-        {
-            int elemhashcode = array[offset]?.GetHashCode() ?? 0;   // Note here that even though TYPE is not TYPE?, it is nullable because we haven't added a notnull generic type constraint (where TYPE: notnull)
-            code ^= (elemhashcode >> (32 - (offset % 32)) ^ (elemhashcode << (offset % 32)) ^ 0x1A7FCA3B);
-        }
-        return code;
+        // delegate to the shared engine so the hash recurses into nested arrays exactly where ValueEquals does (jagged arrays hash by content)
+        return ArrayUtilities.ValueHashCode(typeof(TYPE), array);
     }
 }

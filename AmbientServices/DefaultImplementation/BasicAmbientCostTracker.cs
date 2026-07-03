@@ -276,9 +276,9 @@ internal class CallContextCostTracker : IAmbientAccruedChargesAndCostChanges, IA
     public void OnChargesAccrued(string serviceId, string customerId, long charge)
     {
         // track the charges per service
-        _accumulatorsByService[serviceId] = new(charge);
+        ChargeAccumulator.Accrue(_accumulatorsByService, serviceId, charge);
         // track the charges per customer
-        _accumulatorsByCustomer[customerId] = new(charge);
+        ChargeAccumulator.Accrue(_accumulatorsByCustomer, customerId, charge);
         // track the total charges
         Interlocked.Add(ref _totalCharges, charge);
         // track the number of charges
@@ -293,9 +293,9 @@ internal class CallContextCostTracker : IAmbientAccruedChargesAndCostChanges, IA
     public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         // track the cost change per service
-        _costAccumulatorsByService[serviceId] = new(changePerMonth);
+        CostAccumulator.ChangeCost(_costAccumulatorsByService, serviceId, changePerMonth);
         // track the cost change per customer
-        _costAccumulatorsByCustomer[customerId] = new(changePerMonth);
+        CostAccumulator.ChangeCost(_costAccumulatorsByCustomer, customerId, changePerMonth);
         // track the total cost change
         Interlocked.Add(ref _totalCostChange, changePerMonth);
         // track the number of charges
