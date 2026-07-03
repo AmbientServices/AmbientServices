@@ -492,11 +492,27 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         VersionCounter vc = _versionCounters.GetOrAdd(itemKey, _ => new VersionCounter());
         long revision = Interlocked.Increment(ref vc.Last);
         CacheEntry newEntry = new(storageKey, actualExpiration, value, ShouldDisposeWhenDiscarding(value!), revision);
-        _cache.AddOrUpdate(storageKey, newEntry, (_, old) =>
+        // ConcurrentDictionary has no async update delegate, and its update delegate may run more than
+        // once under contention — so a disposing side effect there can double-dispose. Do the compare-and-swap
+        // ourselves: this displaces exactly one entry, which we then dispose once, awaited, outside the dictionary.
+        CacheEntry? displaced = null;
+        while (true)
         {
-            old.Dispose().AsTask().GetAwaiter().GetResult();
-            return newEntry;
-        });
+            if (_cache.TryGetValue(storageKey, out CacheEntry? old))
+            {
+                if (_cache.TryUpdate(storageKey, newEntry, old))
+                {
+                    displaced = old;
+                    break;
+                }
+            }
+            else if (_cache.TryAdd(storageKey, newEntry))
+            {
+                break;
+            }
+            // another writer changed the slot first; re-read and retry
+        }
+        if (displaced != null) await displaced.Dispose();
         EnqueueExpiration(storageKey, actualExpiration);
         await EjectIfNeeded();
         return revision;

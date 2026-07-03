@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace AmbientServices;
+namespace AmbientServices.Extensions;
 
 /// <summary>
 /// A class that holds extensions to the <see cref="StackTrace"/> class.

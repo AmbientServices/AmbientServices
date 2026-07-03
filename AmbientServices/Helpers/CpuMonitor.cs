@@ -262,7 +262,7 @@ internal sealed class StandardCpuSampler : ICpuSampler
 /// <pledge>When cgroup usage or quota information is unavailable (no quota set, files missing, or parse failures), usage reports 0 rather than failing — this sampler is only meaningful where a CPU quota is enforced.</pledge>
 /// <plan>
 /// At construction it discovers the cgroup layout once: detects v2 versus v1 (presence of <c>cgroup.controllers</c>), extracts the docker container id from <c>/proc/self/cgroup</c> when present, and probes the standard candidate directories for the usage file (<c>cpu.stat</c> v2 / <c>cpuacct.usage</c> v1) and the quota files (<c>cpu.max</c> v2 / <c>cpu.cfs_quota_us</c>+<c>cpu.cfs_period_us</c> v1).  An optional root-prefix parameter redirects all paths into a mirrored directory tree for tests.
-/// Each sample reads cumulative CPU nanoseconds and computes utilization as the usage delta over (quota-fraction × elapsed <see cref="DateTime.UtcNow"/> time), clamped to 0.0–1.0.  All file reads are per-sample (cheap at the default 250ms window) and failure-swallowing.
+/// Each sample reads cumulative CPU nanoseconds and computes utilization as the usage delta over (quota-fraction × elapsed real wall-clock time), clamped to 0.0–1.0.  All file reads are per-sample (cheap at the default 250ms window) and failure-swallowing.
 /// </plan>
 /// </remarks>
 internal sealed class LinuxContainerCpuSampler : ICpuSampler

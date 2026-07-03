@@ -24,10 +24,6 @@ Most items below were found while writing the initial library-wide 3P documentat
 
 ## Convention violations (project rules)
 
-- [ ] Async-avoidance patterns: `BasicAmbientLocalCache.Store` uses `c.Dispose().AsTask().Wait()` inside `AddOrUpdate` (~138); `BasicAmbientAtomicCache.VersionedPut` uses `.AsTask().GetAwaiter().GetResult()` (~497).
-- [ ] `DateTime.UtcNow` without a documented exception: `Helpers/LoggerHelpers.cs` (~270, ~352, ~526 — log-entry timestamps are not steerable by the ambient clock in tests) and `LinuxContainerCpuSampler` (`Helpers/CpuMonitor.cs`).
-- [ ] `ConsoleBuffer.Flush` returns `Task` while its structural sibling `TraceBuffer.Flush` returns `ValueTask`.
-- [ ] `StackTraceExtensions` sits in namespace `AmbientServices` rather than `AmbientServices.Extensions` like its siblings (breaking to move).
 
 ## Doc-only corrections (summaries/comments wrong; code fine)
 
