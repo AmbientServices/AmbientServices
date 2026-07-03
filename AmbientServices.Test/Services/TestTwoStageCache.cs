@@ -171,9 +171,9 @@ public class TestTwoStageCache
         using (AmbientClock.Pause())
         using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(localSettingsSet))
         {
-            BasicAmbientCache localOverride = new();
             BasicAmbientLocalCache localLocalOverride = new();
-            using ScopedLocalServiceOverride<IAmbientSharedCache> localSharedCache = new(localOverride);
+            // suppress the shared tier so this test observes the LOCAL tier's eviction directly: with a shared fallback present, an item evicted from local would still be found in shared, masking local eviction
+            using ScopedLocalServiceOverride<IAmbientSharedCache> localSharedCache = new(null);
             using ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new(localLocalOverride);
             string keyName1 = nameof(CacheExpiration) + "1";
             string keyName2 = nameof(CacheExpiration) + "2";

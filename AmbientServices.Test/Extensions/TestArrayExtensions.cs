@@ -53,4 +53,17 @@ public class TestArrayExtensions
         int hashCode = a.ValueHashCode();
         Assert.AreNotEqual(0, hashCode);
     }
+    [TestMethod]
+    public void ArrayValueHashJaggedAgreesWithEquals()
+    {
+        // two distinct-but-value-equal jagged arrays must hash equally (the hash recurses by value, matching ValueEquals)
+        int[][] a = new int[][] { new int[] { 0, 1, 2 }, new int[] { 3, 4 } };
+        int[][] b = new int[][] { new int[] { 0, 1, 2 }, new int[] { 3, 4 } };
+        Assert.IsTrue(a.ValueEquals(b));
+        Assert.AreEqual(a.ValueHashCode(), b.ValueHashCode());
+        // a value difference in a nested array should (normally) change the hash
+        int[][] c = new int[][] { new int[] { 0, 1, 2 }, new int[] { 3, 5 } };
+        Assert.IsFalse(a.ValueEquals(c));
+        Assert.AreNotEqual(a.ValueHashCode(), c.ValueHashCode());
+    }
 }

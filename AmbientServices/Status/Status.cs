@@ -207,7 +207,21 @@ public class Status
             checkerTasks.Add(checker, task);
         }
         // wait for either all the checker tasks to complete, or for the cancellation token to be canceled
-        await Task.WhenAny(Task.WhenAll(checkerTasks.Values), cancel.AsTask());
+        Task allCheckers = Task.WhenAll(checkerTasks.Values);
+        if (cancel.CanBeCanceled)
+        {
+            // signal completion from a token registration we dispose as soon as the wait ends, so we never leave a callback rooted in the caller's (possibly long-lived) token
+            TaskCompletionSource<bool> cancellationSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            using (cancel.Register(() => cancellationSignal.TrySetResult(true)))
+            {
+                await Task.WhenAny(allCheckers, cancellationSignal.Task);
+            }
+        }
+        else
+        {
+            // no cancellation is possible; wait via WhenAny (not a direct await) so a faulted checker is inspected below rather than thrown here
+            await Task.WhenAny(allCheckers);
+        }
         // make a list of those that got canceled or catastrophically failed (GetStatus should never throw an exception, but it's theoretically possible)
         List<StatusChecker> canceledOrFailedCheckers = new();
         foreach (KeyValuePair<StatusChecker, Task<StatusResults>> kvp in checkerTasks)

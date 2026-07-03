@@ -12,7 +12,7 @@ namespace AmbientServices;
 /// <pitch>Two-tier caching in one call: reads prefer the fast in-process tier while stores and removals are applied to both the local and shared tiers, so repeated nearby lookups stay cheap and other servers can still see the value.  Only serializable values belong here, since everything is also written to the shared tier.</pitch>
 /// <pledge>
 /// Stores and removals are applied to the local tier and then the shared tier; the two writes are not transactional, so a failure partway can leave the tiers different.
-/// Retrieval prefers the local tier and consults the shared tier when no local cache is in effect.
+/// Retrieval prefers the local tier and falls back to the shared tier on a local miss (or when no local cache is in effect).
 /// All keys are prefixed with the owner type's name (or the supplied prefix) before reaching either tier.
 /// When neither tier's service exists, every operation quietly succeeds without caching.
 /// Clearing clears both underlying caches in their entirety, not merely this owner's entries.
@@ -66,15 +66,20 @@ public class AmbientTwoStageCache
     /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating the length of time to extend the lifespan of the cached item.  Defaults to null, meaning not to update the expiration time.  Some cache implementations may ignore this value.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
     /// <returns>The cached object, or null if it was not found in the cache.</returns>
-    public ValueTask<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default) where T : class
+    public async ValueTask<T?> Retrieve<T>(string itemKey, TimeSpan? refresh = null, CancellationToken cancel = default) where T : class
     {
         string key = _cacheKeyPrefix + itemKey;
         IAmbientLocalCache? localCache = _explicitLocalCache ?? _LocalCache.Local;
-        if (localCache != null) return localCache.Retrieve<T>(key, refresh, cancel);
-        // fall back to the shared cache
         IAmbientSharedCache? sharedCache = _explicitSharedCache ?? _SharedCache.Local;
-        if (sharedCache != null) return sharedCache.Retrieve<T>(key, refresh, cancel);
-        return TaskUtilities.ValueTaskFromResult<T?>(null);
+        // prefer the local tier
+        if (localCache != null)
+        {
+            T? local = await localCache.Retrieve<T>(key, refresh, cancel);
+            if (local != null) return local;
+        }
+        // fall back to the shared tier on a local miss (or when no local cache is in effect)
+        if (sharedCache != null) return await sharedCache.Retrieve<T>(key, refresh, cancel);
+        return null;
     }
     /// <summary>
     /// Stores the specified item in the cache.

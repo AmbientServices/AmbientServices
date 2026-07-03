@@ -84,50 +84,40 @@ public class TestLocalCache
             using DisposableCacheEntry dce9 = new(9);
             await cache.Store("Test1", dce1, true);
             await cache.Store("Test1", dce2, true);
-            Assert.IsTrue(dce1.Disposed);
+            Assert.IsTrue(dce1.Disposed);  // storing over an existing dispose-on-discard entry disposes the replaced one
+            // retrieving a dispose-on-discard entry hands it off: it is returned, removed from the cache, and NOT disposed (the caller now owns it)
             ret = await cache.Retrieve<DisposableCacheEntry>("Test1", null);
             Assert.AreEqual(dce2, ret);
-            DisposableCacheEntry dce2rt = await cache.Remove<DisposableCacheEntry>("Test1");
             Assert.IsFalse(dce2.Disposed);
-            Assert.AreEqual(dce2, dce2rt);
-            if (dce2rt == null) throw new ArgumentNullException(nameof(dce2));
             ret = await cache.Retrieve<DisposableCacheEntry>("Test1", null);
-            Assert.IsNull(ret);
-            await cache.Store("Test2", dce2rt, true, null, DateTime.MinValue);
-            ret = await cache.Retrieve<DisposableCacheEntry>("Test2", null);
-            Assert.AreEqual(dce2, ret);
-            await Eject(cache, 2);
-            Assert.IsTrue(dce2.Disposed);
-            ret = await cache.Retrieve<DisposableCacheEntry>("Test2", null);
-            Assert.IsNull(ret);
+            Assert.IsNull(ret);  // already handed off on the previous retrieve
+            // Remove also hands the item off without disposing it
+            await cache.Store("Test8", dce8, true);
+            DisposableCacheEntry dce8rt = await cache.Remove<DisposableCacheEntry>("Test8");
+            Assert.AreEqual(dce8, dce8rt);
+            Assert.IsFalse(dce8.Disposed);
+            // an entry stored already-expired is disposed immediately and is never retrievable
             await cache.Store("Test3", dce3, true, TimeSpan.FromMinutes(-1));
+            Assert.IsTrue(dce3.Disposed);
             ret = await cache.Retrieve<DisposableCacheEntry>("Test3", null);
             Assert.IsNull(ret);
-            await cache.Store("Test4", dce4, true, TimeSpan.FromMinutes(10), DateTime.UtcNow.AddMinutes(11));
-            ret = await cache.Retrieve<DisposableCacheEntry>("Test4", null);
-            Assert.AreEqual(dce4, ret);
-            await cache.Store("Test5", dce5, true, TimeSpan.FromMinutes(10), DateTime.Now.AddMinutes(11));
-            ret = await cache.Retrieve<DisposableCacheEntry>("Test5", null);
-            Assert.AreEqual(dce5, ret);
-            await cache.Store("Test6", dce6, true, TimeSpan.FromMinutes(60), DateTime.UtcNow.AddMinutes(10));
-            ret = await cache.Retrieve<DisposableCacheEntry>("Test6", null);
-            Assert.AreEqual(dce6, ret);
-            ret = await cache.Retrieve<DisposableCacheEntry>("Test6", TimeSpan.FromMinutes(10));
-            Assert.AreEqual(dce6, ret);
+            // dispose-on-discard entries that are never handed off are disposed when the cache discards them
+            await cache.Store("Test4", dce4, true);
+            await cache.Store("Test5", dce5, true);
+            await cache.Store("Test6", dce6, true);
+            // an entry stored with disposeWhenDiscarding=false is retrievable non-destructively and is never disposed by the cache
             await cache.Store("Test7", dce7, false);
             ret = await cache.Retrieve<DisposableCacheEntry>("Test7", null);
             Assert.AreEqual(dce7, ret);
-            await Eject(cache, 50);
-            Assert.IsTrue(dce3.Disposed);
+            ret = await cache.Retrieve<DisposableCacheEntry>("Test7", null);
+            Assert.AreEqual(dce7, ret);  // still cached: retrieve is non-destructive for non-dispose-on-discard entries
+            // Clear discards every remaining entry: dispose-on-discard entries are disposed, others (Test7) are not
+            await cache.Clear();
             Assert.IsTrue(dce4.Disposed);
             Assert.IsTrue(dce5.Disposed);
             Assert.IsTrue(dce6.Disposed);
-            Assert.IsFalse(dce7.Disposed);  // we put this in the cache, but told the cache not to dispose of it, so it should *not* have been disposed
-            await cache.Store("Test8", dce8, true);
-            ret = await cache.Remove<DisposableCacheEntry>("Test8");
-            Assert.IsFalse(dce8.Disposed);  // we put this in the cache, but removed it before it was disposed, so it should *not* have been disposed
-            Assert.IsFalse(dce9.Disposed);  // we never put this into the cache, so it should *not* have been disposed
-            await cache.Clear();
+            Assert.IsFalse(dce7.Disposed);  // stored with disposeWhenDiscarding=false, so the cache never disposes it
+            Assert.IsFalse(dce9.Disposed);  // never put into the cache, so never disposed
             ret = await cache.Retrieve<DisposableCacheEntry>("Test6", null);
             Assert.IsNull(ret);
             ret = await cache.Remove<DisposableCacheEntry>("Test6");

@@ -168,19 +168,19 @@ public static class InterlockedUtilities
     }
     internal static bool TryAgainAfterOptimisticMissDelay(int attempt)
     {
-        // don't delay at all on the first miss (other than this function call and if)
+        // attempts 0-2 (the first few misses): retry immediately with no delay
         if (attempt > 0)
         {
-            // if we hit ten attempts, bail out and just ignore the attempted operation
+            // at ten or more misses, bail out and just ignore the attempted operation
             if (attempt >= 10) return false;
             int delay;
-            // between five and ten misses, sleep for a random amount before continuing
+            // attempts 5-9: sleep for a random, exponentially-growing amount before continuing
             if (attempt >= 5)
             {
                 delay = _Rand.NextInt32 % (int)(50 * Math.Pow(2, attempt - 4));
                 System.Threading.Thread.Sleep(delay);
             }
-            // between one and three misses, loop for a random number of iterations before continuing
+            // attempts 3-4: spin for a random, exponentially-growing number of iterations before continuing (attempts 1-2 fall through here with no delay)
             else if (attempt >= 3)
             {
                 delay = _Rand.NextInt32 % (int)(500 * Math.Pow(2, attempt - 2));

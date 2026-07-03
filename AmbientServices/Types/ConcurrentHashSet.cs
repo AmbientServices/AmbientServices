@@ -15,7 +15,7 @@ namespace AmbientServices;
 /// Enumeration is safe during concurrent mutation and represents a moment-in-time-ish view: items added or removed mid-enumeration may or may not appear.  Multi-item operations (the <see cref="ISet{T}"/> algebra like <see cref="UnionWith"/>, <see cref="IntersectWith"/>, <see cref="SetEquals"/>) are built from individual operations and are therefore <em>not</em> atomic as a whole — concurrent mutation interleaves with them.
 /// Null items are not supported, and items should follow the usual hashed-container rule of stable hash codes while contained.
 /// </pledge>
-/// <plan>A thin adapter over <see cref="ConcurrentDictionary{TKey, TValue}"/> with items as keys and ignored byte values, inheriting its lock-striped scalability, snapshot-free enumerator, and memory overhead (one dictionary entry per item — heavier than <see cref="HashSet{T}"/>).  Set-algebra members enumerate and call the single-item primitives, sometimes materializing the comparand into a temporary <see cref="HashSet{T}"/>; single-item operations compare with the comparer supplied at construction, but the temporary sets in the algebra members use the default comparer.</plan>
+/// <plan>A thin adapter over <see cref="ConcurrentDictionary{TKey, TValue}"/> with items as keys and ignored byte values, inheriting its lock-striped scalability, snapshot-free enumerator, and memory overhead (one dictionary entry per item — heavier than <see cref="HashSet{T}"/>).  Set-algebra members enumerate and call the single-item primitives, sometimes materializing the comparand into a temporary <see cref="HashSet{T}"/> that is given the same construction-time comparer, so all comparisons use the comparer supplied at construction.</plan>
 /// </remarks>
 #pragma warning disable CA1710  // we're following the precedent set by the framework itself rather than the code analyzer rules here, and given the name of this class, it would be very confusing not to
 public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, */ ISet<T>, ICollection<T>, IEnumerable<T>, System.Collections.IEnumerable
@@ -165,7 +165,7 @@ public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, 
     public void IntersectWith(IEnumerable<T>? other)
     {
         if (other == null) { Clear(); return; }
-        HashSet<T> keep = new(other);
+        HashSet<T> keep = new(other, Comparer);
         foreach (T item in this)
         {
             if (!keep.Contains(item))
@@ -182,7 +182,7 @@ public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, 
     public bool IsProperSubsetOf(IEnumerable<T>? other)
     {
         if (other == null) return false;
-        HashSet<T> valid = new(other);
+        HashSet<T> valid = new(other, Comparer);
         if (_dict.Count >= valid.Count) return false;
         foreach (T item in this)
         {
@@ -215,7 +215,7 @@ public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, 
     public bool IsSubsetOf(IEnumerable<T>? other)
     {
         if (other == null) return _dict.IsEmpty;
-        HashSet<T> valid = new(other);
+        HashSet<T> valid = new(other, Comparer);
         if (_dict.Count > valid.Count) return false;
         foreach (T item in this)
         {
