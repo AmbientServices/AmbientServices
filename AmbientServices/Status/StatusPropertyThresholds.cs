@@ -104,11 +104,11 @@ public class StatusPropertyThresholds
     /// <summary>
     /// Constructs a <see cref="StatusPropertyThresholds"/> instance with the specified thresholds.
     /// </summary>
-    /// <param name="nature">A <see cref="StatusThresholdNature"/> indicating whether or not low values are good.  Default is <see cref="StatusThresholdNature.LowIsGood"/>.</param>
+    /// <param name="nature">A <see cref="StatusThresholdNature"/> indicating whether or not low values are good.  Only used when the order cannot be inferred from the threshold values (fewer than two are supplied).  Default is <see cref="StatusThresholdNature.HighIsGood"/>.</param>
     /// <param name="failVsAlertThreshold">The threshold which divides failures from alerts (at this value it counts as a failure).</param>
     /// <param name="alertVsOkayThreshold">The threshold which divides alerts from okays (at this value it counts as an alert).</param>
     /// <param name="okayVsSuperlativeThreshold">The threshold which divides okays from superlatives (at this value it counts as an okay).</param>
-    public StatusPropertyThresholds(float? failVsAlertThreshold, float? alertVsOkayThreshold, float? okayVsSuperlativeThreshold, StatusThresholdNature nature = StatusThresholdNature.LowIsGood)
+    public StatusPropertyThresholds(float? failVsAlertThreshold, float? alertVsOkayThreshold, float? okayVsSuperlativeThreshold, StatusThresholdNature nature = StatusThresholdNature.HighIsGood)
     {
         StatusThresholdNature? computedNature = null;
         if (failVsAlertThreshold > alertVsOkayThreshold || alertVsOkayThreshold > okayVsSuperlativeThreshold || failVsAlertThreshold > okayVsSuperlativeThreshold) computedNature = StatusThresholdNature.LowIsGood;

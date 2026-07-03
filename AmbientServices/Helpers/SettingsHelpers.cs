@@ -79,7 +79,7 @@ public static class AmbientSettings
     /// <summary>
     /// Construct a setting instance that uses a specific settings set and caches the setting with the specified key, converting it from a string using the specified delegate.
     /// </summary>
-    /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, the setting will always contain the default value.</param>
+    /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, the setting reads from the ambient local settings set, falling back to the default value when that set has no value for the key.</param>
     /// <param name="key">A key string identifying the setting.</param>
     /// <param name="description">A description of the setting.</param>
     /// <param name="convert">A delegate that takes a string and returns the type.</param>
@@ -91,7 +91,7 @@ public static class AmbientSettings
     /// <summary>
     /// Construct a setting instance that uses a specific settings set and caches the setting with the specified key, converting it from a string using the specified delegate.
     /// </summary>
-    /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, the setting will always contain the default value.</param>
+    /// <param name="settingsSet">The <see cref="IAmbientSettingsSet"/> to get the setting value from.  If null, the setting reads from the ambient local settings set, falling back to the default value when that set has no value for the key.</param>
     /// <param name="key">A key string identifying the setting.</param>
     /// <param name="description">A description of the setting.</param>
     /// <param name="defaultValue">The default value for the setting.  This will be used as the current value if the setting is not set.</param>
@@ -487,7 +487,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
     /// </summary>
     public void UpdateLastUsed()
     {
-        long accessTime = DateTime.UtcNow.Ticks;
+        long accessTime = AmbientClock.UtcNow.Ticks;
         long oldValue = _lastUsedTicks;
         // loop attempting to put it in until we win the race
         while (accessTime > oldValue)
@@ -677,7 +677,7 @@ internal class AmbientSetting<T> : SettingsSetSetting<T>
         IAmbientSettingsSet? localSettingsSet = settingsSet.Local;
         return (localSettingsSet != null)
             ? GetValueSet() // fall through to the base (global settings set)
-            : null;  // use the default value
+            : null;  // service suppressed: no set is consulted, so the value falls back to the cached global-set value or the declared default
     }
 
     /// <summary>

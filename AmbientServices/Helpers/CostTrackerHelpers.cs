@@ -64,7 +64,7 @@ public class AmbientCostTrackerCoordinator : IAmbientCostTrackerNotificationSink
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMonth">The change in cost (in picodollars per minute).</param> 
+    /// <param name="changePerMonth">The change in cost (in picodollars per month).</param>
     public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         _scopeDistributor.Value ??= new ScopeOnChargesAccruedDistributor();

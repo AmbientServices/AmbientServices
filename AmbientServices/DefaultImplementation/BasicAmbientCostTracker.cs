@@ -43,7 +43,7 @@ internal class BasicAmbientCostTracker : IAmbientCostTracker
     /// </summary>
     /// <param name="serviceId">An optional service identifier, with empty string indicating the system itself.</param>
     /// <param name="customerId">A string identifying the customer.</param>
-    /// <param name="changePerMonth">The change in cost (in picodollars per minute).</param> 
+    /// <param name="changePerMonth">The change in cost (in picodollars per month).</param> 
     public void OnOngoingCostChanged(string serviceId, string customerId, long changePerMonth)
     {
         // call all the notification sinks
@@ -467,31 +467,31 @@ public class ChargeAccumulator
 public class CostAccumulator
 {
     private long _chargeCount;                  // interlocked
-    private long _totalCostPerMinuteChange;     // interlocked
+    private long _totalCostPerMonthChange;     // interlocked
 
     /// <summary>
     /// Constructs a cost accumulator.
     /// </summary>
-    /// <param name="costPerMinuteChange">The initial change in cost.</param>
-    public CostAccumulator(long costPerMinuteChange)
+    /// <param name="costPerMonthChange">The initial change in cost.</param>
+    public CostAccumulator(long costPerMonthChange)
     {
         _chargeCount = 1;
-        _totalCostPerMinuteChange = costPerMinuteChange;
+        _totalCostPerMonthChange = costPerMonthChange;
     }
 
-    internal static void ChangeCost(ConcurrentDictionary<string, CostAccumulator> chargeAccumulators, string key, long costPerMinuteChange)
+    internal static void ChangeCost(ConcurrentDictionary<string, CostAccumulator> chargeAccumulators, string key, long costPerMonthChange)
     {
-        chargeAccumulators.AddOrUpdate(key, new CostAccumulator(costPerMinuteChange), (k, v) => { v.AddCostChange(costPerMinuteChange); return v; });
+        chargeAccumulators.AddOrUpdate(key, new CostAccumulator(costPerMonthChange), (k, v) => { v.AddCostChange(costPerMonthChange); return v; });
     }
 
     /// <summary>
     /// Adds a cost change to the accumulator.
     /// </summary>
-    /// <param name="costPerMinuteChange">The cost change (in picodollars per minute).</param>
-    public void AddCostChange(long costPerMinuteChange)
+    /// <param name="costPerMonthChange">The cost change (in picodollars per month).</param>
+    public void AddCostChange(long costPerMonthChange)
     {
         Interlocked.Increment(ref _chargeCount);
-        Interlocked.Add(ref _totalCostPerMinuteChange, costPerMinuteChange);
+        Interlocked.Add(ref _totalCostPerMonthChange, costPerMonthChange);
     }
 }
 #endif
