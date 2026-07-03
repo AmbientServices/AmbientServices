@@ -34,8 +34,4 @@ Most items below were found while writing the initial library-wide 3P documentat
 
 ## Semantic decisions needed (which side is right is unclear)
 
-- [ ] `StatusPropertyThresholds` default threshold nature differs between constructors: `DefaultPropertyThresholdsAttribute(...)` defaults `thresholdNature` to `HighIsGood`, while `StatusPropertyThresholds(...)` defaults `nature` to `LowIsGood`. This only matters when fewer than two threshold values are supplied (otherwise nature is inferred from their ordering). Pick one canonical default. (`Status/StatusPropertyThresholds.cs` ~111, ~296)
-- [ ] Ongoing-cost units: `IAmbientCostTracker` says picodollars per **month**; `BasicAmbientCostTracker` param docs say per **minute** and `CostAccumulator` field names say per-minute. The 3P documents per-month (interface authority) pending a decision.
-- [ ] `AmbientImmutableSettingsSet` does not subscribe to `SettingsRegistry.SettingRegistered` (the mutable sets do), so settings registered after construction keep raw strings as typed values — possibly deliberate for immutability; confirm and document.
-- [ ] `AmbientSetting<T>` suppressed-service path is commented "use the default value" but `SettingInfo<T>.GlobalOrDefaultValue` can return the cached global-set value — decide whether suppression should yield the default.
-- [ ] `AmbientSettings.GetSettingsSetSetting` param doc says a null set means "always the default value", but `SettingsSetSetting.GetValueSet()` falls back to the ambient local set.
+
