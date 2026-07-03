@@ -2,7 +2,7 @@
 
 ## Module descriptions — The 3P Protocol (3P)
 
-Each unit of code (class, module, subsystem, or system) carries up to three named prose layers — the **3P** — in its XML-doc `<remarks>`, using custom elements `<pitch>`, `<pledge>`, `<plan>`. Generic definition: `docs/MODULE_DESCRIPTIONS.md`; C# placement convention and examples: `docs/MODULE_DESCRIPTIONS.PicMe.md`. Refer to these by their exact names — Pitch, Pledge, Plan — never informal synonyms.
+Each unit of code (class, module, subsystem, or system) carries up to three named prose layers — the **3P** — in its XML-doc `<remarks>`, using custom elements `<pitch>`, `<pledge>`, `<plan>`. Generic definition: `docs/MODULE_DESCRIPTIONS.md`; C# placement convention and examples: `docs/MODULE_DESCRIPTIONS.AmbientServices.md`. Refer to these by their exact names — Pitch, Pledge, Plan — never informal synonyms.
 
 ### The 3P Protocol (3P)
 - **Pitch** *(Value Proposition)* — short; the caller's "is this what I need?" decision. Problem/benefit, optional limits.
