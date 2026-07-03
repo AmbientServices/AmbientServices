@@ -9,7 +9,18 @@ namespace AmbientServices;
 /// </summary>
 /// <remarks>
 /// Note that a local cache differs from a shared/remote cache in that it can properly cache objects that contain pointers as well as disposable objects.
-/// For non-local cache, see <see cref="IAmbientLocalCache"/>.
+/// For non-local cache, see <see cref="IAmbientSharedCache"/>.
+/// <pitch>
+/// An in-process cache that can safely hold anything — including objects with references and <see cref="IDisposable"/> items — because entries never leave the process.
+/// Disposable entries get single-consumer hand-off semantics so nothing is disposed while a caller is still using it.
+/// Entries are per-process: they vanish on restart and are never visible to other servers; for cross-process caching of serializable values, use <see cref="IAmbientSharedCache"/>.
+/// </pitch>
+/// <pledge>
+/// A string-keyed item store with the same replace-on-store, null-on-miss, evict-at-any-time, and earlier-expiration-wins rules as <see cref="IAmbientSharedCache"/>, plus ownership rules that only make sense in-process:
+/// an item stored with dispose-on-discard is disposed by the cache when it is discarded, and is therefore removed from the cache when it is retrieved so that exactly one client holds it at a time; removal returns the removed item, transferring dispose responsibility to the caller.
+/// Retrieval may return the very instance that was stored, so callers must treat cached objects as shared mutable state unless they use dispose-on-discard hand-off.
+/// All operations are asynchronous and honor cooperative cancellation.  Clearing flushes every entry in the cache, not just the caller's.
+/// </pledge>
 /// </remarks>
 public interface IAmbientLocalCache
 {

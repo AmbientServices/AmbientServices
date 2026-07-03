@@ -7,6 +7,15 @@ namespace AmbientServices;
 /// An interface that tracks ambient progress and cancellation.
 /// Implementors that perform I/O operations should do it asynchronously to avoid blocking.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// Report how far a long-running operation has progressed (a zero-to-one portion plus the item currently being worked on) and observe cooperative cancellation from one place, with sub-operations mapping their own zero-to-one range onto a slice of the parent's — so deeply-nested code reports progress without knowing where it sits in the overall operation.  Reporting progress never alters an operation's results; the only outcome it can change is aborting the operation via cancellation.
+/// </pitch>
+/// <pledge>
+/// <see cref="PortionComplete"/> is always between zero and one inclusive, and updates outside that range are rejected.  <see cref="Update"/> both records progress and polls for cancellation, throwing <see cref="OperationCanceledException"/> when cancellation has been requested; progress recorded on a sub-part propagates to its parent scaled into the range the part was delegated, with the part's prefix applied to the item name, so a parent observer sees smoothly-advancing overall progress.
+/// <see cref="TrackPart"/> begins a sub-part which becomes the ambient progress for the call context until the returned <see cref="IDisposable"/> is disposed; parts must be disposed in the reverse order of creation (innermost first), and disposing a part reports it complete to its parent.  A part's cancellation is independent of its parent's unless inheritance is requested at creation.  <see cref="ResetCancellation(TimeSpan)"/> replaces the tracker's cancellation source, and the tracker owns whichever source is current — callers never dispose it.
+/// </pledge>
+/// </remarks>
 public interface IAmbientProgress
 {
     /// <summary>
@@ -65,6 +74,12 @@ public interface IAmbientProgress
 /// <summary>
 /// An interface that abstracts an ambient progress tracking service.
 /// </summary>
+/// <remarks>
+/// <pitch>The entry point for progress tracking: hands each execution context its own current <see cref="IAmbientProgress"/>, so libraries can report progress and honor cancellation without being passed a tracker — and callers that don't care simply never look.</pitch>
+/// <pledge>
+/// <see cref="Progress"/> returns the innermost live progress for the calling execution context, lazily creating a top-level tracker (covering the whole operation) on first access; sub-parts started through <see cref="IAmbientProgress.TrackPart"/> become the value returned here until they are disposed.  Each execution context gets its own tracker, so concurrent operations never see each other's progress; the returned tracker is thread-safe, but cross-thread use is only meaningful among threads cooperating on the same operation.
+/// </pledge>
+/// </remarks>
 public interface IAmbientProgressService
 {
     /// <summary>

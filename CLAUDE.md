@@ -13,6 +13,7 @@ Sharing is per-layer, not a tree: realizations of one Pledge may still have diff
 
 **Rules:**
 - Before modifying a unit, check to see if its 3 Ps are documented and **flag any drift** between them and the code.
+- Drift that is flagged but not reconciled in the same change is recorded in `docs/DRIFT.md` (the drift ledger); remove an entry in the same change that reconciles it.
 - A significant code change updates the affected 3 Ps **in the same change**.
 - A change to any of the 3 Ps is **agreed in prose first**, then code and tests follow.
 - Decide **fix / enhance / branch** using the constraints at *every* layer: code-vs-description mismatch → fix; within all layers → enhance; outside any layer → new unit, or a deliberate, agreed change to that layer.

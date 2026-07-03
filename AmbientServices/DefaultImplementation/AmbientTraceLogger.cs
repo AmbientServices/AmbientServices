@@ -18,6 +18,15 @@ namespace AmbientServices;
 /// Switch to this logger for better performance, but less persistent log data.
 /// Turn the logger off for maximum performance.
 /// </summary>
+/// <remarks>
+/// <pitch>The zero-configuration default logger: higher-performance debug/trace output that is effectively discarded unless a debugger (or trace listener) is attached.  Choose it for speed during development and testing; choose <see cref="AmbientFileLogger"/> instead when logs must survive to be read later.</pitch>
+/// <pledge><see cref="IAmbientLogger"/></pledge>
+/// <pledge><see cref="IAmbientStructuredLogger"/></pledge>
+/// <plan>
+/// A stateless singleton (<see cref="Instance"/>, private constructor) that forwards every line to the process-wide <see cref="TraceBuffer"/>, which does the actual asynchronous buffering and writes batches to <see cref="System.Diagnostics.Trace"/> from a background thread — so logging callers never block on trace I/O.  Structured data is flattened to a summary-plus-JSON line via <see cref="AmbientLogger.ConvertStructuredDataIntoSimpleMessage(object, string)"/> before buffering.
+/// Trade-off profile: fastest of the built-in loggers on the logging path, but durability is entirely delegated to whatever trace listeners are attached — with none, the data is discarded.
+/// </plan>
+/// </remarks>
 [DefaultAmbientService]
 public class AmbientTraceLogger : IAmbientLogger, IAmbientStructuredLogger
 {
@@ -74,6 +83,17 @@ public class AmbientTraceLogger : IAmbientLogger, IAmbientStructuredLogger
 /// <summary>
 /// A class to buffer debug trace messages and display them asynchronously.
 /// </summary>
+/// <remarks>
+/// <pitch>The process-wide asynchronous buffer between logging callers and <see cref="System.Diagnostics.Trace"/>: buffering a line is a cheap enqueue, and a single background thread does the actual trace writes.</pitch>
+/// <pledge>
+/// Buffering never blocks on trace I/O and may be called concurrently from any thread; buffered lines are written to the trace output in enqueue order by a single writer.  A flush returns only after every line enqueued before it has been handed to the trace output.
+/// When the in-memory buffer is at capacity, additional lines spill to the ambient <see cref="IAmbientLogOverflowWriter"/> instead of growing the queue.
+/// </pledge>
+/// <plan>
+/// A static <see cref="ConcurrentQueue{T}"/> drained by one dedicated below-normal-priority background thread that batches up to ten lines per <see cref="Trace.Write(string)"/> call and sleeps on a <see cref="SemaphoreSlim"/> when idle.  Flush works by enqueueing a GUID sentinel string and waiting on a second semaphore that the drainer releases when it dequeues the sentinel; during an explicit flush the drainer thread's priority is temporarily boosted.  Overflow beyond the buffer cap is delegated to <see cref="AmbientLogBufferLimits"/>.
+/// Trade-off profile: minimal per-line cost and no lock contention on the logging path, at the price of a dedicated thread and delivery that lags by the batching latency.
+/// </plan>
+/// </remarks>
 #if NET5_0_OR_GREATER
 [UnsupportedOSPlatform("browser")]
 #endif

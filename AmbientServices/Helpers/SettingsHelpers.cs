@@ -26,6 +26,12 @@ public class SettingConversionFailedEventArgs(string key, string rawValue, Excep
 /// <summary>
 /// A static class that utilizes the <see cref="IAmbientClock"/> if one is registered, or the system clock if not.
 /// </summary>
+/// <remarks>
+/// <pitch>The factory callers use to declare typed settings: give it a key, description, conversion, and default and get back an <see cref="IAmbientSetting{T}"/> that always has a usable value — either following the ambient settings set or pinned to a specific set.  Declaring through it also makes the setting discoverable, so tooling can enumerate every setting the process uses via <see cref="AmbientSettingsInfo"/>.</pitch>
+/// <pledge>
+/// Every factory call registers the setting's key, description, and default in the process-wide <see cref="SettingsRegistry"/>; declaring the same key twice with a different description or default is an error.  Returned settings never lack a value: a missing setting yields the converted default, and a conversion failure raises <see cref="ConversionFailed"/> and falls back to the default rather than throwing.
+/// </pledge>
+/// </remarks>
 public static class AmbientSettings
 {
     /// <summary>
@@ -123,6 +129,10 @@ public static class AmbientSettings
 /// <summary>
 /// An abstraction of a setting that holds a strongly-typed value and provides an event to notify the user of changes to the setting value.
 /// </summary>
+/// <remarks>
+/// <pitch>A strongly-typed handle to one setting: read it at any time and get the current, already-converted value without touching raw strings or knowing which settings set supplies it.</pitch>
+/// <pledge>Reading the value never fails and is cheap enough for hot paths — conversion results are cached, so reads do not re-parse — and when no set supplies the setting, the declared default is returned.  The provenance-reporting read additionally names the settings set the value came from (the default-values set when the default was used) and may be noticeably slower than a plain value read.</pledge>
+/// </remarks>
 /// <typeparam name="T">The type represented by the the setting.</typeparam>
 public interface IAmbientSetting<T>
 {
@@ -143,6 +153,10 @@ public interface IAmbientSetting<T>
 /// <summary>
 /// An abstraction that provides access to a setting's description and last time used.
 /// </summary>
+/// <remarks>
+/// <pitch>The declaration-side view of a registered setting — its key, description, default, string-to-typed conversion, and last-used time — used by settings sets to type raw values and by diagnostic tooling to inventory the settings a process consumes.</pitch>
+/// <pledge>Conversion is called inline by settings sets whenever a raw value needs typing, so it must always return a usable value — realizations fall back to the default (raising <see cref="AmbientSettings.ConversionFailed"/>) rather than throw.  The conversion result for the global settings set may be cached by the realization so globally-attached settings read cheaply.  The last-used time reflects the most recent retrieval of the setting's value, letting operators identify settings that are no longer consulted.</pledge>
+/// </remarks>
 public interface IAmbientSettingInfo
 {
     /// <summary>
@@ -177,6 +191,11 @@ public interface IAmbientSettingInfo
 /// <summary>
 /// A global registry for settings that includes their keys, descriptions, last used time, conversion functions, and default values.
 /// </summary>
+/// <remarks>
+/// <pitch>The process-wide directory of every setting declared anywhere in the process: settings sets consult it to convert raw strings into typed values, and ops tooling enumerates it to discover which settings exist, their descriptions and defaults, and when each was last used.</pitch>
+/// <pledge>Registering the same key again is harmless when the description and default match and an error when they conflict, so a key means exactly one thing process-wide.  Every successful registration raises <see cref="SettingRegistered"/>, which is how settings sets learn to (re)convert raw values for settings declared after the set was built.  Settings are held weakly: a setting no longer referenced anywhere disappears from enumeration and its key may be redeclared, even with a different description or default.</pledge>
+/// <plan>A <see cref="ConcurrentDictionary{TKey,TValue}"/> maps each key to a <see cref="WeakReference{T}"/> to the setting.  Registration uses a get-or-add, and when it loses to a dead reference, a compare-and-swap retry loop with exponential backoff replaces it (bounded by a retry limit; a pathological race throws <see cref="TimeoutException"/>); losing to a live setting triggers the description/default conflict check instead.  Weak references keep abandoned settings (for example, from discarded test fixtures) from accumulating; enumeration prunes dead entries as it encounters them.</plan>
+/// </remarks>
 public class SettingsRegistry
 {
     /// <summary>
@@ -312,6 +331,12 @@ internal class SettingsSetSettingValue<T>
 /// Note that this settings set does NOT actually contain any settings, it returns null for all keys.
 /// Default values are stored with their individual <see cref="IAmbientSettingInfo"/> instance.
 /// </summary>
+/// <remarks>
+/// <pitch>The provenance marker for default values: a singleton, deliberately empty settings set whose name is reported when a setting's value came from its declared default rather than from any real set.</pitch>
+/// <pledge><see cref="IAmbientSettingsSet"/></pledge>
+/// <pledge>Returns null for every key and is immutable (changing a setting throws <see cref="InvalidOperationException"/>).  Default values themselves live on each setting's <see cref="IAmbientSettingInfo"/>; this set only lends its name.</pledge>
+/// <plan>A stateless singleton; every lookup returns null unconditionally.</plan>
+/// </remarks>
 public class DefaultSettingsSet : IAmbientSettingsSet
 {
     /// <summary>
@@ -358,7 +383,17 @@ public class DefaultSettingsSet : IAmbientSettingsSet
     public bool ChangeSetting(string key, string? value) => throw new InvalidOperationException($"{nameof(DefaultSettingsSet)} is not mutable.");
 }
 
-internal class SettingInfo<T> : IAmbientSettingInfo 
+/// <summary>
+/// The realization of <see cref="IAmbientSettingInfo"/> that backs every setting declared through <see cref="AmbientSettings"/>.
+/// </summary>
+/// <remarks>
+/// <pitch>The single realization behind every declared setting: it owns the conversion delegate, the typed default, the last-used timestamp, and a cached copy of the global settings set's converted value.</pitch>
+/// <pledge><see cref="IAmbientSettingInfo"/></pledge>
+/// <pledge>Registers itself in <see cref="SettingsRegistry.DefaultRegistry"/> at construction, so constructing one whose key is already registered with a different description or default throws.</pledge>
+/// <plan>Conversion wraps the caller's delegate in a catch-all that reports failures through <see cref="AmbientSettings.ConversionFailed"/> and substitutes the typed default.  When the requesting set is the global settings set, the converted value is stashed with an interlocked exchange so globally-attached settings read a field instead of querying the set.  The last-used time is maintained as an interlocked maximum via a compare-exchange loop, so concurrent readers can only move it forward.</plan>
+/// </remarks>
+/// <typeparam name="T">The type for the setting.</typeparam>
+internal class SettingInfo<T> : IAmbientSettingInfo
 {
     protected static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
     private readonly Func<string, T> _convert;
@@ -493,6 +528,15 @@ internal class SettingInfo<T> : IAmbientSettingInfo
     }
 }
 
+/// <summary>
+/// A realization of <see cref="IAmbientSetting{T}"/> whose value comes from a specific settings set.
+/// </summary>
+/// <remarks>
+/// <pitch>The realization of <see cref="IAmbientSetting{T}"/> for settings pinned to one specific settings set at declaration time, without the override/suppression handling of <see cref="AmbientSetting{T}"/>.</pitch>
+/// <pledge><see cref="IAmbientSetting{T}"/></pledge>
+/// <plan>Holds a <see cref="SettingInfo{T}"/> (created — and therefore registered — at construction) plus the pinned set reference.  Each read resolves the effective set (a test-injected ambient service, the pinned set, or the ambient local set when no set was pinned), asks it for the typed value, and falls back to the <see cref="SettingInfo{T}"/> default when the set has no value; when no set resolves at all, the value cached from the global set (or the default) is used.</plan>
+/// </remarks>
+/// <typeparam name="T">The type for the setting.</typeparam>
 internal class SettingsSetSetting<T> : IAmbientSetting<T>
 {
     protected static readonly AmbientService<IAmbientSettingsSet> _AmbientSettingsSet = AmbientService<IAmbientSettingsSet>.Instance;
@@ -591,6 +635,15 @@ internal class SettingsSetSetting<T> : IAmbientSetting<T>
     }
 }
 
+/// <summary>
+/// A realization of <see cref="IAmbientSetting{T}"/> whose value follows the ambient settings set.
+/// </summary>
+/// <remarks>
+/// <pitch>The realization of <see cref="IAmbientSetting{T}"/> that follows the ambient settings service — honoring a call-context override set and local suppression, and otherwise reading the local/global set — which is the behavior nearly all setting declarations want.</pitch>
+/// <pledge><see cref="IAmbientSetting{T}"/></pledge>
+/// <plan>Extends <see cref="SettingsSetSetting{T}"/> by resolving the set through the ambient <see cref="AmbientService{T}"/> for <see cref="IAmbientSettingsSet"/>: a local override set wins outright; when the service is suppressed (no local set) no set is consulted and the value falls back to the <see cref="SettingInfo{T}"/>-cached global-set value or the declared default; otherwise resolution falls through to the base class.  Because the global-set value is cached on the <see cref="SettingInfo{T}"/>, the common read path costs a couple of field reads rather than a set lookup.</plan>
+/// </remarks>
+/// <typeparam name="T">The type for the setting.</typeparam>
 internal class AmbientSetting<T> : SettingsSetSetting<T>
 {
     public AmbientSetting(string key, string description, Func<string, T> convert, string defaultValueString = "")

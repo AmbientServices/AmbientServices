@@ -9,6 +9,14 @@ namespace AmbientServices;
 /// <typeparam name="TTYPETOWEAKEN">The type that is being weakly referenced.</typeparam>
 /// <typeparam name="TEVENTARG1">The first argument for the event handler (usually the sender object).</typeparam>
 /// <typeparam name="TEVENTARG2">The second argument for the event handler (usually, but not necessarily a <see cref="EventArgs"/> or the TEventArgs from <see cref="EventHandler{TEventArgs}"/>).</typeparam>
+/// <remarks>
+/// <pitch>Lets a short-lived object subscribe to a long-lived event (such as <see cref="AmbientService{T}.GlobalChanged"/>, whose source lives forever) without the subscription keeping the subscriber alive.</pitch>
+/// <pledge>
+/// While the subscriber is alive, every raise of the event is forwarded to the supplied static notify delegate along with the (strongly-held-for-the-call) subscriber instance.  Once the subscriber has been collected, the first subsequent raise triggers the static unsubscribe delegate, detaching the proxy so it can be collected too — meaning cleanup is lazy: a dead subscriber's proxy lingers until the event next fires, and an event that never fires again never unsubscribes.
+/// Both delegates must be static (or otherwise capture no reference to the subscriber); a delegate that captures the subscriber defeats the weak reference and recreates the leak this class exists to prevent.  <see cref="Unsubscribe"/> may be called at any time for deterministic detachment.
+/// </pledge>
+/// <plan>Holds a <see cref="WeakReference{T}"/> to the subscriber plus the two static delegates; <see cref="WeakEventHandler"/> is the method actually subscribed to the event, and on each raise it either resolves the weak reference and forwards, or self-unsubscribes.  No timers, no finalizers — liveness checking costs one weak-reference resolution per event raise.</plan>
+/// </remarks>
 internal class LazyUnsubscribeWeakEventListenerProxy<TTYPETOWEAKEN, TEVENTARG1, TEVENTARG2> where TTYPETOWEAKEN : class
 {
     private readonly WeakReference<TTYPETOWEAKEN> _weakSubscriber;

@@ -10,6 +10,19 @@ namespace AmbientServices;
 /// A basic implementation of <see cref="IAmbientLogger"/> that writes log messages to a rotating set of files.
 /// Turn the logger off for maximum performance.
 /// </summary>
+/// <remarks>
+/// <pitch>Fan-out: register it as the one ambient logger and it forwards every entry to any number of underlying loggers — for example, files for durability <em>and</em> console for visibility — without the log sources knowing there is more than one target.</pitch>
+/// <pledge><see cref="IAmbientLogger"/></pledge>
+/// <pledge><see cref="IAmbientStructuredLogger"/></pledge>
+/// <pledge>
+/// Every simple log entry is forwarded to each registered simple logger and every structured entry to each registered structured logger, synchronously and in registration order; the splitter adds no buffering, filtering, or rendering of its own.  A registered logger that realizes both interfaces is enrolled for both kinds of entries by a single registration and receives each entry exactly once.
+/// Registration and removal are <em>not</em> thread-safe and must complete during application initialization, before concurrent logging begins; logging itself is as thread-safe as the underlying loggers.  A flush completes only after every registered logger has been flushed.
+/// </pledge>
+/// <plan>
+/// Two plain <see cref="List{T}"/>s (simple and structured); each add/remove cross-enrolls the logger in the other list when it realizes the other interface, and each log call is a straight loop over the matching list.  No locking anywhere — the initialization-only registration term of the Pledge is what makes the lock-free read path safe.  Flush awaits each simple logger then each structured logger sequentially, so a dual-interface logger is flushed twice (harmless — the second flush finds nothing left to deliver).
+/// Trade-off profile: per-entry cost is one virtual call per target with zero added allocation; latency and durability are simply those of the slowest/weakest registered logger.
+/// </plan>
+/// </remarks>
 public class AmbientLogSplitter : IAmbientLogger, IAmbientStructuredLogger
 {
     private readonly List<IAmbientLogger> _ambientLoggers = new();

@@ -11,6 +11,10 @@ namespace AmbientServices;
 /// <summary>
 /// An interface that can be used to mock recent CPU usage so that code branches depending on CPU utilization can be tested.
 /// </summary>
+/// <remarks>
+/// <pitch>The test seam for CPU-dependent logic: register an implementation as the ambient service and <see cref="CpuMonitor.RecentUsage"/> reports your scripted value instead of real CPU usage, making load-dependent branches deterministically testable.</pitch>
+/// <pledge><see cref="RecentUsage"/> returns the value to report as the most recent CPU usage, between 0.0 and 1.0; it may be read at any time and from any thread.</pledge>
+/// </remarks>
 public interface IMockCpuUsage
 {
     /// <summary>
@@ -22,6 +26,10 @@ public interface IMockCpuUsage
 /// <summary>
 /// An interface for CPU usage samplers.
 /// </summary>
+/// <remarks>
+/// <pitch>The environment-specific strategy behind <see cref="CpuMonitor"/> — one realization per way of measuring CPU (standard process time, Linux cgroup quotas).</pitch>
+/// <pledge><c>Sample</c> is called periodically to close a measurement window; <c>GetUsage</c> returns the utilization (0.0–1.0) of the last closed window and <c>GetPendingUsage</c> the utilization since the window was closed, both readable at any time.</pledge>
+/// </remarks>
 internal interface ICpuSampler
 {
     void Sample();
@@ -32,6 +40,16 @@ internal interface ICpuSampler
 /// <summary>
 /// A class that monitors process CPU utilization.
 /// </summary>
+/// <remarks>
+/// <pitch>Continuous, low-overhead CPU utilization for this process — a windowed average suitable for throttling decisions and pressure reporting, with container awareness (measured against the cgroup CPU quota on Linux) and an ambient mock hook for testing.</pitch>
+/// <pledge>
+/// <see cref="RecentUsage"/> reports the average utilization (0.0–1.0, across all processors or the container quota) over the last completed sampling window, so it is stable within a window and at least one window stale; <see cref="PendingUsage"/> reports the average since the current window began.  Both are readable from any thread at any time.
+/// When an ambient <see cref="IMockCpuUsage"/> is registered, <see cref="RecentUsage"/> returns its value instead of a measurement.  Disposal stops sampling.
+/// </pledge>
+/// <plan>
+/// An <see cref="AmbientEventTimer"/> fires at the construction-time window size (default 250ms) and tells the sampler to close its window.  The sampler is chosen once at construction: <see cref="LinuxContainerCpuSampler"/> on Linux (reads cgroup v1/v2 usage and quota files so containerized readings reflect the container's actual CPU allowance) and <see cref="StandardCpuSampler"/> elsewhere (compares <see cref="Process.TotalProcessorTime"/> deltas against wall-clock time from <see cref="Stopwatch"/> timestamps, normalized by processor count).  Cost is one sample per window regardless of reader count.
+/// </plan>
+/// </remarks>
 public sealed class CpuMonitor : IDisposable
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP1_0_OR_GREATER
     , IAsyncDisposable
@@ -104,6 +122,10 @@ public sealed class CpuMonitor : IDisposable
 /// A class that represents a single sample of CPU usage.
 /// Two samples can be compared to see how much CPU the process used between the time the first sample was taken and the time the second sample was taken.
 /// </summary>
+/// <remarks>
+/// <pitch>An immutable point-in-time pairing of wall-clock and process-CPU timestamps; utilization is only meaningful as the ratio of the deltas between two samples.</pitch>
+/// <pledge><see cref="CpuUtilization"/> of two samples yields the process's average utilization across all processors over the intervening span, clamped to 0.0–1.0; in environments with no process information (browser), samples degrade to zero CPU time and utilization reports 0.</pledge>
+/// </remarks>
 internal readonly struct CpuSample : IEquatable<CpuSample>
 {
     /// <summary>
@@ -197,6 +219,14 @@ internal readonly struct CpuSample : IEquatable<CpuSample>
     }
 }
 
+/// <summary>
+/// The default <see cref="ICpuSampler"/>, measuring process CPU time against wall-clock time.
+/// </summary>
+/// <remarks>
+/// <pitch>The sampler for ordinary (non-cgroup-limited) environments: accurate process utilization relative to the whole machine's processors.</pitch>
+/// <pledge><see cref="ICpuSampler"/></pledge>
+/// <plan>Keeps the last <see cref="CpuSample"/> and computes utilization as the CPU-time delta over the wall-clock delta (normalized by processor count) — two timestamp reads per sample, no OS counters or files.</plan>
+/// </remarks>
 internal sealed class StandardCpuSampler : ICpuSampler
 {
     private CpuSample _lastSample;
@@ -223,6 +253,18 @@ internal sealed class StandardCpuSampler : ICpuSampler
     }
 }
 
+/// <summary>
+/// An <see cref="ICpuSampler"/> that measures CPU usage against the Linux cgroup CPU quota, so containerized processes see utilization relative to their actual allowance.
+/// </summary>
+/// <remarks>
+/// <pitch>The sampler for Linux containers: a pod limited to half a CPU reads 100% when it uses its whole allowance, instead of the near-zero number machine-relative measurement would report.</pitch>
+/// <pledge><see cref="ICpuSampler"/></pledge>
+/// <pledge>When cgroup usage or quota information is unavailable (no quota set, files missing, or parse failures), usage reports 0 rather than failing — this sampler is only meaningful where a CPU quota is enforced.</pledge>
+/// <plan>
+/// At construction it discovers the cgroup layout once: detects v2 versus v1 (presence of <c>cgroup.controllers</c>), extracts the docker container id from <c>/proc/self/cgroup</c> when present, and probes the standard candidate directories for the usage file (<c>cpu.stat</c> v2 / <c>cpuacct.usage</c> v1) and the quota files (<c>cpu.max</c> v2 / <c>cpu.cfs_quota_us</c>+<c>cpu.cfs_period_us</c> v1).  An optional root-prefix parameter redirects all paths into a mirrored directory tree for tests.
+/// Each sample reads cumulative CPU nanoseconds and computes utilization as the usage delta over (quota-fraction × elapsed <see cref="DateTime.UtcNow"/> time), clamped to 0.0–1.0.  All file reads are per-sample (cheap at the default 250ms window) and failure-swallowing.
+/// </plan>
+/// </remarks>
 internal sealed class LinuxContainerCpuSampler : ICpuSampler
 {
     private static readonly char[] SlashCharacterArray = ['/'];

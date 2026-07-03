@@ -3,6 +3,13 @@
 /// <summary>
 /// An interface that abstracts a set of ambient settings.
 /// </summary>
+/// <remarks>
+/// <pitch>Implement this to expose a configuration source (in-memory values, environment variables, a configuration file or service) as a named set of string-keyed settings that every AmbientServices consumer reads through.  By convention settings affect behavior only in ways callers are not concerned about, so sources can be swapped or layered without changing the outputs callers depend on.</pitch>
+/// <pledge>
+/// Every setting value has a raw string form; its typed form is that raw value converted by the conversion registered in <see cref="SettingsRegistry"/> for the key, or the raw string itself when no conversion is registered — the raw and typed getters must describe the same underlying value.  Null means "not set": a set never stores a null value, and a null return tells the consumer to fall back to another set or to the setting's declared default.
+/// A set advertises whether it accepts changes; attempting to change a setting on an immutable set is an invalid call.  A change reports whether the stored value actually changed (writing an identical value reports false), and changing a setting to null removes it.  The set's name identifies the provenance of values it supplies.  Reads and writes may arrive concurrently from any thread.
+/// </pledge>
+/// </remarks>
 public interface IAmbientSettingsSet
 {
     /// <summary>

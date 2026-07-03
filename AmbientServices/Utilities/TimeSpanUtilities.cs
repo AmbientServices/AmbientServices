@@ -6,6 +6,11 @@ namespace AmbientServices.Utilities;
 /// <summary>
 /// A static class that contains utility functions for <see cref="System.TimeSpan"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Precise conversion between the library's three time representations — <see cref="TimeSpan"/> ticks, <see cref="Stopwatch"/> ticks, and UTC <see cref="DateTime"/> ticks — used wherever stopwatch timestamps must be reported as wall-clock times or durations.</pitch>
+/// <pledge>Tick-rate conversions are exact whenever the integer math fits in a <see cref="long"/> and lose at most double-precision rounding otherwise.  Stopwatch-to-DateTime conversions are anchored to a baseline pair captured once at type initialization, so they are internally consistent and immune to later wall-clock adjustments, but they extrapolate from that baseline rather than re-reading the system clock.</pledge>
+/// <plan>The static initializer reduces the <see cref="TimeSpan"/> and <see cref="Stopwatch.Frequency"/> tick rates by their GCD to get the smallest multiplier/divisor pair (maximizing the overflow-free range), precomputes double ratios as the fallback, and captures a (stopwatch timestamp, <see cref="DateTime.UtcNow"/>) baseline behind a memory barrier; conversions use checked integer multiply/divide and fall back to double multiplication on <see cref="OverflowException"/>.</plan>
+/// </remarks>
 internal static class TimeSpanUtilities
 {
     internal static readonly long TimeSpanToStopwatchMultiplier;

@@ -40,6 +40,11 @@ public enum StatusRatingRange
 /// a value of 1.5 indicates that the system is okay, but halfway towards alerting (for example, a lack of redundancy, or nearing the alert threshold for disk space available).
 /// When comparing status ratings, keep in mind that <see cref="StatusRating.Pending"/> has the value <see cref="float.NaN"/>, which will not compare to any other value.
 /// If you need to check for pending statuses, either add <see cref="float.IsNaN(float)"/> logic or use the opposite logic and a not.
+/// <pitch>The shared vocabulary of the status system: a single continuous rating scale, its named range boundaries, and the helpers that map any raw rating to a range, name, symbol, and display color — so every checker, aggregator, and renderer means the same thing by "failing".</pitch>
+/// <pledge>
+/// Ratings form one continuous <see cref="float"/> scale where numerically less is worse.  The integer constants are range <em>boundaries</em>: a rating exactly equal to a boundary has just barely crossed from the next better range into the worse one (so exactly <see cref="Fail"/> counts as failing, exactly <see cref="Alert"/> as alerting).  Fractional position within a range expresses how far conditions have degraded toward the next boundary, and values below <see cref="Catastrophic"/> or above <see cref="Superlative"/> are legal but classify into the bottom and top ranges respectively.
+/// <see cref="Pending"/> is <see cref="float.NaN"/>, which compares false against everything (including itself); <see cref="FindRange"/> is the safe classifier because it handles that case explicitly.  Range-keyed helpers accept the <see cref="StatusRatingRange"/> returned by <see cref="FindRange"/> and are pure lookups with no side effects.
+/// </pledge>
 /// </remarks>
 public static class StatusRating
 {

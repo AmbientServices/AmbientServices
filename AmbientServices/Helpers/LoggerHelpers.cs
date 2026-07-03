@@ -37,6 +37,10 @@ public delegate object LogEntryRenderer(DateTime utcNow, AmbientLogLevel level, 
 /// <summary>
 /// An interface that can be implemented by <see cref="Exception"/> classes that provides exception-specific information that should be added to log entries for the errors related to that exception.
 /// </summary>
+/// <remarks>
+/// <pitch>Implement this on a custom exception to get its domain-specific details (identifiers, codes, retry hints) automatically folded into every structured log entry that logs the exception — no changes needed at any log site.</pitch>
+/// <pledge>The exposed key-value pairs are merged into the structured error data whenever the exception is logged through the standard error-augmentation path, after the standard exception fields, so a pair whose key collides with a standard field overrides it.  The property must be safely readable at logging time (no side effects, no throwing).</pledge>
+/// </remarks>
 public interface IExceptionLogInformation
 {
     /// <summary>
@@ -58,6 +62,18 @@ public interface IExceptionLogInformation
 /// <code>Logger.Filtered()?.Log(string.Join(",", MessageListToLog()), new { List = StructuredListToLog() });</code>
 /// In this scenario, MessageListToLog() and StructuredListToLog() will not be called at all when the logging is being filtered because the Filtered() function will return null, and the compiler automatically builds code that conditionally bypasses the construction of the parameters for Log() because of that null.
 /// </summary>
+/// <remarks>
+/// <pitch>The front door for logging: a per-type facade that decides <em>whether</em> an entry should be logged before any log data is built (via the null-conditional <c>Filter(...)?.Log(...)</c> idiom, which skips even the construction of the log data when filtered), then renders and routes the entry to the ambient simple and structured loggers.  Use this — not <see cref="IAmbientLogger"/> directly — in application and library code.</pitch>
+/// <pledge>
+/// Filtering happens first and is settings-driven (by level, owner type, and category, with block patterns taking precedence over allow patterns): a filter check returns a logging handle only when the entry will actually be logged and at least one logger is available, so any work done to produce log data for that handle is never wasted.
+/// A single entry is delivered to the structured logger (rendered by the entry renderer: standard fields, then <see cref="AmbientLogContext"/> pairs, then the caller's data, with sensitive fields masked) and to the simple logger (rendered by the message renderer into a timestamped, type-prefixed line) — but when the same instance serves as both the simple and the structured logger, it receives the entry exactly once, via its structured side.
+/// A logger constructed from just an owner type follows the ambient local logger services dynamically, so per-context overrides take effect call by call; a logger constructed with explicit logger instances is pinned to them.  Error logging augments the caller's data with the standard exception fields (type, message, stack trace, inner exceptions, and any <see cref="IExceptionLogInformation"/> pairs).
+/// </pledge>
+/// <plan>
+/// Built on <see cref="AmbientService{T}"/> accessors for <see cref="IAmbientLogger"/>/<see cref="IAmbientStructuredLogger"/>, an internal settings-driven filter (<c>AmbientLogFilter</c>, five ambient settings per filter name), <see cref="AmbientLogContext"/> for per-async-context fields, and <see cref="AmbientLogSensitiveFieldFilters"/> for masking.  Structured data is converted by reflecting over public instance properties (dictionaries pass through directly) and serialized with System.Text.Json using custom IPAddress/IPEndPoint converters; serialization failures degrade gracefully through a hand-built fallback that emits per-property values with error annotations rather than throwing, with recursion and depth guards.
+/// Trade-off profile: the reflection-and-JSON rendering cost is paid only by entries that survive the filter; the filter check itself is a few live setting reads and regex matches.  Renderers are pluggable per instance for callers that need a different wire format.
+/// </plan>
+/// </remarks>
 public class AmbientLogger
 {
     private static readonly IAmbientSetting<string> _MessageFormatString = AmbientSettings.GetAmbientSetting(nameof(AmbientLogger) + "-Format", "A format string for log messages with arguments as follows: 0: the DateTime of the event, 1: The AmbientLogLevel, 2: The logger owner type name, 3: The category, 4: the log message.", s => s, "{0:yyMMdd HHmmss.fff} [{1}:{2}]{3}{4}");
@@ -622,6 +638,11 @@ public class AmbientLogger
 /// A class that allows construction of a log entry after already determining that the log entry should not be filtered.
 /// Instances of this class are returned by <see cref="AmbientLogger"/> only when filtering for the specified type, category, and level is not in place.
 /// </summary>
+/// <remarks>
+/// <pitch>The post-filter handle: holding one means the filtering decision is already made in your favor, so anything you log through it will actually be delivered — which is what makes building expensive log data behind <c>Filter(...)?.</c> safe from waste.</pitch>
+/// <pledge>Instances are only obtainable from a filter check that passed; logging through one performs no further filtering and delivers immediately with the level and category the handle was created with.  The exception-taking overload augments the structured data with the standard exception fields first.  The handle captures the filter decision, not a snapshot of settings — it is meant to be used immediately, not stored.</pledge>
+/// <plan>A three-field wrapper (owning <see cref="AmbientLogger"/>, level, pre-rendered category prefix) whose log calls forward directly to the owner's post-filter delivery path.  It allocates nothing beyond itself.</plan>
+/// </remarks>
 public class AmbientFilteredLogger
 {
     private readonly AmbientLogger _logger;
@@ -669,6 +690,11 @@ public class AmbientFilteredLogger
 /// Log filtering is generally done centrally, so it does not need to be abstracted or ambient and should be done by using settings or by calling into the logger service directly.
 /// </summary>
 /// <typeparam name="TOWNER">The type that owns the log messages.</typeparam>
+/// <remarks>
+/// <pitch>The usual way to declare a logger: a generic convenience over <see cref="AmbientLogger"/> that takes the owner type as a type parameter, so a class declares one static logger field and every entry is automatically attributed to (and filterable by) that type.</pitch>
+/// <pledge>Identical to <see cref="AmbientLogger"/> constructed with <c>typeof(TOWNER)</c>; it adds no behavior of its own.</pledge>
+/// <plan>A constructor-only subclass forwarding <c>typeof(TOWNER)</c> to the base.</plan>
+/// </remarks>
 public class AmbientLogger<TOWNER> : AmbientLogger
 {
     /// <summary>
@@ -689,6 +715,14 @@ public class AmbientLogger<TOWNER> : AmbientLogger
     {
     }
 }
+/// <summary>
+/// A settings-driven filter that decides which log entries should be dropped.
+/// </summary>
+/// <remarks>
+/// <pitch>The central knob for controlling log volume at runtime: level, owner-type, and category filtering configured entirely through ambient settings, so verbosity can change without touching log sites.</pitch>
+/// <pledge>An entry is blocked when its level is more verbose than the configured maximum, when its owner type or category matches a block pattern, or when an allow pattern is configured and not matched — block always wins over allow, and a null pattern means "no constraint" (allow all / block none).  Checks read the live setting values, so configuration changes apply to subsequent checks without restart.</pledge>
+/// <plan>Five <see cref="IAmbientSetting{T}"/>-backed values per filter name (<c>{name}-AmbientLogFilter-LogLevel/TypeAllow/TypeBlock/CategoryAllow/CategoryBlock</c>), with the patterns parsed as compiled <see cref="Regex"/>es by the settings conversion; each check is a level comparison plus up to four regex matches.  A shared <c>Default</c> instance serves loggers that don't supply their own settings set.</plan>
+/// </remarks>
 internal class AmbientLogFilter
 {
     /// <summary>

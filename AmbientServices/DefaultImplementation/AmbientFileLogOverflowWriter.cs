@@ -9,6 +9,19 @@ namespace AmbientServices;
 /// (same folder convention as <see cref="AmbientFileLogger"/>).
 /// Uses a single long-lived <see cref="StreamWriter"/> per instance to avoid recursion through ambient loggers and per-line open/close cost.
 /// </summary>
+/// <remarks>
+/// <pitch>The default place overflowed log lines land: an append-only file under local application data, so a logging burst that overruns the in-memory buffers leaves a durable trace instead of vanishing.</pitch>
+/// <pledge><see cref="IAmbientLogOverflowWriter"/></pledge>
+/// <pledge><see cref="IDisposable"/></pledge>
+/// <pledge>
+/// All lines from one instance are appended to a single fixed file — the path given at construction, or the default overflow path (executable name plus an overflow suffix, in the same folder <see cref="AmbientFileLogger"/> uses).  Existing file content is preserved across instances and process restarts.
+/// Flushing (or disposing) closes the open writer so the file can be read externally; a later write transparently reopens it.
+/// </pledge>
+/// <plan>
+/// A single lazily-created <see cref="StreamWriter"/> (UTF-8, auto-flush) over a <see cref="FileStream"/> opened with <see cref="FileMode.Append"/> and <see cref="FileShare.ReadWrite"/>, guarded by a private lock; the directory is created on demand.  Every write and close swallows all exceptions, honoring the never-throw term of the overflow-writer Pledge — deliberately writing directly to the file rather than through any ambient logger to avoid recursion.
+/// Trade-off profile: durable and simple at the cost of a lock and a synchronous write per line; acceptable because overflow is an exceptional condition, not the hot logging path.
+/// </plan>
+/// </remarks>
 [DefaultAmbientService(typeof(IAmbientLogOverflowWriter))]
 public sealed class AmbientFileLogOverflowWriter : IAmbientLogOverflowWriter, IDisposable
 {

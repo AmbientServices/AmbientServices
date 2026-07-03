@@ -6,6 +6,13 @@ namespace AmbientServices;
 /// <summary>
 /// An interface that callers implement to receive bottleneck exit notifications.
 /// </summary>
+/// <remarks>
+/// <pitch>The push side of bottleneck detection: implement this to receive every bottleneck access as it completes and accumulate it however you like.  Surveyors that build an <see cref="IAmbientBottleneckSurvey"/> are the canonical implementers.</pitch>
+/// <pledge>
+/// <see cref="BottleneckExited"/> is called once per access, after the access has ended, with the <see cref="AmbientBottleneckAccessor"/> carrying the bottleneck identity, the access time range, and the final usage and utilization numbers — everything needed to attribute and rank the access without retaining any per-access state.
+/// Calls may arrive concurrently from any call context or thread; implementations must be thread-safe unless the registration source guarantees single-context delivery.
+/// </pledge>
+/// </remarks>
 public interface IAmbientBottleneckExitNotificationSink
 {
     /// <summary>
@@ -17,6 +24,14 @@ public interface IAmbientBottleneckExitNotificationSink
 /// <summary>
 /// An interface that callers implement to receive bottleneck entry notifications.
 /// </summary>
+/// <remarks>
+/// <pitch>The optional companion to <see cref="IAmbientBottleneckExitNotificationSink"/> for sinks that need to see accesses as they begin (for example to track in-progress accesses in a time-windowed survey) rather than only after they finish.</pitch>
+/// <pledge>
+/// <see cref="BottleneckEntered"/> is called once per access, when the access begins; the delivered <see cref="AmbientBottleneckAccessor"/> is still in progress, so its end time, usage, and utilization are not yet final and will change as the access proceeds.
+/// There is no separate registration for this interface: the detector notifies entries only to registered exit sinks that also implement this interface.
+/// Calls may arrive concurrently from any call context or thread; implementations must be thread-safe.
+/// </pledge>
+/// </remarks>
 public interface IAmbientBottleneckEnterNotificationSink
 {
     /// <summary>
@@ -31,6 +46,14 @@ public interface IAmbientBottleneckEnterNotificationSink
 /// <remarks>
 /// Each time a bottleneck is used, the caller informs this interface, telling it when the bottleneck is entered and exited, as well as how much usage has occurred.
 /// A survey that ranks the bottlenecks by how close to (or how much over) their limits they are may then be accessed.
+/// <pitch>
+/// Cheap, always-on measurement of how close the system is to maxing out — saturation of known scalability limits (API rate limits, connection pools, disk queues, etc.) can be seen even before load testing.  Callers bracket each use of a potentially-limiting resource; surveyors turn those accesses into a ranked "which limit will we hit first" report.
+/// It measures only what callers explicitly bracket, and only against limits the caller declares — it does not discover bottlenecks on its own.
+/// </pitch>
+/// <pledge>
+/// <see cref="EnterBottleneck"/> begins an access to the specified bottleneck and returns the accessor whose disposal ends it; accesses may overlap freely within and across call contexts, and each access's usage is attributed per the owning <see cref="AmbientBottleneck"/>'s automatic-versus-manual accounting.
+/// Registered <see cref="IAmbientBottleneckExitNotificationSink"/> instances are notified once per access when it ends; a registered sink that also implements <see cref="IAmbientBottleneckEnterNotificationSink"/> is additionally notified when each access begins.  The detector itself accumulates nothing — all aggregation and ranking happens in the sinks.
+/// </pledge>
 /// </remarks>
 public interface IAmbientBottleneckDetector
 {
@@ -77,8 +100,19 @@ public enum AmbientBottleneckUtilizationAlgorithm
 /// A class that tracks a single access to a bottleneck.
 /// </summary>
 /// <remarks>
-/// The access may or may not be in-progress.  
+/// The access may or may not be in-progress.
 /// The access counts the same whether the operation being performed succeeds or not because the contention will be the same either way.
+/// <pitch>The record of usage against one bottleneck — a single access (dispose it to end the access) or an aggregate of many — carrying the usage numbers and the computed <see cref="Utilization"/> by which surveys rank bottlenecks.</pitch>
+/// <pledge>
+/// For a bottleneck marked <see cref="AmbientBottleneck.Automatic"/>, usage accrues as elapsed stopwatch time and is finalized on disposal, and <see cref="SetUsage"/>/<see cref="AddUsage"/> throw; for a manual bottleneck the caller reports usage through those methods instead, and anything unreported records no usage.
+/// <see cref="Utilization"/> is recomputed only at construction, on each usage report, and at disposal; instances sort by utilization, then by limit used, then by access count, so ordering reflects proximity to the limit rather than raw usage.
+/// Property reads and usage updates are thread-safe; disposal ends the access exactly once and notifies the owning detector, which fans the completed access out to its exit sinks.
+/// </pledge>
+/// <plan>
+/// Mutable state (end timestamp, access count, limit used, utilization) lives in fields updated with <see cref="System.Threading.Interlocked"/> (plus <see cref="AmbientServices.Utilities.InterlockedUtilities"/> optimistic adds for the double); an end timestamp of <see cref="long.MaxValue"/> marks an in-progress access, in which case duration is measured against <see cref="AmbientClock.Ticks"/> on read.
+/// Utilization derives from the bottleneck's <see cref="AmbientBottleneckUtilizationAlgorithm"/>: Linear compares the rate of limit usage over the access duration against the declared limit per limit-period; ExponentialLimitApproach maps the same rate through an asymptotic curve that never exceeds one, for bottlenecks with no known hard limit.
+/// The internal <c>Split</c>/<c>Combine</c> operations exist for windowed surveys: Split clips an access at a window boundary (charging each window only the usage that occurred within it, using window-start snapshots for manual usage) and Combine merges same-bottleneck records by unioning time ranges, summing usage, and recomputing utilization over the merged span.
+/// </plan>
 /// </remarks>
 public sealed class AmbientBottleneckAccessor : IComparable<AmbientBottleneckAccessor>, IDisposable
 {

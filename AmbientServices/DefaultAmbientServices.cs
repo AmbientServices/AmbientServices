@@ -14,9 +14,14 @@ namespace AmbientServices;
 /// An attribute to identify classes implementing an ambient service default implementation.
 /// </summary>
 /// <remarks>
+/// <pitch>The zero-registration way to supply the fallback implementation for a service interface: mark the class and every consumer of the interface picks it up automatically, even when the marked assembly loads after the first use of the service.</pitch>
+/// <pledge>
+/// Applying the attribute to a class with a parameterless constructor registers that class as the default implementation of each interface it directly implements (or only the interfaces listed in the attribute, when given), in every assembly that references AmbientServices.  First registration per interface wins; later-discovered candidates for an already-claimed interface are ignored.  Discovery is passive — registration does not construct the class; construction happens lazily on first request and the same instance is shared thereafter.
+/// A default is only a fallback: an explicit assignment to <see cref="AmbientService{T}.Global"/> always takes precedence, and suppression hides the default entirely.
+/// </pledge>
 /// When applied to a class with a public empty constructor in any assembly, causes each interface implemented by that class to be registered as the default ambient service implementation, unless one already exists.
 /// If another implementation has already been registered, the new one will be ignored.
-/// The class instance implementing the service implementation will be constructed the first time it is requested.  
+/// The class instance implementing the service implementation will be constructed the first time it is requested.
 /// In some rare situations where multiple threads attempt the initialization simultaneously, the constructor may be called more than once.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class)]
@@ -57,6 +62,11 @@ public sealed class DefaultAmbientServiceAttribute : Attribute
 /// <summary>
 /// An internal static class that collects default ambient service implementations in every currently and subsequently loaded assembly.
 /// </summary>
+/// <remarks>
+/// <pitch>The discovery registry behind <see cref="DefaultAmbientServiceAttribute"/>: the one place that answers "which type is the default implementation of this interface?"</pitch>
+/// <pledge><see cref="TryFind"/> maps an interface type to its default implementation type or null, is thread-safe, and reflects assemblies loaded at any time before the call; it throws if handed a non-interface type.  Registration is first-wins per interface and never replaces an existing entry.</pledge>
+/// <plan>A static <see cref="ConcurrentDictionary{TKey, TValue}"/> from interface type to implementation type, seeded by scanning every already-loaded assembly and kept current by an <see cref="AppDomain.AssemblyLoad"/> hook installed exactly once by the static constructor.  Scanning is pruned to assemblies that reference this assembly (others cannot carry the attribute) and tolerates partially loadable assemblies via <c>GetLoadableTypes</c>, so a single bad type cannot poison discovery.  Entries are added with <c>TryAdd</c>, making the first-wins rule atomic under concurrent loads.</plan>
+/// </remarks>
 internal static class DefaultAmbientServices
 {
     private static readonly Assembly _ThisAssembly;

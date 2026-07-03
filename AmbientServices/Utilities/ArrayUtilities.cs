@@ -5,6 +5,11 @@ namespace AmbientServices.Utilities;
 /// <summary>
 /// A static class that adds utilities for <see cref="System.Array"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>The comparison engine behind <see cref="AmbientServices.Extensions.ArrayExtensions"/>: deep value equality for arbitrary <see cref="Array"/> instances, including multidimensional and jagged arrays.</pitch>
+/// <pledge>Arrays are equal only when they agree in rank and in length in every dimension and every corresponding pair of elements is equal; elements that are themselves arrays are compared by value recursively rather than by reference.  Two null arrays are equal; a null and a non-null array are not.</pledge>
+/// <plan>Multidimensional arrays are walked without recursion by mapping a single linear offset to a per-dimension cursor using precomputed dimension sizes; only nested (jagged) element arrays recurse.</plan>
+/// </remarks>
 internal static class ArrayUtilities
 {
     /// <summary>

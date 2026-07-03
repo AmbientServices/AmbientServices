@@ -9,6 +9,16 @@ namespace AmbientServices;
 /// <summary>
 /// A class used to rate and organize a tree of <see cref="StatusResults"/> such that single results are pushed up to parents, children are sorted by rating, and overall ratings for each node are assigned based on the nature of the system represented by each node.
 /// </summary>
+/// <remarks>
+/// <pitch>The summarization engine behind <see cref="StatusResults.GetSummaryAlerts"/>: it merges one or more results trees (possibly from many servers) into a single rated, sorted tree ready for rendering, without touching the immutable inputs.</pitch>
+/// <pledge>
+/// Merging honors the <see cref="StatusResults"/> naming rules: nodes are placed by target, results with matching target, source, and nature merge into one node, and a leading-slash target re-roots the node as a child of the root so shared systems reported by many sources combine.  Property values merge into per-name min/max ranges using natural (numeric-aware) comparison.
+/// <see cref="ComputeOverallRatingAndSort"/> assigns each node a rating according to its <see cref="StatusNatureOfSystem"/>: heterogeneous nodes take their worst child; homogeneous nodes average their children when all fall in the same rating range and otherwise land in the <see cref="StatusRating.Alert"/> range, positioned by how badly the children rate; irrelevant-children nodes are always okay; leaves keep their assigned rating.  Numeric property ranges are rated against thresholds and can only worsen a node's rating, never improve it.  Afterward, an only child is collapsed into its parent and siblings are sorted worst-first; unrated nodes count as okay for sorting, and pending ratings propagate a pending flag up the tree.
+/// </pledge>
+/// <plan>
+/// A recursive mutable tree built by walking each added <see cref="StatusResults"/>, keyed on (target, source, nature) for merge matching, accumulating <see cref="StatusPropertyRange"/>s per property name.  Rating is a single post-order pass; property thresholds come from the supplied <see cref="IStatusThresholdsRegistry"/> or the attribute-declared defaults in <see cref="StatusPropertyThresholds.DefaultPropertyThresholds"/>, keyed by the dotted target path.  When a threshold rating is worse than the node's own, the node's report is replaced with one carrying the worst property alert.  Homogeneous averaging clamps child ratings to [<see cref="StatusRating.Catastrophic"/>, <see cref="StatusRating.Okay"/>] so mixed-range farms map into the alert band proportionally.
+/// </plan>
+/// </remarks>
 internal class StatusResultsOrganizer
 {
     private readonly IStatusThresholdsRegistry? _thresholds;
@@ -434,6 +444,13 @@ internal class StatusResultsOrganizer
     }
 }
 
+/// <summary>
+/// A class that accumulates equivalent alerts from multiple sources for the same target so they can be reported as a single line.
+/// </summary>
+/// <remarks>
+/// <pitch>Collapses "the same problem on N servers" into one notification entry: sources are collected while times, audit durations, and ratings are merged into ranges and averages.</pitch>
+/// <pledge>Only results that <see cref="CanBeAggregated"/> — same rendered target and an equivalent alert (see <see cref="StatusAuditAlert"/> equality) — may be aggregated; violating that throws.  A missing report is treated as an okay-rated no-alert report at the results' time.</pledge>
+/// </remarks>
 internal class AggregatedAlert
 {
     private static string RenderSource(string? source) { return source ?? Status.DefaultSource; }

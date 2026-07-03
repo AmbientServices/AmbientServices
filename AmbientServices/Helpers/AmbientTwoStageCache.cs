@@ -8,6 +8,21 @@ namespace AmbientServices;
 /// <summary>
 /// A class that provides caching using the local cache, falling back to the shared cache if not found, and storing/deleting from both.
 /// </summary>
+/// <remarks>
+/// <pitch>Two-tier caching in one call: reads prefer the fast in-process tier while stores and removals are applied to both the local and shared tiers, so repeated nearby lookups stay cheap and other servers can still see the value.  Only serializable values belong here, since everything is also written to the shared tier.</pitch>
+/// <pledge>
+/// Stores and removals are applied to the local tier and then the shared tier; the two writes are not transactional, so a failure partway can leave the tiers different.
+/// Retrieval prefers the local tier and consults the shared tier when no local cache is in effect.
+/// All keys are prefixed with the owner type's name (or the supplied prefix) before reaching either tier.
+/// When neither tier's service exists, every operation quietly succeeds without caching.
+/// Clearing clears both underlying caches in their entirety, not merely this owner's entries.
+/// </pledge>
+/// <plan>
+/// A stateless composition over two <see cref="AmbientService{T}"/> accessors (local and shared) with optional explicit overrides captured at construction; operations resolve each tier per call, prefix the key, and forward sequentially — local then shared — with no cross-tier coordination, retry, or rollback.
+/// Local stores pass dispose-on-discard as false because anything cached here must also survive serialization to the shared tier.
+/// Cost and durability per tier are exactly those of the underlying caches.
+/// </plan>
+/// </remarks>
 public class AmbientTwoStageCache
 {
     private static readonly AmbientService<IAmbientLocalCache> _LocalCache = Ambient.GetService<IAmbientLocalCache>();
@@ -112,6 +127,11 @@ public class AmbientTwoStageCache
 /// A generic type-specific two-stage cache owner class.  The name of the type is prepended to each cache key.
 /// </summary>
 /// <typeparam name="TOWNER">The type that owns the log messages.</typeparam>
+/// <remarks>
+/// <pitch>The usual way to declare a two-stage cache: the owner is a type parameter, so the key prefix is derived at compile time and each class gets its own key namespace from a single static field.</pitch>
+/// <pledge><see cref="AmbientTwoStageCache"/></pledge>
+/// <plan>Passes <c>typeof(TOWNER)</c> to the base class; adds no behavior of its own.</plan>
+/// </remarks>
 public class AmbientTwoStageCache<TOWNER> : AmbientTwoStageCache
 {
     /// <summary>

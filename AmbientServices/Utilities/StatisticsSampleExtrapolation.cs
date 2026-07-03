@@ -6,6 +6,14 @@ namespace AmbientServices;
 /// <summary>
 /// A class that contains extension methods for various statistics interfaces that add functions to aggregate statistic samples.
 /// </summary>
+/// <remarks>
+/// <pitch>The client-side realization of <see cref="MissingSampleHandling"/>: fills the null gaps in a sample series the way the statistic's declaration says they should be filled (skip, zero, or linear/exponential/logarithmic estimation) before charting or aggregation.</pitch>
+/// <pledge>
+/// Skip drops null samples (shortening the series); every other mode returns exactly one output sample per input sample, in order.  Estimation modes interpolate interior gaps between their surrounding non-null samples and extrapolate leading and trailing gaps from the nearest two non-null samples; a series with a single non-null sample repeats that value throughout, and an all-null series is returned all-null.
+/// Enumeration is lazy and single-pass, but output can trail input by an arbitrary number of samples, since a gap cannot be filled until the non-null sample that closes it arrives.
+/// </pledge>
+/// <plan>Implemented as a streaming state machine over the input enumeration that buffers only gap counts and the last two non-null samples — never the series itself — and delegates the three gap positions (leading, interior, trailing) to a per-mode extrapolator: linear works in value space; exponential and logarithmic apply the same linear interpolation in log space and exponent space respectively, so exponential estimation follows growth curves and logarithmic follows saturation curves.</plan>
+/// </remarks>
 public static class MissingSampleHandlingExtensions
 {
     private interface IMissingSampleExtrapolator

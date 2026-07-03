@@ -9,6 +9,10 @@ namespace AmbientServices.Extensions;
 /// <summary>
 /// A static class with extension functions for <see cref="System.Reflection.Assembly"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Reflection over assemblies that don't fully load: enumerate whatever types <em>are</em> loadable without the whole enumeration throwing, and test whether one assembly references another.</pitch>
+/// <pledge><see cref="GetLoadableTypes"/> never propagates <see cref="ReflectionTypeLoadException"/>; when some types fail to load it returns the successfully-loaded subset (possibly empty) rather than failing.  The reference checks treat an assembly as referring to itself and compare referenced assemblies by full name; only the direct reference list is consulted.</pledge>
+/// </remarks>
 public static class AssemblyExtensions
 {
     /// <summary>

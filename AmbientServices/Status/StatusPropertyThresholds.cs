@@ -26,6 +26,16 @@ public enum StatusThresholdNature
 /// Thresholds only apply to <see cref="StatusProperty"/>s whose values are numeric, and those property values must be converted to <see cref="float"/> before they can be compared to the threshold values.
 /// The static <see cref="DefaultPropertyThresholds"/> property provides access to the thresholds for all currently-loaded status checkers and auditors.
 /// </summary>
+/// <remarks>
+/// <pitch>Turns a measured number (free disk space, queue depth, latency) into a <see cref="StatusRating"/>: three optional boundary values divide the scale into fail/alert/okay/superlative, so checkers report raw property values and let thresholds decide how alarming they are.</pitch>
+/// <pledge>
+/// The three thresholds must be monotonic; their ordering determines whether low or high values are good (the explicit nature parameter only breaks ties when fewer than two thresholds make the direction ambiguous).  A value exactly equal to a threshold counts as the worse of the two adjoining states, matching the <see cref="StatusRating"/> boundary convention.  Missing thresholds simply remove the corresponding transition.
+/// <see cref="Rate(string,float,float)"/> is pure: it returns a <see cref="StatusAuditAlert"/> whose rating is positioned continuously within the matched range according to how far the value has progressed toward the next-worse threshold, whose code is derived from the property name, and whose messages state the value and the range boundaries in SI notation.  When rating a min/max range, the worse end of the range is judged.  Instances are immutable.
+/// </pledge>
+/// <plan>
+/// Rating is a threshold ladder walked in the good-to-bad direction indicated by the nature, with linear interpolation between the bounding thresholds supplying the fractional "seriousness" subtracted from the range's <see cref="StatusRating"/> boundary.  The process-wide default registry is a <see cref="ConcurrentDictionary{TKey,TValue}"/> keyed by upper-cased property path, populated by scanning every loaded (and later-loaded, via <see cref="AppDomain.AssemblyLoad"/>) assembly that directly references this one for <see cref="DefaultPropertyThresholdsAttribute"/>s on testable checker classes.
+/// </plan>
+/// </remarks>
 public class StatusPropertyThresholds
 {
     private static ConcurrentDictionary<string, StatusPropertyThresholds> _thresholds = InitializeThresholds();
@@ -252,6 +262,13 @@ internal class DefaultStatusThresholds : IStatusThresholdsRegistry
 /// <summary>
 /// An attribute class that identifies the default property thresholds for a status test.
 /// </summary>
+/// <remarks>
+/// <pitch>The declarative way for a checker or auditor to ship sensible default thresholds with its code: decorate the class once per property and the status system rates that property automatically, without any configuration at the deployment site.</pitch>
+/// <pledge>
+/// Attributes on testable checker classes are gathered into <see cref="StatusPropertyThresholds.DefaultPropertyThresholds"/> when their assembly loads; the property path is matched case-insensitively against the dotted target path computed during summarization.  Because attribute parameters cannot be nullable, <see cref="float.NaN"/> stands for "no such threshold".
+/// The <see cref="DeferToType"/> form composes: it imports the thresholds declared on another type, prefixing each with this attribute's property path — letting a checker that embeds another checker's subtree reuse its threshold declarations.
+/// </pledge>
+/// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class DefaultPropertyThresholdsAttribute : Attribute
 {
@@ -315,6 +332,10 @@ public sealed class DefaultPropertyThresholdsAttribute : Attribute
 /// <summary>
 /// An interface that abstracts the querying of thresholds used to rate system statuses.
 /// </summary>
+/// <remarks>
+/// <pitch>The seam for overriding how property values are rated: supply your own registry to summarization to replace the attribute-declared defaults with, say, deployment-specific thresholds from configuration.</pitch>
+/// <pledge>A pure lookup from a dotted target-system property path to its <see cref="StatusPropertyThresholds"/>; returns null when no thresholds apply to the path, in which case the property is not rated against thresholds.  Implementations must be safe to query concurrently during summarization.</pledge>
+/// </remarks>
 public interface IStatusThresholdsRegistry
 {
     /// <summary>

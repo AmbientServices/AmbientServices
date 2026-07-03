@@ -81,6 +81,19 @@ public sealed class StatusProperty
 /// <summary>
 /// An immutable class that holds a snapshot of a status results tree (whether from an audit or not), with all the information needed to compute the overall status for a particular system, subsystem, or group of systems.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// The interchange format of the status system: an immutable tree of source/target-labeled nodes carrying properties, child results, and audit reports.  Everything a checker produces, a farm forwards, or a summary consumes is one of these — and because it is a self-contained snapshot, results from many servers can be merged and summarized long after and far away from where they were measured.
+/// </pitch>
+/// <pledge>
+/// A node carries either children or a <see cref="Report"/>, never both: reported (leaf) nodes are the rated facts, and inner nodes exist to group them, with <see cref="NatureOfSystem"/> declaring how a summarizer should combine their children's ratings.  Instances and the whole tree are immutable and safe to share across threads.
+/// Naming rules make cross-server merging work: a <see cref="TargetSystem"/> without a leading slash names a subsystem of the parent node, while a leading slash marks a shared system that summarization re-roots as top-level so reports about it from every source combine; target names for the same backend must match exactly regardless of which server reported them, and the nearest non-null <see cref="SourceSystem"/> in the tree identifies the reporter.  Property names beginning with an underscore carry sensitive values that must not be shared publicly.
+/// <see cref="GetSummaryAlerts"/> computes a summary alert over the tree — worst-first, aggregating equivalent alerts, ignoring nodes rated better than the given cutoff — without mutating the tree, and may be called repeatedly.
+/// </pledge>
+/// <plan>
+/// Properties and children are stored in <see cref="ImmutableArray{T}"/>s captured at construction.  <see cref="GetSummaryAlerts"/> delegates the heavy lifting: a <see cref="StatusResultsOrganizer"/> merges and re-roots the tree by target, applies property thresholds, computes per-node ratings per <see cref="NatureOfSystem"/>, and sorts children worst-first; a <see cref="StatusNotificationWriter"/> then renders the organized tree into paired terse and HTML notifications, grouping by rating range and flushing runs of equivalent alerts as single aggregated lines.  The returned alert's rating is the organizer's overall rating; its code is empty because it summarizes many conditions.
+/// </plan>
+/// </remarks>
 public sealed class StatusResults
 {
 #if RAWRATINGS

@@ -8,6 +8,16 @@ namespace AmbientServices;
 /// <summary>
 /// A class that provides caching using either a specified cache or the ambient shared cache (<see cref="IAmbientSharedCache"/>).
 /// </summary>
+/// <remarks>
+/// <pitch>The front door library code uses for shared caching of serializable values: it namespaces every key with an owner prefix so unrelated classes never collide, and it degrades to a no-op when no shared cache service is available, so callers need no null checks and no registration just to run.</pitch>
+/// <pledge>
+/// Every operation delegates to the explicit cache supplied at construction or, when none was, to whatever <see cref="IAmbientSharedCache"/> is currently in effect (re-resolved on every call, so registration changes and local overrides take effect immediately).
+/// When neither exists the call quietly succeeds without caching: retrieval reports not-found and stores are discarded.
+/// All keys are prefixed with the owner type's name (or the supplied prefix) before reaching the underlying cache, so distinct owners occupy distinct key namespaces.
+/// Clearing clears the entire underlying cache, not merely this owner's entries.
+/// </pledge>
+/// <plan>A stateless pass-through: it holds only the optional explicit cache and the computed key prefix, resolves the ambient service through a static <see cref="AmbientService{T}"/> accessor on each call, concatenates the prefix, and forwards.  All caching behavior, cost, and durability are those of the underlying <see cref="IAmbientSharedCache"/>.</plan>
+/// </remarks>
 public class AmbientSharedCache
 {
     private static readonly AmbientService<IAmbientSharedCache> _Cache = Ambient.GetService<IAmbientSharedCache>();
@@ -99,6 +109,11 @@ public class AmbientSharedCache
 /// A generic type-specific shared cache owner class.  The name of the type is prepended to each cache key.
 /// </summary>
 /// <typeparam name="TOWNER">The type that owns the log messages.</typeparam>
+/// <remarks>
+/// <pitch>The usual way to declare a shared cache: the owner is a type parameter, so the key prefix is derived at compile time and each class gets its own key namespace from a single static field.</pitch>
+/// <pledge><see cref="AmbientSharedCache"/></pledge>
+/// <plan>Passes <c>typeof(TOWNER)</c> to the base class; adds no behavior of its own.</plan>
+/// </remarks>
 public class AmbientSharedCache<TOWNER> : AmbientSharedCache
 {
     /// <summary>

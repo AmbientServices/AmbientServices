@@ -13,6 +13,20 @@ namespace AmbientServices;
 /// Derived classes do not have to be immutable, but they must be threadsafe.
 /// StatusTestNode is disposable because derived classes often contain things like mutexes and timers that require disposal.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// The base unit of the status system: derive from this to report the health of one target system when the status is passively known or cheap to compute on demand.
+/// When the status must be actively and periodically tested, derive from <see cref="StatusAuditor"/> instead, which layers self-tuning background scheduling on top of this contract.
+/// </pitch>
+/// <pledge>
+/// A checker is permanently bound to the single target system named at construction: results recorded through <see cref="SetLatestResults"/> must carry that same target or the call throws.  Recording publishes the new results as <see cref="LatestResults"/> and moves the previous results into <see cref="History"/>, which is bounded both by age and by entry count (ambient settings); before the first recording, <see cref="LatestResults"/> reports a pending placeholder rather than null.
+/// <see cref="GetStatus"/> may be called from multiple threads simultaneously, must never throw (failures are converted into meaningful results), and should record what it returns via <see cref="SetLatestResults"/>; the base implementation simply returns <see cref="LatestResults"/>, so checkers whose status rarely changes may compute results once and reuse them.
+/// The owning <see cref="Status"/> drives the shutdown lifecycle in phases across all checkers — <see cref="BeginStop"/>, then <see cref="FinishStop"/>, then <see cref="IDisposable.Dispose"/> — and <see cref="Applicable"/> tells it whether this checker belongs in the machine's status at all.  Derived classes must be thread-safe.
+/// </pledge>
+/// <plan>
+/// The latest results are held by interlocked exchange inside a private tracker, so publishing is lock-free and readers always see a complete <see cref="StatusResults"/> instance.  History is a <see cref="System.Collections.Concurrent.ConcurrentQueue{T}"/> truncated on every publish by the StatusChecker-HistoryRetentionMinutes and StatusChecker-HistoryRetentionEntries ambient settings, using <see cref="AmbientClock.UtcNow"/> for age comparisons; a benign race can occasionally trim one extra entry.  The base class owns no timers or unmanaged state — disposal machinery exists for derived classes.
+/// </plan>
+/// </remarks>
 public abstract class StatusChecker : IDisposable
 {
     private readonly StatusResultsTracker _resultsTracker;

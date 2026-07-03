@@ -3,6 +3,17 @@ using System.Threading;
 
 namespace AmbientServices;
 
+/// <summary>
+/// A basic default implementation of <see cref="IAmbientProgressService"/> that tracks a stack of progress scopes for each execution context.
+/// </summary>
+/// <remarks>
+/// <pitch>The zero-configuration, in-process progress service used unless overridden.  Progress state lives entirely in memory and is observed by whoever polls the trackers; nothing is displayed, logged, or persisted.</pitch>
+/// <pledge><see cref="IAmbientProgressService"/></pledge>
+/// <pledge>Out-of-order disposal of part scopes is detected rather than silently tolerated: the service makes a best-effort repair of the scope stack and then throws <see cref="InvalidOperationException"/> to surface the misuse.</pledge>
+/// <plan>
+/// Holds the innermost <see cref="AmbientServices.Progress"/> for each execution context in an <see cref="AsyncLocal{T}"/>; the first read — or a read that finds the top tracker already disposed — lazily creates a fresh top-level tracker covering the whole zero-to-one range.  Starting a part pushes a child tracker onto the context and disposing it pops it; when the popped tracker is not the innermost one, the parent chains of both candidates are walked to distinguish a late pop (an ancestor was already popped, so nothing remains to do) from an early pop (the intermediate trackers are popped through), after which the corruption exception is thrown.  No locking is used anywhere — the stack is per-execution-context by construction.
+/// </plan>
+/// </remarks>
 [DefaultAmbientService]
 internal class BasicAmbientProgress : IAmbientProgressService
 {
@@ -85,6 +96,17 @@ internal class BasicAmbientProgress : IAmbientProgressService
     }
 }
 
+/// <summary>
+/// The <see cref="IAmbientProgress"/> realization used by <see cref="BasicAmbientProgress"/>: one node in the per-execution-context stack of progress scopes.
+/// </summary>
+/// <remarks>
+/// <pitch>Tracks one part of an operation — its portion complete, the item being processed, and its cancellation — propagating scaled progress up to its parent.</pitch>
+/// <pledge><see cref="IAmbientProgress"/></pledge>
+/// <pledge>Also <see cref="IDisposable"/>: disposal reports the part complete (1.0) to the parent — swallowing any pending cancellation exception, since disposal must succeed — and pops the part from the context's scope stack.</pledge>
+/// <plan>
+/// Stores the parent, the start portion and portion span it occupies within the parent, and an item-name prefix, all fixed at construction.  <see cref="Update"/> validates the portion, stores it and the current item with <see cref="Interlocked"/> exchanges for cross-thread visibility, polls for cancellation, and recursively updates the parent with the scaled portion and prefixed item.  Cancellation uses an <see cref="AmbientCancellationTokenSource"/> — created fresh per scope by default, shared with the parent's when inheritance is requested — and <see cref="ResetCancellation(TimeSpan)"/> swaps in a replacement source.  A <see cref="Disposed"/> flag lets <see cref="BasicAmbientProgress"/> recover when a disposed tracker is found at the top of a context's stack.
+/// </plan>
+/// </remarks>
 internal class Progress : IAmbientProgress, IDisposable
 {
     private readonly BasicAmbientProgress _tracker;

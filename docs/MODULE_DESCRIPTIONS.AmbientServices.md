@@ -24,6 +24,10 @@ All three live in the type's XML-doc `<remarks>`, using **custom elements** name
 - **Shared Pledge, different Pitches.** `AmbientFileLogger` and `AmbientTraceLogger` (the `[DefaultAmbientService]`) both realize `IAmbientLogger`, obeying the identical Pledge, yet sell opposite trade-off profiles: `AmbientFileLogger` pitches durable, rotating on-disk logs that survive a restart, while `AmbientTraceLogger` pitches higher-performance debug/trace output that is effectively discarded unless a debugger is attached. Each Pitch is the caller-facing distillation of that realization's Plan trade-offs — durability versus speed.
 - **Multiple Pledges.** `IAmbientLogger` defines the line-logging Pledge and `IAmbientStructuredLogger` defines the structured-data Pledge. A realization links each interface it implements as its own `<pledge>` element. `AmbientTraceLogger` links both (`<see cref="IAmbientLogger"/>` and `<see cref="IAmbientStructuredLogger"/>`) and adds nothing further. `AmbientFileLogger` links both, plus `IDisposable`, and additionally pledges realization-specific behavior — a file path/prefix, a configurable rotation period with daily suffix rollover at midnight UTC, and timed auto-flush — stated in an extension `<pledge>` alongside the `<see cref>` links.
 
+## Drift ledger
+
+Drift that is flagged but not reconciled in the same change is recorded in `docs/DRIFT.md`, categorized by which side is likely wrong (code, prose, or undecided). Reconciling an item is a fix-category change agreed in prose first; the entry is removed in the same change.
+
 ## AI-oriented notes
 
 Candidate units where a sidecar `*.ai.md` is likely worth the maintenance: `BasicAmbientAtomicCache` (optimistic-concurrency retries, parallel versioned/unversioned storage, and the linked timeout/cancellation budget), `AmbientFileLogger` (file rotation and retention via `RotatingFileBuffer`), and `BasicAmbientServiceProfiler` (scope-change accounting across the notification sinks).

@@ -5,6 +5,13 @@ namespace AmbientServices.Extensions;
 /// <summary>
 /// A static class that extends <see cref="System.TimeSpan"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Human-oriented duration handling: parse strings like &quot;30s&quot;, &quot;5 minutes&quot;, or &quot;1:30:00&quot; into a <see cref="TimeSpan"/>, and render a <see cref="TimeSpan"/> as a short (&quot;90m&quot;) or long (&quot;90 minutes&quot;) approximate string.</pitch>
+/// <pledge>
+/// Parsing accepts standard colon-delimited <see cref="TimeSpan"/> syntax, or a number followed by an optional unit (years, months, days, hours, minutes, seconds, or milliseconds, spelled out or abbreviated, case-insensitive except that lowercase &quot;m&quot; means minutes while uppercase &quot;M&quot; means months); a bare number is interpreted as ticks, and unparseable input returns null rather than throwing.  Years and months convert using calendar-average lengths (365.25 and 30.4375 days).
+/// Rendering is lossy by design: it picks a single unit large enough for the value to read comfortably, keeps at most one decimal digit (and only for values under ten), pluralizes the long form, uses the invariant culture, and prefixes negative durations with a minus sign.  Round-tripping through these strings is approximate, not exact.
+/// </pledge>
+/// </remarks>
 public static class TimeSpanExtensions
 {
     private static readonly char[] Alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();

@@ -8,6 +8,11 @@ namespace AmbientServices;
 /// <summary>
 /// An <see cref="IPressurePoint"/> implementation that measures local CPU pressure.
 /// </summary>
+/// <remarks>
+/// <pitch>Feeds this process's CPU utilization into the pressure system, so background work throttles when the CPU is busy.</pitch>
+/// <pledge><see cref="IPressurePoint"/></pledge>
+/// <plan>Each poll takes a fresh <see cref="CpuSample"/>, swaps it for the previous one via <see cref="Interlocked.Exchange(ref object, object)"/>, and reports the process utilization between the two plus a small constant (0.02) to stand in for the rest of the system; the reading is also published as an ambient "CPU Pressure" statistic when available.  In a browser it reports the construction-time neutral value (default 0.89) since no process information exists.  The measurement window is therefore whatever interval the monitor polls at.</plan>
+/// </remarks>
 public sealed class CpuPressurePoint : IPressurePoint
 {
     private const double FixedFloatingPointAdjustment = 100_000_000;
@@ -69,6 +74,11 @@ public sealed class CpuPressurePoint : IPressurePoint
 /// <summary>
 /// A <see cref="IPressurePoint"/> implementation that measures local thread pool pressure.
 /// </summary>
+/// <remarks>
+/// <pitch>Feeds thread starvation signals into the pressure system: worker and completion-port saturation, process thread count, pending thread pool work, and thread-creation rate, whichever is worst.</pitch>
+/// <pledge><see cref="IPressurePoint"/></pledge>
+/// <plan>Each poll computes several sub-pressures — in-use worker and completion-port threads relative to <see cref="ThreadPool"/> maximums, process thread count and total pool threads relative to construction-time caps, and (on .NET Core targets) pending work items and newly-created threads relative to caps — publishes each as its own ambient statistic when available, and reports the maximum.  All inputs are point-in-time reads of <see cref="ThreadPool"/>/<see cref="Process"/> counters, so a poll costs a handful of API calls and no sampling state beyond the previous thread count.</plan>
+/// </remarks>
 #if NET5_0_OR_GREATER
 [UnsupportedOSPlatform("browser")]
 #endif
@@ -187,6 +197,11 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
 /// because significant memory is always in use even when nothing is happening,
 /// so this pressure point uses a skewed scale to better represent the pressure.
 /// </summary>
+/// <remarks>
+/// <pitch>Feeds memory headroom into the pressure system, on a skewed scale that stays near zero through the memory usage every healthy process has and climbs steeply as the system approaches exhaustion.</pitch>
+/// <pledge><see cref="IPressurePoint"/></pledge>
+/// <plan>On .NET Core targets, each poll takes the worse of two linear measures — <c>GC.GetGCMemoryInfo</c> memory load and the process working set — relative to total physical memory less a reserved headroom (10%, clamped between 25MB and 4GB), publishing sub-readings as ambient statistics when available; on older targets it uses <see cref="GC.GetTotalMemory(bool)"/> against a construction-time byte cap.  The linear proportion is then mapped through a piecewise-linear interpolation of a hand-tuned logistic-like table (49% linear ≈ 9% pressure, 89% linear ≈ 64% pressure) so throttling engages only when memory is genuinely scarce.</plan>
+/// </remarks>
 #if NET5_0_OR_GREATER
 [UnsupportedOSPlatform("browser")]
 #endif

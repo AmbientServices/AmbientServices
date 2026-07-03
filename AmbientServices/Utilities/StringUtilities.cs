@@ -7,6 +7,11 @@ namespace AmbientServices.Utilities;
 /// <summary>
 /// A static partial class that extends <see cref="string"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>The normalization engine behind natural string comparison in <see cref="AmbientServices.Extensions.StringExtensions"/>: rewrites a string so that a plain ordinal comparison of the results orders embedded numbers numerically.</pitch>
+/// <pledge>Given the same <c>maxDigits</c> (at least the longest digit run in either input), ordinal comparison of two normalized strings yields the natural ordering of the originals; non-numeric characters pass through unchanged.</pledge>
+/// <plan>A single compiled regex classifies each numeric token — period- or dash-separated sequences (versions, dates; treated as runs of positive whole numbers), then negative and positive reals and integers.  Every number is zero-padded to the common width and prefixed with a sign marker chosen so negatives order before positives (&quot;1&quot; versus &quot;4&quot;), negative digits are nines-complemented so larger-magnitude negatives order earlier, and fractional parts are right-padded so reals compare positionally.</plan>
+/// </remarks>
 internal static partial class StringUtilities
 {
     private static readonly char[] DecimalPointCharArray = ".,".ToCharArray();

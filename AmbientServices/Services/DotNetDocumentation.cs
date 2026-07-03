@@ -40,6 +40,18 @@ public static class DocumentationMemberType
 /// <summary>
 /// A class that manages access to a .NET XML documentation file.
 /// </summary>
+/// <remarks>
+/// <pitch>Runtime access to the XML documentation the compiler wrote for an assembly: hand it a <see cref="Type"/>, method, property, or field and get back the summary/remarks/parameter prose — useful for generating API documentation or self-describing endpoints.  It reads only; it does not write or reconstruct documentation files.</pitch>
+/// <pledge>
+/// <see cref="Load(Assembly)"/> never fails for a missing or absent documentation file — it returns an object whose queries simply find nothing — and repeated loads for the same assembly return a shared cached instance.
+/// The Get*Documentation methods return null (rather than throwing) whenever the member has no documentation entry, letting callers treat undocumented members uniformly; returned records are immutable snapshots.
+/// The <see cref="ProxyTypeAttribute"/>, <see cref="IncludeTypeInDocumentationAttribute"/>, and <see cref="ExcludeInDocumentationAttribute"/> attributes let documented code steer consumers of this class (substituting serializer proxy types, forcing inclusion, or hiding members).
+/// </pledge>
+/// <plan>
+/// Locates the documentation file by convention beside the assembly (same base name, <c>.xml</c> extension), parses it once into an <see cref="XPathDocument"/>, and serves every query as an XPath lookup against the ECMA member-ID scheme (<c>T:</c>/<c>M:</c>/<c>P:</c>/<c>F:</c> names, with <c>``n</c> generic arity and <c>{...}</c> parameter encodings built by <c>BuildDisambiguatingParameterList</c>).  Instances are cached per documentation-file path in a lock-guarded static dictionary; racing loaders may both parse but converge on one cached entry.
+/// The whole document stays in memory for the life of the process — a trade of memory for query speed appropriate to its documentation-generation use, not for bulk reflection over many large assemblies.
+/// </plan>
+/// </remarks>
 public class DotNetDocumentation
 {
     private static readonly Dictionary<string, DotNetDocumentation> sDocumentations = new();

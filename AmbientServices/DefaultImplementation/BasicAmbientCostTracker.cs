@@ -7,6 +7,14 @@ using System.Threading.Tasks;
 
 namespace AmbientServices;
 
+/// <summary>
+/// A basic default implementation of <see cref="IAmbientCostTracker"/> that broadcasts every cost report to registered sinks.
+/// </summary>
+/// <remarks>
+/// <pitch>The zero-configuration, in-process cost tracker used unless overridden.  Each report costs only a sink fan-out, so it is cheap enough to leave on in production.</pitch>
+/// <pledge><see cref="IAmbientCostTracker"/></pledge>
+/// <plan>Entirely stateless except for the sink set (a <see cref="ConcurrentHashSet{T}"/>, so registration is idempotent and fan-out is lock-free); charge and ongoing-cost reports are synchronously forwarded verbatim to every registered <see cref="IAmbientCostTrackerNotificationSink"/>.  No accumulation happens here — collectors do that from the broadcast reports.</plan>
+/// </remarks>
 [DefaultAmbientService]
 internal class BasicAmbientCostTracker : IAmbientCostTracker
 {
@@ -67,6 +75,12 @@ internal class BasicAmbientCostTracker : IAmbientCostTracker
 /// <summary>
 /// A class that tracks service profile statistics across multiple call contexts in a process or a single time window.
 /// </summary>
+/// <remarks>
+/// <pitch>The all-contexts cost accumulator: hook it to a cost tracker and it totals every charge and ongoing-cost change reported anywhere in the process until tracking is closed — used directly for process-lifetime totals and as the per-window collector inside <see cref="TimeWindowCostTracker"/>.</pitch>
+/// <pledge><see cref="IAmbientAccruedChargesAndCostChanges"/></pledge>
+/// <pledge><see cref="IAmbientCostTrackerNotificationSink"/></pledge>
+/// <plan>Registers with the <see cref="IAmbientCostTracker"/> at construction and deregisters on disposal (or on the internal close used at window rotation).  Totals and counts are maintained with <see cref="Interlocked"/> adds; per-service and per-customer breakdowns accumulate in <see cref="ConcurrentDictionary{TKey,TValue}"/>s of <see cref="ChargeAccumulator"/>/<see cref="CostAccumulator"/> (currently internal-only — not exposed through the reporting interface).</plan>
+/// </remarks>
 internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedChargesAndCostChanges, IAmbientCostTrackerNotificationSink, IDisposable
 {
     private readonly IAmbientCostTracker _profiler;
@@ -167,6 +181,14 @@ internal class ProcessOrSingleTimeWindowCostTracker : IAmbientAccruedChargesAndC
     }
 }
 
+/// <summary>
+/// A class that fans cost notifications out to the sinks registered within one call context.
+/// </summary>
+/// <remarks>
+/// <pitch>The fan-out node for one call context's cost stream: call-context cost trackers register here rather than with the process-wide tracker, so their view is limited to their own context's reports.</pitch>
+/// <pledge><see cref="IAmbientCostTrackerNotificationSink"/></pledge>
+/// <plan>A <see cref="ConcurrentHashSet{T}"/> of sinks with synchronous fan-out; idempotent registration.</plan>
+/// </remarks>
 internal class ScopeOnChargesAccruedDistributor : IAmbientCostTrackerNotificationSink
 {
     private readonly ConcurrentHashSet<IAmbientCostTrackerNotificationSink> _notificationSinks = new();
@@ -209,6 +231,12 @@ internal class ScopeOnChargesAccruedDistributor : IAmbientCostTrackerNotificatio
 /// <summary>
 /// A class that tracks service profile statistics for a specific call context.
 /// </summary>
+/// <remarks>
+/// <pitch>The per-request cost accumulator: totals the charges and ongoing-cost changes reported within one call context (for example, one web request) between construction and disposal.</pitch>
+/// <pledge><see cref="IAmbientAccruedChargesAndCostChanges"/></pledge>
+/// <pledge><see cref="IAmbientCostTrackerNotificationSink"/></pledge>
+/// <plan>Registers with its call context's <see cref="ScopeOnChargesAccruedDistributor"/> at construction and deregisters on disposal.  Totals and counts are maintained with <see cref="Interlocked"/> adds; per-service and per-customer breakdown dictionaries exist but are internal-only and not exposed through the reporting interface.</plan>
+/// </remarks>
 internal class CallContextCostTracker : IAmbientAccruedChargesAndCostChanges, IAmbientCostTrackerNotificationSink, IDisposable
 {
     private readonly ScopeOnChargesAccruedDistributor _distributor;
@@ -311,6 +339,11 @@ internal class CallContextCostTracker : IAmbientAccruedChargesAndCostChanges, IA
 /// <summary>
 /// A class that tracks service profile statistics for a moving time window.
 /// </summary>
+/// <remarks>
+/// <pitch>Periodic cost reporting: every window of the configured size yields a finished <see cref="IAmbientAccruedChargesAndCostChanges"/> totaling exactly that window's reports, delivered to a callback.</pitch>
+/// <pledge>Each report is delivered once, after its window closes; costs reported near a boundary land in whichever window's collector was current when the report arrived.  Disposal stops the rotation.</pledge>
+/// <plan>An <see cref="AmbientEventTimer"/> rotates a <see cref="ProcessOrSingleTimeWindowCostTracker"/> atomically (via <see cref="Interlocked.Exchange{T}(ref T, T)"/>) at each boundary, closes the old collector's tracking, and hands it to the completion delegate; window scope names embed the UTC window identifier and size from <see cref="WindowScope"/>.</plan>
+/// </remarks>
 internal class TimeWindowCostTracker : IDisposable
 {
     private readonly string _scopeNamePrefix;
@@ -390,6 +423,10 @@ internal class TimeWindowCostTracker : IDisposable
 /// <summary>
 /// A class that accumulates charges for some scope.
 /// </summary>
+/// <remarks>
+/// <pitch>A tiny thread-safe accumulator pairing a charge count with a running charge total, for per-service and per-customer breakdowns.</pitch>
+/// <pledge>Construction records the first charge; <see cref="AddCharge"/> atomically bumps the count and adds to the total, and concurrent additions never lose each other's effects.</pledge>
+/// </remarks>
 public class ChargeAccumulator
 {
     private long _chargeCount;      // interlocked
@@ -423,6 +460,10 @@ public class ChargeAccumulator
 /// <summary>
 /// A class that accumulates cost for some scope.
 /// </summary>
+/// <remarks>
+/// <pitch>A tiny thread-safe accumulator pairing a change count with a running total of ongoing-cost-rate changes, for per-service and per-customer breakdowns.</pitch>
+/// <pledge>Construction records the first change; <see cref="AddCostChange"/> atomically bumps the count and adds the (possibly negative) rate change to the total, and concurrent additions never lose each other's effects.</pledge>
+/// </remarks>
 public class CostAccumulator
 {
     private long _chargeCount;                  // interlocked

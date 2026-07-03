@@ -10,6 +10,13 @@ namespace AmbientServices;
 /// <summary>
 /// An interface that abstracts an external pressure point.
 /// </summary>
+/// <remarks>
+/// <pitch>Implement this to contribute one measured source of load — CPU, thread pool, memory, a database, a throttled dependency — to the system-wide pressure number that background processing throttles against.</pitch>
+/// <pledge>
+/// <see cref="Pressure"/> returns the current load as a proportion between 0.0 (idle) and 1.0 (saturated), comparable across unrelated resources so a monitor can simply take the maximum.  It is polled periodically from a timer thread and may be read concurrently, so it must be thread-safe and cheap; each read should reflect load at (or near) the moment of the call.
+/// <see cref="Name"/> is stable and unique among registered pressure points — it is the registration key.
+/// </pledge>
+/// </remarks>
 public interface IPressurePoint
 {
     /// <summary>
@@ -24,6 +31,11 @@ public interface IPressurePoint
 /// <summary>
 /// A static class that manages registrations of <see cref="IPressurePoint"/> instances for internal pressures.
 /// </summary>
+/// <remarks>
+/// <pitch>The process-wide registry for pressure points measuring this process's own resources (CPU, threads, memory), feeding <see cref="PressureMonitor.InternalPressure"/>.</pitch>
+/// <pledge>Registration is first-in-wins by <see cref="IPressurePoint.Name"/> and permanent — there is no deregistration, so registered points must remain valid for the process lifetime.  Registration and enumeration are thread-safe.</pledge>
+/// <plan>A static <see cref="ConcurrentDictionary{TKey,TValue}"/> keyed by pressure point name.</plan>
+/// </remarks>
 public static class InternalPressurePoints
 {
     private static readonly ConcurrentDictionary<string, IPressurePoint> _PressurePoints = new();
@@ -47,6 +59,11 @@ public static class InternalPressurePoints
 /// <summary>
 /// A static class that manages registrations of <see cref="IPressurePoint"/> instances for external pressures.
 /// </summary>
+/// <remarks>
+/// <pitch>The process-wide registry for pressure points measuring systems outside this process (databases, throttled dependencies), feeding <see cref="PressureMonitor.ExternalPressure"/>.</pitch>
+/// <pledge>Registration is first-in-wins by <see cref="IPressurePoint.Name"/> and permanent — there is no deregistration, so registered points must remain valid for the process lifetime.  Registration and enumeration are thread-safe.</pledge>
+/// <plan>A static <see cref="ConcurrentDictionary{TKey,TValue}"/> keyed by pressure point name.</plan>
+/// </remarks>
 public static class ExternalPressurePoints
 {
     private static readonly ConcurrentDictionary<string, IPressurePoint> _PressurePoints = new();
@@ -70,6 +87,17 @@ public static class ExternalPressurePoints
 /// <summary>
 /// A static class that monitors and reports on system pressure so that background processing can be adjusted accordingly to prevent the system from getting overwhelmed and to prevent background processing from interfering with interactive processing.
 /// </summary>
+/// <remarks>
+/// <pitch>One cheap number answering "how loaded is this system right now?" so background work can throttle itself before it overwhelms the process or crowds out interactive work.  A shared <see cref="Default"/> instance makes adoption a one-liner.</pitch>
+/// <pledge>
+/// <see cref="InternalPressure"/>, <see cref="ExternalPressure"/>, and <see cref="OverallPressure"/> each report the highest pressure among the corresponding registered pressure points (overall being the highest of everything, clipped to 1.0), refreshed periodically at the construction-time frequency rather than on read — so reads are effectively free but may lag reality by up to one period, and pressure points registered later are picked up automatically at the next refresh.
+/// Reads are thread-safe from any context; disposal stops refreshing.
+/// </pledge>
+/// <plan>
+/// An <see cref="AmbientCallbackTimer"/> (default one second) polls every <see cref="IPressurePoint"/> in <see cref="InternalPressurePoints"/> and <see cref="ExternalPressurePoints"/>, taking the maximum of each group; results are stored in fields via <see cref="Interlocked.Exchange(ref float, float)"/> and simultaneously published as three ambient statistics (units "p", raw range 0–1) when an <see cref="IAmbientStatistics"/> is available.
+/// Max-of-pressures (rather than sum or average) is the deliberate trade-off: one saturated resource is enough to warrant throttling, and it keeps unrelated pressure scales comparable without weighting.  Because sampling is timer-driven, cost is proportional to the number of pressure points and the refresh frequency, not to the number of readers.
+/// </plan>
+/// </remarks>
 public class PressureMonitor : IDisposable
 {
     private static readonly AmbientService<IAmbientStatistics> AmbientStatistics = Ambient.GetService<IAmbientStatistics>();

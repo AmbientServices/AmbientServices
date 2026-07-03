@@ -7,6 +7,10 @@ namespace AmbientServices.Extensions;
 /// <summary>
 /// A static class that extends <see cref="System.Exception"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Log-friendly exception rendering: a compact exception string with irrelevant stack frames and machine-specific file paths stripped out, and a terse type name for use in keys and structured log fields.</pitch>
+/// <pledge>The filtered string renders the innermost exception first, each as a bracketed type name and message followed by its filtered stack trace (the filtering rules are <see cref="FilteredStackTrace"/>'s), formatted with the invariant culture.  <see cref="TypeName"/> is the exception's type name with a single trailing &quot;Exception&quot; suffix removed, compared ordinally.</pledge>
+/// </remarks>
 public static class ExceptionExtensions
 {
     /// <summary>

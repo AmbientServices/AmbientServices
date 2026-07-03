@@ -19,6 +19,15 @@ namespace AmbientServices;
 /// Switch to this logger for better performance, but less persistent log data.
 /// Turn the logger off for maximum performance.
 /// </summary>
+/// <remarks>
+/// <pitch>Asynchronous logging to standard output — the natural choice for containers and CLI tools where the console stream <em>is</em> the log pipeline.  Faster on the logging path than the file logger; persistence is whatever is capturing stdout (nothing, if nothing is).</pitch>
+/// <pledge><see cref="IAmbientLogger"/></pledge>
+/// <pledge><see cref="IAmbientStructuredLogger"/></pledge>
+/// <plan>
+/// A stateless singleton (<see cref="Instance"/>, private constructor) that forwards every line to the process-wide <see cref="ConsoleBuffer"/>, which buffers and writes batches to <see cref="Console"/> from a background thread so logging callers never block on console I/O.  Structured data is flattened to a summary-plus-JSON line via <see cref="AmbientLogger.ConvertStructuredDataIntoSimpleMessage(object, string)"/> before buffering.
+/// Trade-off profile: same buffering machinery and speed as <see cref="AmbientTraceLogger"/>, but delivered to stdout instead of the debug/trace listeners.
+/// </plan>
+/// </remarks>
 public class AmbientConsoleLogger : IAmbientLogger, IAmbientStructuredLogger
 {
     /// <summary>
@@ -74,6 +83,17 @@ public class AmbientConsoleLogger : IAmbientLogger, IAmbientStructuredLogger
 /// <summary>
 /// A class to buffer debug console messages and display them asynchronously.
 /// </summary>
+/// <remarks>
+/// <pitch>The process-wide asynchronous buffer between logging callers and <see cref="Console"/>: buffering a line is a cheap enqueue, and a single background thread does the actual console writes.</pitch>
+/// <pledge>
+/// Buffering never blocks on console I/O and may be called concurrently from any thread; buffered lines are written to the console in enqueue order by a single writer.  A flush returns only after every line enqueued before it has been handed to the console.
+/// When the in-memory buffer is at capacity, additional lines spill to the ambient <see cref="IAmbientLogOverflowWriter"/> instead of growing the queue.
+/// </pledge>
+/// <plan>
+/// A static <see cref="ConcurrentQueue{T}"/> drained by one dedicated below-normal-priority background thread that batches up to ten lines per <see cref="Console.Write(string)"/> call and sleeps on a <see cref="SemaphoreSlim"/> when idle.  Flush works by enqueueing a GUID sentinel string and waiting on a second semaphore that the drainer releases when it dequeues the sentinel; during an explicit flush the drainer thread's priority is temporarily boosted.  Overflow beyond the buffer cap is delegated to <see cref="AmbientLogBufferLimits"/>.
+/// Structurally a sibling of <see cref="TraceBuffer"/> with <see cref="Console"/> substituted for <see cref="System.Diagnostics.Trace"/>; the trade-off profile is identical.
+/// </plan>
+/// </remarks>
 #if NET5_0_OR_GREATER
 [UnsupportedOSPlatform("browser")]
 #endif

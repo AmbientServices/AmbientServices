@@ -6,6 +6,11 @@ namespace AmbientServices.Extensions;
 /// <summary>
 /// A static class that contains extensions for <see cref="Task"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Bridges <see cref="CancellationToken"/> into task composition: get a task that completes when the token is cancelled, so cancellation can race arbitrary work in <see cref="Task.WhenAny(Task[])"/>-style combinators.</pitch>
+/// <pledge>The returned task never completes successfully and never faults — it transitions to canceled when (and only when) the token is cancelled, so a token that is never cancelled yields a task that never completes.  The cancellation callback runs without capturing a synchronization context.</pledge>
+/// <plan>A <see cref="TaskCompletionSource{TResult}"/> canceled from a token registration; the registration lives as long as the token, so repeatedly converting a long-lived token accumulates registrations.</plan>
+/// </remarks>
 public static class TaskExtensions
 {
     /// <summary>

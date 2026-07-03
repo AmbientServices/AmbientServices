@@ -3,6 +3,12 @@ using System.Collections.Immutable;
 
 namespace AmbientServices.Utilities;
 
+/// <summary>
+/// A static class that contains utilities for <see cref="ImmutableArray{T}"/>.
+/// </summary>
+/// <remarks>
+/// <pitch>Builds an <see cref="ImmutableArray{T}"/> from any <see cref="IEnumerable{T}"/> uniformly across target frameworks whose immutable-collections surface lacks a convenient conversion.</pitch>
+/// </remarks>
 internal static class ImmutableArrayUtilities
 {
     /// <summary>

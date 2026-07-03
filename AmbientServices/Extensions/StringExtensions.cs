@@ -8,6 +8,16 @@ namespace AmbientServices.Extensions;
 /// <summary>
 /// A static partial class that extends <see cref="string"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Natural string comparison (&quot;a99b&quot; before &quot;a100b&quot;) for sorting user-visible names that embed numbers, plus small shims that give older target frameworks the newer <see cref="string"/> overloads with explicit ordinal semantics.</pitch>
+/// <pledge>
+/// Natural comparison orders embedded numeric sequences by numeric value rather than character order: comma-grouped digits are treated as a single number, floating-point and negative numbers are supported, and sequences of numbers separated by single dashes or periods (dates, versions) are treated as runs of separate positive numbers.  Null and empty strings sort first and equal to each other.
+/// Every comparison in the class is invariant-culture or ordinal — no member's result is affected by the thread's current culture.
+/// </pledge>
+/// <plan>
+/// Natural comparison is regex normalization followed by a single ordinary compare: both strings are rewritten by <see cref="AmbientServices.Utilities.StringUtilities"/> so that every numeric token is zero-padded to the longest digit run present in either string and prefixed with a sign marker that makes negatives order before positives, then the normalized strings are compared once using the invariant culture.  The token-finding regexes are compiled and shared.  The framework-conditional members simply forward to whichever ordinal overload the target framework provides.
+/// </plan>
+/// </remarks>
 public static partial class StringExtensions
 {
     private static readonly System.Text.RegularExpressions.Regex DigitSequenceRegex = new(@"\d+", System.Text.RegularExpressions.RegexOptions.Compiled);

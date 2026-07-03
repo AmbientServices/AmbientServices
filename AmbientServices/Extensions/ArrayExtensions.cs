@@ -6,6 +6,10 @@ namespace AmbientServices.Extensions;
 /// <summary>
 /// A static class that extends <see cref="System.Array"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Value semantics for arrays: compare two arrays by their contents and hash an array by its contents, for use in equality implementations or as dictionary keys where reference identity is the wrong notion of sameness.</pitch>
+/// <pledge>Equality is deep: element order is significant, and elements that are themselves arrays are compared by value recursively (so jagged arrays compare by content).  The hash code mixes each element's own hash with its position, so arrays with the same elements in a different order generally hash differently; hash agreement with <see cref="ValueEquals{TYPE}(TYPE[], TYPE[])"/> holds only when the element type's own <see cref="object.GetHashCode"/> is value-based.</pledge>
+/// </remarks>
 public static class ArrayExtensions
 {
     /// <summary>

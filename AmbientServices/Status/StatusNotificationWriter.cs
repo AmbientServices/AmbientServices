@@ -8,6 +8,16 @@ namespace AmbientServices;
 /// <summary>
 /// A class that manages writing status notifications.
 /// </summary>
+/// <remarks>
+/// <pitch>Renders an organized status tree into two notifications at once: a terse plain-text form fit for SMS and a detailed HTML form fit for email or web, kept in lockstep so both describe the same state.</pitch>
+/// <pledge>
+/// Callers drive it as a strictly-nested protocol: optionally enter html/body, then enter a status range, then optionally enter targets (which may nest), writing aggregated alerts inside; every enter must be matched by the corresponding leave, and out-of-order calls throw <see cref="InvalidOperationException"/>.  Status ranges may not nest — the current range must be left before another is entered.
+/// <see cref="Terse"/> and <see cref="Details"/> may be read at any point and reflect everything written so far.  The notification time is stamped into the first status range header only.  Instances are single-use, forward-only builders and are not thread-safe.
+/// </pledge>
+/// <plan>
+/// Two <see cref="StringBuilder"/>s built in parallel: the terse form uses indentation and the <see cref="StatusRating"/> range symbols; the HTML form uses header tags scaled by nesting depth (h1–h4, then div), indented div blocks, range-keyed CSS classes, and colors interpolated from the rating via <see cref="StatusRating.GetRatingRgbForegroundColor"/>.  A single tab-level counter is both the indentation state and the nesting validator.
+/// </plan>
+/// </remarks>
 internal class StatusNotificationWriter
 {
 #if RAWRATINGS

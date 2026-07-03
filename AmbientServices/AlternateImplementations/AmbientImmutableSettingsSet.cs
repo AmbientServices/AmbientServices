@@ -6,6 +6,12 @@ namespace AmbientServices;
 /// <summary>
 /// A settings set implementation that contains settings that are assigned at construction and cannot be changed.
 /// </summary>
+/// <remarks>
+/// <pitch>A frozen snapshot of settings fixed at construction — the cheapest possible reads and complete predictability, at the cost of no updates ever.  Well suited as a lower layer under <see cref="AmbientSettingsLayers"/> or for tests that need guaranteed-stable configuration.</pitch>
+/// <pledge><see cref="IAmbientSettingsSet"/></pledge>
+/// <pledge>Values never change after construction; the set reports itself immutable and any attempt to change a setting throws <see cref="InvalidOperationException"/>.</pledge>
+/// <plan>Plain (non-concurrent) dictionaries hold the raw and typed values, safe for unsynchronized concurrent reads precisely because they are never mutated after construction.  Typed values are converted exactly once, at construction, using whatever conversions are registered in <see cref="SettingsRegistry.DefaultRegistry"/> at that moment; unlike the mutable sets it does not subscribe to <see cref="SettingsRegistry.SettingRegistered"/>, so a key whose setting is registered later keeps its raw string as its typed value.</plan>
+/// </remarks>
 public class AmbientImmutableSettingsSet : IAmbientSettingsSet
 {
     /// <summary>

@@ -9,6 +9,10 @@ namespace AmbientServices;
 /// <summary>
 /// An interface that is used to notify a subscriber about stack trace information updates.
 /// </summary>
+/// <remarks>
+/// <pitch>The push side of ambient stack tracking: implement this to observe the logical stack maintained by <see cref="AmbientStackTrace"/> as frames are pushed and popped.</pitch>
+/// <pledge><see cref="OnStackTraceUpdated"/> is called after each change to the current call context's trace stack, receiving the complete new stack as an immutable snapshot that may be retained or read at any time without synchronization.  Calls arrive on whatever thread performs the trace, and only for changes within contexts where the sink was registered via <see cref="AmbientStackTrace.Reset"/>.</pledge>
+/// </remarks>
 public interface IStackTraceUpdateSink
 {
     /// <summary>
@@ -22,6 +26,15 @@ public interface IStackTraceUpdateSink
 /// A "static" class to track the state of the call stack.
 /// The class isn't really static, as its members are <see cref="AsyncLocal{T}"/> instances, whose contents vary based on the current async context.
 /// </summary>
+/// <remarks>
+/// <pitch>A <em>logical</em> stack trace for async code: physical stack traces dissolve into state-machine noise across <c>await</c>s, so this lets code annotate its own meaningful frames (via <c>using</c>-scoped <see cref="Trace"/> calls) and gives diagnostics a readable where-are-we answer per call context.  Coverage is opt-in — only explicitly traced frames appear.</pitch>
+/// <pledge>
+/// Each call context carries its own stack; <see cref="Trace"/> pushes a caller-identifying frame and the returned object pops back to the prior stack on dispose, so scopes must be disposed in the context that created them and naturally nest.
+/// <see cref="Reset"/> replaces the context's stack with a single baseline frame and registers the sink that will be notified of subsequent pushes and pops (the reset itself is not notified) — call it at the start of reused contexts (thread pool, test frameworks) to clear leftovers.
+/// Snapshots handed to the sink are immutable and safe to retain.
+/// </pledge>
+/// <plan>Two <see cref="AsyncLocal{T}"/> slots — an <see cref="ImmutableStack{T}"/> of frame strings and the registered <see cref="IStackTraceUpdateSink"/> — with frames built from <see cref="System.Runtime.CompilerServices.CallerMemberNameAttribute"/>-family data at compile time, so pushing costs a small string format and an immutable-stack push rather than a stack walk.  The pop restores the previous immutable snapshot captured at push time, which also self-heals if an intervening frame leaks undisposed.</plan>
+/// </remarks>
 public static class AmbientStackTrace
 {
     private static readonly AsyncLocal<IStackTraceUpdateSink> aNotify = new();

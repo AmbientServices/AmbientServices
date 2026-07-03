@@ -11,6 +11,18 @@ namespace AmbientServices;
 /// Ratios of two statistics can be used to track things like average sizes or times, events per second, bytes per second, hit ratios, etc.
 /// All times are in terms of ticks whose frequency is <see cref="System.Diagnostics.Stopwatch.Frequency"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>
+/// The registry answering "how well are the various systems functioning under how much load?" — long-lived, high-performance named counters (accumulated, minimum, maximum, or raw) that are cheap enough to update on every operation, plus ratio descriptors that tell downstream aggregators which pairs of counters make meaningful charts (hit ratios, requests per second, average sizes).
+/// It holds only the current raw value of each statistic — sampling over time, graphing, and cross-system roll-up are left to whatever system reads it.
+/// </pitch>
+/// <pledge>
+/// Statistics are identified by dash-delimited IDs and live until removed: a get-or-add call returns the already-registered statistic for an ID unless replacement is explicitly requested, so independent components can safely share a statistic by agreeing on its ID.  Disposing a returned statistic deregisters it; removal and disposal stop reporting but never invalidate outstanding references.
+/// Each statistic carries immutable metadata (name, description, units, fixed-floating-point adjustment, aggregation preferences, missing-sample handling) that tells consumers how to display and aggregate its samples; only the sample value itself changes after creation.
+/// A built-in execution-time statistic always exists, cannot be removed, and serves as the standard denominator for rate ratios.  Ratio statistics are pure descriptors — they carry no samples of their own and must be computed from their numerator/denominator statistics after aggregation.
+/// All operations are thread-safe and safe to call from any call context.
+/// </pledge>
+/// </remarks>
 public interface IAmbientStatistics
 {
     /// <summary>
@@ -207,6 +219,13 @@ public enum MissingSampleHandling
 /// An interface that gives read access to a single statistic.
 /// Note that many user-facing statistics will naturally be a ratio of the samples of two statistics or the changes in those samples over time.
 /// </summary>
+/// <remarks>
+/// <pitch>The read side of one statistic: the current raw sample plus the immutable metadata a consumer needs to display it (name, units, adjustment) and to aggregate samples of it correctly over time and across systems.</pitch>
+/// <pledge>
+/// Everything except <see cref="CurrentRawValue"/> is immutable for the life of the statistic.  <see cref="CurrentRawValue"/> is a thread-safe point-in-time snapshot of the raw integer sample; readers convert raw samples to display values by dividing by <see cref="FixedFloatingPointAdjustment"/>, and the name, description, and units all describe the adjusted value, not the raw one.
+/// The aggregation-type and missing-sample-handling properties are advice to consumers, not behavior of this object — the statistic itself never aggregates or interpolates.
+/// </pledge>
+/// </remarks>
 public interface IAmbientStatisticReader
 {
     /// <summary>
@@ -284,6 +303,14 @@ public interface IAmbientStatisticReader
 /// Implementations are disposable, but should not throw exceptions if methods are called after disposal.
 /// Disposability is meant to stop reporting results.
 /// </summary>
+/// <remarks>
+/// <pitch>The write side of one statistic: atomic raw-sample updates cheap enough to call on every operation, in whichever style (set, add, increment/decrement, min, max) matches the statistic's type.</pitch>
+/// <pledge><see cref="IAmbientStatisticReader"/></pledge>
+/// <pledge>
+/// All updates are atomic and thread-safe, and concurrent updates never lose each other's effects (min/max updates only ever move the value in their own direction).  The update style should match the declared <see cref="AmbientStatisticType"/> — the interface does not enforce this, but consumers aggregate based on the type, so mismatched updates produce misleading aggregations.
+/// Disposal deregisters the statistic from its <see cref="IAmbientStatistics"/> to stop reporting; calling any member after disposal must not throw.
+/// </pledge>
+/// </remarks>
 public interface IAmbientStatistic : IAmbientStatisticReader, IDisposable
 {
     /// <summary>
@@ -329,6 +356,13 @@ public interface IAmbientStatistic : IAmbientStatisticReader, IDisposable
 /// Implementations are disposable, but should not throw exceptions if methods are called after disposal.
 /// Disposability is meant to stop reporting results.
 /// </summary>
+/// <remarks>
+/// <pitch>A declaration that a useful user-facing value is the ratio of two statistics (or of their changes over time) — so aggregators can compute hit ratios, rates, and averages from raw data after aggregation, where the math weights every sample equally, instead of averaging pre-computed ratios that overweight barely-loaded servers.</pitch>
+/// <pledge>
+/// A pure descriptor: it carries no samples and performs no computation — consumers resolve the numerator and denominator statistics by ID from the owning <see cref="IAmbientStatistics"/> and compute the ratio after any spatial and/or temporal aggregation, using the raw value or its delta over time as each side's flag indicates and the constant 1 for a null side.
+/// All properties are immutable; disposal deregisters the descriptor and must not throw afterwards.
+/// </pledge>
+/// </remarks>
 public interface IAmbientRatioStatistic : IDisposable
 {
     /// <summary>
@@ -374,6 +408,13 @@ public interface IAmbientRatioStatistic : IDisposable
 /// <summary>
 /// A class that contains extension methods for various statistics interfaces that add functions to aggregate statistic samples.
 /// </summary>
+/// <remarks>
+/// <pitch>The client-side math for statistics: set adjusted (display-unit) values without hand-multiplying by the fixed-floating-point adjustment, and aggregate sample sets using a statistic's preferred (or type-default) aggregation.</pitch>
+/// <pledge>
+/// Adjusted-value setters convert display units to raw samples using the statistic's own adjustment factor and are as thread-safe as the underlying raw setter.
+/// Aggregation treats a <see cref="AggregationTypes.None"/> preference as "use the default for the statistic's type"; Sum clips at <see cref="long.MaxValue"/> rather than overflowing, Average rounds to the nearest integer, Sum/Average/Min/Max skip null samples (aggregating to null only when every sample is null), and MostRecent takes the literal last sample, null or not.  Callers wanting missing samples filled in should apply <see cref="MissingSampleHandlingExtensions.HandleMissingSamples"/> first.  Only a single aggregation flag is honored per call.
+/// </pledge>
+/// </remarks>
 public static class IAmbientStatisticsExtensions
 {
     /// <summary>

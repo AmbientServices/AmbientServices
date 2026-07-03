@@ -8,6 +8,14 @@ namespace AmbientServices;
 /// <summary>
 /// An implementation of <see cref="IAmbientSettingsSet"/> that treats multiple settings sets as a single set.
 /// </summary>
+/// <remarks>
+/// <pitch>Composes several settings sets into one with override semantics — later (higher-priority) sets hide same-named settings in earlier ones — so a fixed base configuration can be selectively overridden (for example, environment over file over defaults) while consumers see a single set.  Always writable: a mutable top layer is guaranteed.</pitch>
+/// <pledge><see cref="IAmbientSettingsSet"/></pledge>
+/// <pledge>
+/// Reads probe the layers from highest priority to lowest and return the first value found.  Writes go only to the highest-priority layer (a mutable one is appended at construction when the given layers end with an immutable one), so a change shadows lower layers rather than modifying them, and removing a setting from the top layer merely unmasks whatever a lower layer holds — it cannot remove a value owned by a lower layer.  The set's name is composed from the layer names so provenance remains visible.
+/// </pledge>
+/// <plan>An ordered <see cref="List{T}"/> of the composed sets, fixed at construction (which is what makes unsynchronized concurrent reads of the layer list safe); each get walks the list in reverse until a layer returns non-null, so read cost grows with the number of layers above the owning one, and nothing is cached or merged — every read reflects the layers' live values.</plan>
+/// </remarks>
 public class AmbientSettingsLayers : IAmbientSettingsSet
 {
     private readonly List<IAmbientSettingsSet> _setsInLowPriorityOrder = new();

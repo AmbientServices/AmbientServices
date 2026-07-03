@@ -5,6 +5,11 @@ namespace AmbientServices;
 /// <summary>
 /// A static class that extends <see cref="System.DateTime"/>.
 /// </summary>
+/// <remarks>
+/// <pitch>Compact, human-readable labels for time windows: <see cref="WindowId"/> names which window a moment falls in at a chosen resolution, and <see cref="WindowSize"/> renders a duration as a short unit string — both intended for embedding in keys and report output rather than for parsing.</pitch>
+/// <pledge>Window identifiers are derived from the invariant-culture universal sortable format of the given <see cref="DateTime"/>, keeping only the fields significant near the requested resolution: any two moments within roughly one resolution of each other get distinct identifiers, while moments much further apart may share one (fields coarser than the resolution are dropped to keep labels short).  <see cref="WindowSize"/> renders using the largest unit that keeps the magnitude readable (ms, s, m, h, D, M, Y), showing at most one decimal place and preserving sign.</pledge>
+/// <plan>Pure string slicing of the fixed-position "u" format at per-resolution-bucket positions; durations pick their unit at roughly five-of-the-next-unit thresholds, approximating months as 30.5 days and years as 365.25 days.  No clock access and no state.</plan>
+/// </remarks>
 public static class WindowScope
 {
     /// <summary>
