@@ -9,7 +9,7 @@ namespace AmbientServices;
 /// A class that provides caching using either a specified cache or the ambient cache.
 /// </summary>
 /// <remarks>
-/// <pitch>The front door library code uses for local caching: it namespaces every key with an owner prefix so unrelated classes never collide, and it degrades to a no-op when no local cache service is available, so callers need no null checks and no registration just to run.</pitch>
+/// <pitch>The front door library that code uses for local caching: it namespaces every key with an owner prefix so unrelated classes never collide, and it degrades to a no-op when no local cache service is available, so callers need no null checks and no registration just to run.</pitch>
 /// <pledge>
 /// Every operation delegates to the explicit cache supplied at construction or, when none was, to whatever <see cref="IAmbientLocalCache"/> is currently in effect (re-resolved on every call, so registration changes and local overrides take effect immediately).
 /// When neither exists the call quietly succeeds without caching: retrieval and removal report not-found and stores are discarded.
@@ -107,7 +107,7 @@ public class AmbientLocalCache
     }
 }
 /// <summary>
-/// A class that provides caching using either a specified cache or the ambient cache.
+/// A class that provides caching using either a specified cache or the ambient cache.  When you need a cache for a non-static class, use this generic class.  For static classes, use <see cref="AmbientLocalCache"/> directly.
 /// </summary>
 /// <typeparam name="TOWNER">The type that owns the items to be cached.</typeparam>
 /// <remarks>

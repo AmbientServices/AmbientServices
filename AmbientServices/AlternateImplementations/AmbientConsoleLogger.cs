@@ -20,7 +20,7 @@ namespace AmbientServices;
 /// Turn the logger off for maximum performance.
 /// </summary>
 /// <remarks>
-/// <pitch>Asynchronous logging to standard output — the natural choice for containers and CLI tools where the console stream <em>is</em> the log pipeline.  Faster on the logging path than the file logger; persistence is whatever is capturing stdout (nothing, if nothing is).</pitch>
+/// <pitch>Asynchronous logging to standard output — the natural choice for containers and CLI tools where the console stream <em>is</em> the log pipeline.  Faster on the logging path than the file logger; persistence is whatever is capturing stdout (nothing, if nothing is). Significantly better performance than calling <see cref="Console.WriteLine()"/> directly, due to buffering.</pitch>
 /// <pledge><see cref="IAmbientLogger"/></pledge>
 /// <pledge><see cref="IAmbientStructuredLogger"/></pledge>
 /// <plan>
@@ -36,7 +36,7 @@ public class AmbientConsoleLogger : IAmbientLogger, IAmbientStructuredLogger
     public static AmbientConsoleLogger Instance { get; } = new();
 
     /// <summary>
-    /// Constructs an ambient console logger, and implementation of <see cref="IAmbientLogger"/> that outputs log data to the system console output.
+    /// Constructs an ambient console logger, an implementation of <see cref="IAmbientLogger"/> that outputs log data to the system console output.
     /// </summary>
     private AmbientConsoleLogger()
     {

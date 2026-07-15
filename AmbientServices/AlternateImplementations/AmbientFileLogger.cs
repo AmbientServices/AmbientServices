@@ -13,7 +13,7 @@ namespace AmbientServices;
 /// Turn the logger off for maximum performance.
 /// </summary>
 /// <remarks>
-/// <pitch>Durable, rotating on-disk logs that survive a process restart — the logger to use when you need to diagnose issues after the fact, including ones that happen before anyone can attach a debugger.  Slower in aggregate than <see cref="AmbientTraceLogger"/> or <see cref="AmbientConsoleLogger"/> because the data actually lands on disk, though the logging call itself never waits for I/O.</pitch>
+/// <pitch>Durable, rotating on-disk logs that survive a process restart — the logger to use when you need to diagnose issues after the fact, including ones that happen before anyone can attach a debugger or before a shared logger can be configured.  Slower in aggregate than <see cref="AmbientTraceLogger"/> or <see cref="AmbientConsoleLogger"/> because the data actually lands on disk, though the logging call itself never waits for I/O.</pitch>
 /// <pledge><see cref="IAmbientLogger"/></pledge>
 /// <pledge><see cref="IAmbientStructuredLogger"/></pledge>
 /// <pledge><see cref="IDisposable"/></pledge>
