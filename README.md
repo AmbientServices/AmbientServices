@@ -5,6 +5,16 @@
 
 AmbientServices is a .NET library that provides abstractions for services which are both ubiquitous and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those services.
 
+## How this library is documented — The 3P Protocol
+
+This project describes each unit of code — from a single class up to the whole library — with up to three short prose layers, the **3P**: a **Pitch** (why you'd use it), a **Pledge** (what it promises and how you interact with it), and a **Plan** (how it's built). Per-type layers live in the XML-doc `<remarks>` of each type; the layers for the library as a whole live in their own documents:
+
+- [**Pitch**](docs/PITCH.md) — is this library what you need?
+- [**Pledge**](docs/PLEDGE.md) — the behavioral contract shared by every ambient service.
+- [**Plan**](docs/PLAN.md) — how the ambient-service mechanism is built and the trade-offs it strikes.
+
+The methodology itself is defined in [docs/MODULE_DESCRIPTIONS.md](docs/MODULE_DESCRIPTIONS.md) (with a C#-specific companion, [docs/MODULE_DESCRIPTIONS.AmbientServices.md](docs/MODULE_DESCRIPTIONS.AmbientServices.md)) and draws on a shared [glossary](docs/GLOSSARY.md).
+
 ## Basic Services
 The basic ambient services include local caching, an atomic cache, clock, logging, progress/cancellation, and settings.  Interfaces for those services are provided here.
 By accessing these services through the interfaces provided here, library authors can utilize new basic services as they become available without changing their external interface, and library consumers can use those libraries without having to provide dependencies for systems that they may or may not use.
