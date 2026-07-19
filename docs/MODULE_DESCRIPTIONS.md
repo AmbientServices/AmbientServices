@@ -70,6 +70,8 @@ Use this as an on-demand check, not a stored description: hand the layers (plus 
 
 Each project defines a placement convention appropriate to its language and documentation system, recorded in that project's companion module-descriptions file. Whatever the mechanism, an **abstraction** carries a Pitch and a Pledge; a **concrete realization** carries a Pitch, one or more Pledges, and a Plan — a realization's Pledge is usually a reference to the abstraction's Pledge, plus any realization-specific extensions.
 
+The highest-altitude unit — the **whole system** (a library, service, or application viewed as one thing) — usually has no single place in the source to attach to, since it is realized by many types rather than one. For that unit the layers are best kept as dedicated project-level documents (one per layer), placed where they are easy to discover and index — and linked from the project's entry point (e.g., the README) so a reader arriving at the repository can navigate straight to them. The project companion records the exact filenames and location.
+
 ## Glossary
 
 A project that adopts this model keeps a single cross-cutting **glossary** of its invented vocabulary — the names of its core abstractions, data structures, and techniques. The glossary is orthogonal to the three per-unit layers: those describe one unit each, while the glossary defines the terms every unit's prose relies on. Its value is disproportionate and its upkeep is nearly free — defining a term once lets every Pitch, Pledge, and Plan reference it tersely instead of re-explaining it, and it gives every collaborator, human or AI, one authoritative meaning per term. Add an entry when a term is coined; entries change far more slowly than code.

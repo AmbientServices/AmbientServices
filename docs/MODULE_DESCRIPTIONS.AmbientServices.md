@@ -18,6 +18,10 @@ All three live in the type's XML-doc `<remarks>`, using **custom elements** name
 - An **abstraction** (interface) carries `<pitch>` and a `<pledge>` whose body is the behavioral-protocol prose.
 - A **concrete realization** carries `<pitch>`, one or more `<pledge>` elements, and `<plan>`. A `<pledge>` containing a `<see cref>` to an abstraction means "this unit fulfills that abstraction's Pledge; its terms apply here." Additional `<pledge>` elements state realization-specific extensions; omit them when the realization adds nothing.
 
+## Where the whole-library layers live
+
+The library viewed as one unit is documented, one layer per file, in the `docs` folder — [`docs/PITCH.md`](PITCH.md), [`docs/PLEDGE.md`](PLEDGE.md), and [`docs/PLAN.md`](PLAN.md) — kept beside the other 3P meta-documents (`MODULE_DESCRIPTIONS.md`, `GLOSSARY.md`, `DRIFT.md`). The `README.md` carries a short explanation of the 3P and links to all three so the repository's entry point navigates straight to them (and so public-repo indexers pick them up). These are written for the whole-system unit's purpose — adoption triage, the cross-cutting contract, and the system-level architecture — not as a digest of the per-type layers, and each begins with a one-line note identifying which layer it is and linking back to this methodology. A significant change to the library-wide Pitch, Pledge, or Plan updates the matching file in the same change, agreed in prose first, exactly as for per-type layers.
+
 ## Examples
 
 - **Different Pitches, similar shape.** `IAmbientLocalCache` and `IAmbientSharedCache` share the same "store an item under a string key with optional expiration" shape (`Retrieve`/`Store`/`Remove`/`Clear`), but sell different things. `IAmbientLocalCache` pitches an in-process cache that can safely hold objects with references and `IDisposable` items (with hand-off-on-retrieve semantics); `IAmbientSharedCache` pitches a cache for serializable objects that may live in another process or machine. Same shape, different Pitches — and different Pledges, since only the local one promises to handle non-serializable and disposable values.
