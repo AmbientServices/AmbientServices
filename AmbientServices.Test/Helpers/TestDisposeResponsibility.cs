@@ -12,6 +12,8 @@ public class TestDisposeResponsibility
     [TestMethod]
     public async Task OwnershipTransfer()
     {
+        // the pending-disposal census only tracks instances whose creation site was collected, so turn detail collection on for this call context
+        using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();
         {
             using (DisposeResponsibility<Stream> owner = new(new MemoryStream())) { }
             using DisposeResponsibility<Stream> firstOwner = new(new MemoryStream());
@@ -128,6 +130,8 @@ public class TestDisposeResponsibility
     [TestMethod]
     public void DisposeResponsibilityNotification()
     {
+        // exercise the leak report with creation-site detail collected, which also covers rendering the deferred capture from the finalizer thread
+        using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();
         ResponsibilityNotDisposedEventArgs? args = null;
         void Handler(object? sender, ResponsibilityNotDisposedEventArgs e) => args = e;
         DisposeResponsibility.ResponsibilityNotDisposed += Handler;

@@ -1271,17 +1271,34 @@ Wrapping the output from the function in a `DisposeResponsibility` is not only a
 For functions that return disposable instances where the caller is expected to dispose of the instance (as would usually be the case), switching to return a `DisposeResponsibility` instance will cause a notification if the instance is not disposed.
 That notification can come in several forms.  First, the `DisposeResponsiblity.ResponsibilityNotDisposed` event can be subscribed to for immediate handling (for example `Debugger.Break()` during interactive debugging).
 If there are no subscribers to that event, an `AmbientLogger` warning is written and the leak is recorded for `DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc()` (intended for test assembly cleanup after a full GC and finalizer drain).
-The notification will include the stack trace indicating where the disposable instance was created, so that the developer can determine why the instance wasn't disposed.
+The notification will include the stack trace indicating where the disposable instance was created (when creation-site collection is enabled, see below), so that the developer can determine why the instance wasn't disposed.
 Care should be taken in the event handler for the `DisposeResponsiblity.ResponsibilityNotDisposed` event to avoid throwing exceptions, as this could cause the application to crash because it is called by the garbage collector during finalization.
 In most cases `DisposeResponsibility` instances returned from functions should be disposed of using a `using` block in the scope where the call is made, but sometimes the instances are returned higher up the stack, or stored inside another object for later disposal.
 `DisposeResponsibility` ensures that responsibility for disposing of the instance is not lost.  
 The responsibility can be transferred to another caller or scope, but won't be lost unintentionally as often is the case without it.
 Someday, it would be nice if C# incorporated this kind of explicit dispose responsibility tracking and transfer into the language, as it could greatly improve the readability and performance, and could eliminate all numerous false positive code analysis warnings.
 
+### Creation-site detail collection (off by default)
+Capturing the stack that created every `DisposeResponsibility` is expensive, so it is **off by default** and controlled by the ambient setting whose key is `DisposeResponsibility.CollectLeakDetailsSettingKey` (`DisposeResponsibility-CollectLeakDetails`, a `bool`).
+Turn it on in the projects and scenarios that actually report leaks — typically test assemblies and diagnostic runs — either process-wide through your settings set, or for one call context with `using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();`.
+Instances capture according to the value in effect **where they are constructed**, so the scope has to cover the construction, not just the reporting.
+`DisposeResponsibility.CollectLeakDetails` reports the current value.
+
+When collection is on, the creation stack is captured as a `System.Diagnostics.StackTrace` object and only rendered to a string if a leak is actually reported, so the happy path pays for a capture but never for a rendering.
+When it is off, leaks are still reported (occurrence and contained type, plus the explicit creation-site string if one was passed) — just without a captured stack.
+Hot paths can pass their own creation-site string to the constructor or `AssumeResponsibility`; that string is used verbatim, is unaffected by the setting, and suppresses the capture entirely.
+
+`DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc()` **throws `InvalidOperationException` when collection is off**, naming the setting to enable, rather than "verifying" leaks that could never say where they came from.
+So the assembly-cleanup verification below requires collection to be enabled where the instances are created and where the verification runs.
+
+Historical note: the creation stack used to be rendered to a string eagerly at construction. That was required on .NET Framework, where finalizers ran during AppDomain unload and process shutdown and deferred resolution could touch already-finalized state. Modern .NET has no AppDomain unloads and never runs finalizers at shutdown, which is what makes deferring the rendering to report time safe. The one remaining way a deferred rendering can fail — a collectible `AssemblyLoadContext` unloading between capture and report — is caught, and degrades to a short placeholder instead of losing the leak report.
+
 ### MSTest (VSTest / Visual Studio test explorer)
 Finalization is non-deterministic, so a forgotten `using` may not surface until a GC runs. Test hosts (including Microsoft Testing Platform) are also poor places for `Trace.Assert` in finalizers. Instead, undisposed wrappers record a diagnostic when finalized (when there is no handler on `DisposeResponsibility.ResponsibilityNotDisposed`), and you assert during **assembly cleanup** after forcing collection and waiting for finalizers (`DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc`).
 
 Add **one** `[AssemblyCleanup]` per test assembly, or merge that call into an existing cleanup method. Prefer running it **after** other teardown that must complete first (for example flushing trace or log buffers). This repository's main test assembly calls `DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly()` from `TestAmbientService.AssemblyCleanup` after `TraceBuffer.Flush`.
+
+Remember that the verification refuses to run unless creation-site collection is enabled (see above): enable it process-wide for the test assembly (for example from `[AssemblyInitialize]`, through the settings set the tests use), or wrap the verification call in `using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();` — which is what this repository's `AssemblyCleanup` does. Enabling it process-wide is usually what you want, because instances constructed by the tests then carry their creation stacks into the report.
 
 For interactive debugging, subscribe to `DisposeResponsibility.ResponsibilityNotDisposed` (for example from `[AssemblyInitialize]`) and use `System.Diagnostics.Debugger.Break()`; do not throw from that handler.
 
@@ -1307,12 +1324,18 @@ public static class DisposeResponsibilityMstestVerification
 /// <summary>
 /// Copy this pattern into your test assembly (one class is enough). Alternatively, call
 /// <see cref="DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly"/> from an existing <c>[AssemblyCleanup]</c> method after any other teardown you need (for example flushing logs).
+/// The verification refuses to run unless creation-site collection is enabled, so this enables it (see <see cref="DisposeResponsibility.ScopedLeakDetailCollection"/>); enabling it process-wide from an <c>[AssemblyInitialize]</c> instead lets the instances your tests construct carry their creation stacks into the report.
 /// </summary>
 [TestClass]
 public static class DisposeResponsibilityMstestAssemblyCleanupSample
 {
     [AssemblyCleanup]
-    public static void AssemblyCleanup() => DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly();
+    public static void AssemblyCleanup()
+    {
+        // creation-site collection is off by default and the verification throws without it, so turn it on for this scope (which also covers the verification's own GC/finalizer drain)
+        using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();
+        DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly();
+    }
 }
 ```
 

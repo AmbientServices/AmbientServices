@@ -37,6 +37,8 @@ public class TestAmbientService
     {
         System.Threading.Tasks.ValueTask t = TraceBuffer.Flush();
         t.GetAwaiter().GetResult();
+        // leak-detail collection is off by default, and the leak verification refuses to run without it, so turn it on for this call
+        using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();
         DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly();
     }
 
