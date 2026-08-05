@@ -27,9 +27,11 @@ Each ambient service is reached through three related views:
 
 - **Global** — the process-wide default for the service. When nothing else is set, this is what callers get. It may be replaced (including with null to disable the service).
 - **Override** — a call-context-local replacement that flows with the async execution context and is undone when its scope is disposed. Setting an override affects only the current logical call flow, not other threads or requests.
-- **Local** — the *effective* service a caller actually gets: the call-context override if one is in force, otherwise the global. Consumers should read `Local`; overriders write `Override` (typically via a scoped, disposable helper that restores the prior value).
+- **Local** — the *effective* service a caller actually gets: the call-context override if one is in force, otherwise the global. Consumers read `Local`; overriders install a replacement for the current call flow via `ScopedLocalOverride(replacement)` — a disposable that restores the prior value on dispose.
 
-Overrides nest and restore in stack order. This is the mechanism behind per-test service substitution, per-request isolation, and selectively suppressing a service before calling less-trusted code.
+Overrides nest and restore in stack order, which is the mechanism behind per-test service substitution and per-request isolation.
+
+**Suppression is a distinct operation from replacement.** To deny a service to the current call flow — the security-relevant case of preventing less-trusted code from reaching it — use `ScopedLocalOverride(null)` (equivalently, set `Local` to null). This installs a call-context sentinel that hides the global service as well, and it is **not** the same as clearing the `Override` property, which merely reverts to the global. Because it is call-context-scoped, the suppression flows into synchronous calls made within that scope without affecting the service other concurrent contexts see.
 
 ## Startup, shutdown, and change
 

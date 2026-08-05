@@ -26,11 +26,11 @@ These constraints are not incidental style; they shape every realization in the 
 - **No `lock` keyword** (and no async-unfriendly lock types). Concurrency is handled with lock-free algorithms where possible, and async-friendly waits where a wait is genuinely required, so the code never has to be un-blocked later for asyncification.
 - **Optionality and nullability** are pervasive by design — every service can be absent, so the code and its helpers treat a missing service as a no-op rather than an error.
 - **Backwards-compatible evolution.** Public input schemas may only gain optional/nullable additions and output schemas may not drop non-deprecated members, so consumers can upgrade the single package without breakage.
-- **Warning-free and dependency-free.** The library introduces no external assembly dependencies and is kept warning-free, keeping it safe to drop into any host.
+- **Warning-free and no third-party dependencies.** The library depends only on Microsoft-published .NET packages (`System.Collections.Immutable` and `System.Text.Json`) — no assemblies outside those the .NET platform itself provides — and is kept warning-free, keeping it safe to drop into any host.
 
 ## Targeting and packaging
 
-The library targets **.NET Standard 2.0** plus **.NET 8.0–10.0**, shipped as a single NuGet package (`AmbientServices`); the test suite runs on .NET 10.0. Broad target coverage keeps it usable from legacy hosts up through current runtimes without the consumer choosing a variant.
+The library targets **.NET Standard 2.0 and 2.1** plus **.NET 8.0, 9.0, and 10.0**, shipped as a single NuGet package (`AmbientServices`); the test suite runs on .NET 10.0. Broad target coverage keeps it usable from legacy hosts up through current runtimes without the consumer choosing a variant.
 
 ## System-wide trade-offs
 

@@ -23,7 +23,7 @@ You would reach for AmbientServices when you want:
 
 - **Not a replacement for DI of *required* services.** Ambient resolution is for things whose absence is acceptable and whose presence is environmental; genuinely required collaborators still belong in constructors.
 - **Not a channel for values that change outputs in ways the caller cares about.** By design, an ambient service must behave environmentally — see [PLEDGE.md](PLEDGE.md). Caching may return bounded-stale results, a clock may simulate time, settings act as inputs, but nothing may alter a function's input→output relationship *unexpectedly*.
-- **Not a heavyweight framework.** It carries no external dependencies and stays out of your object graph until you ask for a service.
+- **Not a heavyweight framework.** It takes no third-party dependencies — only Microsoft-published .NET packages — and stays out of your object graph until you ask for a service.
 
 ## What's inside (so you can decide)
 
