@@ -1139,12 +1139,18 @@ public static class DisposeResponsibilityMstestVerification
 /// <summary>
 /// Copy this pattern into your test assembly (one class is enough). Alternatively, call
 /// <see cref="DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly"/> from an existing <c>[AssemblyCleanup]</c> method after any other teardown you need (for example flushing logs).
+/// The verification refuses to run unless creation-site collection is enabled, so this enables it (see <see cref="DisposeResponsibility.ScopedLeakDetailCollection"/>); enabling it process-wide from an <c>[AssemblyInitialize]</c> instead lets the instances your tests construct carry their creation stacks into the report.
 /// </summary>
 [TestClass]
 public static class DisposeResponsibilityMstestAssemblyCleanupSample
 {
     [AssemblyCleanup]
-    public static void AssemblyCleanup() => DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly();
+    public static void AssemblyCleanup()
+    {
+        // creation-site collection is off by default and the verification throws without it, so turn it on for this scope (which also covers the verification's own GC/finalizer drain)
+        using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();
+        DisposeResponsibilityMstestVerification.AfterAllTestsInAssembly();
+    }
 }
 #endregion
 

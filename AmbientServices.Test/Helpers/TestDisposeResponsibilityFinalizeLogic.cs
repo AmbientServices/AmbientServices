@@ -115,6 +115,8 @@ public class TestDisposeResponsibilityFinalizeLogic
     [TestMethod]
     public void AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc_ThrowsWhenLeakedAndNoHandler()
     {
+        // the verification refuses to run without leak-detail collection, which is off by default
+        using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();
         FieldInfo field = GetResponsibilityNotDisposedBackingField();
         object? previous = field.GetValue(null);
         field.SetValue(null, null);
@@ -140,6 +142,8 @@ public class TestDisposeResponsibilityFinalizeLogic
     [TestMethod]
     public void AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc_NoThrow_WhenDisposed()
     {
+        // the verification refuses to run without leak-detail collection, which is off by default
+        using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();
         FieldInfo field = GetResponsibilityNotDisposedBackingField();
         object? previous = field.GetValue(null);
         field.SetValue(null, null);
@@ -189,6 +193,8 @@ public class TestDisposeResponsibilityFinalizeLogic
     [TestMethod]
     public void AssertNoUndisposedLeaksAfterFullGc_ShirkedWithoutExplicitDispose_DoesNotThrow()
     {
+        // the verification refuses to run without leak-detail collection, which is off by default
+        using IDisposable leakDetails = DisposeResponsibility.ScopedLeakDetailCollection();
         FieldInfo field = GetResponsibilityNotDisposedBackingField();
         object? previous = field.GetValue(null);
         field.SetValue(null, null);
