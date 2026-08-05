@@ -224,7 +224,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// Constructs a dispose responsibility object which takes responsibility for disposing the specified disposable object.
     /// </summary>
     /// <param name="contained">An optional disposable object that will be owned and disposed by the instance.</param>
-    /// <param name="stackOnCreation">The creation stack to associated with <paramref name="contained"/>.  When this is specified, no stack is captured (which is how hot paths avoid the capture cost entirely) and <see cref="DisposeResponsibility.CollectLeakDetails"/> is not consulted.</param>
+    /// <param name="stackOnCreation">The creation stack to associate with <paramref name="contained"/>.  When this is specified, no stack is captured (which is how hot paths avoid the capture cost entirely) and <see cref="DisposeResponsibility.CollectLeakDetails"/> is not consulted.</param>
     public DisposeResponsibility(T? contained, string? stackOnCreation = null)
     {
         _contained = contained;
@@ -359,7 +359,7 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
     /// Disposes of any existing disposable and assumes responsibility for the newly specified disposable.
     /// </summary>
     /// <param name="newDisposable">The new disposable to take responsibility for.</param>
-    /// <param name="stackOnCreation">The creation stack to associated with <paramref name="newDisposable"/>.  When this is specified, no stack is captured and <see cref="DisposeResponsibility.CollectLeakDetails"/> is not consulted.</param>
+    /// <param name="stackOnCreation">The creation stack to associate with <paramref name="newDisposable"/>.  When this is specified, no stack is captured and <see cref="DisposeResponsibility.CollectLeakDetails"/> is not consulted.</param>
     public void AssumeResponsibility(T? newDisposable, string? stackOnCreation = null)
     {
         Dispose();
@@ -493,9 +493,7 @@ public class ResponsibilityNotDisposedEventArgs : EventArgs
 public static class DisposeResponsibility
 {
     private static readonly AmbientService<IAmbientSettingsSet> _SettingsSet = Ambient.GetService<IAmbientSettingsSet>();
-    private static readonly IAmbientSetting<bool> _CollectLeakDetailsSetting = AmbientSettings.GetAmbientSetting<bool>(nameof(DisposeResponsibility) + "-CollectLeakDetails",
-        "Whether or not `DisposeResponsibility<T>` should gather creation-site detail (a deferred stack capture) for instances constructed without an explicit creation-site string.  This defaults to `false` because capturing a stack on every construction is expensive, so it should be turned on only in the projects and scenarios that report leaks.  Note that `DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc` throws when this is off.",
-        false, s => string.Equals(s, "true", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "1", StringComparison.Ordinal) || string.Equals(s, "yes", StringComparison.OrdinalIgnoreCase));
+    private static readonly IAmbientSetting<bool> _CollectLeakDetailsSetting = AmbientSettings.GetAmbientSetting<bool>(nameof(DisposeResponsibility) + "-CollectLeakDetails", "Whether or not `DisposeResponsibility<T>` should gather creation-site detail (a deferred stack capture) for instances constructed without an explicit creation-site string.  This defaults to `false` because capturing a stack on every construction is expensive, so it should be turned on only in the projects and scenarios that report leaks.  Note that `DisposeResponsibility.AssertNoUndisposedDisposeResponsibilityLeaksAfterFullGc` throws when this is off.", false, s => string.Equals(s, "true", StringComparison.OrdinalIgnoreCase) || string.Equals(s, "1", StringComparison.Ordinal) || string.Equals(s, "yes", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Gets the ambient settings key that controls <see cref="CollectLeakDetails"/>, so callers can override the setting without repeating a magic string.
