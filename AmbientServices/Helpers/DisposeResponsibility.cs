@@ -198,8 +198,8 @@ public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirk
 
         // note that the leak is always reported, even when no creation-site detail was collected--the occurrence and the type are still worth knowing
         string notice = string.IsNullOrEmpty(stackOnCreation)
-            ? $"Disposable object ({typeof(T).FullName}) was not disposed.  No creation site was collected: enable the {DisposeResponsibility.CollectLeakDetailsSettingKey} setting (see {nameof(DisposeResponsibility)}.{nameof(DisposeResponsibility.ScopedLeakDetailCollection)}) to get creation stacks."
-            : $"Disposable object ({typeof(T).FullName}) was not disposed.  Object was constructed at {stackOnCreation}.";
+            ? $"A DisposeResponsibility<{typeof(T).FullName}> was not disposed.  No creation site was collected: enable the {DisposeResponsibility.CollectLeakDetailsSettingKey} setting (see {nameof(DisposeResponsibility)}.{nameof(DisposeResponsibility.ScopedLeakDetailCollection)}) to get creation stacks."
+            : $"A DisposeResponsibility<{typeof(T).FullName}> was not disposed.  It was constructed at {stackOnCreation}.";
         Logger.Filter(AmbientLogLevel.Warning)?.Log(new { Action = "UndisposedDisposeResponsibility", Message = notice });
         // stop/notify *if we can*, but if not, queue up a record of this that someone can query later, presumably during cleanup
 		if (System.Diagnostics.Debugger.IsAttached) System.Diagnostics.Debugger.Break();
