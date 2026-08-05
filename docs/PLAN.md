@@ -22,7 +22,7 @@ Global defaults are supplied by types marked `[DefaultAmbientService]`, found by
 
 These constraints are not incidental style; they shape every realization in the library and any functionally-equivalent reimplementation should honor them:
 
-- **Async all the way.** `ValueTask` is preferred over `Task`; async-avoidance patterns (`.Result`, `GetAwaiter().GetResult()`, sync-over-async) are never used — async is propagated up the call stack instead. `ConfigureAwait` is not used anywhere.
+- **Async all the way.** `ValueTask` is preferred over `Task`, and async-avoidance patterns (`.Result`, `GetAwaiter().GetResult()`, sync-over-async) are avoided as a rule — async is propagated up the call stack instead — save for a few deliberate exceptions where the surrounding contract is synchronous (for example releasing a semaphore from a synchronous logging path, or an MSTest assembly-cleanup that cannot be async). `ConfigureAwait` is not used anywhere.
 - **No `lock` keyword** (and no async-unfriendly lock types). Concurrency is handled with lock-free algorithms where possible, and async-friendly waits where a wait is genuinely required, so the code never has to be un-blocked later for asyncification.
 - **Optionality and nullability** are pervasive by design — every service can be absent, so the code and its helpers treat a missing service as a no-op rather than an error.
 - **Backwards-compatible evolution.** Public input schemas may only gain optional/nullable additions and output schemas may not drop non-deprecated members, so consumers can upgrade the single package without breakage.
