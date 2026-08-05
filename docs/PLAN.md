@@ -26,7 +26,7 @@ These constraints are not incidental style; they shape every realization in the 
 - **No `lock` keyword** (and no async-unfriendly lock types). Concurrency is handled with lock-free algorithms where possible, and async-friendly waits where a wait is genuinely required, so the code never has to be un-blocked later for asyncification.
 - **Optionality and nullability** are pervasive by design — every service can be absent, so the code and its helpers treat a missing service as a no-op rather than an error.
 - **Backwards-compatible evolution.** Public input schemas may only gain optional/nullable additions and output schemas may not drop non-deprecated members, so consumers can upgrade the single package without breakage.
-- **Warning-free and no third-party dependencies.** The library depends only on Microsoft-published .NET packages (`System.Collections.Immutable` and `System.Text.Json`) — no assemblies outside those the .NET platform itself provides — and is kept warning-free, keeping it safe to drop into any host.
+- **Warning-free and no third-party dependencies.** The library's only *runtime* dependencies are Microsoft-published .NET packages (`System.Collections.Immutable` and `System.Text.Json`) — no assemblies outside those the .NET platform itself provides, and no third-party packages. Its one other package reference, `Microsoft.SourceLink.GitHub`, is a build-time-only source-linking tool (`PrivateAssets="All"`) that never ships to consumers. It is kept warning-free, keeping it safe to drop into any host.
 
 ## Targeting and packaging
 
