@@ -1,20 +1,20 @@
 # AmbientServices
 
-## Module descriptions — The 3P Protocol (3P)
+## Module descriptions — The 4P Protocol (4P)
 
-Each unit of code (class, module, subsystem, or system) carries up to three named prose layers — the **3P** — in its XML-doc `<remarks>`, using custom elements `<pitch>`, `<pledge>`, `<plan>`. The library viewed as one whole-system unit carries its layers in dedicated project-level files instead: `docs/PITCH.md`, `docs/PLEDGE.md`, `docs/PLAN.md`, linked from `README.md`. Generic definition: `docs/MODULE_DESCRIPTIONS.md`; C# placement convention and examples: `docs/MODULE_DESCRIPTIONS.AmbientServices.md`. Refer to these by their exact names — Pitch, Pledge, Plan — never informal synonyms.
+Each unit of code (class, module, subsystem, or system) carries up to four named prose layers — the **4P** — in its XML-doc `<remarks>`, using custom elements `<pitch>`, `<pledge>`, `<plan>`, and `<pin>`. The library viewed as one whole-system unit carries its layers in dedicated project-level files instead: `docs/PITCH.md`, `docs/PLEDGE.md`, `docs/PLAN.md`, linked from `README.md`. Generic definition: `docs/MODULE_DESCRIPTIONS.md`; C# placement convention and examples: `docs/MODULE_DESCRIPTIONS.AmbientServices.md`. Refer to these by their exact names — Pitch, Pledge, Plan, Pin — never informal synonyms.
 
-### The 3P Protocol (3P)
+### The 4P Protocol (4P)
 - **Pitch** *(Value Proposition)* — short; the caller's "is this what I need?" decision. Problem/benefit, optional limits.
 - **Pledge** *(Contract)* — data flow, valid/invalid call sequences, and behavioral rules the signatures can't express. Attaches to the abstraction; realizations link to it.
 - **Plan** *(Implementation)* — per-realization algorithms, dependencies, and performance/durability/reliability/cost trade-offs and how they're achieved.
 
-3P Sharing is per-layer, not a tree: realizations of one Pledge may still have different Pitches. Abstractions carry Pitch + Pledge; realizations carry a Pitch, one or more Pledges, and a Plan — a realization links the abstraction's Pledge and may add realization-specific extension Pledges.
+4P sharing is per-layer, not a tree: realizations of one Pledge may still have different Pitches. Abstractions carry Pitch + Pledge; realizations carry a Pitch, one or more Pledges, and a Plan — a realization links the abstraction's Pledge and may add realization-specific extension Pledges.
 
 **Rules:**
-- Before modifying a unit, check to see if its 3P are documented and **flag any drift** between them and the code.
-- A significant code change updates the affected 3P **in the same change**.
-- A change to any of the 3P is **agreed in prose first**, then code and tests follow.
+- Before modifying a unit, check to see if its 4P are documented and **flag any drift** between them and the code. Treat a `<pin>` as read-only unless the change is explicitly a migration.
+- A significant code change updates the affected 4P **in the same change**.
+- A change to any of the 4P is **agreed in prose first**, then code and tests follow. Violating a `<pin>` is a **migration** decision, not a code decision: it invalidates data or peers that already exist, so the compatibility plan is agreed before the code changes.
 - Decide **fix / enhance / branch** using the constraints at *every* layer: code-vs-description mismatch → fix; within all layers → enhance; outside any layer → new unit, or a deliberate, agreed change to that layer.
 
 ### C# Coding Standards

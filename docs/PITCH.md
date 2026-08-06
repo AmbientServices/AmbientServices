@@ -1,6 +1,6 @@
 # AmbientServices — Pitch
 
-*This is the whole-library **Pitch** layer of the 3P Protocol — the "is this what I need?" triage layer for the project as a single unit. See [MODULE_DESCRIPTIONS.md](MODULE_DESCRIPTIONS.md) for what the 3P are, [PLEDGE.md](PLEDGE.md) for what the library promises, and [PLAN.md](PLAN.md) for how it is built.*
+*This is the whole-library **Pitch** layer of the 4P Protocol — the "is this what I need?" triage layer for the project as a single unit. See [MODULE_DESCRIPTIONS.md](MODULE_DESCRIPTIONS.md) for what the 4P are, [PLEDGE.md](PLEDGE.md) for what the library promises, and [PLAN.md](PLAN.md) for how it is built.*
 
 ## The problem
 
