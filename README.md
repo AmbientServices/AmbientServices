@@ -5,9 +5,9 @@
 
 AmbientServices is a .NET library that provides abstractions for services which are both ubiquitous and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those services.
 
-## How this library is documented — The 3P Protocol
+## How this library is documented — The 4P Protocol
 
-This project describes each unit of code — from a single class up to the whole library — with up to three short prose layers, the **3P**: a **Pitch** (why you'd use it), a **Pledge** (what it promises and how you interact with it), and a **Plan** (how it's built). Per-type layers live in the XML-doc `<remarks>` of each type; the layers for the library as a whole live in their own documents:
+This project describes each unit of code — from a single class up to the whole library — with up to four short prose layers, the **4P**: a **Pitch** (why you'd use it), a **Pledge** (what it promises and how you interact with it), a **Plan** (how it's built), and a **Pin** (what may never change, for the units that freeze something). Per-type layers live in the XML-doc `<remarks>` of each type; the layers for the library as a whole live in their own documents:
 
 - [**Pitch**](docs/PITCH.md) — is this library what you need?
 - [**Pledge**](docs/PLEDGE.md) — the behavioral contract shared by every ambient service.

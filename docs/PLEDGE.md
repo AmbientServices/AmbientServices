@@ -1,6 +1,6 @@
 # AmbientServices — Pledge
 
-*This is the whole-library **Pledge** layer of the 3P Protocol — the behavioral contract shared by the library as a single unit: the rules that hold across every ambient service and that the interface signatures cannot express by themselves. See [MODULE_DESCRIPTIONS.md](MODULE_DESCRIPTIONS.md) for what the 3P are, [PITCH.md](PITCH.md) for whether the library fits your need, and [PLAN.md](PLAN.md) for how these promises are implemented. Each interface additionally carries its own Pledge in its XML-doc `<remarks>`; the promises below apply on top of all of them.*
+*This is the whole-library **Pledge** layer of the 4P Protocol — the behavioral contract shared by the library as a single unit: the rules that hold across every ambient service and that the interface signatures cannot express by themselves. See [MODULE_DESCRIPTIONS.md](MODULE_DESCRIPTIONS.md) for what the 4P are, [PITCH.md](PITCH.md) for whether the library fits your need, and [PLAN.md](PLAN.md) for how these promises are implemented. Each interface additionally carries its own Pledge in its XML-doc `<remarks>`; the promises below apply on top of all of them.*
 
 ## The ambient contract
 
