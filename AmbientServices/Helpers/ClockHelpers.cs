@@ -15,7 +15,7 @@ namespace AmbientServices;
 /// The way code in this library and its consumers should read time: <see cref="UtcNow"/>, <see cref="Now"/>, <see cref="Ticks"/>, and <see cref="Elapsed"/> observe the ambient <see cref="IAmbientClock"/> when one is registered and fall back to the system clock (at essentially zero overhead) when none is.  Test code uses <see cref="Pause"/> and the skip/sleep/delay members to control the passage of that time deterministically.
 /// </pitch>
 /// <pledge>
-/// With no ambient clock, every member mirrors the system clock exactly.  <see cref="Pause"/> freezes time for the current call context (and contexts it subsequently spawns) until the returned scope is disposed in that same call context; pause scopes nest, an inner disposal restoring the outer paused clock.  While paused, time moves only via <see cref="SkipAhead(TimeSpan)"/>, <see cref="ThreadSleep(TimeSpan)"/>, or <see cref="TaskDelay(TimeSpan)"/>, which advance the paused clock instantly instead of waiting — and ambient timers and timed cancellations scheduled against the paused clock fire synchronously, on the advancing thread, before the call returns.  The skip members are for test code only: when the clock is not paused, skips do nothing.  The sleep/delay members skip when the clock is paused and genuinely wait when the clock is not paused.
+/// With no ambient clock, every member mirrors the system clock exactly.  <see cref="Pause"/> freezes time for the current call context (and contexts it subsequently spawns) until the returned scope is disposed in that same call context; pause scopes nest, an inner disposal restoring the outer paused clock.  While paused, time moves only via <see cref="SkipAhead(TimeSpan)"/>, <see cref="ThreadSleep(TimeSpan)"/>, or <see cref="TaskDelay(TimeSpan)"/>, which advance the paused clock instantly instead of waiting — and ambient timers and timed cancellations scheduled against the paused clock fire synchronously, on the advancing thread, before the call returns, each observing the time it was scheduled for rather than the time the advance ended.  The skip members are for test code only: when the clock is not paused, skips do nothing.  The sleep/delay members skip when the clock is paused and genuinely wait when the clock is not paused.
 /// </pledge>
 /// <plan>
 /// A static facade over <c>Ambient.GetService&lt;IAmbientClock&gt;()</c>: reads use the call-context-local service and fall back to <see cref="Stopwatch.GetTimestamp"/> and <see cref="DateTime.UtcNow"/>.  <see cref="Pause"/> installs a <see cref="PausedAmbientClock"/> as the call-context override through a disposable that restores the prior override; the skip/sleep/delay members skip the clock forward when the current override is a <see cref="PausedAmbientClock"/>.  Tick math converts between stopwatch ticks and <see cref="TimeSpan"/> ticks using <see cref="Stopwatch.Frequency"/>.
@@ -263,8 +263,8 @@ public static class AmbientClock
     /// <remarks>
     /// <pitch>The controllable clock installed by <see cref="AmbientClock.Pause"/>: time stands perfectly still until the test says otherwise.</pitch>
     /// <pledge><see cref="IAmbientClock"/></pledge>
-    /// <pledge>Time moves only through <see cref="SkipAhead(long)"/>, which applies the change and then notifies registered sinks synchronously on the calling thread; it must be called by only one thread at a time and never (directly or indirectly) from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> notification.</pledge>
-    /// <plan>Captures <see cref="Stopwatch.GetTimestamp"/> once at construction as the frozen base time and adds an <see cref="Interlocked"/>-maintained elapsed-tick counter; the UTC date-time is derived from the same tick value, so the two views always agree.  Sinks are held in a <see cref="ConcurrentHashSet{T}"/>.</plan>
+    /// <pledge>Time moves only through <see cref="SkipAhead(long)"/>, and never backwards except when explicitly asked to.  A skip does not jump straight to its destination: the clock stops at each callback scheduled along the way, in chronological order, reading that callback's due time while its sink is notified, and settles at the requested time once nothing further is due.  Callbacks therefore observe the time they were scheduled for rather than the time the skip ended, which is what lets a rescheduling callback compute its next deadline the same way it would against the system clock.  Sinks are notified synchronously on the calling thread; <see cref="SkipAhead(long)"/> must be called by only one thread at a time and never (directly or indirectly) from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> notification.</pledge>
+    /// <plan>Captures <see cref="Stopwatch.GetTimestamp"/> once at construction as the frozen base time and adds an <see cref="Interlocked"/>-maintained elapsed-tick counter; the UTC date-time is derived from the same tick value, so the two views always agree.  Sinks are held in a <see cref="ConcurrentHashSet{T}"/>.  Skipping re-scans the sinks for the soonest <see cref="IAmbientClockScheduledCallbackSource.NextScheduledCallbackStopwatchTicks"/> still ahead of the clock on every pass rather than planning the whole skip up front, which is what makes callbacks that reschedule themselves fall out correctly; the cost is a scan per delivered callback, which is deliberately traded for fidelity since this clock exists only for testing.  Sinks that schedule nothing are simply passed the whole span.</plan>
     /// </remarks>
     internal class PausedAmbientClock : IAmbientClock
     {
@@ -330,8 +330,43 @@ public static class AmbientClock
         /// <remarks>This function is not thread-safe and must only be called by one thread at a time.  It must not be called directly or indirectly from a <see cref="IAmbientClockTimeChangedNotificationSink.TimeChanged"/> implementation.</remarks>
         public void SkipAhead(long ticks)
         {
-            long newTicks = _baseStopwatchTicks + Interlocked.Add(ref _elapsedStopwatchTicks, ticks);
-            long oldTicks = newTicks - ticks;
+            long startStopwatchTicks = _baseStopwatchTicks + _elapsedStopwatchTicks;
+            long targetStopwatchTicks = startStopwatchTicks + ticks;
+            long positionStopwatchTicks = startStopwatchTicks;
+            // walk forward through the scheduled callbacks in chronological order, stopping the clock at each one before notifying, so that every callback observes the time it was scheduled for
+            // each pass re-asks for the soonest deadline, so callbacks that reschedule themselves are picked up at their new time, exactly as they would be by the system clock
+            for (long? nextStopwatchTicks = SoonestScheduledCallback(positionStopwatchTicks, targetStopwatchTicks); nextStopwatchTicks != null; nextStopwatchTicks = SoonestScheduledCallback(positionStopwatchTicks, targetStopwatchTicks))
+            {
+                MoveTo(nextStopwatchTicks.Value);
+                NotifyTimeChanged(positionStopwatchTicks, nextStopwatchTicks.Value);
+                positionStopwatchTicks = nextStopwatchTicks.Value;
+            }
+            // settle at the requested time--this is the only step taken when nothing is scheduled, including when moving backwards
+            MoveTo(targetStopwatchTicks);
+            NotifyTimeChanged(positionStopwatchTicks, targetStopwatchTicks);
+        }
+        /// <summary>
+        /// Gets the soonest time any registered sink has a callback scheduled after <paramref name="afterStopwatchTicks"/> and no later than <paramref name="throughStopwatchTicks"/>, or null if there is none.
+        /// </summary>
+        /// <param name="afterStopwatchTicks">The time the clock currently sits at.  Callbacks due at or before this have already been delivered.</param>
+        /// <param name="throughStopwatchTicks">The time the clock is moving to.  Callbacks due after this are not part of this move.</param>
+        private long? SoonestScheduledCallback(long afterStopwatchTicks, long throughStopwatchTicks)
+        {
+            long? soonestStopwatchTicks = null;
+            foreach (IAmbientClockTimeChangedNotificationSink notificationSink in _notificationSinks)
+            {
+                long? dueStopwatchTicks = (notificationSink as IAmbientClockScheduledCallbackSource)?.NextScheduledCallbackStopwatchTicks;
+                if (dueStopwatchTicks == null || dueStopwatchTicks.Value <= afterStopwatchTicks || dueStopwatchTicks.Value > throughStopwatchTicks) continue;
+                if (soonestStopwatchTicks == null || dueStopwatchTicks.Value < soonestStopwatchTicks.Value) soonestStopwatchTicks = dueStopwatchTicks;
+            }
+            return soonestStopwatchTicks;
+        }
+        private void MoveTo(long stopwatchTicks)
+        {
+            Interlocked.Exchange(ref _elapsedStopwatchTicks, stopwatchTicks - _baseStopwatchTicks);
+        }
+        private void NotifyTimeChanged(long oldTicks, long newTicks)
+        {
             // notify any subscribers
             foreach (IAmbientClockTimeChangedNotificationSink notificationSink in _notificationSinks)
             {
@@ -504,10 +539,10 @@ public sealed class AmbientStopwatch
 /// AmbientEventTimer is thread-safe.
 /// <pitch>A drop-in <see cref="System.Timers.Timer"/> whose <see cref="Elapsed"/> event rides the ambient clock when one is registered at construction, so periodic logic can be driven deterministically from tests by skipping virtual time — and behaves identically to the system timer otherwise.</pitch>
 /// <pledge><see cref="IAmbientClockTimeChangedNotificationSink"/></pledge>
-/// <pledge>Which clock the timer observes is fixed at construction (a call-context clock such as one installed by <see cref="AmbientClock.Pause"/> is included).  Under an ambient clock, <see cref="Elapsed"/> is raised synchronously on the thread advancing the clock, once for every period boundary the skip crosses while <see cref="AutoReset"/> is set (at most once otherwise); no thread-pool thread is involved, and nothing ever fires while virtual time stands still.</pledge>
-/// <plan>When bound to an ambient clock, the base <see cref="System.Timers.Timer"/> stays permanently disabled and the instance instead registers itself as a time-changed sink, tracking its period and next-raise deadline in stopwatch ticks with <see cref="Interlocked"/> operations; each time-change notification loops, raising <see cref="Elapsed"/> for as long as the deadline falls within the skipped span.  Event arguments are manufactured through the framework's non-public <see cref="System.Timers.ElapsedEventArgs"/> constructor via reflection, and subscribers are kept in a private event holder rather than the base event.  Disposal deregisters the sink.  With no ambient clock, every member falls straight through to the base class.</plan>
+/// <pledge>Which clock the timer observes is fixed at construction (a call-context clock such as one installed by <see cref="AmbientClock.Pause"/> is included).  Behavior is that of <see cref="System.Timers.Timer"/> with virtual time substituted for system time — including which intervals are rejected and with which exception, since the interval reaches the base class before anything else looks at it.  That is deliberately stated by reference rather than restated here, so that this timer tracks any future change to the framework's behavior instead of contradicting it.  What differs, because it cannot be inferred from the framework type: under an ambient clock <see cref="Elapsed"/> is raised synchronously on the thread advancing the clock rather than on a thread-pool thread, nothing is ever raised while virtual time stands still, and any <see cref="ArgumentException.ParamName"/> names this type's own parameter rather than the framework's.</pledge>
+/// <plan>When bound to an ambient clock, the base <see cref="System.Timers.Timer"/> stays permanently disabled and the instance instead registers itself as a time-changed sink, tracking its period and next-raise deadline in stopwatch ticks with <see cref="Interlocked"/> operations, and reporting that deadline through <see cref="IAmbientClockScheduledCallbackSource"/> so a virtual clock can stop there before notifying.  Each notification re-reads the scheduling state on every pass rather than caching it, so a handler that reschedules or disables the timer is honored immediately; the schedule is advanced with a compare-exchange that stands down when the handler already moved it.  Event arguments are manufactured through the framework's non-public <see cref="System.Timers.ElapsedEventArgs"/> constructor via reflection, and subscribers are kept in a private event holder rather than the base event.  Disposal deregisters the sink.  With no ambient clock, every member falls straight through to the base class.</plan>
 /// </remarks>
-public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNotificationSink
+public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNotificationSink, IAmbientClockScheduledCallbackSource
 {
 #if NET6_0_OR_GREATER
     private static readonly System.Reflection.ConstructorInfo _ElapsedEventArgsConstructor = typeof(System.Timers.ElapsedEventArgs).GetConstructor(
@@ -555,7 +590,7 @@ public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNo
     /// The timer starts with <see cref="AutoReset"/> set to true and <see cref="Enabled"/> set to false.
     /// </summary>
     public AmbientEventTimer()
-        : this(SchedulingClock, TimeSpan.FromMilliseconds(100))
+        : this(SchedulingClock)
     {
     }
     /// <summary>
@@ -564,7 +599,7 @@ public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNo
     /// </summary>
     /// <param name="milliseconds">The number of milliseconds indicating how often the <see cref="Elapsed"/> event should be raised.</param>
     public AmbientEventTimer(double milliseconds)
-        : this(SchedulingClock, TimeSpan.FromMilliseconds(milliseconds))
+        : this(SchedulingClock, milliseconds)
     {
     }
     /// <summary>
@@ -585,45 +620,60 @@ public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNo
         : base()
     {
         _clock = clock;
-        _autoReset = 1;
-        // is there a clock?
-        if (clock != null)
-        {
-            // disable the system timer (it should be disabled anyway, but just in case)
-            base.Enabled = false;
-
-            long nowStopwatchTicks = clock.Ticks;
-            clock.RegisterTimeChangedNotificationSink(this);
-            _periodStopwatchTicks = 0;
-            _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
-            _enabled = 0;
-        }
-        // else no clock, so use the base system timer
+        InitializeAmbientScheduling();
     }
     /// <summary>
     /// Constructs an AmbientEventTimer that will use the specified period and clock to determine when to raise the <see cref="Elapsed"/> event.
     /// The timer starts with <see cref="AutoReset"/> set to true and <see cref="Enabled"/> set to false.
     /// </summary>
     /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
-    /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be raised.  If zero, the timer will not be enabled.  If non-zero, the timer will start immediately.</param>
+    /// <param name="period">A <see cref="TimeSpan"/> indicating how often the <see cref="Elapsed"/> event should be raised.  Periods that <see cref="System.Timers.Timer"/> rejects are rejected here identically, including zero.</param>
     public AmbientEventTimer(IAmbientClock? clock, TimeSpan period)
-        : base(period.TotalMilliseconds)
+        : this(clock, period.TotalMilliseconds)
+    {
+    }
+    /// <summary>
+    /// Constructs an AmbientEventTimer that will use the specified period and clock to determine when to raise the <see cref="Elapsed"/> event.
+    /// </summary>
+    /// <remarks>
+    /// The period goes to the base <see cref="System.Timers.Timer"/> constructor before anything else looks at it, so an invalid period is rejected by the framework itself rather than by a conversion on the way in.
+    /// </remarks>
+    /// <param name="clock">The <see cref="IAmbientClock"/> to use to determine when to raise the <see cref="Elapsed"/> event.</param>
+    /// <param name="milliseconds">The number of milliseconds indicating how often the <see cref="Elapsed"/> event should be raised.</param>
+    private AmbientEventTimer(IAmbientClock? clock, double milliseconds)
+        : base(milliseconds)
     {
         _clock = clock;
+        InitializeAmbientScheduling();
+    }
+    /// <summary>
+    /// Sets up the virtual scheduling state, using the interval the base class has already validated and stored.
+    /// </summary>
+    private void InitializeAmbientScheduling()
+    {
         _autoReset = 1;
-        // is there a clock?
-        if (clock != null)
-        {
-            // disable the system timer (it should be disabled anyway, but just in case)
-            base.Enabled = false;
+        // no clock, so use the base system timer
+        if (_clock == null) return;
+        // disable the system timer (it should be disabled anyway, but just in case)
+        base.Enabled = false;
 
-            long nowStopwatchTicks = clock.Ticks;
-            clock.RegisterTimeChangedNotificationSink(this);
-            _periodStopwatchTicks = TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(period.Ticks);
-            _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
-            _enabled = 0;
-        }
-        // else no clock, so use the base system timer
+        long nowStopwatchTicks = _clock.Ticks;
+        _periodStopwatchTicks = PeriodStopwatchTicks(base.Interval);
+        _nextRaiseStopwatchTicks = nowStopwatchTicks + _periodStopwatchTicks;
+        _enabled = 0;
+        _clock.RegisterTimeChangedNotificationSink(this);
+    }
+    /// <summary>
+    /// Converts an interval in milliseconds that <see cref="System.Timers.Timer"/> has already accepted into stopwatch ticks.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="System.Timers.Timer"/> accepts some intervals that <see cref="TimeSpan"/> cannot represent (NaN, most notably), so those become a period of zero, which never elapses.  Rejecting them here instead would throw where the system timer does not.
+    /// </remarks>
+    /// <param name="milliseconds">The interval in milliseconds, as validated and stored by the base class.</param>
+    private static long PeriodStopwatchTicks(double milliseconds)
+    {
+        if (double.IsNaN(milliseconds) || milliseconds <= 0.0 || milliseconds > TimeSpan.MaxValue.TotalMilliseconds) return 0;
+        return TimeSpanUtilities.TimeSpanTicksToStopwatchTicks(TimeSpan.FromMilliseconds(milliseconds).Ticks);
     }
     /// <summary>
     /// Receives notification that the ambient clock time was changed.
@@ -637,30 +687,27 @@ public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNo
     {
         // there should be a clock if we get here
         Debug.Assert(_clock != null && !((System.Timers.Timer)this).Enabled);
-        // is the timer enabled?
-        if (_enabled != 0)
+        // loop because it's possible that we need to raise the event more than once
+        // the handler may reschedule or disable the timer, so the scheduling state is re-read on every pass rather than cached across the loop
+        while (_enabled != 0)
         {
             // was it not time to raise before, but it is now?
-            long nextRaiseStopwatchTicks = _nextRaiseStopwatchTicks;
+            long raiseStopwatchTicks = _nextRaiseStopwatchTicks;
+            if (raiseStopwatchTicks <= oldTicks || raiseStopwatchTicks > newTicks) break;
             long periodStopwatchTicks = _periodStopwatchTicks;
             bool autoReset = (_autoReset != 0);
-            // loop because it's possible that we need to raise the event more than once
-            while (nextRaiseStopwatchTicks > oldTicks && nextRaiseStopwatchTicks <= newTicks && _enabled != 0)
-            {
-                _eventHolder.RaiseElapsed(this);
-                // should we reset for another period?
-                if (autoReset && periodStopwatchTicks != 0)
-                {
-                    nextRaiseStopwatchTicks = Interlocked.Add(ref _nextRaiseStopwatchTicks, periodStopwatchTicks);
-                    // loop around again to check to see if we need to be raised again
-                }
-                else
-                {
-                    break;
-                }
-            }
+            _eventHolder.RaiseElapsed(this);
+            // should we reset for another period?
+            if (!autoReset || periodStopwatchTicks == 0) break;
+            // move to the next period, but stand down if the handler already rescheduled us, because that reschedule wins
+            Interlocked.CompareExchange(ref _nextRaiseStopwatchTicks, raiseStopwatchTicks + periodStopwatchTicks, raiseStopwatchTicks);
+            // loop around again to check to see if we need to be raised again
         }
     }
+    /// <summary>
+    /// Gets the time the <see cref="Elapsed"/> event is next due to be raised, or null if the timer is not enabled.
+    /// </summary>
+    long? IAmbientClockScheduledCallbackSource.NextScheduledCallbackStopwatchTicks => (_enabled != 0) ? _nextRaiseStopwatchTicks : null;
     /// <summary>
     /// Gets or sets whether or not the event resets and fires again after being raised.
     /// </summary>
@@ -707,21 +754,16 @@ public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNo
     /// </summary>
     public new double Interval
     {
-        get
-        {
-            return (_clock != null) ? _periodStopwatchTicks * 1000.0 / Stopwatch.Frequency : base.Interval;
-        }
+        // the base class holds the interval in both cases, so that it validates and reports exactly what the system timer would
+        get { return base.Interval; }
         set
         {
+            base.Interval = value;
             if (_clock != null)
             {
-                Interlocked.Exchange(ref _periodStopwatchTicks, (long)(value / 1000.0 * Stopwatch.Frequency));
+                Interlocked.Exchange(ref _periodStopwatchTicks, PeriodStopwatchTicks(value));
                 // are we enabled?
                 if (_enabled != 0) SetupNextRaise();
-            }
-            else
-            {
-                base.Interval = value;
             }
         }
     }
@@ -813,16 +855,17 @@ public class AmbientEventTimer : System.Timers.Timer, IAmbientClockTimeChangedNo
 /// AmbientCallbackTimer is thread-safe.
 /// <pitch>A drop-in <see cref="System.Threading.Timer"/> whose callbacks ride the ambient clock when one is registered at construction, making callback-based scheduling deterministically testable through virtual time skips; identical to the system timer otherwise.</pitch>
 /// <pledge><see cref="IAmbientClockTimeChangedNotificationSink"/></pledge>
-/// <pledge>Which clock is observed is fixed at construction.  Under an ambient clock, the callback is invoked synchronously on the thread advancing the clock, once for every period boundary the skip crosses (once in total when the period is infinite, after which the timer disables itself); <see cref="Change(TimeSpan, TimeSpan)"/> discards all previous scheduling exactly like the system timer, and <see cref="Dispose(WaitHandle)"/> signals the handle immediately because ambient-clock callbacks are synchronous — there is never an in-flight callback to wait for.</pledge>
-/// <plan>Holds exactly one of an <see cref="IAmbientClock"/> or a real <see cref="System.Threading.Timer"/>: the ambient path registers as a time-changed sink and tracks due time, period, and next-raise deadline in stopwatch ticks, settling enable/disable races with <see cref="Interlocked"/> exchanges, while the system path forwards every member to the wrapped timer.  A static count of live ambient-clock timers backs <c>ActiveCount</c> alongside the framework's own count.  Disposal routes through <see cref="Change(TimeSpan, TimeSpan)"/> to deregister the sink.</plan>
+/// <pledge>Which clock is observed is fixed at construction.  Behavior is that of <see cref="System.Threading.Timer"/> with virtual time substituted for system time, including which due times and periods are rejected and with which exception — deliberately stated by reference rather than restated here, so that this timer tracks any future change to the framework's behavior instead of contradicting it.  What differs, because it cannot be inferred from the framework type: under an ambient clock the callback is invoked synchronously on the thread advancing the clock rather than on a thread-pool thread, <see cref="Dispose(WaitHandle)"/> signals the handle immediately since synchronous callbacks mean there is never an in-flight one to wait for, and any <see cref="ArgumentException.ParamName"/> names this type's own parameter rather than the framework's.</pledge>
+/// <plan>Holds exactly one of an <see cref="IAmbientClock"/> or a real <see cref="System.Threading.Timer"/>: the ambient path registers as a time-changed sink and tracks due time, period, and next-raise deadline in stopwatch ticks, settling enable/disable races with <see cref="Interlocked"/> exchanges and reporting the deadline through <see cref="IAmbientClockScheduledCallbackSource"/> so a virtual clock can stop there before notifying, while the system path forwards every member to the wrapped timer.  Each notification re-reads the scheduling state on every pass rather than caching it, which is what lets a callback that re-arms the timer be honored immediately instead of the loop running on against a stale deadline.  A static count of live ambient-clock timers backs <c>ActiveCount</c> alongside the framework's own count.  Disposal routes through <see cref="Change(TimeSpan, TimeSpan)"/> to deregister the sink.</plan>
 /// </remarks>
-public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTimeChangedNotificationSink,
+public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTimeChangedNotificationSink, IAmbientClockScheduledCallbackSource,
 #if NETCOREAPP3_1 || NET5_0_OR_GREATER
     IAsyncDisposable, 
 #endif
     IDisposable
 {
     private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
+    private const long MaxSupportedTimeoutMilliseconds = 0xFFFFFFFE;    // the same limit System.Threading.Timer enforces
     private static readonly ManualResetEvent _AlwaysSignaled = new(true);
     private static readonly object _UseTimerInstanceForStateIndicator = new();
     private static long _TimerCount;
@@ -909,8 +952,8 @@ public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTime
     /// <param name="period">A <see cref="TimeSpan"/> indicating the number of milliseconds between callbacks.  <see cref="Timeout.InfiniteTimeSpan"/> to disable periodic signaling.</param>
     public AmbientCallbackTimer(IAmbientClock? clock, TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
     {
-        if (dueTime != Timeout.InfiniteTimeSpan && dueTime.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(dueTime), "The dueTime parameter must not be negative unless it is Infinite!");
-        if (period != Timeout.InfiniteTimeSpan && period.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(period), "The period parameter must not be negative unless it is Infinite!");
+        ValidateTime(dueTime, nameof(dueTime));
+        ValidateTime(period, nameof(period));
 
         _callback = callback ?? throw new ArgumentNullException(nameof(callback));
         _state = ReferenceEquals(state, _UseTimerInstanceForStateIndicator) ? this : state;
@@ -943,29 +986,45 @@ public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTime
     void IAmbientClockTimeChangedNotificationSink.TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime)
     {
         if (_clock == null) throw new InvalidOperationException("TimeChanged may only be used with non-system ambient clocks!");
-        // is the timer enabled?
-        if (_enabled != 0)
+        // the callback may reschedule or disable the timer, so the scheduling state is re-read on every pass rather than cached across the loop
+        // caching it would let a callback that re-arms the timer be measured against a stale deadline, which never advances and so never ends
+        while (_callback != null && _enabled != 0)
         {
             // was it not time to raise before, but it is now?
-            long nextRaiseStopwatchTicks = _nextRaiseStopwatchTicks;
+            long raiseStopwatchTicks = _nextRaiseStopwatchTicks;
+            if (raiseStopwatchTicks <= oldTicks || raiseStopwatchTicks > newTicks) break;
             long periodStopwatchTicks = _periodStopwatchTicks;
             bool autoReset = (_autoReset != 0);
-            while (_callback != null && nextRaiseStopwatchTicks > oldTicks && nextRaiseStopwatchTicks <= newTicks && _enabled != 0)
+            // should we reset for another period?
+            if (autoReset && periodStopwatchTicks != Timeout.Infinite)
             {
-                // should we reset for another period?
-                if (autoReset && periodStopwatchTicks != Timeout.Infinite)
-                {
-                    nextRaiseStopwatchTicks = Interlocked.Add(ref _nextRaiseStopwatchTicks, periodStopwatchTicks);
-                    // we might loop around again and invoke the callback again depending on how much the time changed
-                }
-                else // we're no longer active, as the period indicates that we shouldn't invoke the callback again
-                {
-                    Disable();
-                    // _enabled getting set to zero should cause us to break out of the loop, unless the callback reenables us or someone else changes it asynchronously
-                }
-                _callback.Invoke(_state);
+                Interlocked.Add(ref _nextRaiseStopwatchTicks, periodStopwatchTicks);
+                // we might loop around again and invoke the callback again depending on how much the time changed
             }
+            else // we're no longer active, as the period indicates that we shouldn't invoke the callback again
+            {
+                Disable();
+                // _enabled getting set to zero should cause us to break out of the loop, unless the callback reenables us or someone else changes it asynchronously
+            }
+            _callback.Invoke(_state);
         }
+    }
+    /// <summary>
+    /// Gets the time the callback is next due to be invoked, or null if the timer is not enabled.
+    /// </summary>
+    long? IAmbientClockScheduledCallbackSource.NextScheduledCallbackStopwatchTicks => (_enabled != 0) ? _nextRaiseStopwatchTicks : null;
+
+    /// <summary>
+    /// Validates a due time or period against the same limits <see cref="System.Threading.Timer"/> applies.
+    /// </summary>
+    /// <param name="time">The <see cref="TimeSpan"/> to validate, with <see cref="Timeout.InfiniteTimeSpan"/> always allowed.</param>
+    /// <param name="parameterName">The name of the parameter being validated, for the exception.</param>
+    private static void ValidateTime(TimeSpan time, string parameterName)
+    {
+        if (time == Timeout.InfiniteTimeSpan) return;
+        long milliseconds = (long)time.TotalMilliseconds;
+        if (milliseconds < 0) throw new ArgumentOutOfRangeException(parameterName, "The parameter must not be negative unless it is Infinite!");
+        if (milliseconds > MaxSupportedTimeoutMilliseconds) throw new ArgumentOutOfRangeException(parameterName, $"The parameter must not exceed {MaxSupportedTimeoutMilliseconds} milliseconds!");
     }
 
     private void Disable()
@@ -1033,8 +1092,8 @@ public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTime
     {
         if (_clock != null)
         {
-            if (dueTime != Timeout.InfiniteTimeSpan && dueTime.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(dueTime), "The dueTime parameter must not be negative unless it is Infinite!");
-            if (period != Timeout.InfiniteTimeSpan && period.Ticks < 0) throw new ArgumentOutOfRangeException(nameof(period), "The period parameter must not be negative unless it is Infinite!");
+            ValidateTime(dueTime, nameof(dueTime));
+            ValidateTime(period, nameof(period));
 
             // were we enabled before?
             if (_enabled != 0)
@@ -1069,6 +1128,8 @@ public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTime
         {
             if (_clock != null)
             {
+                // the system path gets this validation from the timer it forwards to, but the ambient path has to do it here
+                if (waitHandle == null) throw new ArgumentNullException(nameof(waitHandle));
                 bool enabled = (_enabled != 0);
                 Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan); // note that this disables the timer and decrements the timer count if needed
                 // since notification when we have an ambient clock service is synchronous, there is no need to wait for full disposal
@@ -1140,13 +1201,13 @@ public sealed class AmbientCallbackTimer : MarshalByRefObject, IAmbientClockTime
 /// <remarks>
 /// <pitch>The ambient-clock counterpart of <see cref="RegisteredWaitHandle"/>, created through <see cref="AmbientThreadPool"/>: wait-handle callbacks whose timeout leg follows virtual time, so timeout paths can be exercised deterministically in tests.</pitch>
 /// <pledge><see cref="IAmbientClockTimeChangedNotificationSink"/></pledge>
-/// <pledge>Signal-triggered callbacks always come from a real thread-pool wait, regardless of clock.  With an ambient clock, timeout-triggered callbacks are instead invoked synchronously while virtual time is skipped, once per timeout interval the skip crosses; a signal reschedules the next timeout, execute-only-once registrations stop after their first invocation, and "safe" registrations run timeout callbacks in the <see cref="ExecutionContext"/> captured at registration.  <see cref="Unregister"/> stops both legs.</pledge>
-/// <plan>Always registers with the real <see cref="ThreadPool"/> for the signal leg — with an infinite timeout when an ambient clock will handle the timing — and registers as a time-changed sink for the timeout leg, tracking the next callback deadline in stopwatch ticks; the two legs coordinate through an <see cref="Interlocked"/>-updated deadline.  With no ambient clock, the whole object is a thin wrapper over the corresponding <see cref="ThreadPool"/> registration.</plan>
+/// <pledge>Behavior is that of the corresponding <see cref="ThreadPool"/> registration with virtual time substituted for system time on the timeout leg, including which arguments are rejected and with which exception — deliberately stated by reference rather than restated here, so that this type tracks any future change to the framework's behavior instead of contradicting it.  What differs, because it cannot be inferred from the framework: signal-triggered callbacks always come from a real thread-pool wait regardless of clock, while under an ambient clock timeout-triggered callbacks are invoked synchronously on the thread advancing the clock, "safe" registrations run those timeout callbacks in the <see cref="ExecutionContext"/> captured at registration, and any <see cref="ArgumentException.ParamName"/> names this type's own parameter rather than the framework's.  <see cref="Unregister"/> stops both legs.</pledge>
+/// <plan>Always registers with the real <see cref="ThreadPool"/> for the signal leg — with an infinite timeout when an ambient clock will handle the timing — and registers as a time-changed sink for the timeout leg, tracking the next callback deadline in stopwatch ticks and reporting it through <see cref="IAmbientClockScheduledCallbackSource"/> so a virtual clock can stop there before notifying; the two legs coordinate through an <see cref="Interlocked"/>-updated deadline.  With no ambient clock, the whole object is a thin wrapper over the corresponding <see cref="ThreadPool"/> registration.</plan>
 /// </remarks>
 #if NET5_0_OR_GREATER
 [UnsupportedOSPlatform("browser")]
 #endif
-public sealed class AmbientRegisteredWaitHandle : IAmbientClockTimeChangedNotificationSink
+public sealed class AmbientRegisteredWaitHandle : IAmbientClockTimeChangedNotificationSink, IAmbientClockScheduledCallbackSource
 {
     private static readonly AmbientService<IAmbientClock> _Clock = Ambient.GetService<IAmbientClock>();
     private static readonly ManualResetEvent _ManualResetEvent = new(true);
@@ -1191,6 +1252,9 @@ public sealed class AmbientRegisteredWaitHandle : IAmbientClockTimeChangedNotifi
         }
         else
         {
+            // the system path gets this validation from the ThreadPool registration it forwards to, but the ambient path has to do it here
+            if (callback == null) throw new ArgumentNullException(nameof(callback));
+            if (millisecondTimeoutInterval < -1) throw new ArgumentOutOfRangeException(nameof(millisecondTimeoutInterval), "The timeout interval must not be negative unless it is Infinite!");
             _callback = callback;
             _state = state;
             _registeredWaitHandle = safe
@@ -1274,6 +1338,17 @@ public sealed class AmbientRegisteredWaitHandle : IAmbientClockTimeChangedNotifi
             {
                 _callback(_state, true);
             }
+        }
+    }
+    /// <summary>
+    /// Gets the time the timeout callback is next due to be invoked, or null if no timed callback is scheduled.
+    /// </summary>
+    long? IAmbientClockScheduledCallbackSource.NextScheduledCallbackStopwatchTicks
+    {
+        get
+        {
+            long nextCallbackTimeStopwatchTicks = _nextCallbackTimeStopwatchTicks;
+            return (nextCallbackTimeStopwatchTicks == Timeout.Infinite) ? null : nextCallbackTimeStopwatchTicks;
         }
     }
     /// <summary>

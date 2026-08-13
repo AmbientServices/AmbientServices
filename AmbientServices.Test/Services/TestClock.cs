@@ -1,6 +1,7 @@
 ﻿using AmbientServices.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
@@ -640,6 +641,310 @@ public class TestClock
     /// Performs tests on <see cref="IAmbientClock"/>.
     /// </summary>
     [TestMethod]
+    public void EventTimerAmbientClockMultipleRaisesInOneSkip()
+    {
+        using (AmbientClock.Pause())
+        {
+            int elapsed = 0;
+            using AmbientEventTimer timer = new(TimeSpan.FromMilliseconds(100));
+            timer.Elapsed += (s, e) => { ++elapsed; };
+            timer.Enabled = true;
+            Assert.AreEqual(0, elapsed);
+            // one skip crossing three period boundaries (100ms, 200ms, and 300ms) must raise the event three times before it returns
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(350));
+            Assert.AreEqual(3, elapsed);
+            // this skip crosses only the fourth boundary (400ms)
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(50));
+            Assert.AreEqual(4, elapsed);
+        }
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    [TestMethod]
+    public void EventTimerAmbientClockOneRaisePerSkipWithoutAutoReset()
+    {
+        using (AmbientClock.Pause())
+        {
+            int elapsed = 0;
+            using AmbientEventTimer timer = new(TimeSpan.FromMilliseconds(100));
+            timer.AutoReset = false;
+            timer.Elapsed += (s, e) => { ++elapsed; };
+            timer.Enabled = true;
+            // the skip crosses a hundred period boundaries, but a timer that does not auto-reset must only be raised once
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(10000));
+            Assert.AreEqual(1, elapsed);
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(10000));
+            Assert.AreEqual(1, elapsed);
+        }
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    [TestMethod]
+    public void EventTimerExplicitClockMultipleRaisesInOneSkip()
+    {
+        AmbientClock.PausedAmbientClock clock = new();
+        int elapsed = 0;
+        using AmbientEventTimer timer = new(clock, TimeSpan.FromMilliseconds(100));
+        timer.Elapsed += (s, e) => { ++elapsed; };
+        timer.Enabled = true;
+        clock.SkipAhead(TimeSpan.FromMilliseconds(350));
+        Assert.AreEqual(3, elapsed);
+        clock.SkipAhead(TimeSpan.FromMilliseconds(50));
+        Assert.AreEqual(4, elapsed);
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    [TestMethod]
+    public void EventTimerRearmedFromHandlerDuringSkip()
+    {
+        const int RunawayLimit = 1000;      // bounds a runaway so that it fails the test instead of hanging the test run
+        using (AmbientClock.Pause())
+        {
+            int elapsed = 0;
+            using AmbientEventTimer timer = new(TimeSpan.FromMilliseconds(100));
+            timer.AutoReset = false;
+            // re-arming a one-shot timer from inside its own handler is the usual way to keep periodic work from overlapping itself
+            timer.Elapsed += (s, e) => { if (++elapsed < RunawayLimit) { timer.Enabled = false; timer.Enabled = true; } };
+            timer.Enabled = true;
+            // each re-arm is measured from the instant the handler ran, so the skip covers exactly ten 100ms periods, just as it would with the system clock
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(1000));
+            Assert.AreEqual(10, elapsed);
+        }
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    [TestMethod]
+    public void EventTimerObservesScheduledTimeDuringSkip()
+    {
+        using (AmbientClock.Pause())
+        {
+            DateTime start = AmbientClock.UtcNow;
+            List<double> observed = [];
+            List<double> signaled = [];
+            using AmbientEventTimer timer = new(TimeSpan.FromMilliseconds(100));
+            timer.Elapsed += (s, e) => { observed.Add((AmbientClock.UtcNow - start).TotalMilliseconds); signaled.Add((e.SignalTime.ToUniversalTime() - start).TotalMilliseconds); };
+            timer.Enabled = true;
+            // a single skip crossing three period boundaries must present each raise at the time it was scheduled for, not at the time the skip ended
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(350));
+            Assert.AreEqual("100,200,300", string.Join(",", observed));
+            Assert.AreEqual("100,200,300", string.Join(",", signaled));
+            // and the clock settles at the requested time once the scheduled raises are done
+            Assert.AreEqual(350.0, (AmbientClock.UtcNow - start).TotalMilliseconds);
+        }
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    [TestMethod]
+    public void TimersInterleavedDuringOneSkipRunInScheduledOrder()
+    {
+        using (AmbientClock.Pause())
+        {
+            DateTime start = AmbientClock.UtcNow;
+            List<string> order = [];
+            using AmbientEventTimer fast = new(TimeSpan.FromMilliseconds(100));
+            using AmbientEventTimer slow = new(TimeSpan.FromMilliseconds(150));
+            fast.Elapsed += (s, e) => { order.Add($"fast@{(AmbientClock.UtcNow - start).TotalMilliseconds}"); };
+            slow.Elapsed += (s, e) => { order.Add($"slow@{(AmbientClock.UtcNow - start).TotalMilliseconds}"); };
+            fast.Enabled = true;
+            slow.Enabled = true;
+            // two timers whose deadlines interleave must run in deadline order across the skip, each seeing its own scheduled time
+            AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(250));
+            Assert.AreEqual("fast@100,slow@150,fast@200", string.Join(",", order));
+        }
+    }
+    private static readonly double[] _Intervals = [-1.0, 0.0, 0.5, 1.0, 100.0, 2147483647.0, 2147483648.0, double.MaxValue, double.NaN, double.PositiveInfinity];
+    private static readonly int[] _Times = [-2, -1, 0, 1, 2147483647];
+    private static readonly long[] _LongTimes = [-2L, -1L, 0L, 4294967294L, 4294967295L];
+
+    /// <summary>
+    /// Runs an action and describes how it ended, so that an ambient type can be compared against the system type it emulates.
+    /// </summary>
+    /// <remarks>
+    /// Only the exception type is reported, not <see cref="ArgumentException.ParamName"/>: the ambient types name their own parameters, so for example a timeout our API calls <c>millisecondTimeoutInterval</c> is reported by the framework as <c>millisecondsTimeOutInterval</c>.
+    /// Matching those spellings would mean renaming public parameters, which would break callers using named arguments.
+    /// </remarks>
+    /// <param name="action">The <see cref="Action"/> to run.</param>
+    /// <returns>The name of the exception type that was thrown, or "ok" if none was.</returns>
+    private static string Outcome(Action action)
+    {
+        try
+        {
+            action();
+            return "ok";
+        }
+        catch (Exception ex)
+        {
+            return ex.GetType().Name;
+        }
+    }
+    /// <summary>
+    /// Compares how the system type and the ambient type that emulates it respond to the same input, appending a line to the report if they differ.
+    /// </summary>
+    /// <param name="report">A <see cref="StringBuilder"/> collecting the differences found.</param>
+    /// <param name="what">A description of the input being compared, for the report.</param>
+    /// <param name="system">An <see cref="Action"/> exercising the system type.</param>
+    /// <param name="ambient">An <see cref="Action"/> exercising the ambient type the same way.</param>
+    private static void CompareToSystem(StringBuilder report, string what, Action system, Action ambient)
+    {
+        string systemOutcome = Outcome(system);
+        string ambientOutcome = Outcome(ambient);
+        if (!string.Equals(systemOutcome, ambientOutcome, StringComparison.Ordinal)) report.AppendLine($"{what}: system={systemOutcome} ambient={ambientOutcome}");
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    /// <remarks>
+    /// This compares against the live framework rather than against hardcoded expectations, so that it reports a difference if either side's validation ever changes.
+    /// </remarks>
+    [TestMethod]
+    public void EventTimerExceptionsMatchSystemTimer()
+    {
+        StringBuilder report = new();
+        foreach (double interval in _Intervals)
+        {
+            CompareToSystem(report, $"no clock: ctor({interval})", () => { using System.Timers.Timer t = new(interval); }, () => { using AmbientEventTimer t = new(interval); });
+            CompareToSystem(report, $"no clock: Interval={interval}", () => { using System.Timers.Timer t = new(); t.Interval = interval; }, () => { using AmbientEventTimer t = new(); t.Interval = interval; });
+        }
+        using (AmbientClock.Pause())
+        {
+            foreach (double interval in _Intervals)
+            {
+                CompareToSystem(report, $"paused: ctor({interval})", () => { using System.Timers.Timer t = new(interval); }, () => { using AmbientEventTimer t = new(interval); });
+                // the TimeSpan overload can only be compared over intervals TimeSpan can represent, because otherwise TimeSpan.FromMilliseconds throws before either timer is reached
+                if (!double.IsNaN(interval) && !double.IsInfinity(interval) && Math.Abs(interval) <= TimeSpan.MaxValue.TotalMilliseconds)
+                {
+                    TimeSpan period = TimeSpan.FromMilliseconds(interval);
+                    CompareToSystem(report, $"paused: ctor(TimeSpan {interval}ms)", () => { using System.Timers.Timer t = new(period.TotalMilliseconds); }, () => { using AmbientEventTimer t = new(period); });
+                }
+                CompareToSystem(report, $"paused: Interval={interval}", () => { using System.Timers.Timer t = new(); t.Interval = interval; }, () => { using AmbientEventTimer t = new(); t.Interval = interval; });
+            }
+            // the interval a default-constructed timer reports must match too, since it is what an unset timer will use
+            AmbientClock.PausedAmbientClock clock = new();
+            using System.Timers.Timer systemTimer = new();
+            using AmbientEventTimer ambientTimer = new(clock);
+            Assert.AreEqual(systemTimer.Interval, ambientTimer.Interval);
+        }
+        Assert.AreEqual("", report.ToString());
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    /// <remarks>
+    /// This compares against the live framework rather than against hardcoded expectations, so that it reports a difference if either side's validation ever changes.
+    /// </remarks>
+    [TestMethod]
+    public void CallbackTimerExceptionsMatchSystemTimer()
+    {
+        StringBuilder report = new();
+        void noop(object o) { }
+        using (AmbientClock.Pause())
+        {
+            CompareToSystem(report, "ctor(null callback)", () => { using System.Threading.Timer t = new(null!); }, () => { using AmbientCallbackTimer t = new(null!); });
+            foreach (int dueTime in _Times)
+            {
+                foreach (int period in _Times)
+                {
+                    CompareToSystem(report, $"ctor(int {dueTime},{period})", () => { using System.Threading.Timer t = new(noop, null, dueTime, period); }, () => { using AmbientCallbackTimer t = new(noop, null, dueTime, period); });
+                    CompareToSystem(report, $"Change(int {dueTime},{period})", () => { using System.Threading.Timer t = new(noop); t.Change(dueTime, period); }, () => { using AmbientCallbackTimer t = new(noop); t.Change(dueTime, period); });
+                }
+            }
+            foreach (long dueTime in _LongTimes)
+            {
+                CompareToSystem(report, $"ctor(long {dueTime},0)", () => { using System.Threading.Timer t = new(noop, null, dueTime, 0L); }, () => { using AmbientCallbackTimer t = new(noop, null, dueTime, 0L); });
+                CompareToSystem(report, $"Change(long {dueTime},0)", () => { using System.Threading.Timer t = new(noop); t.Change(dueTime, 0L); }, () => { using AmbientCallbackTimer t = new(noop); t.Change(dueTime, 0L); });
+            }
+            CompareToSystem(report, "ctor(TimeSpan.MaxValue)", () => { using System.Threading.Timer t = new(noop, null, TimeSpan.MaxValue, TimeSpan.Zero); }, () => { using AmbientCallbackTimer t = new(noop, null, TimeSpan.MaxValue, TimeSpan.Zero); });
+            CompareToSystem(report, "Change after Dispose", () => { System.Threading.Timer t = new(noop); t.Dispose(); t.Change(1, 1); }, () => { AmbientCallbackTimer t = new(noop); t.Dispose(); t.Change(1, 1); });
+            CompareToSystem(report, "Dispose(null WaitHandle)", () => { using System.Threading.Timer t = new(noop); t.Dispose(null!); }, () => { using AmbientCallbackTimer t = new(noop); t.Dispose(null!); });
+        }
+        Assert.AreEqual("", report.ToString());
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    /// <remarks>
+    /// This compares against the live framework rather than against hardcoded expectations, so that it reports a difference if either side's validation ever changes.
+    /// </remarks>
+    [TestMethod]
+    public void RegisteredWaitHandleExceptionsMatchThreadPool()
+    {
+        StringBuilder report = new();
+        void noop(object o, bool b) { }
+        using (AmbientClock.Pause())
+        {
+            using ManualResetEvent mre = new(false);
+            foreach (int timeout in _Times)
+            {
+                CompareToSystem(report, $"RegisterWaitForSingleObject(int {timeout})",
+                    () => { ThreadPool.RegisterWaitForSingleObject(mre, noop, null, timeout, true).Unregister(null); },
+                    () => { AmbientThreadPool.RegisterWaitForSingleObject(mre, noop, null, timeout, true).Unregister(null); });
+                CompareToSystem(report, $"UnsafeRegisterWaitForSingleObject(int {timeout})",
+                    () => { ThreadPool.UnsafeRegisterWaitForSingleObject(mre, noop, null, timeout, true).Unregister(null); },
+                    () => { AmbientThreadPool.UnsafeRegisterWaitForSingleObject(mre, noop, null, timeout, true).Unregister(null); });
+            }
+            CompareToSystem(report, "RegisterWaitForSingleObject(null handle)",
+                () => { ThreadPool.RegisterWaitForSingleObject(null!, noop, null, 100, true).Unregister(null); },
+                () => { AmbientThreadPool.RegisterWaitForSingleObject(null!, noop, null, 100, true).Unregister(null); });
+            CompareToSystem(report, "RegisterWaitForSingleObject(null callback)",
+                () => { ThreadPool.RegisterWaitForSingleObject(mre, null!, null, 100, true).Unregister(null); },
+                () => { AmbientThreadPool.RegisterWaitForSingleObject(mre, null!, null, 100, true).Unregister(null); });
+        }
+        Assert.AreEqual("", report.ToString());
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    /// <remarks>
+    /// This compares against the live framework rather than against hardcoded expectations, so that it reports a difference if either side's validation ever changes.
+    /// The scheduling timer's own interval rules must not show through here: a cancellation source accepts zero and -1, both of which are invalid timer intervals.
+    /// </remarks>
+    [TestMethod]
+    public void CancellationTokenSourceExceptionsMatchSystem()
+    {
+        StringBuilder report = new();
+        using (AmbientClock.Pause())
+        {
+            foreach (int time in _Times)
+            {
+                CompareToSystem(report, $"ctor(int {time})", () => { using CancellationTokenSource s = new(time); }, () => { using AmbientCancellationTokenSource s = new(time); });
+                CompareToSystem(report, $"ctor(TimeSpan {time}ms)", () => { using CancellationTokenSource s = new(TimeSpan.FromMilliseconds(time)); }, () => { using AmbientCancellationTokenSource s = new(TimeSpan.FromMilliseconds(time)); });
+                CompareToSystem(report, $"CancelAfter(int {time})", () => { using CancellationTokenSource s = new(); s.CancelAfter(time); }, () => { using AmbientCancellationTokenSource s = new(); s.CancelAfter(time); });
+                CompareToSystem(report, $"CancelAfter(TimeSpan {time}ms)", () => { using CancellationTokenSource s = new(); s.CancelAfter(TimeSpan.FromMilliseconds(time)); }, () => { using AmbientCancellationTokenSource s = new(); s.CancelAfter(TimeSpan.FromMilliseconds(time)); });
+            }
+            CompareToSystem(report, "CancelAfter(TimeSpan.MaxValue)", () => { using CancellationTokenSource s = new(); s.CancelAfter(TimeSpan.MaxValue); }, () => { using AmbientCancellationTokenSource s = new(); s.CancelAfter(TimeSpan.MaxValue); });
+        }
+        Assert.AreEqual("", report.ToString());
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    [TestMethod]
+    public void CancellationTokenSourceZeroAndInfiniteTimeouts()
+    {
+        using (AmbientClock.Pause())
+        {
+            // zero cancels at once, exactly as the system source does
+            using AmbientCancellationTokenSource immediate = new(TimeSpan.Zero);
+            Assert.IsTrue(immediate.IsCancellationRequested);
+            using AmbientCancellationTokenSource immediateMilliseconds = new(0);
+            Assert.IsTrue(immediateMilliseconds.IsCancellationRequested);
+            // and an infinite timeout never cancels on its own, no matter how far time is skipped
+            using AmbientCancellationTokenSource never = new(Timeout.InfiniteTimeSpan);
+            AmbientClock.SkipAhead(TimeSpan.FromDays(1));
+            Assert.IsFalse(never.IsCancellationRequested);
+            never.Cancel();
+            Assert.IsTrue(never.IsCancellationRequested);
+        }
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    [TestMethod]
     public void EventTimerDefaults()
     {
         using System.Timers.Timer systemTimer = new(100.0);
@@ -932,6 +1237,27 @@ public class TestClock
             Assert.AreEqual(0, invocations);
             AmbientClock.ThreadSleep(TimeSpan.FromMilliseconds(47));
             Assert.AreEqual(0, invocations);
+        }
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientClock"/>.
+    /// </summary>
+    [TestMethod]
+    public void CallbackTimerRearmedFromCallbackDuringSkip()
+    {
+        const int RunawayLimit = 1000;      // bounds a runaway so that it fails the test instead of hanging the test run
+        using (AmbientClock.Pause())
+        {
+            int invocations = 0;
+            AmbientCallbackTimer? timer = null;
+            // re-arming a one-shot timer from inside its own callback is the usual way to keep periodic work from overlapping itself
+            void callback(object o) { if (++invocations < RunawayLimit) timer?.Change(100, Timeout.Infinite); }
+            using (timer = new AmbientCallbackTimer(callback, null, 100, Timeout.Infinite))
+            {
+                // each re-arm is measured from the instant the callback ran, so the skip covers exactly ten 100ms periods, just as it would with the system clock
+                AmbientClock.SkipAhead(TimeSpan.FromMilliseconds(1000));
+                Assert.AreEqual(10, invocations);
+            }
         }
     }
     /// <summary>
