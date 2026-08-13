@@ -32,9 +32,9 @@ public static class AmbientProgressService
 /// <remarks>
 /// <pitch>A <see cref="CancellationTokenSource"/> stand-in whose scheduled cancellations follow the ambient clock, so timeout-driven cancellation can be tested by skipping virtual time rather than waiting for it; it also supports cancelling after a set number of cancellation checks, for fault-injection testing of error handling and recovery.  With no ambient clock it behaves like the system source.</pitch>
 /// <pledge>
-/// Which clock schedules timed cancellations is fixed at construction; under a paused clock, a scheduled cancellation fires synchronously when virtual time is skipped past the deadline.  After disposal the source is inert but safe: <see cref="Token"/> returns an already-cancelled token rather than throwing.  <see cref="CancelAfterChecks(int)"/> arms cancellation after the given number of <see cref="IsCancellationRequested"/> polls (replacing an already-cancelled underlying source with a fresh one) and leaves any time-based cancellation in place.
+/// Which clock schedules timed cancellations is fixed at construction; under a paused clock, a scheduled cancellation fires synchronously when virtual time is skipped past the deadline.  Delays are accepted and rejected exactly as <see cref="CancellationTokenSource"/> accepts and rejects them — including zero, which cancels at once, and -1, which never cancels — so the interval rules of the timer used to schedule them never show through; only <see cref="ArgumentException.ParamName"/> differs, naming this type's own parameter.  After disposal the source is inert but safe: <see cref="Token"/> returns an already-cancelled token rather than throwing.  <see cref="CancelAfterChecks(int)"/> arms cancellation after the given number of <see cref="IsCancellationRequested"/> polls (replacing an already-cancelled underlying source with a fresh one) and leaves any time-based cancellation in place.
 /// </pledge>
-/// <plan>Wraps a system <see cref="CancellationTokenSource"/> and schedules timed cancellation with a one-shot <see cref="AmbientEventTimer"/> instead of the system source's built-in timer, which is what routes timeouts through the ambient clock.  Check-based cancellation counts polls with <see cref="Interlocked"/>.  A static pre-cancelled token serves the disposed state.</plan>
+/// <plan>Wraps a system <see cref="CancellationTokenSource"/> and schedules timed cancellation with a one-shot <see cref="AmbientEventTimer"/> instead of the system source's built-in timer, which is what routes timeouts through the ambient clock.  Because that timer rejects intervals a cancellation source must accept, delays are validated here against the cancellation source's own rules and the degenerate ones — cancel now, and never cancel — are handled without creating a timer at all.  Check-based cancellation counts polls with <see cref="Interlocked"/>.  A static pre-cancelled token serves the disposed state.</plan>
 /// </remarks>
 public class AmbientCancellationTokenSource : IDisposable
 {
@@ -66,7 +66,7 @@ public class AmbientCancellationTokenSource : IDisposable
     /// </summary>
     /// <param name="timeout">A <see cref="TimeSpan"/> indicating how long to wait before timing out.</param>
     public AmbientCancellationTokenSource(TimeSpan timeout)
-        : this(_AmbientClock.Override ?? _AmbientClock.Local, timeout)
+        : this(_AmbientClock.Override ?? _AmbientClock.Local, ValidatedDelay(timeout, nameof(timeout)))
     {
     }
     /// <summary>
@@ -74,7 +74,7 @@ public class AmbientCancellationTokenSource : IDisposable
     /// </summary>
     /// <param name="timeoutMilliseconds">The number of milliseconds to wait before timing out.</param>
     public AmbientCancellationTokenSource(int timeoutMilliseconds)
-        : this(_AmbientClock.Override ?? _AmbientClock.Local, TimeSpan.FromMilliseconds(timeoutMilliseconds))
+        : this(_AmbientClock.Override ?? _AmbientClock.Local, ValidatedDelay(timeoutMilliseconds, nameof(timeoutMilliseconds)))
     {
     }
     /// <summary>
@@ -84,6 +84,7 @@ public class AmbientCancellationTokenSource : IDisposable
     /// <param name="timeout">An optional timeout indicating how long before the associated cancellation token should be cancelled.</param>
     public AmbientCancellationTokenSource(IAmbientClock? clock, TimeSpan? timeout = null)
     {
+        if (timeout != null) ValidatedDelay(timeout.Value, nameof(timeout));
         _clock = clock;
         _tokenSource = new CancellationTokenSource();
         if (timeout != null)
@@ -92,9 +93,41 @@ public class AmbientCancellationTokenSource : IDisposable
         }
     }
 
-    private void ScheduleCancellation(TimeSpan timeout)
+    /// <summary>
+    /// Validates a cancellation delay the way <see cref="CancellationTokenSource"/> does and returns it as a <see cref="TimeSpan"/>.
+    /// </summary>
+    /// <remarks>
+    /// Note that this deliberately does not defer to the scheduling timer's validation: <see cref="CancellationTokenSource"/> accepts zero (cancel at once) and -1 (never), both of which are invalid timer intervals.
+    /// </remarks>
+    /// <param name="milliseconds">The number of milliseconds to delay, with -1 meaning never.</param>
+    /// <param name="parameterName">The name of the parameter being validated, for the exception.</param>
+    private static TimeSpan ValidatedDelay(double milliseconds, string parameterName)
     {
-        AmbientEventTimer timer = new AmbientEventTimer(timeout);
+        if (milliseconds < -1 || milliseconds > int.MaxValue) throw new ArgumentOutOfRangeException(parameterName);
+        return TimeSpan.FromMilliseconds(milliseconds);
+    }
+    /// <summary>
+    /// Validates a cancellation delay the way <see cref="CancellationTokenSource"/> does and returns it unchanged.
+    /// </summary>
+    /// <param name="delay">A <see cref="TimeSpan"/> indicating how long to delay, with -1 milliseconds meaning never.</param>
+    /// <param name="parameterName">The name of the parameter being validated, for the exception.</param>
+    private static TimeSpan ValidatedDelay(TimeSpan delay, string parameterName)
+    {
+        return ValidatedDelay(delay.TotalMilliseconds, parameterName);
+    }
+
+    private void ScheduleCancellation(TimeSpan delay)
+    {
+        double milliseconds = delay.TotalMilliseconds;
+        // never?  then there is nothing to schedule
+        if (milliseconds < 0) return;
+        // already due?  then cancel right now, because a timer cannot be given a zero interval
+        if (milliseconds == 0)
+        {
+            _tokenSource?.Cancel();
+            return;
+        }
+        AmbientEventTimer timer = new AmbientEventTimer(delay);
         _ambientTimer = timer;
         void handler(object? source, System.Timers.ElapsedEventArgs e)
         {
@@ -144,8 +177,9 @@ public class AmbientCancellationTokenSource : IDisposable
     /// <param name="millisecondsDelay">The number of milliseconds to delay before cancelling.</param>
     public void CancelAfter(int millisecondsDelay)
     {
+        TimeSpan delay = ValidatedDelay(millisecondsDelay, nameof(millisecondsDelay));
         if (_ambientTimer != null) _ambientTimer.Dispose();
-        ScheduleCancellation(TimeSpan.FromMilliseconds(millisecondsDelay));
+        ScheduleCancellation(delay);
     }
     /// <summary>
     /// Schedules a cancellation after the specified time.
@@ -153,7 +187,9 @@ public class AmbientCancellationTokenSource : IDisposable
     /// <param name="delay">A <see cref="TimeSpan"/> indicating how long to delay before cancelling.</param>
     public void CancelAfter(TimeSpan delay)
     {
-        CancelAfter((int)delay.TotalMilliseconds);
+        TimeSpan validatedDelay = ValidatedDelay(delay, nameof(delay));
+        if (_ambientTimer != null) _ambientTimer.Dispose();
+        ScheduleCancellation(validatedDelay);
     }
     /// <summary>
     /// Schedules a cancellation after a certain number of checks to see if the token was canceled.

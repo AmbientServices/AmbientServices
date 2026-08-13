@@ -8,7 +8,7 @@ namespace AmbientServices;
 /// <remarks>
 /// <pitch>The push side of virtual time: implement this to be told whenever an ambient clock's time is explicitly moved.  The ambient timer classes (<see cref="AmbientEventTimer"/>, <see cref="AmbientCallbackTimer"/>, <see cref="AmbientRegisteredWaitHandle"/>) are the canonical implementers — this notification is how their events fire during a virtual time skip.</pitch>
 /// <pledge>
-/// <see cref="TimeChanged"/> is called once per explicit time change, after the change has been applied, with both the old and new tick counts and their UTC date-time equivalents, which fully determine the change.  Calls arrive synchronously on the thread that changed the clock, so implementations should be fast, must not block indefinitely, and must not change the clock's time again from inside the notification (no reentrancy).
+/// <see cref="TimeChanged"/> is called with both the old and new tick counts and their UTC date-time equivalents, which fully determine the change, and the clock already reads the new time when the call arrives.  A single explicit time change may be delivered as several consecutive calls whose spans tile the whole change without gaps or overlap, so that a clock can stop at each scheduled callback along the way (see <see cref="IAmbientClockScheduledCallbackSource"/>); implementations must therefore treat each call as one step of a change rather than the whole of it.  Calls arrive synchronously on the thread that changed the clock, so implementations should be fast, must not block indefinitely, and must not change the clock's time again from inside the notification (no reentrancy).
 /// </pledge>
 /// </remarks>
 public interface IAmbientClockTimeChangedNotificationSink
@@ -22,6 +22,20 @@ public interface IAmbientClockTimeChangedNotificationSink
     /// <param name="oldUtcDateTime">The old UTC <see cref="DateTime"/>.</param>
     /// <param name="newUtcDateTime">The new UTC <see cref="DateTime"/>.</param>
     void TimeChanged(IAmbientClock clock, long oldTicks, long newTicks, DateTime oldUtcDateTime, DateTime newUtcDateTime);
+}
+/// <summary>
+/// An interface implemented by time changed notification sinks that schedule callbacks at a known future time.
+/// </summary>
+/// <remarks>
+/// <pitch>How a virtual clock learns when a sink's next callback is due, so that it can position itself at that instant before notifying rather than jumping past it.  Without this, callbacks raised during a skip observe the time the skip ended instead of the time they were scheduled for.</pitch>
+/// <pledge>Reports the stopwatch tick count at which the sink's next callback is due, or null when nothing is scheduled.  Reads must be free of side effects and safe to call at any time, including from inside a time change notification; a virtual clock consults this repeatedly while advancing, and a sink that reschedules itself from within a callback is expected to report its new due time on the next read.  Returning a due time in the past is harmless: an advancing clock ignores any due time at or before its current position.</pledge>
+/// </remarks>
+internal interface IAmbientClockScheduledCallbackSource
+{
+    /// <summary>
+    /// Gets the stopwatch tick count (in units of <see cref="System.Diagnostics.Stopwatch.Frequency"/>) at which the next callback is due, or null if no callback is scheduled.
+    /// </summary>
+    long? NextScheduledCallbackStopwatchTicks { get; }
 }
 /// <summary>
 /// An interface that abstracts an ambient clock which can be overridden in order to provide a different resolution or to artificially manipulate the current date-time and timing for testing.
