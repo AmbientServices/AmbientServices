@@ -959,6 +959,77 @@ public sealed class TestAtomicCache
         }
     }
 
+    [TestMethod]
+    public async Task AtomicCache_GetOrAdd_NonCanceledToken_ReturnsWithoutThrowing()
+    {
+        // Covers ThrowIfCancellationUnlessRetryDeadlineExceeded in its no-exception case: on a normal, non-canceled GetOrAdd, the cancellation check at the top of the retry loop must simply return (the token is not cancellation-requested) rather than throw.
+        AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_GetOrAdd_NonCanceledToken_ReturnsWithoutThrowing));
+        using (AmbientClock.Pause())
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+        {
+            IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
+            string key = nameof(AtomicCache_GetOrAdd_NonCanceledToken_ReturnsWithoutThrowing);
+            using CancellationTokenSource notCanceled = new();
+            // first call constructs and stores the value; the non-canceled token flows through the cancellation check without throwing
+            string value = await cache.GetOrAdd<string>(key, async () => ("created-value", AmbientClock.UtcNow.AddMinutes(5)), cancel: notCanceled.Token);
+            Assert.AreEqual("created-value", value);
+            // second call hits the cached value (another pass through the same cancellation check), again without throwing
+            string again = await cache.GetOrAdd<string>(key, async () => ("should-not-be-recreated", AmbientClock.UtcNow.AddMinutes(5)), cancel: notCanceled.Token);
+            Assert.AreEqual("created-value", again);
+        }
+    }
+
+    [TestMethod]
+    public async Task AtomicCache_AddOrUpdate_CreateTryAddRaceLost_RetriesIntoUpdate()
+    {
+        // Covers the AddOrUpdate create path where the final _cache.TryAdd returns false: we deterministically lose the add race by inserting a competing entry for the same key from inside create(), so the subsequent TryAdd collides and the loop retries -- finding the competitor and taking the update path instead.
+        AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_AddOrUpdate_CreateTryAddRaceLost_RetriesIntoUpdate));
+        using (AmbientClock.Pause())
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+        {
+            IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
+            string key = nameof(AtomicCache_AddOrUpdate_CreateTryAddRaceLost_RetriesIntoUpdate);
+            int createCalls = 0;
+            string result = await cache.AddOrUpdate<string>(
+                key,
+                async () =>
+                {
+                    ++createCalls;
+                    // on the first (losing) attempt, sneak a competing entry in under the same key so the outer TryAdd below collides and returns false
+                    if (createCalls == 1) _ = await cache.GetOrAdd<string>(key, async () => ("racer", AmbientClock.UtcNow.AddMinutes(10)));
+                    return ("created", AmbientClock.UtcNow.AddMinutes(10));
+                },
+                async existing => ("updated-" + existing, AmbientClock.UtcNow.AddMinutes(10)));
+            // the first attempt's TryAdd loses to the competitor and discards "created"; the retry sees the competitor and updates it
+            Assert.AreEqual("updated-racer", result);
+            Assert.AreEqual(1, createCalls, "create should run once for the losing attempt; the retry should take the update path rather than create again");
+        }
+    }
+
+    [TestMethod]
+    public async Task AtomicCache_NegativeEjectFrequency_ClampsCadenceAndStillOperates()
+    {
+        // Covers EjectIfNeeded when the configured eject frequency is negative: it must clamp the cadence to 1 rather than take a modulo by a non-positive number, and cache operations must still succeed.
+        Dictionary<string, string> negativeFrequencySettings = new()
+        {
+            { nameof(BasicAmbientAtomicCache) + "-EjectFrequency", "-1" },
+            { nameof(BasicAmbientAtomicCache) + "-MaximumItemCount", "20" },
+            { nameof(BasicAmbientAtomicCache) + "-MinimumItemCount", "1" },
+        };
+        AmbientSettingsOverride settings = new(negativeFrequencySettings, nameof(AtomicCache_NegativeEjectFrequency_ClampsCadenceAndStillOperates));
+        using (AmbientClock.Pause())
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+        {
+            IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
+            // each operation calls EjectIfNeeded, which with a negative frequency clamps the cadence to 1 (eject every call)
+            for (int i = 0; i < 5; ++i)
+            {
+                string value = await cache.GetOrAdd<string>(nameof(AtomicCache_NegativeEjectFrequency_ClampsCadenceAndStillOperates) + i, async () => ("v" + i, AmbientClock.UtcNow.AddMinutes(5)));
+                Assert.AreEqual("v" + i, value);
+            }
+        }
+    }
+
     /// <summary>Starts cache work that may block on a synchronization primitive (not for paused-clock tests).</summary>
     private static Task<T> RunBlockingCacheWorkOnDedicatedThreadAsync<T>(Func<Task<T>> work) =>
         Task.Factory.StartNew(work, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).Unwrap();
