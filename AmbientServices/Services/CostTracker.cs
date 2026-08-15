@@ -42,6 +42,10 @@ public interface IAmbientCostTrackerNotificationSink
 /// The tracker itself accumulates nothing: every report is fanned out to all registered <see cref="IAmbientCostTrackerNotificationSink"/> instances, which do the aggregation.  Sink registration is idempotent.
 /// The empty-string service identifier denotes the system itself; reports may arrive from any call context concurrently.
 /// </pledge>
+/// <priority>
+/// 1. Always-on affordability over metering anything itself: only what callers explicitly report is recorded — no metering, no currency conversion, no billing.  A sibling that discovered costs by instrumenting the services it watches would need far less cooperation from callers and is rejected on two counts: it could not stay cheap enough to leave on, and a guessed number is worse than an absent one when the output is money. (public)
+/// 2. Keeping one-time charges and ongoing-cost changes separate over reporting one combined number: a point-in-time amount and a signed change to a recurring monthly rate are never folded together here, even though a single figure would be far easier to consume.  They answer different questions, and only the consumer knows the horizon over which to combine them. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientCostTracker
 {

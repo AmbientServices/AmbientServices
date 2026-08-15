@@ -201,6 +201,11 @@ public sealed class ThreadPoolPressurePoint : IPressurePoint
 /// <pitch>Feeds memory headroom into the pressure system, on a skewed scale that stays near zero through the memory usage every healthy process has and climbs steeply as the system approaches exhaustion.</pitch>
 /// <pledge><see cref="IPressurePoint"/></pledge>
 /// <plan>On .NET Core targets, each poll takes the worse of two linear measures — <c>GC.GetGCMemoryInfo</c> memory load and the process working set — relative to total physical memory less a reserved headroom (10%, clamped between 25MB and 4GB), publishing sub-readings as ambient statistics when available; on older targets it uses <see cref="GC.GetTotalMemory(bool)"/> against a construction-time byte cap.  The linear proportion is then mapped through a piecewise-linear interpolation of a hand-tuned logistic-like table (49% linear ≈ 9% pressure, 89% linear ≈ 64% pressure) so throttling engages only when memory is genuinely scarce.</plan>
+/// <priority>
+/// <see cref="IPressurePoint"/>
+/// 1. Silence during healthy operation over early warning: the linear proportion is deliberately skewed so that the memory usage every healthy process carries reports near-zero pressure, and the curve climbs steeply only near exhaustion.  A linear sibling would warn sooner and is rejected because a pressure signal that is always slightly on gets ignored, or worse, throttles a process that was fine. (public)
+/// 2. The worse of two measures over the more accurate one: each poll takes the higher of GC memory load and process working set rather than trying to decide which is right.  Under-reporting memory pressure costs an out-of-memory failure; over-reporting costs some throttling. (public)
+/// </priority>
 /// </remarks>
 #if NET5_0_OR_GREATER
 [UnsupportedOSPlatform("browser")]

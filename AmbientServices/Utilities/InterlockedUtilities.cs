@@ -9,6 +9,10 @@ namespace AmbientServices.Utilities;
 /// <pitch>Lock-free aggregation on shared numeric fields — running min/max, additive accumulation, and an exponential moving average — for hot statistics paths where taking a lock would cost more than occasionally losing an update.</pitch>
 /// <pledge>All operations are safe to call from any number of threads, never take a lock, and never throw due to contention; they are best-effort — under sustained contention an attempt may be abandoned, leaving the value as some other thread set it.  The returned value is the value the operation established, or the value observed when it gave up.</pledge>
 /// <plan>Each operation is an optimistic <see cref="System.Threading.Interlocked.CompareExchange(ref long, long, long)"/> loop with escalating backoff on misses: immediate retries at first, then random-length spin loops, then random sleeps (randomness from <see cref="Pseudorandom"/> to keep contending threads out of lock-step), abandoning the attempt entirely after ten misses.  Min/max short-circuit without writing when the current value already wins.</plan>
+/// <priority>
+/// 1. Bounded cost under contention over never losing an update: an attempt is abandoned after ten misses, so a caller on a hot statistics path is never made to wait, and the update is simply lost.  A sibling that retried until it won would keep every sample and is rejected because these are measurements of the work — losing one is cheaper than delaying the thing being measured, and a lock here would cost more than the samples are worth. (public)
+/// 2. Keeping contending threads out of lock-step over the cheapest possible backoff: the spins and sleeps are randomly sized, drawn from <see cref="Pseudorandom"/>, because uniform backoff makes contenders collide again in unison at exactly the moment contention is worst. (private)
+/// </priority>
 /// Note that we could increase the code coverage by making a single function with a delegate to reduce the uncovered lines to two,
 /// but this would likely have a significant performance impact without affecting the actual testability or reliability of the code.
 /// </remarks>

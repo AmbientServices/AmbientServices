@@ -268,6 +268,10 @@ internal class DefaultStatusThresholds : IStatusThresholdsRegistry
 /// Attributes on testable checker classes are gathered into <see cref="StatusPropertyThresholds.DefaultPropertyThresholds"/> when their assembly loads; the property path is matched case-insensitively against the dotted target path computed during summarization.  Because attribute parameters cannot be nullable, <see cref="float.NaN"/> stands for "no such threshold".
 /// The <see cref="DeferToType"/> form composes: it imports the thresholds declared on another type, prefixing each with this attribute's property path — letting a checker that embeds another checker's subtree reuse its threshold declarations.
 /// </pledge>
+/// <priority>
+/// 1. Working thresholds shipped with the code over correct ones supplied at deployment: a checker declares its own defaults here so it rates something sensible with no configuration anywhere, and deployment-specific values arrive later through a threshold-registry override.  A sibling requiring configuration would be right more often, and is rejected because an unconfigured checker that rates nothing is indistinguishable from a healthy system. (public)
+/// 2. Living beside the code it rates over living in one central table: thresholds are declared on the checker class and composed through <see cref="DeferToType"/> when one checker embeds another's subtree, so a threshold travels with the code that produced the number.  A central table would be easier to review all at once and would drift the moment a checker changed. (public)
+/// </priority>
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class DefaultPropertyThresholdsAttribute : Attribute

@@ -21,6 +21,11 @@ namespace AmbientServices;
 /// Two plain <see cref="List{T}"/>s (simple and structured); each add/remove cross-enrolls the logger in the other list when it realizes the other interface, and each log call is a straight loop over the matching list.  No locking anywhere — the initialization-only registration term of the Pledge is what makes the lock-free read path safe.  Flush awaits each simple logger then each structured logger sequentially, so a dual-interface logger is flushed twice (harmless — the second flush finds nothing left to deliver).
 /// Trade-off profile: per-entry cost is one virtual call per target with zero added allocation; latency and durability are simply those of the slowest/weakest registered logger.
 /// </plan>
+/// <priority>
+/// <see cref="IAmbientLogger"/>
+/// 1. A lock-free logging path over registration you can change at any time: registration and removal are deliberately not thread-safe and must finish during initialization, which is exactly what lets every log call be a plain loop over a list with no synchronization at all.  A sibling supporting live reconfiguration would be more flexible and would put a synchronization cost on every entry, forever, to serve something almost nobody does twice. (public)
+/// 2. Adding nothing of its own over being useful in the middle: no buffering, filtering, or rendering happens here — entries are forwarded synchronously, in registration order, and every guarantee is whatever the underlying loggers give.  That keeps the fan-out composable with any of them and means a slow logger slows the ones registered after it. (public)
+/// </priority>
 /// </remarks>
 public class AmbientLogSplitter : IAmbientLogger, IAmbientStructuredLogger
 {

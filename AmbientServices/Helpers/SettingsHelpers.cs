@@ -31,6 +31,10 @@ public class SettingConversionFailedEventArgs(string key, string rawValue, Excep
 /// <pledge>
 /// Every factory call registers the setting's key, description, and default in the process-wide <see cref="SettingsRegistry"/>; declaring the same key twice with a different description or default is an error.  Returned settings never lack a value: a missing setting yields the converted default, and a conversion failure raises <see cref="ConversionFailed"/> and falls back to the default rather than throwing.
 /// </pledge>
+/// <priority>
+/// 1. A setting that always reads over surfacing a bad value: a missing setting yields the declared default and a failed conversion raises <see cref="ConversionFailed"/> and then falls back to the default, so a read never throws and a hot path never has to handle configuration failure.  The cost is that a typo in configuration runs silently at the default unless somebody subscribed — which is why the event exists. (public)
+/// 2. Process-wide discoverability over a free declaration: every factory call registers the key, description, and default in a permanent process-wide registry so tooling can inventory what a process actually consumes, and declaring one key twice with a different description or default is an error rather than a last-one-wins merge.  The cost is a permanent registration per declared setting and no way to withdraw one. (public)
+/// </priority>
 /// </remarks>
 public static class AmbientSettings
 {

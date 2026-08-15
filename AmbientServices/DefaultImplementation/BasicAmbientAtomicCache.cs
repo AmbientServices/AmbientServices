@@ -22,9 +22,7 @@ namespace AmbientServices;
 /// </plan>
 /// <priority>
 /// <see cref="IAmbientAtomicCache"/>
-/// 1. Lock-free steady-state reads over avoiding duplicate work: factories run outside any lock, so contending callers may each build a value and every loser is discarded.  A sibling that serialized factory execution per key would satisfy the same Pledge and never waste a build; it is rejected because the overwhelmingly common case is an uncontended hit, and it must not pay for the rare case. (public)
-/// 2. Liveness over completion: the optimistic retry loop carries a hard budget and throws when it exhausts it rather than retrying until it wins.  A caller that never returns is worse than a caller that fails loudly, and the budget is what makes the difference visible. (public)
-/// 3. Sharing the local cache's bookkeeping over tuning its own: size bounding reuses <see cref="BasicAmbientLocalCache"/>'s timed/untimed queue scheme unchanged, so the two stay comprehensible together, at the cost of an ejection policy that was never tuned for versioned entries. (private)
+/// 1. Sharing the local cache's bookkeeping over tuning its own: size bounding reuses <see cref="BasicAmbientLocalCache"/>'s timed/untimed queue scheme unchanged, so the two stay comprehensible together, at the cost of an ejection policy that was never tuned for versioned entries. (private)
 /// </priority>
 /// <para>Bounded size is enforced by ejecting timed and untimed bookkeeping rows on a configurable cadence.  Settings use the prefix <c>BasicAmbientAtomicCache-</c> with keys <c>EjectFrequency</c>, <c>MaximumItemCount</c>, and <c>MinimumItemCount</c> (see <see cref="AmbientSettings"/>).</para>
 /// <para>Expiration comparisons and optimistic retry deadlines use <see cref="AmbientClock"/> so tests can pause or skip virtual time deterministically.</para>

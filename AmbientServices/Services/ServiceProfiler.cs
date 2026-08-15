@@ -43,6 +43,10 @@ public interface IAmbientServiceProfilerNotificationSink
 /// Concurrency is expressed only by multiple call contexts, each internally sequential; an <see cref="System.Threading.AsyncLocal{T}"/>-style flow carries the active-system state into forked contexts.  The just-ended system may be retroactively renamed via <c>updatedPreviousSystem</c> (for example to fold in a success/failure outcome only known on completion).
 /// Registered <see cref="IAmbientServiceProfilerNotificationSink"/> instances are notified on every switch with the identities and start timestamps of both the ending and beginning systems, which fully determine each completed interval and its attribution.
 /// </pledge>
+/// <priority>
+/// 1. Always-on affordability over measurement richness: the point of this service is that it can be left enabled in production, so anything that would make it expensive loses.  That is why it measures no CPU time, allocations, or call counts, and why one call context has exactly one active system — a sibling tracking concurrently-active systems per context would answer more questions, and is rejected because it would need accumulating state on the switch path. (public)
+/// 2. Self-contained notifications over a narrow notification surface: every switch tells sinks the identities and start timestamps of both the ending and the beginning system, so each notification fully determines one completed interval and a sink needs no memory of the notifications before it.  The cost is a wider signature than "system X started". (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientServiceProfiler
 {

@@ -16,6 +16,10 @@ namespace AmbientServices;
 /// Equality — and therefore aggregatability — is defined by <see cref="Rating"/> and a case-insensitive <see cref="AuditAlertCode"/> only; the messages do not participate, so instances whose messages differ in incidental detail still combine.  For that collapsing to work, codes must be stable across occurrences (no embedded numbers or varying strings) and messages for a given code must be essentially the same.
 /// Neither the code nor the terse message may contain sensitive details, and the terse message must be free of line breaks and markup.  Instances are immutable.
 /// </pledge>
+/// <priority>
+/// 1. Collapsing across servers over expressing per-server detail: equality is the rating and a case-insensitive alert code alone, messages excluded, so one condition on two hundred servers becomes one summary line even when the messages differ in incidental detail.  A sibling including the message in equality would preserve every nuance, and is rejected because the resulting notification becomes unreadable exactly when the outage is largest. (public)
+/// 2. A notification safe to send anywhere over one that says everything: neither the code nor the terse message may carry sensitive detail, and the terse form must be free of line breaks and markup, because it is expected to reach an SMS gateway.  Detail belongs in the detailed message, which travels only through channels that can carry it. (public)
+/// </priority>
 /// </remarks>
 public sealed class StatusAuditAlert : IEquatable<StatusAuditAlert>
 {
@@ -292,6 +296,12 @@ public sealed class StatusAuditReport : IEquatable<StatusAuditReport>
 /// Two <see cref="AmbientEventTimer"/>s drive scheduling: a one-shot ~10ms timer for the initial audit (disposed after it fires) and a non-auto-resetting recurring timer that is stopped during each audit and restarted afterward with a recomputed interval, which is how overlapping timer firings are suppressed.  The interval computation multiplies the current interval by a rating factor (0.75 failing, 0.9 alerting, 1.1 okay, 1.5 superlative) and a duration factor ((1000 × duration / interval) raised to the 0.1 power, so duration influences the schedule more slowly than rating), then clamps to [baseline/10, baseline×4] interval ticks — the one-quarter-to-ten-times frequency window.
 /// All mutable scheduling state is interlocked; background audits observe an <see cref="AmbientCancellationTokenSource"/> canceled at <see cref="StatusChecker.BeginStop"/>.  Each audit assembles its results in a <see cref="StatusResultsBuilder"/>, stamps the next audit time into the report, and records via <see cref="StatusChecker.SetLatestResults"/>; an audit racing disposal yields a pending placeholder instead of throwing.  Timing flows through <see cref="AmbientClock"/> so tests can control it.
 /// </plan>
+/// <priority>
+/// <see cref="StatusChecker"/>
+/// 1. Noticing trouble and recovery quickly over an even sampling rate: a worse rating shortens the interval, so a failing system is re-tested sooner than a healthy one, and the rating factor moves the schedule faster than any other input.  Evenly-spaced samples would graph better and would find out about a recovery last. (public)
+/// 2. Never letting the tests congest what they test over holding that pace: audit duration damps the schedule the other way — slower audits, failing ones that time out included, run less often — and the whole range is clamped to a quarter-to-ten-times the baseline frequency so neither input can run away.  The damping is deliberately gentler than the rating factor so that degradation still draws attention; the clamp is what keeps that bounded. (public)
+/// 3. Capturing an audit failure as a result over letting it propagate: exceptions escaping <see cref="Audit"/> become failure results rather than exceptions in the framework's face.  A health check able to crash the health system stops reporting on everything else at the same time. (public)
+/// </priority>
 /// </remarks>
 public abstract class StatusAuditor : StatusChecker
 {

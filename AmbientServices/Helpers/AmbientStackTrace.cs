@@ -34,6 +34,11 @@ public interface IStackTraceUpdateSink
 /// Snapshots handed to the sink are immutable and safe to retain.
 /// </pledge>
 /// <plan>Two <see cref="AsyncLocal{T}"/> slots — an <see cref="ImmutableStack{T}"/> of frame strings and the registered <see cref="IStackTraceUpdateSink"/> — with frames built from <see cref="System.Runtime.CompilerServices.CallerMemberNameAttribute"/>-family data at compile time, so pushing costs a small string format and an immutable-stack push rather than a stack walk.  The pop restores the previous immutable snapshot captured at push time, which also self-heals if an intervening frame leaks undisposed.</plan>
+/// <priority>
+/// 1. Costing nothing where it is not used over complete coverage: only explicitly traced frames appear, so untraced code contributes nothing and pays nothing.  A sibling that instrumented automatically would give a complete picture without anyone annotating anything, and is rejected because the cost would then fall on every frame in the process rather than on the handful worth naming. (public)
+/// 2. Cheap pushes over rich frames: a frame is a small string formatted from compile-time caller information, not a stack walk, so entering a traced scope stays affordable inside loops.  The cost is frames that say where the code declared itself to be rather than where it demonstrably is. (public)
+/// 3. Self-healing over strict scope accounting: a pop restores the whole immutable snapshot captured at push time, so a leaked intervening frame corrects itself at the next pop instead of corrupting the context's stack permanently.  A counter-based design would be cheaper and would stay wrong once it went wrong. (private)
+/// </priority>
 /// </remarks>
 public static class AmbientStackTrace
 {

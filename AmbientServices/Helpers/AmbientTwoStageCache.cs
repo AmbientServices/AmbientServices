@@ -21,6 +21,10 @@ namespace AmbientServices;
 /// Local stores pass dispose-on-discard as false because anything cached here must also survive serialization to the shared tier.
 /// Cost and durability per tier are exactly those of the underlying caches.
 /// </plan>
+/// <priority>
+/// 1. Fast local reads over agreement between the tiers: retrieval prefers the local tier and reaches the shared one only on a miss, so a local hit may be arbitrarily stale relative to what other servers can already see.  A sibling checking the shared tier first would keep servers in step, and is rejected because it would spend a network round trip on every read — the exact cost this composition exists to avoid. (public)
+/// 2. Simplicity over consistency between the tiers: stores and removals are applied local-then-shared with no coordination, retry, or rollback, so a failure partway leaves the two disagreeing.  Callers already have to treat either tier as evictable at any moment, so divergence is a state they must tolerate regardless. (public)
+/// </priority>
 /// </remarks>
 public class AmbientTwoStageCache
 {

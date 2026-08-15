@@ -22,6 +22,10 @@ namespace AmbientServices;
 /// A built-in execution-time statistic always exists, cannot be removed, and serves as the standard denominator for rate ratios.  Ratio statistics are pure descriptors — they carry no samples of their own and must be computed from their numerator/denominator statistics after aggregation.
 /// All operations are thread-safe and safe to call from any call context.
 /// </pledge>
+/// <priority>
+/// 1. Correct aggregation across servers over convenience at the reporting site: ratios are published as descriptors naming a numerator and a denominator rather than as pre-computed values, so consumers compute them *after* aggregating raw samples, where every sample carries equal weight.  A sibling exposing a ready-made hit-ratio gauge would be markedly easier to consume; it is rejected because averaging pre-computed ratios overweights barely-loaded servers, and that error is invisible in the resulting chart. (public)
+/// 2. Update cost over read richness: only the current raw value of each statistic is held, with sampling over time, graphing, and roll-up left to whoever reads it, so that updating one stays cheap enough to do on every operation.  The cost is that this interface can answer "what is it now" and nothing whatsoever about history. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientStatistics
 {

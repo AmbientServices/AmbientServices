@@ -72,6 +72,10 @@ public interface IAmbientLogger
 /// This is the structured-data Pledge.  Each logged entry is an arbitrary non-null object whose public properties (or dictionary entries) carry the data; the realization renders it into whatever format its target understands — line-oriented realizations typically flatten to a summary plus JSON.  The logger applies no filtering or leveling of its own.
 /// Logging is expected to buffer rather than block on I/O; delivery guarantees, thread-safety, and flush semantics are the same as the line-logging Pledge: entries may be logged concurrently from any thread or async context, and an entry is only guaranteed delivered after a flush that began after it was logged completes.
 /// </pledge>
+/// <priority>
+/// <see cref="IAmbientLogger"/>
+/// 1. Handing the realization structure it may ignore over rendering for it: an entry arrives as an object whose fields a structured sink can index, and line-oriented realizations flatten it themselves.  A sibling taking a pre-rendered string would spare every line-oriented realization that work, and is rejected because flattening is lossy and only the caller still has the structure to lose. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientStructuredLogger
 {

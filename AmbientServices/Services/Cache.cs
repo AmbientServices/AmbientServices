@@ -21,6 +21,10 @@ namespace AmbientServices;
 /// Expiration may be given as a relative duration, a fixed instant, or both, in which case the earlier applies; retrieval may optionally extend an entry's lifespan, though implementations may ignore the extension.
 /// All operations are asynchronous and honor cooperative cancellation.  Clearing flushes every entry in the cache, not just the caller's.
 /// </pledge>
+/// <priority>
+/// 1. Being shareable over what it can hold: values must be fully serializable, carrying no object references and no dispose responsibilities, because an entry may cross a process boundary and come back as a copy rather than the original instance.  <see cref="IAmbientLocalCache"/> makes the opposite trade, and the pair exists so the caller picks rather than the library. (public)
+/// 2. A legal miss over a guaranteed hit: any entry may be discarded at any time under capacity or memory pressure, and callers must always be able to rebuild a value from its inputs.  This is what keeps a cache a cache — a sibling that promised retention would be storage, and would owe callers answers about durability, capacity, and eviction that this interface deliberately refuses to give. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientSharedCache
 {

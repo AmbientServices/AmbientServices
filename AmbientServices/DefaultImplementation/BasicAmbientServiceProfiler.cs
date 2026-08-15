@@ -20,7 +20,6 @@ namespace AmbientServices;
 /// <priority>
 /// <see cref="IAmbientServiceProfiler"/>
 /// 1. Bounded per-switch cost over in-band analysis: a switch is one <see cref="AsyncLocal{T}"/> write, one timestamp, and a synchronous sink fan-out — no grouping, no time math, no result allocation.  A sibling that accumulated per-system totals right here would produce the same numbers with far less plumbing, and is rejected because the switch sits on the caller's path and the collector does not. (public)
-/// 2. Always-on approximation over profiler-grade precision: the design target is that leaving this enabled in production needs no argument, so precision loses wherever the two conflict.  Anyone who needs exact figures should be running a profiler, not reading these. (public)
 /// </priority>
 /// </remarks>
 [DefaultAmbientService]
