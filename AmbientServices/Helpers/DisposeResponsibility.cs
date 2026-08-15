@@ -97,6 +97,12 @@ internal interface IShirkResponsibility
 /// Deferral has a history worth keeping: the string used to be rendered eagerly at construction because .NET Framework ran finalizers at AppDomain unload and process shutdown, where deferred resolution could touch already-finalized state.  Modern .NET has no AppDomain unloads and never runs finalizers at shutdown, which is what makes deferring the rendering to report time safe.
 /// In DEBUG builds each still-undisposed instance also has an entry in <c>PendingDispose</c> (a creation-site object per instance, grouped and rendered only when <c>DisposeResponsibility.AllPendingDisposals</c> is enumerated, so the census does not force eager rendering either); transfers hand the entry to the instance taking responsibility.
 /// </plan>
+/// <priority>
+/// <see cref="IDisposeResponsibility{T}"/>
+/// 1. A degraded leak report over no leak report: every failure path here still reports something.  Creation-site collection turned off yields the leak without a stack; a stack that cannot be rendered because a collectible load context unloaded underneath it yields a placeholder rather than an exception.  Losing the detail is always better than losing the report, because the report is the only evidence the leak ever happened. (public)
+/// 2. Zero cost on the happy path over cheap diagnostics: the finalizer is suppressed on correct disposal and re-registered only on transfer, capture happens only when explicitly enabled and only when no creation-site string was supplied, and rendering is deferred to report time.  A sibling that rendered eagerly at construction would be markedly simpler and produce identical reports; it is rejected because its cost would fall on every construction instead of on the leaks. (public)
+/// 3. Capture speed over report precision: stacks are captured without file information, keeping construction close to its historical cost at the price of frame-only reports.  Reverse this only for a build where reading PDBs at every construction is acceptable. (private)
+/// </priority>
 /// </remarks>
 /// <typeparam name="T">The disposable type being wrapped.</typeparam>
 public sealed class DisposeResponsibility<T> : IDisposeResponsibility<T>, IShirkResponsibility

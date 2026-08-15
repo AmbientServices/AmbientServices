@@ -1,6 +1,6 @@
 # AmbientServices — Plan
 
-*This is the whole-library **Plan** layer of the 4P Protocol — how the ambient-service mechanism is built at the system altitude, the building blocks it rests on, and the cross-cutting trade-offs every realization inherits. See [MODULE_DESCRIPTIONS.md](MODULE_DESCRIPTIONS.md) for what the 4P are, [PITCH.md](PITCH.md) for the adoption decision, and [PLEDGE.md](PLEDGE.md) for the contract this implements. This file is deliberately not a digest of the per-service Plans — each concrete implementation carries its own Plan in its XML-doc `<remarks>`; this one covers only what is common to the whole library and how the ambient machinery itself works.*
+*This is the whole-library **Plan** layer of the 5P Protocol — how the ambient-service mechanism is built at the system altitude, the building blocks it rests on, and the cross-cutting trade-offs every realization inherits. See [MODULE_DESCRIPTIONS.md](MODULE_DESCRIPTIONS.md) for what the 5P are, [PITCH.md](PITCH.md) for the adoption decision, [PLEDGE.md](PLEDGE.md) for the contract this implements, and [PRIORITY.md](PRIORITY.md) for the rankings that produced the trade-offs below. This file is deliberately not a digest of the per-service Plans — each concrete implementation carries its own Plan in its XML-doc `<remarks>`; this one covers only what is common to the whole library and how the ambient machinery itself works.*
 
 ## The resolution machine
 

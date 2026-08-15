@@ -305,4 +305,20 @@ public class TestStatistics
         Assert.AreEqual("requestsPerSecond", stat.Name);
         Assert.AreEqual("requests per second", stat.Description);
     }
+    [TestMethod]
+    public void AmbientRatioStatisticReplaceAndRemove()
+    {
+        using IAmbientStatistic requests = AmbientStatistics.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(AmbientRatioStatisticReplaceAndRemove) + "-requests", "requests", "requests");
+        string ratioId = nameof(AmbientRatioStatisticReplaceAndRemove) + "-ratio";
+        IAmbientRatioStatistic first = AmbientStatistics.GetOrAddRatioStatistic(ratioId, "ratio", "ratio", false, "r/s", requests.Id, true, null, true);
+        // replaceIfAlreadyExists: true replaces the existing entry with a new instance
+        IAmbientRatioStatistic replacement = AmbientStatistics.GetOrAddRatioStatistic(ratioId, "ratio", "ratio-replaced", true, "r/s", requests.Id, true, null, true);
+        Assert.AreNotSame(first, replacement);
+        Assert.AreSame(replacement, AmbientStatistics.RatioStatistics[ratioId]);
+        // remove the ratio statistic explicitly
+        Assert.IsTrue(AmbientStatistics.RemoveRatioStatistic(ratioId));
+        Assert.IsFalse(AmbientStatistics.RatioStatistics.ContainsKey(ratioId));
+        // removing again returns false because it is already gone
+        Assert.IsFalse(AmbientStatistics.RemoveRatioStatistic(ratioId));
+    }
 }

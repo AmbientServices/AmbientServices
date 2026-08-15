@@ -1,19 +1,20 @@
-# Module Descriptions — The 4P Protocol (4P)
+# Module Descriptions — The 5P Protocol (5P)
 
 A reusable methodology for describing units of code at a higher linguistic altitude than the code itself. It is the shared language a developer and an AI assistant use to agree on what each unit is for, how it behaves, and how it's built — and the means by which they decide what to change and where. It is also how an AI assistant re-acquires context about a unit quickly across sessions.
 
 This document is project- and language-agnostic. A companion file supplies the language-specific placement convention (where the layers physically live in source) and concrete examples; that companion references this file. (By convention, the project-specific companion is `docs/MODULE_DESCRIPTIONS.<project-name>.md`.)
 
-We use **unit** to mean the thing being described, at any level of abstraction: a class, a module, a subsystem, or a whole system. Each unit carries up to four named prose layers — the **4P**:
+We use **unit** to mean the thing being described, at any level of abstraction: a class, a module, a subsystem, or a whole system. Each unit carries up to five named prose layers — the **5P**:
 
 - **Pitch** *(Value Proposition)* — why you'd use it.
 - **Pledge** *(Contract)* — what it promises to callers, and how you interact with it.
 - **Plan** *(Implementation)* — how it's built.
 - **Pin** *(Compatibility)* — what may never change.
+- **Priority** *(Precedence)* — which consideration wins when two legal options compete.
 
 With the formal interface, the code, the tests, and the call sites, the layers are independent expressions of the same intent; that redundancy is what lets collaborators coordinate, choose tools, and find bugs.
 
-*(This was the 3P Protocol until Pin was added as a fourth layer; the three original layers are unchanged.)*
+*(This was the 3P Protocol until Pin was added, and the 4P Protocol until Priority was added; in each case the earlier layers were left unchanged.)*
 
 ## Why these exist
 
@@ -21,12 +22,15 @@ With the formal interface, the code, the tests, and the call sites, the layers a
 - **Triangulation.** A defect shows up as a *disagreement* between two independent expressions of intent. Code that agrees with a wrong test hides the bug; prose layers at different altitudes add witnesses, so contradictions surface.
 - **Agree first.** When any layer changes, collaborators agree on the prose change first, then write code and tests to match. Cheap to disagree in prose; expensive in code.
 - **Fix / enhance / branch.** The layers' constraints tell us whether a change is a bug fix, an in-scope enhancement, or grounds for a new unit (below).
+- **Settle the ties.** When two changes are both legal, the **Priority** says which one this unit prefers — so the same fork isn't re-argued from scratch every time it comes up, and doesn't get resolved a different way each time by whoever happens to be holding it.
 
-## The four layers
+## The five layers
 
 The first three form a **constraint cascade** — each removes degrees of freedom the previous left open. Sharing is **per-layer and independent**, not a strict tree: two units can share a Pledge yet have different Pitches, or share a Pitch with unrelated Pledges.  The Plan is generally unique because it's much longer and more descriptive than the other two.
 
-**Pin sits on a different axis.** Pitch, Pledge, and Plan describe the unit as it is now, at three altitudes. Pin describes what is *frozen* — and it is frozen with respect to **time**, not altitude: the obligation is to versions and data that already exist and to peers already deployed, not to the caller in front of you. Most units have no Pin at all, and that is normal.
+**Pin and Priority each sit on their own axis.** Pitch, Pledge, and Plan describe the unit as it is now, at three altitudes. Pin describes what is *frozen* — and it is frozen with respect to **time**, not altitude: the obligation is to versions and data that already exist and to peers already deployed, not to the caller in front of you. Priority describes what is *preferred*, and it is the only layer that looks forward: the other four say what the unit is, and it says which way to move. Most units have neither, and that is normal.
+
+In one line: **the first three narrow the space of legal implementations, the Pin freezes part of it, and the Priority orders what's left.**
 
 Each layer attaches independently to an **abstraction** (e.g., an interface) or to a **concrete realization** (e.g., a class):
 
@@ -34,6 +38,7 @@ Each layer attaches independently to an **abstraction** (e.g., an interface) or 
 - **Pledge** — attaches to the abstraction; realizations share it and link to it.
 - **Plan** — attaches to each concrete realization; always differs between siblings.
 - **Pin** — attaches wherever the frozen thing is *owned*. Every other unit that must agree with it **links** that Pin rather than restating it.
+- **Priority** — attaches to both. An abstraction's Priority binds every realization under it; a realization links that and adds its own, which is usually where siblings sharing one Pledge visibly diverge. Like a Pledge and a Pin, it is **linked, never copied**.
 
 ### Pitch — *short; for the caller's decision*
 
@@ -57,7 +62,7 @@ The per-realization layer, and the one that always differs between siblings. Hig
 
 The unit's **compatibility surface**: the things that are frozen because something outside this moment already depends on them. Exact serialization formats and wire payloads; on-disk and path layouts; key and id encodings; the string values of stable error codes; the identity and ordering guarantees other systems have stored assumptions about. Not *how* the unit works and not *what it promises to do* — specifically **what it is no longer free to move**, and what breaks if it moves anyway.
 
-Pin exists because the other three layers are all about the present tense, and none of them carries this obligation:
+Pin exists because the first three layers are all about the present tense, and none of them carries this obligation:
 
 - A **Pledge** is a promise to the caller in front of you. It can be extended compatibly — add a guarantee and existing callers are fine.
 - A **Plan** is explicitly the layer you are allowed to rewrite. That is its purpose: name the building blocks so a functionally equivalent replacement knows what to reach for.
@@ -73,12 +78,42 @@ So the test for whether something belongs in the Pin is not "is it low-level?" b
 
 **Most units have no Pin.** Leave it out rather than writing "none" — an empty layer trains readers to skip the layer that matters most when it *is* present.
 
+### Priority — *which consideration wins when two legal options compete*
+
+A short **ranked** list of the competing considerations this unit resolves in a consistent direction, so a collaborator standing at a fork the other layers don't settle picks the same way the unit's author would have. It is the only **prescriptive** layer: the other four describe the unit, the Priority guides the next change to it.
+
+Every entry names **both sides — what wins and what loses**. "Fast" is not a priority; "throughput over p99 latency" is. An entry with no named sacrifice is a wish, and, being unfalsifiable, it can never be found to have drifted — which makes it worse than absent.
+
+Entries carry an audience:
+
+- **Public** — callers may rely on the ordering. This is *forward-looking* in a way the Pitch is not: the Pitch says which trade-off profile you get today, the public Priority says which way the unit will bend the next time it's forced to choose. A caller building on the trajectory rather than the snapshot needs it.
+- **Private** — maintainers only. It constrains the Plan and future edits but promises nothing outside, and may be reordered without notifying anyone.
+
+**Why this isn't a section of the Plan.** The Plan is per-realization and always differs between siblings, but priorities are frequently shared — "never trade correctness for throughput" is usually owned by the abstraction and binding on everything under it. Housing that in the Plan means copying it into every sibling, and a copy is a second thing to drift. Public entries also address a caller audience the Plan doesn't serve at all.
+
+**Keep it short.** Three to five entries suits a type; the whole-system unit may justify somewhat more. An ordering nobody can hold in their head has stopped being an ordering — if everything is a priority, nothing is.
+
+**Only the non-obvious ones.** "Correctness over speed" is everyone's default and says nothing. Write an entry when a reasonable engineer might have ranked it the other way, or when someone already did and got it wrong: "memory over CPU, because this runs inside the caller's process"; "backwards compatibility over API elegance"; "leak attributability over allocation cost".
+
+**Most units have no Priority.** As with the Pin, leave it out rather than writing "none".
+
+#### Finding a unit's Priority
+
+The layer is usually recoverable from a unit that already exists, and the procedure doubles as the test for whether an entry is worth writing:
+
+> Imagine a sibling that satisfies the same Pitch, Pledge, and Pin, built from the same building blocks the Plan names — and that you would nevertheless reject. What is that sibling optimizing that this one isn't?
+
+That difference is a Priority entry. If no such sibling can be constructed, the other layers already determine the answer and there is nothing to write. If one can be constructed and you *can't* say why you'd reject it, you've found something that needs deciding rather than something that needs documenting.
+
+A Plan that ends "X, in exchange for Y" is the most reliable place to look: the trade-off is already recorded, and the Priority is the rule that produced it.
+
 ## What belongs in each layer
 
 A few recurring kinds of content have natural homes; put them there rather than inventing new descriptions:
 
 - **Invariants.** Conditions that always hold. Caller-facing invariants ("reads always return the latest write") belong in the **Pledge**; internal-consistency invariants ("a node is never simultaneously locked for both splitting and merging") belong in the **Plan**; invariants that outlive the code ("an id, once issued, is never reused") belong in the **Pin**. State them explicitly — they are the most bug-dense, checkable lines, and the easiest place for code and prose to disagree.
-- **Failure modes and non-goals.** What the unit refuses to do belongs in the **Pitch**'s limits; how it behaves under error or contention belongs in the **Pledge**; how it degrades under certain types of load belongs in the **Plan**; what happens when a peer or an older version disagrees about a format belongs in the **Pin**.
+- **Failure modes and non-goals.** What the unit refuses to do belongs in the **Pitch**'s limits; how it behaves under error or contention belongs in the **Pledge**; how it degrades under certain types of load belongs in the **Plan**; what happens when a peer or an older version disagrees about a format belongs in the **Pin**; and which way it gives when it cannot satisfy everything at once belongs in the **Priority**.
+- **Trade-offs.** The trade-off *struck* belongs in the **Plan** — this is what we chose and how we achieve it. The rule that *produced* it belongs in the **Priority** — this is what we will choose, every time it comes up again. Only lift a Priority out of a Plan when the same ranking would govern a decision that hasn't been made yet; otherwise the Plan already says everything there is to say.
 - **Canonical usage.** Depending on the language conventions, optionally point to a representative test, sometimes *by name* rather than inlining example code. Keep it prose — don't formally link from the code into its test project, since tests depend on the code, not the other way around. Treat the pointer as an optional, judgment-call aid: it is an ongoing maintenance chore, so skip it where the Pledge already makes usage clear. Where the investment is justified.  At the project-level, consider build-time sample extraction (e.g., https://github.com/jamesivie/dotnet-markdown-sample-code) can pull build-verified samples from real code or tests outside the implementation into the rendered project-level documentation.
 
 ## Regeneration as a completeness test
@@ -91,6 +126,7 @@ The layers double as a generative specification, which lets us *test* their comp
 Functional equivalence is not *compatibility*. A regenerated unit can pass the tests yet be unable to read data the original wrote, or interoperate with it, because compatibility hinges on details Pitch, Pledge, and Plan deliberately leave unspecified — exact serialization formats, on-disk or path layouts, key encodings, wire protocols.
 
 - Adding the **Pin** closes that gap: **Pitch + Pledge + Plan + Pin** should regenerate an implementation that is not merely functionally equivalent but **format-compatible** — able to read what the original wrote and to interoperate with its peers. This is the strongest claim the layers make, and it is the reason Pin is a layer rather than a footnote.
+- Adding the **Priority** governs what the layers deliberately leave open. Wherever the specification admits more than one answer, the regenerated unit should bend the same direction the original does — degrading under pressure, and optimizing under pressure, the same way. This is the layer a generator benefits from most, because a generator that meets an unspecified fork does not stall at it; it guesses, silently, and the guess is invisible in a passing test run.
 
 A unit with no Pin makes no compatibility claim, which is the honest default: regeneration validates behavior only.
 
@@ -98,13 +134,13 @@ Use this as an on-demand check, not a stored description: hand the layers (plus 
 
 ## Where they live in the code
 
-Each project defines a placement convention appropriate to its language and documentation system, recorded in that project's companion module-descriptions file. Whatever the mechanism, an **abstraction** carries a Pitch and a Pledge; a **concrete realization** carries a Pitch, one or more Pledges, and a Plan — a realization's Pledge is usually a reference to the abstraction's Pledge, plus any realization-specific extensions. A **Pin** appears only on the unit that owns something frozen, and as a reference on the units that must agree with it.
+Each project defines a placement convention appropriate to its language and documentation system, recorded in that project's companion module-descriptions file. Whatever the mechanism, an **abstraction** carries a Pitch and a Pledge; a **concrete realization** carries a Pitch, one or more Pledges, and a Plan — a realization's Pledge is usually a reference to the abstraction's Pledge, plus any realization-specific extensions. A **Pin** appears only on the unit that owns something frozen, and as a reference on the units that must agree with it. A **Priority** appears on either kind, wherever a ranking is actually being enforced, and as a reference wherever it is inherited.
 
-The highest-altitude unit — the **whole system** (a library, service, or application viewed as one thing) — usually has no single place in the source to attach to, since it is realized by many types rather than one. For that unit the layers are best kept as dedicated project-level documents (one per layer, so up to four), placed where they are easy to discover and index — and linked from the project's entry point (e.g., the README) so a reader arriving at the repository can navigate straight to them. The project companion records the exact filenames and location. A project with nothing frozen at the system level simply has no project-level Pin document.
+The highest-altitude unit — the **whole system** (a library, service, or application viewed as one thing) — usually has no single place in the source to attach to, since it is realized by many types rather than one. For that unit the layers are best kept as dedicated project-level documents (one per layer, so up to five), placed where they are easy to discover and index — and linked from the project's entry point (e.g., the README) so a reader arriving at the repository can navigate straight to them. The project companion records the exact filenames and location. A project with nothing frozen at the system level simply has no project-level Pin document; a project whose system-level rankings are all obvious has no Priority document either, though that is rarer — a system large enough to need a Pitch has usually made a few contested calls.
 
 ## Glossary
 
-A project that adopts this model keeps a single cross-cutting **glossary** of its invented vocabulary — the names of its core abstractions, data structures, and techniques. The glossary is orthogonal to the three per-unit layers: those describe one unit each, while the glossary defines the terms every unit's prose relies on. Its value is disproportionate and its upkeep is nearly free — defining a term once lets every Pitch, Pledge, and Plan reference it tersely instead of re-explaining it, and it gives every collaborator, human or AI, one authoritative meaning per term. Add an entry when a term is coined; entries change far more slowly than code.
+A project that adopts this model keeps a single cross-cutting **glossary** of its invented vocabulary — the names of its core abstractions, data structures, and techniques. The glossary is orthogonal to the per-unit layers: those describe one unit each, while the glossary defines the terms every unit's prose relies on. Its value is disproportionate and its upkeep is nearly free — defining a term once lets every Pitch, Pledge, and Plan reference it tersely instead of re-explaining it, and it gives every collaborator, human or AI, one authoritative meaning per term. Add an entry when a term is coined; entries change far more slowly than code.
 
 Standard location: `docs/GLOSSARY.md` at the project root.
 
@@ -117,6 +153,8 @@ The constraints at **every layer** decide the move:
 - **Branch** — the change falls outside the Pitch's scope, against the Pledge, or is wrong for this Plan's trade-offs. Build a new unit — or, by considered agreement, change the relevant layer first.
 - **Break** — the change violates the **Pin**. This is categorically different from the other three: it invalidates something that already exists, so it is not a code decision but a migration decision. It needs an explicit compatibility plan (dual-read, version tag, rewrite-on-read, or accepted data loss) agreed before the code changes. A Pin change that arrives as an ordinary edit is the most expensive mistake this model exists to prevent.
 
+The **Priority** adds no fifth verdict — it **breaks ties among Enhancements**. When several changes are all legal, the one that agrees with the ordering is the right one. A change that *inverts* the ordering is a change to the Priority itself, agreed in prose first like any other layer; and inverting a **public** entry almost always invalidates the Pitch too, since the Pitch is the caller-facing distillation of the same trade-offs — so a public Priority change forces a Pitch review in the same change.
+
 Because the boundaries are written down, crossing one is **visible**: it forces the "widen this, or build new?" conversation at the moment it should happen.
 
 ## Maintaining them
@@ -125,7 +163,8 @@ Because the boundaries are written down, crossing one is **visible**: it forces 
 - A change to any layer is **agreed in prose first**, then code and tests follow. A change to a **Pin** additionally needs the compatibility plan agreed first (see **Break**, above).
 - Keep the Plan at strategy/building-blocks/trade-off altitude — never narration.
 - Resolve ambiguities (in the descriptions or the code) thoughtfully as encountered, and write the resolution back.
-- **The assistant's standing duty:** before modifying a unit, read its layers (Pitch, Pledge, Plan, and Pin where present) and flag any drift between them and the code. Treat a Pin as read-only unless the change is explicitly a migration.
+- Where a unit has a **Priority**, follow it rather than re-deciding the fork; if the ordering looks wrong, say so and change it in prose first.
+- **The assistant's standing duty:** before modifying a unit, read its layers (Pitch, Pledge, Plan, and the Pin and Priority where present) and flag any drift between them and the code. Treat a Pin as read-only unless the change is explicitly a migration.
 
 ## AI-oriented notes (optional)
 
@@ -137,7 +176,7 @@ Per the same principle: the project's agent-instructions file (e.g., `CLAUDE.md`
 
 ## Adopting this in another project
 
-**This file is the upstream definition of the 4P Protocol.** It lives in AmbientServices because that is where the methodology was first worked out; it is deliberately project- and language-agnostic so other projects can adopt it unchanged.
+**This file is the upstream definition of the 5P Protocol.** It lives in AmbientServices because that is where the methodology was first worked out; it is deliberately project- and language-agnostic so other projects can adopt it unchanged.
 
 An adopting project needs two things: a **companion** (`docs/MODULE_DESCRIPTIONS.<project>.md`) recording where the layers physically live in its language and what its project-level layer documents are called, and a way to **track changes here**. On tracking, prefer in this order:
 

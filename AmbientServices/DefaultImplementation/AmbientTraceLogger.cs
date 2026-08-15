@@ -26,6 +26,10 @@ namespace AmbientServices;
 /// A stateless singleton (<see cref="Instance"/>, private constructor) that forwards every line to the process-wide <see cref="TraceBuffer"/>, which does the actual asynchronous buffering and writes batches to <see cref="System.Diagnostics.Trace"/> from a background thread — so logging callers never block on trace I/O.  Structured data is flattened to a summary-plus-JSON line via <see cref="AmbientLogger.ConvertStructuredDataIntoSimpleMessage(object, string)"/> before buffering.
 /// Trade-off profile: fastest of the built-in loggers on the logging path, but durability is entirely delegated to whatever trace listeners are attached — with none, the data is discarded.
 /// </plan>
+/// <priority>
+/// <see cref="IAmbientLogger"/>
+/// 1. Logging-path speed over durability: whether anything survives is the attached listeners' business, and with none attached the data is discarded rather than buffered up, spilled, or held.  This is the exact inverse of <see cref="AmbientFileLogger"/>'s ranking, and having both inversions available is why both types exist. (public)
+/// </priority>
 /// </remarks>
 [DefaultAmbientService]
 public class AmbientTraceLogger : IAmbientLogger, IAmbientStructuredLogger

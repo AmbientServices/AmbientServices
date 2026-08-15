@@ -27,6 +27,10 @@ namespace AmbientServices;
 /// A stateless singleton (<see cref="Instance"/>, private constructor) that forwards every line to the process-wide <see cref="ConsoleBuffer"/>, which buffers and writes batches to <see cref="Console"/> from a background thread so logging callers never block on console I/O.  Structured data is flattened to a summary-plus-JSON line via <see cref="AmbientLogger.ConvertStructuredDataIntoSimpleMessage(object, string)"/> before buffering.
 /// Trade-off profile: same buffering machinery and speed as <see cref="AmbientTraceLogger"/>, but delivered to stdout instead of the debug/trace listeners.
 /// </plan>
+/// <priority>
+/// <see cref="IAmbientLogger"/>
+/// 1. Logging-path speed over durability: persistence is whatever is capturing stdout, and with nothing capturing it the data is gone.  The same ranking <see cref="AmbientTraceLogger"/> makes, and the opposite of <see cref="AmbientFileLogger"/>'s. (public)
+/// </priority>
 /// </remarks>
 public class AmbientConsoleLogger : IAmbientLogger, IAmbientStructuredLogger
 {
