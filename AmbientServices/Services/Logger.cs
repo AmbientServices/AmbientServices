@@ -46,6 +46,10 @@ public enum AmbientLogLevel
 /// This is the line-logging Pledge.  Each logged message is a complete, fully-rendered line; the logger applies no filtering, leveling, or formatting of its own.  Logging is expected to buffer rather than block on I/O — a message is only guaranteed to have reached the underlying target (to whatever degree the realization promises persistence at all) after a flush that began after the message was logged completes.
 /// Messages may be logged concurrently from any thread or async context; realizations must be thread-safe.  A flush delivers the messages logged before it began; messages logged concurrently with or after the start of a flush may remain buffered.
 /// </pledge>
+/// <priority>
+/// 1. Never delaying the caller over guaranteeing delivery: logging buffers and returns, and a message is only guaranteed delivered after a flush that began after it was logged.  A realization that wrote synchronously would satisfy every signature here and is still the wrong shape, because a logger is not allowed to change how long the code it observes takes to run. (public)
+/// 2. Trivial realizations over a rich interface: filtering, leveling, and formatting stay above this interface in helpers such as <see cref="AmbientLogger"/>, so a new sink costs two methods to write.  The price is that every realization receives fully-rendered lines it has no cheap way to suppress. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientLogger
 {

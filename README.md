@@ -5,13 +5,14 @@
 
 AmbientServices is a .NET library that provides abstractions for services which are both ubiquitous and optional, allowing assemblies that use it to be used in a variety of systems that provide vastly different implementations (or no implementation) of those services.
 
-## How this library is documented — The 4P Protocol
+## How this library is documented — The 5P Protocol
 
-This project describes each unit of code — from a single class up to the whole library — with up to four short prose layers, the **4P**: a **Pitch** (why you'd use it), a **Pledge** (what it promises and how you interact with it), a **Plan** (how it's built), and a **Pin** (what may never change, for the units that freeze something). Per-type layers live in the XML-doc `<remarks>` of each type; the layers for the library as a whole live in their own documents:
+This project describes each unit of code — from a single class up to the whole library — with up to five short prose layers, the **5P**: a **Pitch** (why you'd use it), a **Pledge** (what it promises and how you interact with it), a **Plan** (how it's built), a **Pin** (what may never change, for the units that freeze something), and a **Priority** (which consideration wins when two legal options compete). Per-type layers live in the XML-doc `<remarks>` of each type; the layers for the library as a whole live in their own documents:
 
 - [**Pitch**](docs/PITCH.md) — is this library what you need?
 - [**Pledge**](docs/PLEDGE.md) — the behavioral contract shared by every ambient service.
 - [**Plan**](docs/PLAN.md) — how the ambient-service mechanism is built and the trade-offs it strikes.
+- [**Priority**](docs/PRIORITY.md) — the rankings behind those trade-offs, and which way the library bends next time.
 
 The methodology itself is defined in [docs/MODULE_DESCRIPTIONS.md](docs/MODULE_DESCRIPTIONS.md) (with a C#-specific companion, [docs/MODULE_DESCRIPTIONS.AmbientServices.md](docs/MODULE_DESCRIPTIONS.AmbientServices.md)) and draws on a shared [glossary](docs/GLOSSARY.md).
 

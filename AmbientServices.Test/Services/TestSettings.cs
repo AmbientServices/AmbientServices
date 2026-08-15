@@ -61,6 +61,31 @@ public class TestSettings
         Assert.AreEqual(4, settingsSetSetting.Value);
     }
     /// <summary>
+    /// Verifies that <see cref="IAmbientSetting{T}.GetValueWithSetName"/> falls back to the cached global-set value (or the declared
+    /// default) and the default settings set's name when the ambient settings service is suppressed.
+    /// </summary>
+    [TestMethod]
+    public void AmbientSettingGetValueWithSetNameSuppressed()
+    {
+        using ScopedLocalServiceOverride<IAmbientSettingsSet> suppress = new(null);
+        AmbientSetting<int> setting = new(nameof(AmbientSettingGetValueWithSetNameSuppressed), "", s => Int32.Parse(s), "7");
+        (int value, string setName) = setting.GetValueWithSetName();
+        Assert.AreEqual(7, value);
+        Assert.AreEqual("DefaultSettingsValues", setName);
+    }
+    /// <summary>
+    /// Verifies that <see cref="SettingsSetSetting{T}.ToString"/> includes the originating set name and the current value.
+    /// </summary>
+    [TestMethod]
+    public void SettingsSetSettingToString()
+    {
+        IAmbientSettingsSet settingsSet = new BasicAmbientSettingsSet(nameof(SettingsSetSettingToString));
+        SettingsSetSetting<int> setting = new(settingsSet, nameof(SettingsSetSettingToString), "", s => Int32.Parse(s), "42");
+        string text = setting.ToString();
+        StringAssert.Contains(text, "42");
+        StringAssert.Contains(text, ":");
+    }
+    /// <summary>
     /// Performs tests on <see cref="IAmbientSettingsSet"/>.
     /// </summary>
     [TestMethod]

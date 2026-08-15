@@ -33,6 +33,10 @@ public class TestStatusAuditor
         Assert.AreNotEqual(sr.GetHashCode(), new StatusAuditReport(AmbientClock.UtcNow, TimeSpan.FromMilliseconds(5)).GetHashCode());
         Assert.IsFalse(StatusAuditReport.Pending.Equals(null));
         Assert.IsFalse(StatusAuditReport.Pending!.Equals("test"));  // this is a false positive in the analyzer's null detector
+        // exercise Equals(object) when the other object really is a StatusAuditReport (the branch that delegates to the typed Equals)
+        object srAsObject = sr;
+        Assert.IsTrue(sr.Equals(srAsObject));
+        Assert.IsFalse(sr.Equals((object)StatusAuditReport.Pending));
         Assert.AreNotEqual(StatusAuditReport.Pending.ToString(), sr.ToString());
     }
     [TestMethod]

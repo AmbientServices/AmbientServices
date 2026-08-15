@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -58,6 +59,37 @@ public class TestLogSecurityAndBuffers
             Assert.IsTrue(AmbientLogSensitiveFieldFilters.ShouldMaskFieldName(fieldA));
             Assert.IsFalse(AmbientLogSensitiveFieldFilters.ShouldMaskFieldName(fieldB));
         }
+    }
+
+    [TestMethod]
+    public void SensitiveFieldFilter_GetRegisteredFilters_IncludesRegisteredFilter()
+    {
+        string uniqueField = nameof(SensitiveFieldFilter_GetRegisteredFilters_IncludesRegisteredFilter) + "Field";
+        using (AmbientLogSensitiveFieldFilters.RegisterFieldNameFilter(Regex.Escape(uniqueField)))
+        {
+            IReadOnlyCollection<Regex> registered = AmbientLogSensitiveFieldFilters.GetRegisteredFilters();
+            Assert.IsGreaterThan(0, registered.Count);
+            // our just-registered filter should be present (matched by value, since other tests may register filters concurrently)
+            Assert.IsTrue(registered.Any(r => r.IsMatch(uniqueField)));
+        }
+    }
+
+    [TestMethod]
+    public void LogBufferOverflow_SwallowsOverflowWriterException()
+    {
+        using (new ScopedLocalServiceOverride<IAmbientLogOverflowWriter>(new ThrowingOverflowWriter()))
+        {
+            System.Collections.Concurrent.ConcurrentQueue<string> queue = new();
+            // maxBufferedLines: 0 forces the overflow path, where the throwing writer's exception must be swallowed rather than propagated
+            AmbientLogBufferLimits.EnqueueOrOverflow(queue, "overflow-line", maxBufferedLines: 0);
+            Assert.HasCount(0, queue);
+        }
+    }
+
+    private sealed class ThrowingOverflowWriter : IAmbientLogOverflowWriter
+    {
+        public void WriteOverflowLine(string line) => throw new IOException("simulated overflow-writer failure");
+        public void Flush() => throw new IOException("simulated overflow-writer flush failure");
     }
 
     [TestMethod]

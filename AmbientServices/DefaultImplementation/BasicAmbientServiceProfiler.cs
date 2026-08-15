@@ -17,6 +17,11 @@ namespace AmbientServices;
 /// <plan>
 /// Holds the currently-active system for each call context in an <see cref="AsyncLocal{T}"/> of <see cref="CallContextActiveSystemData"/> (a struct, so a fresh context starts at the default/unattributed system as of the first switch).  On <see cref="SwitchSystem"/> it stamps the new system's start with <see cref="AmbientClock.Ticks"/>, replaces the active value, then synchronously notifies every registered <see cref="IAmbientServiceProfilerNotificationSink"/> with both the new and old start timestamps so each notification is a self-contained completed interval.  Sinks are held in a <see cref="ConcurrentHashSet{T}"/>; registration is idempotent.  No time math or grouping happens here — collectors do that from the broadcast intervals.
 /// </plan>
+/// <priority>
+/// <see cref="IAmbientServiceProfiler"/>
+/// 1. Bounded per-switch cost over in-band analysis: a switch is one <see cref="AsyncLocal{T}"/> write, one timestamp, and a synchronous sink fan-out — no grouping, no time math, no result allocation.  A sibling that accumulated per-system totals right here would produce the same numbers with far less plumbing, and is rejected because the switch sits on the caller's path and the collector does not. (public)
+/// 2. Always-on approximation over profiler-grade precision: the design target is that leaving this enabled in production needs no argument, so precision loses wherever the two conflict.  Anyone who needs exact figures should be running a profiler, not reading these. (public)
+/// </priority>
 /// </remarks>
 [DefaultAmbientService]
 internal class BasicAmbientServiceProfiler : IAmbientServiceProfiler

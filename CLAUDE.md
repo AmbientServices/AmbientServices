@@ -1,21 +1,24 @@
 # AmbientServices
 
-## Module descriptions — The 4P Protocol (4P)
+## Module descriptions — The 5P Protocol (5P)
 
-Each unit of code (class, module, subsystem, or system) carries up to four named prose layers — the **4P** — in its XML-doc `<remarks>`, using custom elements `<pitch>`, `<pledge>`, `<plan>`, and `<pin>`. The library viewed as one whole-system unit carries its layers in dedicated project-level files instead: `docs/PITCH.md`, `docs/PLEDGE.md`, `docs/PLAN.md`, linked from `README.md`. Generic definition: `docs/MODULE_DESCRIPTIONS.md`; C# placement convention and examples: `docs/MODULE_DESCRIPTIONS.AmbientServices.md`. Refer to these by their exact names — Pitch, Pledge, Plan, Pin — never informal synonyms.
+Each unit of code (class, module, subsystem, or system) carries up to five named prose layers — the **5P** — in its XML-doc `<remarks>`, using custom elements `<pitch>`, `<pledge>`, `<plan>`, `<pin>`, and `<priority>`. The library viewed as one whole-system unit carries its layers in dedicated project-level files instead: `docs/PITCH.md`, `docs/PLEDGE.md`, `docs/PLAN.md`, `docs/PRIORITY.md`, linked from `README.md`. Generic definition: `docs/MODULE_DESCRIPTIONS.md`; C# placement convention and examples: `docs/MODULE_DESCRIPTIONS.AmbientServices.md`. Refer to these by their exact names — Pitch, Pledge, Plan, Pin, Priority — never informal synonyms.
 
-### The 4P Protocol (4P)
+### The 5P Protocol (5P)
 - **Pitch** *(Value Proposition)* — short; the caller's "is this what I need?" decision. Problem/benefit, optional limits.
 - **Pledge** *(Contract)* — data flow, valid/invalid call sequences, and behavioral rules the signatures can't express. Attaches to the abstraction; realizations link to it.
 - **Plan** *(Implementation)* — per-realization algorithms, dependencies, and performance/durability/reliability/cost trade-offs and how they're achieved.
+- **Pin** *(Compatibility)* — what may never change, who already depends on it, and what breaks if it moves. Omit entirely when nothing is frozen.
+- **Priority** *(Precedence)* — a short ranked list of which consideration wins when two otherwise-legal options compete. Every entry names what wins *and* what loses, and is tagged `(public)` when callers may rely on it or `(private)` when it binds maintainers only. Only non-obvious rankings; omit entirely when there are none.
 
-4P sharing is per-layer, not a tree: realizations of one Pledge may still have different Pitches. Abstractions carry Pitch + Pledge; realizations carry a Pitch, one or more Pledges, and a Plan — a realization links the abstraction's Pledge and may add realization-specific extension Pledges.
+5P sharing is per-layer, not a tree: realizations of one Pledge may still have different Pitches. Abstractions carry Pitch + Pledge (and may carry a Priority binding every realization); realizations carry a Pitch, one or more Pledges, and a Plan — a realization links the abstraction's Pledge and may add realization-specific extension Pledges. Pledges, Pins, and Priorities are **linked, never copied**.
 
 **Rules:**
-- Before modifying a unit, check to see if its 4P are documented and **flag any drift** between them and the code. Treat a `<pin>` as read-only unless the change is explicitly a migration.
-- A significant code change updates the affected 4P **in the same change**.
-- A change to any of the 4P is **agreed in prose first**, then code and tests follow. Violating a `<pin>` is a **migration** decision, not a code decision: it invalidates data or peers that already exist, so the compatibility plan is agreed before the code changes.
+- Before modifying a unit, check to see if its 5P are documented and **flag any drift** between them and the code. Treat a `<pin>` as read-only unless the change is explicitly a migration.
+- A significant code change updates the affected 5P **in the same change**.
+- A change to any of the 5P is **agreed in prose first**, then code and tests follow. Violating a `<pin>` is a **migration** decision, not a code decision: it invalidates data or peers that already exist, so the compatibility plan is agreed before the code changes.
 - Decide **fix / enhance / branch** using the constraints at *every* layer: code-vs-description mismatch → fix; within all layers → enhance; outside any layer → new unit, or a deliberate, agreed change to that layer.
+- Where several changes are all legal, the `<priority>` breaks the tie — follow it rather than re-deciding the fork. Inverting a ranking is a Priority change (prose first), and inverting a **public** one forces a Pitch review in the same change.
 
 ### C# Coding Standards
 - This is a warning-free project.  All warnings except for temporarily lingering Obsoletion warnings should be fixed before claiming completion

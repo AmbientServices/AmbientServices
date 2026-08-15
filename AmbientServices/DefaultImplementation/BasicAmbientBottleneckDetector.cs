@@ -19,6 +19,11 @@ namespace AmbientServices;
 /// <plan>
 /// Entirely stateless except for the sink set (a <see cref="ConcurrentHashSet{T}"/>, so registration is idempotent and fan-out is lock-free).  <see cref="EnterBottleneck"/> stamps a new <see cref="AmbientBottleneckAccessor"/> with <see cref="AmbientClock.Ticks"/> and synchronously notifies registered sinks that also implement <see cref="IAmbientBottleneckEnterNotificationSink"/>; the accessor's disposal calls back into <c>LeaveBottleneck</c>, which synchronously fans the completed access out to every exit sink.  No accumulation, filtering, or ranking happens here — surveyors do that from the broadcast accesses.
 /// </plan>
+/// <priority>
+/// <see cref="IAmbientBottleneckDetector"/>
+/// 1. Bounded per-access cost over in-band analysis: entering a bottleneck costs one accessor allocation, two timestamp reads, and a sink fan-out, and everything analytical belongs to the surveyors downstream.  A sibling that ranked as it went would need accumulating state and synchronization here, on the caller's path, which is the one place this library will not put them. (public)
+/// 2. Always-on approximation over precision: the same ranking <see cref="BasicAmbientServiceProfiler"/> makes, for the same reason — a detector nobody turns off is worth more than a precise one that everybody does. (public)
+/// </priority>
 /// </remarks>
 [DefaultAmbientService]
 internal class BasicAmbientBottleneckDetector : IAmbientBottleneckDetector

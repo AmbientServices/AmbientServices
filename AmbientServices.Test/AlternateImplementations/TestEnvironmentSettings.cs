@@ -40,6 +40,27 @@ public class TestEnvironmentSettings
         Assert.AreEqual(1, setting3.Value);
     }
     /// <summary>
+    /// Verifies that <see cref="AmbientEnvironmentSettingsSet.GetTypedValue(string)"/> reads an unregistered key live from the
+    /// environment and, when no setting is registered for the key, returns the raw string value.
+    /// </summary>
+    [TestMethod]
+    public void EnvironmentGetTypedValueUnregisteredKey()
+    {
+        string key = "AMBIENT_TEST_TYPED_" + Guid.NewGuid().ToString("N");
+        Environment.SetEnvironmentVariable(key, "raw-typed-value");
+        try
+        {
+            AmbientEnvironmentSettingsSet settingsSet = new();
+            // the key is not registered and not cached, so the value comes live from the environment and, lacking a registered
+            // setting to convert it, is returned as the raw string
+            Assert.AreEqual("raw-typed-value", settingsSet.GetTypedValue(key));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(key, null);
+        }
+    }
+    /// <summary>
     /// Performs tests on <see cref="IAmbientSettingsSet"/>.
     /// </summary>
     [TestMethod]

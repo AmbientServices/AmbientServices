@@ -128,6 +128,23 @@ public class TestLocalCache
     /// Performs tests on <see cref="IAmbientLocalCache"/>.
     /// </summary>
     [TestMethod]
+    public async Task LocalCacheRemoveWrongType()
+    {
+        BasicAmbientLocalCache cache = new();
+        using DisposableCacheEntry stored = new(1);
+        await cache.Store("Test1", stored, true);
+        // remove with a type the entry cannot be handed off as: the cache cannot transfer ownership, so it disposes the discarded entry itself
+        TestLocalCache? mismatched = await cache.Remove<TestLocalCache>("Test1");
+        Assert.IsNull(mismatched);
+        Assert.IsTrue(stored.Disposed);
+        // the entry was removed by that call, so a subsequent (matching-type) remove finds nothing
+        DisposableCacheEntry? gone = await cache.Remove<DisposableCacheEntry>("Test1");
+        Assert.IsNull(gone);
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientLocalCache"/>.
+    /// </summary>
+    [TestMethod]
     public async Task LocalCacheNone()
     {
         using ScopedLocalServiceOverride<IAmbientLocalCache> localLocalCache = new(null);

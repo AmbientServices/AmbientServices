@@ -20,6 +20,11 @@ namespace AmbientServices;
 /// Entries stored with dispose-on-discard are disposed on ejection, replacement, and clear; <see cref="Clear"/> swaps in fresh queues and snapshot-ejects in a bounded number of passes without blocking concurrent stores.
 /// Trade-offs: constant-time operations and no background threads, in exchange for approximate size bounds (queue counts are approximate), insertion-order rather than least-recently-used ejection, and no reaction to actual memory pressure.
 /// </plan>
+/// <priority>
+/// <see cref="IAmbientLocalCache"/>
+/// 1. Bounded, predictable per-call cost over accurate capacity management: ejection rides a call-count cadence over approximate queue counts instead of tracking recency or memory, and every loop that could grow with the data has a hard cap.  A sibling doing real LRU accounting or reacting to memory pressure would serve the same Pledge and evict far better; it is rejected because that bookkeeping would land on the caller's thread, and this is a convenience cache sitting in front of work the caller already decided was expensive. (public)
+/// 2. No background threads over timely expiration: nothing sweeps until a later call happens to, so a cache that goes quiet keeps holding its expired entries.  The gain is that a process which stops using the cache stops paying for it entirely. (public)
+/// </priority>
 /// </remarks>
 [DefaultAmbientService]
 internal class BasicAmbientLocalCache : IAmbientLocalCache

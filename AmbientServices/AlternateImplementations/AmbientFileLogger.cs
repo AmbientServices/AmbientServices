@@ -25,6 +25,11 @@ namespace AmbientServices;
 /// All buffering and file I/O is delegated to an internal <see cref="RotatingFileBuffer"/>, which queues lines and in-band rotation commands and writes them under a single async writer lock, with an <see cref="AmbientEventTimer"/> driving auto-flush.  The logging path computes the current period from <see cref="AmbientClock.UtcNow"/> (so tests can steer rotation via a paused clock) and publishes period changes with an <see cref="Interlocked.CompareExchange(ref int, int, int)"/> race so exactly one concurrent logger enqueues each rotation command; losers retry with <see cref="Utilities.InterlockedUtilities"/> backoff.  Structured data is flattened to a summary-plus-JSON line via <see cref="AmbientLogger.ConvertStructuredDataIntoSimpleMessage(object, string)"/> before buffering, and buffer overflow spills to the ambient <see cref="IAmbientLogOverflowWriter"/>.
 /// Rotation reuses filenames day over day: opening a period's file truncates any previous day's content for that same period, keeping disk usage bounded to one day's worth of files per prefix without a separate retention job.  <see cref="TryDeleteAllFiles"/> is the best-effort cleanup for removing a prefix's files entirely.
 /// </plan>
+/// <priority>
+/// <see cref="IAmbientLogger"/>
+/// 1. Durability over aggregate logging cost: this realization exists so the data is on disk afterwards, so it is allowed to cost more in aggregate than <see cref="AmbientTraceLogger"/> or <see cref="AmbientConsoleLogger"/>.  Only in aggregate, though — the inherited "never delay the caller" ranking still forbids file I/O on the logging call itself. (public)
+/// 2. Bounded disk use over retained history: reusing period filenames day over day and truncating the previous day's content bounds disk to one day per prefix with no retention job, at the price of silently losing anything older.  A sibling that accumulated dated files and swept them on a schedule would meet the same Pledge and keep more; it is rejected because it turns an always-on logger into something that needs operating. (public)
+/// </priority>
 /// </remarks>
 public class AmbientFileLogger : IAmbientLogger, IAmbientStructuredLogger, IDisposable
 {
