@@ -15,6 +15,10 @@ namespace AmbientServices;
 /// <see cref="PortionComplete"/> is always between zero and one inclusive, and updates outside that range are rejected.  <see cref="Update"/> both records progress and polls for cancellation, throwing <see cref="OperationCanceledException"/> when cancellation has been requested; progress recorded on a sub-part propagates to its parent scaled into the range the part was delegated, with the part's prefix applied to the item name, so a parent observer sees smoothly-advancing overall progress.
 /// <see cref="TrackPart"/> begins a sub-part which becomes the ambient progress for the call context until the returned <see cref="IDisposable"/> is disposed; parts must be disposed in the reverse order of creation (innermost first), and disposing a part reports it complete to its parent.  A part's cancellation is independent of its parent's unless inheritance is requested at creation.  <see cref="ResetCancellation(TimeSpan)"/> replaces the tracker's cancellation source, and the tracker owns whichever source is current — callers never dispose it.
 /// </pledge>
+/// <priority>
+/// 1. Nested code's ignorance of the whole over precise overall progress: every part reports zero-to-one against its own work and the tracker scales that into the slice its parent delegated, so code deep in a call stack never needs to know what fraction of the overall operation it represents.  A sibling requiring absolute progress would produce exact numbers and is rejected because the code best placed to report progress is the code least able to know its own share. (public)
+/// 2. Cancellation travelling with progress over separating the two concerns: <see cref="Update"/> both records progress and throws when cancellation has been requested, so a loop that reports progress cannot forget to poll for cancellation.  The cost is an interface that does two things and a progress call that can throw. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientProgress
 {

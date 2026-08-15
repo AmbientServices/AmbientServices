@@ -22,7 +22,6 @@ namespace AmbientServices;
 /// <priority>
 /// <see cref="IAmbientBottleneckDetector"/>
 /// 1. Bounded per-access cost over in-band analysis: entering a bottleneck costs one accessor allocation, two timestamp reads, and a sink fan-out, and everything analytical belongs to the surveyors downstream.  A sibling that ranked as it went would need accumulating state and synchronization here, on the caller's path, which is the one place this library will not put them. (public)
-/// 2. Always-on approximation over precision: the same ranking <see cref="BasicAmbientServiceProfiler"/> makes, for the same reason — a detector nobody turns off is worth more than a precise one that everybody does. (public)
 /// </priority>
 /// </remarks>
 [DefaultAmbientService]

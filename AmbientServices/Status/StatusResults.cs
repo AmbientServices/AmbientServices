@@ -93,6 +93,10 @@ public sealed class StatusProperty
 /// <plan>
 /// Properties and children are stored in <see cref="ImmutableArray{T}"/>s captured at construction.  <see cref="GetSummaryAlerts"/> delegates the heavy lifting: a <see cref="StatusResultsOrganizer"/> merges and re-roots the tree by target, applies property thresholds, computes per-node ratings per <see cref="NatureOfSystem"/>, and sorts children worst-first; a <see cref="StatusNotificationWriter"/> then renders the organized tree into paired terse and HTML notifications, grouping by rating range and flushing runs of equivalent alerts as single aggregated lines.  The returned alert's rating is the organizer's overall rating; its code is empty because it summarizes many conditions.
 /// </plan>
+/// <priority>
+/// 1. Being mergeable across servers and across time over being compact: every node carries its own source, target, properties, and report, so a snapshot stays fully interpretable far from where it was measured and long after it was taken.  A sibling referencing shared context by id would be far smaller on the wire, and is rejected because summarization happens somewhere that has none of that context to resolve. (public)
+/// 2. Immutability over cheap construction: instances and the whole tree are immutable, so results can be shared, summarized repeatedly, and merged concurrently with nobody copying defensively.  The cost is that assembling a tree allocates rather than mutating in place, which is exactly what <see cref="StatusResultsBuilder"/> exists to absorb. (public)
+/// </priority>
 /// </remarks>
 public sealed class StatusResults
 {

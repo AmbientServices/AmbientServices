@@ -26,6 +26,12 @@ namespace AmbientServices;
 /// Checkers live in a <see cref="ConcurrentHashSet{T}"/>.  Automatic discovery hooks <see cref="AppDomain.AssemblyLoad"/> and scans each assembly's loadable types, skipping assemblies that do not directly reference this one (they cannot contain derivatives).  Auditors get their initial audit scheduled ~10ms out on an <see cref="AmbientEventTimer"/> so tests can control timing through <see cref="AmbientClock"/>.
 /// The summary properties sort the checkers' latest results by rating, wrap them in a root "/" heterogeneous <see cref="StatusResults"/>, and delegate summarization to <see cref="StatusResults.GetSummaryAlerts"/> with per-property rating cutoffs.  <see cref="RefreshAsync"/> fans each checker out via <see cref="Task.Run(Func{Task})"/>, races the aggregate against the cancellation token, records faulted checkers' exceptions back into their results via <see cref="StatusResultsBuilder"/>, and returns the incomplete ones.  Start/shutdown state is a pair of interlocked flags; stopping is a three-phase pass (begin-stop, finish-stop, dispose) across all checkers.
 /// </plan>
+/// <priority>
+/// 1. Finding problems at startup over discovering them lazily: checkers and auditors are discovered and constructed at <see cref="Start"/>, and every auditor's initial audit is scheduled immediately rather than waiting for something to touch its backend.  A sibling registering lazily on first use would start faster and is rejected because the entire point of the subsystem is to know a backend is broken before a request needs it. (public)
+/// 2. Explicit start over running on discovery: nothing runs until <see cref="Start"/> is called, so merely referencing an assembly full of checkers never sets audits running behind the process's back.  The cost is a step that is easy to forget — which is why a second <see cref="Start"/> throws rather than quietly doing nothing. (public)
+/// 3. Answering from the last recorded results over auditing on read: the summary properties snapshot what was already recorded and never trigger audits, so a health endpoint under heavy polling cannot itself become load on the systems it reports about.  Callers who genuinely need current data ask for it through <see cref="RefreshAsync"/>. (public)
+/// 4. Reporting the checkers that could not finish over failing the whole refresh: a refresh returns the incomplete ones rather than throwing, because one unresponsive backend must not deny the caller the health of everything else. (public)
+/// </priority>
 /// </remarks>
 public class Status
 {

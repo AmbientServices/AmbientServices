@@ -16,6 +16,11 @@ namespace AmbientServices;
 /// Null items are not supported, and items should follow the usual hashed-container rule of stable hash codes while contained.
 /// </pledge>
 /// <plan>A thin adapter over <see cref="ConcurrentDictionary{TKey, TValue}"/> with items as keys and ignored byte values, inheriting its lock-striped scalability, snapshot-free enumerator, and memory overhead (one dictionary entry per item — heavier than <see cref="HashSet{T}"/>).  Set-algebra members enumerate and call the single-item primitives, sometimes materializing the comparand into a temporary <see cref="HashSet{T}"/> that is given the same construction-time comparer, so all comparisons use the comparer supplied at construction.</plan>
+/// <priority>
+/// 1. Never blocking a caller over atomic set algebra: the single-item operations are safe and lock-free, and the <see cref="ISet{T}"/> algebra is built from them and is therefore not atomic as a whole.  A sibling taking a lock across a multi-item operation would give real set semantics and is rejected because the callers here are registries and subscriber lists, where a blocked add matters and an interleaved union does not. (public)
+/// 2. Enumeration that never throws over a coherent snapshot: enumerating during concurrent mutation is safe and shows a moment-in-time-ish view in which mid-enumeration changes may or may not appear.  Fan-out over subscriber lists happens constantly; a collection-modified exception on that path would be a defect the caller cannot prevent. (public)
+/// 3. Concurrency safety over memory and set-algebra speed: one <see cref="ConcurrentDictionary{TKey, TValue}"/> entry per item is markedly heavier than <see cref="HashSet{T}"/>, and the algebra is a loop over primitives.  Anyone whose set is not shared should use <see cref="HashSet{T}"/> — this type is not a faster set, it is a safe one. (public)
+/// </priority>
 /// </remarks>
 #pragma warning disable CA1710  // we're following the precedent set by the framework itself rather than the code analyzer rules here, and given the name of this class, it would be very confusing not to
 public class ConcurrentHashSet<T> : /* ISerializable, IDeserializationCallback, */ ISet<T>, ICollection<T>, IEnumerable<T>, System.Collections.IEnumerable

@@ -97,6 +97,10 @@ public static class ExternalPressurePoints
 /// An <see cref="AmbientCallbackTimer"/> (default one second) polls every <see cref="IPressurePoint"/> in <see cref="InternalPressurePoints"/> and <see cref="ExternalPressurePoints"/>, taking the maximum of each group; results are stored in fields via <see cref="Interlocked.Exchange(ref float, float)"/> and simultaneously published as three ambient statistics (units "p", raw range 0–1) when an <see cref="IAmbientStatistics"/> is available.
 /// Max-of-pressures (rather than sum or average) is the deliberate trade-off: one saturated resource is enough to warrant throttling, and it keeps unrelated pressure scales comparable without weighting.  Because sampling is timer-driven, cost is proportional to the number of pressure points and the refresh frequency, not to the number of readers.
 /// </plan>
+/// <priority>
+/// 1. Free reads over current readings: pressure is refreshed on a timer rather than computed on read, so a read is a field read that may lag reality by up to one refresh period.  The readers are throttling decisions inside background loops that may run very often — a monitor expensive enough that you have to think before reading it would be crowded out by exactly the load it exists to detect. (public)
+/// 2. Max-of-pressures over sum or average: one saturated resource is reason enough to throttle, and taking the maximum keeps unrelated pressure scales comparable without anybody having to weight them.  A sibling that averaged would rate a system with one pegged resource and nine idle ones as barely loaded, which is precisely backwards. (public)
+/// </priority>
 /// </remarks>
 public class PressureMonitor : IDisposable
 {

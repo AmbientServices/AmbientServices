@@ -18,6 +18,11 @@ namespace AmbientServices;
 /// Registration, disposal, and mask checks are thread-safe and take effect immediately; each check consults the set of filters registered at that moment.
 /// </pledge>
 /// <plan>A <see cref="ConcurrentDictionary{TKey, TValue}"/> of <see cref="Regex"/>es keyed by an <see cref="Interlocked"/>-incremented id, with each registration's <see cref="IDisposable"/> removing only its own id.  A mask check scans every registered regex linearly, so per-field cost grows with the number of registered filters — fine for the expected handful; callers with many patterns should combine them into one regex.</plan>
+/// <priority>
+/// 1. Masking a field that did not need it over letting one through: filters match field <em>names</em> rather than values, which cannot recognize a secret that arrives under an unregistered name but also cannot be fooled by a value that merely looks harmless.  When the two directions of error are a redacted log line and a leaked credential, they are not close. (public)
+/// 2. Independent registrations over a single coordinated list: each assembly registers its own patterns and disposes only its own, so no assembly can unregister another's protection — even by mistake, and even at shutdown.  The cost is that the same pattern may be registered several times and checked several times. (public)
+/// 3. Immediate effect over cached filter sets: every check consults the filters registered at that instant, so protection begins the moment it is registered rather than at the next entry, buffer flush, or restart.  The cost is a linear scan of the registered regexes on every field. (public)
+/// </priority>
 /// </remarks>
 public static class AmbientLogSensitiveFieldFilters
 {

@@ -13,6 +13,10 @@ namespace AmbientServices.Utilities;
 /// Non-finite and extreme values render as sentinels (<c>NaN</c>, <c>INF</c>/<c>-INF</c>, <c>EPS</c>/<c>-EPS</c>, <c>MAX</c>/<c>-MAX</c>); magnitudes beyond the largest prefix repeat the outermost prefix rather than overflowing.  Digits are formatted with the supplied culture, defaulting to the current thread culture — callers wanting invariant output must pass it explicitly.
 /// </pledge>
 /// <plan>Prefix tables indexed by how many divide-or-multiply-by-1000 steps normalize the value into [1, 999.5), with explicit compensation for the floating-point edge where scaling lands exactly on 999.5; magnitudes beyond quetta/quecto loop, appending repeated outer prefixes.  Purely computational — no allocation beyond the produced strings.</plan>
+/// <priority>
+/// 1. A predictable column width over exact digits: output is fitted to a fixed character budget for the numeric part, so a dashboard column never reflows and a log line never grows — and the value is rounded to make it fit.  These renderings are for reading, not for arithmetic; a caller that needs the number should format the number. (public)
+/// 2. Always rendering something over refusing a value it cannot represent: non-finite and extreme inputs come back as sentinels, and magnitudes past the largest prefix repeat the outermost prefix rather than overflowing.  A status display with a hole in it is harder to read than one with <c>MAX</c> in it. (public)
+/// </priority>
 /// </remarks>
 public static class SI
 {

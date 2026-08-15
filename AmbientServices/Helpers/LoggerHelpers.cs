@@ -73,6 +73,11 @@ public interface IExceptionLogInformation
 /// Built on <see cref="AmbientService{T}"/> accessors for <see cref="IAmbientLogger"/>/<see cref="IAmbientStructuredLogger"/>, an internal settings-driven filter (<c>AmbientLogFilter</c>, five ambient settings per filter name), <see cref="AmbientLogContext"/> for per-async-context fields, and <see cref="AmbientLogSensitiveFieldFilters"/> for masking.  Structured data is converted by reflecting over public instance properties (dictionaries pass through directly) and serialized with System.Text.Json using custom IPAddress/IPEndPoint converters; serialization failures degrade gracefully through a hand-built fallback that emits per-property values with error annotations rather than throwing, with recursion and depth guards.
 /// Trade-off profile: the reflection-and-JSON rendering cost is paid only by entries that survive the filter; the filter check itself is a few live setting reads and regex matches.  Renderers are pluggable per instance for callers that need a different wire format.
 /// </plan>
+/// <priority>
+/// 1. Never building log data that will be discarded over a conventional logging call: the filter decision comes first and hands back a handle only when the entry will really be logged, which is what makes the <c>Filter(...)?.Log(...)</c> idiom skip constructing the data entirely.  A sibling taking the data (or a lambda producing it) up front would read more naturally at every log site and is rejected because the filtered case is the common one in production, and it should cost almost nothing. (public)
+/// 2. Delivering a degraded entry over dropping it: a structured-data serialization failure falls back to per-property values with error annotations rather than throwing or discarding, and filtering failures likewise render an error-describing string.  Diagnostics are least affordable to lose at exactly the moment something is malformed. (public)
+/// 3. Following the ambient loggers dynamically over binding once: a logger built from an owner type resolves the services call by call so per-context overrides take effect immediately, at the cost of a resolution on every entry that survives the filter.  Callers who want the other ranking construct with explicit logger instances. (public)
+/// </priority>
 /// </remarks>
 public class AmbientLogger
 {

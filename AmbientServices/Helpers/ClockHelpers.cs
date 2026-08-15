@@ -20,6 +20,11 @@ namespace AmbientServices;
 /// <plan>
 /// A static facade over <c>Ambient.GetService&lt;IAmbientClock&gt;()</c>: reads use the call-context-local service and fall back to <see cref="Stopwatch.GetTimestamp"/> and <see cref="DateTime.UtcNow"/>.  <see cref="Pause"/> installs a <see cref="PausedAmbientClock"/> as the call-context override through a disposable that restores the prior override; the skip/sleep/delay members skip the clock forward when the current override is a <see cref="PausedAmbientClock"/>.  Tick math converts between stopwatch ticks and <see cref="TimeSpan"/> ticks using <see cref="Stopwatch.Frequency"/>.
 /// </plan>
+/// <priority>
+/// <see cref="IAmbientClock"/>
+/// 1. Drop-in fidelity to the framework types over a cleaner API: this facade and the ambient-clock stand-ins built on it (<see cref="AmbientStopwatch"/>, <see cref="AmbientEventTimer"/>, <see cref="AmbientCallbackTimer"/>, <see cref="AmbientRegisteredWaitHandle"/>) mirror their framework namesakes' shapes and semantics exactly, including quirks a fresh design would drop, so that adopting them is a mechanical substitution.  This ranking governs the whole family; a stand-in that improved on its namesake would make adoption a rewrite, and code that is not adopted is not testable. (public)
+/// 2. Test determinism over test speed being incidental: while paused, a skip advances the clock instantly and fires the timers and timed cancellations scheduled against it synchronously, before the call returns, each observing the instant it was scheduled for rather than the instant the skip ended.  A sibling that let them fire on their own threads afterwards would be simpler and would make every such test a race. (public)
+/// </priority>
 /// </remarks>
 public static class AmbientClock
 {

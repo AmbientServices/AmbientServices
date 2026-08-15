@@ -21,6 +21,10 @@ namespace AmbientServices;
 /// Retrieval may return the very instance that was stored, so callers must treat cached objects as shared mutable state unless they use dispose-on-discard hand-off.
 /// All operations are asynchronous and honor cooperative cancellation.  Clearing flushes every entry in the cache, not just the caller's.
 /// </pledge>
+/// <priority>
+/// 1. Never disposing an item a caller still holds over keeping it cached: an entry stored with dispose-on-discard is removed from the cache when it is retrieved, so exactly one client holds it at a time — a cache that gives up its entry on the first hit.  A sibling that returned the shared instance and left disposal to callers would hit far more often, and is rejected because nothing in the process can tell when the last user has finished with it. (public)
+/// 2. Holding anything over being shareable: entries never leave the process, which is precisely what lets this cache hold objects with references and live disposables at all.  <see cref="IAmbientSharedCache"/> makes the opposite trade, and the pair exists so the caller picks rather than the library. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientLocalCache
 {

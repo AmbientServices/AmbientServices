@@ -24,6 +24,10 @@ namespace AmbientServices;
 /// Pure key composition and delegation: keys are concatenated from the base key, <see cref="MonotonicSplitCacheKeySeparator"/>, and fixed marker segments, revision numbers are formatted with the invariant culture, and each method forwards to the corresponding <see cref="IAmbientAtomicCache"/> member after argument validation.
 /// No state, no I/O, no locking — cost and durability are exactly those of the underlying cache, plus one extra cache round trip for the head on combined reads.
 /// </plan>
+/// <priority>
+/// 1. Cheap staleness checks over a single round trip: a combined read resolves the small head first and touches the large payload only once the head proves present, unexpired, and recent enough — one extra round trip on every read.  A sibling storing one mutable entry would read in a single trip and is rejected because a reader could then only bound staleness by fetching the entire payload, which is the cost this pattern exists to avoid. (public)
+/// 2. Adding nothing of its own over doing more: these methods compose keys and delegate — no storage, no synchronization, no retry — so every guarantee is exactly the underlying <see cref="IAmbientAtomicCache"/>'s and the pattern works on any realization of it.  The cost is that any weakness in the underlying cache passes straight through to the caller. (public)
+/// </priority>
 /// </remarks>
 public static class AmbientAtomicSplitCacheExtensions
 {

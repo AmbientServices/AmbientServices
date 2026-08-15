@@ -49,6 +49,11 @@ internal interface ICpuSampler
 /// <plan>
 /// An <see cref="AmbientEventTimer"/> fires at the construction-time window size (default 250ms) and tells the sampler to close its window.  The sampler is chosen once at construction: <see cref="LinuxContainerCpuSampler"/> on Linux (reads cgroup v1/v2 usage and quota files so containerized readings reflect the container's actual CPU allowance) and <see cref="StandardCpuSampler"/> elsewhere (compares <see cref="Process.TotalProcessorTime"/> deltas against wall-clock time from <see cref="Stopwatch"/> timestamps, normalized by processor count).  Cost is one sample per window regardless of reader count.
 /// </plan>
+/// <priority>
+/// 1. What the process is actually allowed to use over what the machine has: on Linux the sampler reads the cgroup quota, so a pod limited to half a CPU reads 100% when it uses its whole allowance instead of the near-zero figure machine-relative measurement would report.  Machine-relative numbers are not merely less precise in a container — they point the wrong way, and throttling decisions built on them never fire. (public)
+/// 2. Sampling cost independent of readers over current readings: one sample per window regardless of how many callers read, so <see cref="RecentUsage"/> is stable within a window and at least one window stale.  The readers are throttling loops that may read constantly; the measurement must not scale with them. (public)
+/// 3. A windowed average over an instantaneous figure: throttling on an instantaneous reading oscillates, so the reported number is deliberately smoothed and deliberately late. (public)
+/// </priority>
 /// </remarks>
 public sealed class CpuMonitor : IDisposable
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP1_0_OR_GREATER

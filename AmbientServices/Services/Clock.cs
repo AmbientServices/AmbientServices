@@ -48,6 +48,10 @@ internal interface IAmbientClockScheduledCallbackSource
 /// <pledge>
 /// <see cref="Ticks"/> and <see cref="UtcDateTime"/> are thread-safe views of the same virtual instant — ticks are measured in <see cref="System.Diagnostics.Stopwatch.Frequency"/> units and the two always agree and advance together.  Time moves only as the realization dictates, and every explicit change is announced to each registered <see cref="IAmbientClockTimeChangedNotificationSink"/> after it takes effect, per that interface's Pledge; a realization that changes time without notifying its sinks breaks the ambient timers built on it.
 /// </pledge>
+/// <priority>
+/// 1. Zero cost when absent over a uniform abstraction: there is deliberately no default realization, so an unoverridden clock is a null service and every read falls through to the native system call.  A sibling shipping a system-clock default would be more uniform and would spare callers the null handling; it is rejected because every timestamp, stopwatch, timer, and timeout in the library reads through here, and none of them should pay an interface dispatch for a service that most processes never replace. (public)
+/// 2. Determinism for the caller who substitutes over fidelity to real time: a realization may stop time, skip it, or run it at any rate, and callers are forbidden from assuming wall-clock progression.  That freedom is the entire reason the indirection exists, which is why the only thing time may never do is run backward. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientClock
 {

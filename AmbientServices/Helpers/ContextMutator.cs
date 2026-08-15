@@ -12,6 +12,10 @@ namespace AmbientServices;
 /// <pitch>Solves the async context-mutation problem: an <see cref="System.Threading.AsyncLocal{T}"/> write made <em>inside</em> an awaited function is lost when the function returns, because <see cref="System.Threading.ExecutionContext"/> flows down into callees but never back up.  This carries the intended mutation back to the caller as a value so the caller can apply it on its own context.</pitch>
 /// <pledge>The mutation happens only when the <em>caller</em> invokes <see cref="ApplyContextChanges"/>, and it applies to whichever call context invokes it — so it must be called directly in the frame that should inherit the change, immediately after awaiting, not from inside any further wrapper (each wrapping layer reintroduces the very problem this solves).  The mutator itself is a passive value: transporting it performs no context changes.</pledge>
 /// <plan>Wraps a single caller-supplied <see cref="Action"/>; the class adds no state or logic beyond signaling the calling convention through its type.</plan>
+/// <priority>
+/// 1. Solving the problem at all over an API that cannot be misused: the calling convention is genuinely fragile — apply must run in the frame that should inherit the change, immediately after awaiting, never from inside a further wrapper — and the type cannot enforce it, because any enforcement wrapper would reintroduce the exact frame boundary the type exists to cross.  A safer-looking sibling would silently do nothing, which is worse than a sharp tool that works. (public)
+/// 2. Naming the convention in the type over hiding it: the class carries no state or logic and exists mainly so the convention has a name a caller can look up.  A bare <see cref="Action"/> return would be lighter and would leave every call site to rediscover the rule. (public)
+/// </priority>
 /// </remarks>
 public sealed class ContextMutator
 {

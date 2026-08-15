@@ -54,6 +54,10 @@ public interface IAmbientBottleneckEnterNotificationSink
 /// <see cref="EnterBottleneck"/> begins an access to the specified bottleneck and returns the accessor whose disposal ends it; accesses may overlap freely within and across call contexts, and each access's usage is attributed per the owning <see cref="AmbientBottleneck"/>'s automatic-versus-manual accounting.
 /// Registered <see cref="IAmbientBottleneckExitNotificationSink"/> instances are notified once per access when it ends; a registered sink that also implements <see cref="IAmbientBottleneckEnterNotificationSink"/> is additionally notified when each access begins.  The detector itself accumulates nothing — all aggregation and ranking happens in the sinks.
 /// </pledge>
+/// <priority>
+/// 1. Always-on affordability over finding bottlenecks by itself: it measures only what callers explicitly bracket, and only against limits the caller declares.  A sibling that instrumented broadly and inferred limits would find bottlenecks nobody thought to declare, and is rejected because it could no longer be cheap enough to leave on — and a detector that gets turned off measures nothing at all. (public)
+/// 2. Accumulating nothing here over sink simplicity: raw accesses are broadcast and every aggregation, windowing, and ranking decision belongs to the sinks, so two surveys may weigh the same accesses differently without this interface choosing for them.  The cost is that a sink can ask this interface nothing and must carry its own state. (public)
+/// </priority>
 /// </remarks>
 public interface IAmbientBottleneckDetector
 {
