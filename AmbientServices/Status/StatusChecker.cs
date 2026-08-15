@@ -26,6 +26,7 @@ namespace AmbientServices;
 /// <plan>
 /// The latest results are held by interlocked exchange inside a private tracker, so publishing is lock-free and readers always see a complete <see cref="StatusResults"/> instance.  History is a <see cref="System.Collections.Concurrent.ConcurrentQueue{T}"/> truncated on every publish by the StatusChecker-HistoryRetentionMinutes and StatusChecker-HistoryRetentionEntries ambient settings, using <see cref="AmbientClock.UtcNow"/> for age comparisons; a benign race can occasionally trim one extra entry.  The base class owns no timers or unmanaged state — disposal machinery exists for derived classes.
 /// </plan>
+/// <pin><see cref="StatusResults"/></pin>
 /// </remarks>
 public abstract class StatusChecker : IDisposable
 {

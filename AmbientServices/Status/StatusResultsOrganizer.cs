@@ -18,6 +18,7 @@ namespace AmbientServices;
 /// <plan>
 /// A recursive mutable tree built by walking each added <see cref="StatusResults"/>, keyed on (target, source, nature) for merge matching, accumulating <see cref="StatusPropertyRange"/>s per property name.  Rating is a single post-order pass; property thresholds come from the supplied <see cref="IStatusThresholdsRegistry"/> or the attribute-declared defaults in <see cref="StatusPropertyThresholds.DefaultPropertyThresholds"/>, keyed by the dotted target path.  When a threshold rating is worse than the node's own, the node's report is replaced with one carrying the worst property alert.  Homogeneous averaging clamps child ratings to [<see cref="StatusRating.Catastrophic"/>, <see cref="StatusRating.Okay"/>] so mixed-range farms map into the alert band proportionally.
 /// </plan>
+/// <pin><see cref="StatusResults"/></pin>
 /// </remarks>
 internal class StatusResultsOrganizer
 {

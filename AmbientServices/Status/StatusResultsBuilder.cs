@@ -20,6 +20,7 @@ namespace AmbientServices;
 /// <plan>
 /// A thin mutable shell: property and child lists, settable node metadata, and a running worst-alert comparison on <see cref="StatusAuditAlert.Rating"/>.  Timing comes from <see cref="AmbientClock.UtcNow"/>.  Construction from an existing <see cref="StatusResults"/> deep-copies it into builders so gathered results can be amended and re-emitted.
 /// </plan>
+/// <pin><see cref="StatusResults"/></pin>
 /// </remarks>
 public class StatusResultsBuilder
 {

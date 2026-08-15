@@ -1449,9 +1449,9 @@ The details will contain the corresponding detailed information, and a list of s
 The source is usually applied not by that system, but by the system gathering the results across the server farm.
 This is because when there are multiple levels of servers using the system, the system directly doing the testing may or may not be the source that system operators want to be reported.
 
-The timing of audits is determined algorithmically, but will always be between one tenth and four times the baseline audit frequency specified in the constructor.
-The time until the next audit is a function of the baseline audit frequency, the rating, and the duration of the previous audit.
-As status ratings degrade and audits speed up, the frequency is increased towards one tenth the baseline frequency.
+The timing of audits is determined algorithmically, but will always be between one tenth and four times the baseline audit interval specified in the constructor (the constructor takes a `TimeSpan`, so the value is an interval even though the parameter is named for the frequency).
+The time until the next audit is a function of that baseline interval, the rating, and the duration of the previous audit.
+As status ratings degrade and audits speed up, the interval is reduced towards one tenth of the baseline interval.
 This algorithm prevents slow audits from consuming too many resources, but also speeds up recovery detection when possible.
 
 ### Settings
