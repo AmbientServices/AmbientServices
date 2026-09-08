@@ -13,6 +13,7 @@ namespace AmbientServices;
 /// Add-or-update caching with optimistic concurrency: when several threads race to compute the same expensive value, exactly one result is retained per key without any process-wide lock.
 /// Monotonic versioned entries additionally support staleness floors and tiered or split-cache patterns.
 /// Factories may run more than once under contention, so it is unsuitable when creation has side effects that must happen exactly once; for simple retrieve-or-store caching without races on creation, <see cref="IAmbientLocalCache"/> is often enough.
+/// Disposable values are allowed only in a local realization (<see cref="IsShared"/> is false), and even there retrieval is not a hand-off, so <see cref="IAmbientLocalCache"/> is the choice when an entry must be disposed only after its one holder is finished with it.
 /// </pitch>
 /// <pledge>
 /// Every mutation is atomic per key: under contention competing values may be created, but only one is installed, callers always receive the value that actually ended up in the cache, and losing values are disposed when appropriate.
@@ -21,12 +22,17 @@ namespace AmbientServices;
 /// Entries may be evicted at any time, and expirations use the earlier of a relative duration and a fixed instant.
 /// A caller-supplied time budget produces two distinguishable outcomes: exhausting the optimistic-retry budget raises an invalid-operation error, while cooperative cancellation raises a cancellation error, so policy timeouts are never mistaken for caller-initiated cancellation.
 /// Whether entries are visible across processes is discoverable via <see cref="IsShared"/>; when they are not, callers must bound cross-server staleness with time limits or another mechanism.
+/// Whether disposable entries (<see cref="IDisposable"/> or <see cref="IAsyncDisposable"/>) may be cached at all follows <see cref="IsShared"/>.  A shared realization serializes entries out of the process, so dispose ownership cannot be established for them and disposable values must never be cached — the same prohibition, for the same reason and with the same one exception, as <see cref="IAmbientSharedCache"/>: an entry whose disposal does not actually matter, and which survives a serialization round trip intact, is not what the rule is about.
+/// A local realization accepts disposable values and takes dispose responsibility for them automatically — there is no opt-in flag, because the whole point of add-or-update under contention is that values get discarded: a factory result that lost the race to install, an update that lost its compare-and-swap, a value created already expired or rejected because the caching arguments rule it out, an entry displaced by a later write, and every entry removed, evicted, or cleared.  The cache disposes each of those, which is what keeps a factory that allocates a disposable from leaking one on every lost race.
+/// Retrieval, however, is never a hand-off: <see cref="GetOrAdd{T}"/> and <see cref="VersionedGet{T}"/> return the live instance and leave the entry in the cache, so the cache may dispose an instance a caller is still holding, and that caller then sees <see cref="ObjectDisposedException"/>.  Disposable values therefore belong here only when the caller's use of them finishes inside the operation that fetched them, or when disposal mid-use is harmless; when an entry must survive in one owner's hands, use <see cref="IAmbientLocalCache"/> with dispose-on-discard, which gives up the entry on retrieval for exactly that reason.
+/// An entry that implements both disposal interfaces may be disposed through either one, so it must be safe to dispose either way.
 /// Clearing disposes what was present when it began without blocking concurrent installs, and does not guarantee an empty cache afterward.
 /// </pledge>
 /// <priority>
 /// 1. No process-wide lock over running each factory exactly once: under contention competing values may be created and all but one discarded, which is exactly why this is unsuitable when creation has side effects that must happen once.  A sibling that serialized creation per key would never waste a factory run, and is rejected because it would put a lock in front of every expensive computation in the process. (public)
 /// 2. Never going backwards over always being fresh: revisions strictly increase per key and a versioned read never yields a payload older than the caller's stated minimum.  Slightly stale is allowed; regressing is not — a caller can build a staleness floor on the first guarantee and can build nothing at all on a value that might go backwards. (public)
 /// 3. Distinguishable failures over a single simple one: exhausting the optimistic-retry budget and being cancelled by the caller raise deliberately different exception types, so a policy timeout is never mistaken for caller-initiated cancellation.  The cost is two failure modes for callers to handle where one would have read more simply. (public)
+/// 4. Never leaking a discarded value over never disposing one a caller still holds: a local realization disposes every value it discards, including a live entry being evicted, and it never removes an entry on retrieval, so an instance a caller is using can be disposed out from under it.  <see cref="IAmbientLocalCache"/> ranks these the other way and gives up its entry on the first hit to do so; here lost races are the ordinary case rather than the exception, so leaking one disposable per lost race is not affordable, and callers who need the other ranking have that sibling. (public)
 /// </priority>
 /// <para>The default ambient implementation is <see cref="BasicAmbientAtomicCache"/>.  It is thread-safe and uses optimistic concurrency: <see cref="GetOrAdd{T}"/> and <see cref="AddOrUpdate{T}"/> may invoke factories more than once under contention, and implementations may discard a created or updated value if it loses a race to install the entry.</para>
 /// <para>Unversioned operations (<see cref="GetOrAdd{T}"/>, <see cref="AddOrUpdate{T}"/>, <see cref="Remove{T}"/>) and versioned operations (<see cref="VersionedGet{T}"/>, <see cref="VersionedPut{T}"/>, <see cref="VersionedRemove{T}"/>) use distinct storage for the same logical key string, so callers may use both families side by side without colliding.</para>
@@ -38,6 +44,7 @@ public interface IAmbientAtomicCache
     /// <summary>
     /// Gets whether or not the cache is shared across multiple processes or machines.  
     /// When false (ie. the cache is local), items must be time-limited to avoid stale entries, or the caller must use some other mechanism to avoid cache consistency issues across servers.
+    /// This also decides whether disposable values may be cached at all: only a local cache can hold them, since a shared one serializes entries out of the process and no owner can be named for the copies (see the type's remarks).
     /// </summary>
     bool IsShared { get; }
     /// <summary>
@@ -45,7 +52,7 @@ public interface IAmbientAtomicCache
     /// </summary>
     /// <typeparam name="T">The type of the cached object.</typeparam>
     /// <param name="itemKey">The unique key used when the object was cached.</param>
-    /// <param name="create">A factory that returns the new item and an optional UTC expiration instant (or null for no fixed expiration).  May run even when another thread wins the race to add the entry; in that case the implementation disposes the discarded instance when appropriate.</param>
+    /// <param name="create">A factory that returns the new item and an optional UTC expiration instant (or null for no fixed expiration).  May run even when another thread wins the race to add the entry; in that case a local implementation disposes the discarded instance.</param>
     /// <param name="refresh">An optional <see cref="TimeSpan"/> indicating how long to extend the lifespan of the cached item when it is returned from the cache.  Defaults to null, meaning the expiration time is left unchanged.  Some implementations may ignore this value.</param>
     /// <param name="timeout">An optional <see cref="TimeSpan"/> for optimistic-retry and linked ambient cancellation.  Null skips linking an ambient timeout.  Zero or negative values cancel the linked token immediately and shorten the ambient-clock retry budget so the call can fail fast without relying on a wall-clock timer interval.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
@@ -54,6 +61,7 @@ public interface IAmbientAtomicCache
     /// <exception cref="OperationCanceledException">The operation was canceled via <paramref name="cancel"/> or the linked timeout token.</exception>
     /// <remarks>
     /// On a cache hit with <paramref name="refresh"/> set, implementations typically enqueue an additional timed bookkeeping row; ejection logic may ignore superseded rows when the in-cache expiration no longer matches.
+    /// The returned instance stays in the cache — this is not a hand-off — so a disposable value can be disposed by the cache while the caller still holds it; see the type's remarks for when disposable values may be cached at all.
     /// </remarks>
     ValueTask<T> GetOrAdd<T>(string itemKey, Func<ValueTask<(T Item, DateTime? Expires)>> create, TimeSpan? refresh = null, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class;
     /// <summary>
@@ -62,7 +70,7 @@ public interface IAmbientAtomicCache
     /// <typeparam name="T">The type of the cached object.</typeparam>
     /// <param name="itemKey">The unique key used when the object was cached.</param>
     /// <param name="create">A factory used when the key is missing.  During a race to add the item to the cache, may be called even though the returned item is not the one ultimately retained.</param>
-    /// <param name="update">A factory that receives the current cached instance and returns the replacement and an optional UTC expiration.  May be invoked more than once when updates race, but each call receives a consistent snapshot of the value being replaced.</param>
+    /// <param name="update">A factory that receives the current cached instance and returns the replacement and an optional UTC expiration.  May be invoked more than once when updates race, but each call receives a consistent snapshot of the value being replaced.  A local implementation disposes both the value that is replaced and any replacement that loses its race to install, so a caller must not hold on to either.</param>
     /// <param name="timeout">An optional <see cref="TimeSpan"/> for optimistic-retry and linked ambient cancellation.  Null skips linking an ambient timeout.  Zero or negative values cancel the linked token immediately and shorten the ambient-clock retry budget so the call can fail fast without relying on a wall-clock timer interval.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
     /// <returns>The created or updated object that ended up in the cache.</returns>
@@ -89,7 +97,7 @@ public interface IAmbientAtomicCache
     /// <param name="refresh">Optional extension of expiration when the entry is returned (file- and Redis-backed implementations apply the same sliding refresh rules as their non-versioned retrieve paths).</param>
     /// <param name="timeout">Optional linked ambient cancellation.  Null skips ambient timeout.  Zero or negative values cancel the linked token immediately.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
-    /// <returns>The cached object and its version, or default with the latest observed version when the key is missing, expired, or the stored revision is below <paramref name="minVersion"/>.</returns>
+    /// <returns>The cached object and its version, or default with the latest observed version when the key is missing, expired, or the stored revision is below <paramref name="minVersion"/>.  A returned value stays in the cache and is not handed off, so a disposable one may be disposed while the caller still holds it.</returns>
     /// <exception cref="OperationCanceledException">The operation was canceled via <paramref name="cancel"/> or the linked timeout token after a matching entry was found.</exception>
     ValueTask<(T? Value, long Version)> VersionedGet<T>(string itemKey, long minVersion = -1, TimeSpan? refresh = null, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class;
     /// <summary>
@@ -105,7 +113,7 @@ public interface IAmbientAtomicCache
     /// <param name="expiration">Optional fixed UTC expiration instant.</param>
     /// <param name="timeout">Optional linked ambient cancellation.  Null skips ambient timeout.  Zero or negative values cancel the linked token immediately.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
-    /// <returns>The new monotonic revision of the stored entry, or zero when the value is discarded because duration or expiration arguments rule out caching.</returns>
+    /// <returns>The new monotonic revision of the stored entry, or zero when the value is discarded because duration or expiration arguments rule out caching (a local implementation disposes a discarded disposable value at that point rather than handing it back).</returns>
     /// <exception cref="OperationCanceledException">The operation was canceled via <paramref name="cancel"/> or the linked timeout token.</exception>
     ValueTask<long> VersionedPut<T>(string itemKey, T value, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, TimeSpan? timeout = null, CancellationToken cancel = default) where T : class;
     /// <summary>

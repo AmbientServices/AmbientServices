@@ -13,6 +13,7 @@ namespace AmbientServices;
 /// <pledge>
 /// Every operation delegates to the explicit cache supplied at construction or, when none was, to whatever <see cref="IAmbientLocalCache"/> is currently in effect (re-resolved on every call, so registration changes and local overrides take effect immediately).
 /// When neither exists the call quietly succeeds without caching: retrieval and removal report not-found and stores are discarded.
+/// A discarded store never disposes the item, even one offered with dispose-on-discard: with no cache to take ownership, ownership stays with the caller.
 /// All keys are prefixed with the owner type's name (or the supplied prefix) before reaching the underlying cache, so distinct owners occupy distinct key namespaces.
 /// Clearing clears the entire underlying cache, not merely this owner's entries.
 /// </pledge>
@@ -67,7 +68,7 @@ public class AmbientLocalCache
     /// <typeparam name="T">The type of the item to be cached.</typeparam>
     /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
     /// <param name="item">The item to be cached.</param>
-    /// <param name="disposeWhenDiscarding">Whether or not to dispose <see cref="IDisposable"/> items when discarding items from the cache.  If true, this will result in <see cref="ObjectDisposedException"/>s if the items are still in use when they get discarded, so when true, items will be automatically removed from the cache when they are retrieved.  This results in items only being available to one client at a time.</param>
+    /// <param name="disposeWhenDiscarding">Whether or not to dispose disposable items (<see cref="IDisposable"/> or <see cref="IAsyncDisposable"/>) when discarding items from the cache.  If true, this will result in <see cref="ObjectDisposedException"/>s if the items are still in use when they get discarded, so when true, items will be automatically removed from the cache when they are retrieved.  This results in items only being available to one client at a time.  If false, the cache never disposes the item and the caller keeps that responsibility.  Either way, when no cache is in effect the store is discarded and <paramref name="item"/> is left undisposed for the caller to handle.</param>
     /// <param name="maxCacheDuration">An optional <see cref="TimeSpan"/> indicating the maximum amount of time to keep the item in the cache.</param>
     /// <param name="expiration">An optional <see cref="DateTime"/> indicating a fixed time for when the item should expire from the cache.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>

@@ -13,9 +13,12 @@ namespace AmbientServices;
 /// <pitch>The zero-configuration atomic cache used unless overridden: a single-process realization (<see cref="IsShared"/> is false) with lock-free steady-state reads and optimistic writes, cheap enough to sit in front of any expensive computation.  Because entries are per-process, callers must bound cross-server staleness with time limits or another mechanism.</pitch>
 /// <pledge><see cref="IAmbientAtomicCache"/></pledge>
 /// <pledge>Optimistic add/update retries are capped at thirty seconds of <see cref="AmbientClock"/> time, shortened further by any caller-supplied timeout; exhausting that budget throws <see cref="InvalidOperationException"/> even when no cancellation token fired.</pledge>
+/// <pledge>Because <see cref="IsShared"/> is false, disposable values are permitted, and dispose responsibility is inferred from the value's type rather than requested by the caller: any value implementing a disposal interface is disposed whenever this cache discards it, through <see cref="IAsyncDisposable"/> when the value implements that interface and through <see cref="IDisposable"/> otherwise — exactly one of the two, on every discard path and every target framework.</pledge>
 /// <plan>
 /// One <see cref="ConcurrentDictionary{TKey,TValue}"/> holds both operation families, with single-character storage-key prefixes keeping unversioned and versioned entries in disjoint slots.
 /// Installs are compare-and-swap loops over TryAdd/TryUpdate: factories run outside any lock, losers are disposed via a shared discard helper, and monotonic revisions come from per-key counters advanced with <see cref="Interlocked"/>.
+/// Disposal is driven off a type test taken when the entry is built, so the cache disposes a losing factory result, a replaced or displaced entry, and every entry it removes, ejects, or clears — but never an entry it merely returns, since retrieval leaves the entry installed.
+/// A displaced versioned entry is disposed once, awaited, outside the dictionary rather than inside an update delegate, because <see cref="ConcurrentDictionary{TKey,TValue}"/> may run such a delegate more than once under contention and would then double-dispose.
 /// Caller timeouts are realized by linking the caller's token to an <see cref="AmbientCancellationTokenSource"/> (an already-cancelled source for non-positive budgets, avoiding a zero-interval system timer), while the separate optimistic-retry deadline is computed from <see cref="AmbientClock"/> so a policy timeout stays distinguishable from cooperative cancellation.
 /// Size is bounded by the same timed/untimed queue bookkeeping, cadence-driven ejection, and bounded <see cref="Clear"/> passes as <see cref="BasicAmbientLocalCache"/>, configured under the <c>BasicAmbientAtomicCache-</c> settings prefix.
 /// Trade-offs: no cross-process sharing or durability, approximate size bounds, and duplicate factory work under contention, in exchange for lock-free steady-state reads and no background threads.
@@ -88,11 +91,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
 
     private static bool ShouldDisposeWhenDiscarding(object entry)
     {
-#if NET5_0_OR_GREATER
         return entry is IAsyncDisposable || entry is IDisposable;
-#else
-        return entry is IDisposable;
-#endif
     }
 
     private readonly struct TimeoutCancellationRegistration : IDisposable
@@ -177,27 +176,11 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
             Entry = entry;
             MonotonicRevision = monotonicRevision;
         }
-#if NET5_0_OR_GREATER
         public async ValueTask Dispose()
         {
-            if (DisposeWhenDiscarding)
-            {
-                // if the entry is disposable, dispose it after removing it
-                if (Entry is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync();
-                if (Entry is IDisposable disposable) disposable.Dispose();
-            }
+            // if the entry is disposable, dispose it after removing it
+            if (DisposeWhenDiscarding) await DisposeDiscardedValue(Entry);
         }
-#else
-        public async ValueTask Dispose()
-        {
-            if (DisposeWhenDiscarding)
-            {
-                // if the entry is disposable, dispose it after removing it
-                if (Entry is IDisposable disposable) disposable.Dispose();
-                await Task.CompletedTask;
-            }
-        }
-#endif
     }
 
     private static DateTime? NormalizeExpiresInstant(DateTime? expires)
@@ -272,15 +255,13 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         }
     }
 
+    /// <summary>
+    /// Disposes a value the cache is discarding, preferring asynchronous disposal when the value implements both interfaces so that exactly one of them is invoked.
+    /// </summary>
     private static async ValueTask DisposeDiscardedValue(object value)
     {
-#if NET5_0_OR_GREATER
         if (value is IAsyncDisposable asyncDisposable) await asyncDisposable.DisposeAsync();
         else if (value is IDisposable disposable) disposable.Dispose();
-#else
-        if (value is IDisposable disposable) disposable.Dispose();
-        await Task.CompletedTask;
-#endif
     }
 
     /// <inheritdoc/>
@@ -476,7 +457,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
     {
         if (maxCacheDuration < TimeSpan.FromTicks(0))
         {
-            if (value is IDisposable d) d.Dispose();
+            await DisposeDiscardedValue(value);
             return 0;
         }
 
@@ -487,7 +468,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
         DateTime? actualExpiration = ComputeActualExpiration(maxCacheDuration, expiration, utcNow);
         if (actualExpiration < utcNow)
         {
-            if (value is IDisposable d) d.Dispose();
+            await DisposeDiscardedValue(value);
             return 0;
         }
 
@@ -495,7 +476,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
 
         VersionCounter vc = _versionCounters.GetOrAdd(itemKey, _ => new VersionCounter());
         long revision = Interlocked.Increment(ref vc.Last);
-        CacheEntry newEntry = new(storageKey, actualExpiration, value, ShouldDisposeWhenDiscarding(value!), revision);
+        CacheEntry newEntry = new(storageKey, actualExpiration, value, ShouldDisposeWhenDiscarding(value), revision);
         // ConcurrentDictionary has no async update delegate, and its update delegate may run more than
         // once under contention — so a disposing side effect there can double-dispose. Do the compare-and-swap
         // ourselves: this displaces exactly one entry, which we then dispose once, awaited, outside the dictionary.
