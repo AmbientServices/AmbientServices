@@ -18,7 +18,8 @@ namespace AmbientServices;
 /// Head and payload keys are derived deterministically from a base logical key using a reserved separator character (<see cref="MonotonicSplitCacheKeySeparator"/>), which the base key must not contain.
 /// The head travels through the versioned operation family and the payload through the unversioned family keyed by the head's revision, so a payload written for one revision is never returned for another.
 /// A combined read resolves the head first and touches the payload only when the head is present, unexpired, and at least the requested minimum revision; a publish writes the head first and hands back the new revision for the caller to key the payload with.
-/// These methods add no storage or synchronization of their own — every behavioral guarantee is inherited from the underlying <see cref="IAmbientAtomicCache"/>.
+/// These methods add no storage or synchronization of their own — every behavioral guarantee is inherited from the underlying <see cref="IAmbientAtomicCache"/>, including whether disposable entries may be cached at all: they may not when that cache is shared, and when it is local the cache disposes each head or payload it discards without ever handing one off.
+/// Because the head and each revision's payload are separate entries with independent expirations and eviction, a payload can be discarded (and, if disposable, disposed) while its head is still current, and a superseded revision's payload lingers under its own key until it is evicted — so a disposable payload's lifetime is bounded by nothing the caller controls.
 /// </pledge>
 /// <plan>
 /// Pure key composition and delegation: keys are concatenated from the base key, <see cref="MonotonicSplitCacheKeySeparator"/>, and fixed marker segments, revision numbers are formatted with the invariant culture, and each method forwards to the corresponding <see cref="IAmbientAtomicCache"/> member after argument validation.

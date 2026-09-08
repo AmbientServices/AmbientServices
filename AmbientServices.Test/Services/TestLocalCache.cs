@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AmbientServices.Test;
@@ -140,6 +141,53 @@ public class TestLocalCache
         // the entry was removed by that call, so a subsequent (matching-type) remove finds nothing
         DisposableCacheEntry? gone = await cache.Remove<DisposableCacheEntry>("Test1");
         Assert.IsNull(gone);
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientLocalCache"/> to be sure an item the caching arguments rule out is only disposed when the cache was given ownership of it.
+    /// </summary>
+    [TestMethod]
+    public async Task LocalCacheStoreRejectedItemRespectsOwnership()
+    {
+        BasicAmbientLocalCache cache = new();
+        using DisposableCacheEntry kept = new(1);
+        // the arguments rule the item out, but the caller kept ownership, so the cache must not dispose it
+        await cache.Store("Test1", kept, false, TimeSpan.FromMinutes(-1));
+        Assert.IsFalse(kept.Disposed);
+        Assert.IsNull(await cache.Retrieve<DisposableCacheEntry>("Test1"));
+        using DisposableCacheEntry owned = new(2);
+        // the same store with dispose-on-discard hands ownership over, so the cache disposes what it cannot cache
+        await cache.Store("Test2", owned, true, TimeSpan.FromMinutes(-1));
+        Assert.IsTrue(owned.Disposed);
+        Assert.IsNull(await cache.Retrieve<DisposableCacheEntry>("Test2"));
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientLocalCache"/> to be sure an entry that implements only asynchronous disposal is still disposed when it is discarded.
+    /// </summary>
+    [TestMethod]
+    public async Task LocalCacheAsyncOnlyDisposableDisposedOnDiscard()
+    {
+        BasicAmbientLocalCache cache = new();
+        await using AsyncOnlyDisposableCacheEntry cleared = new();
+        await cache.Store("Test1", cleared, true);
+        await cache.Clear();
+        Assert.AreEqual(1, cleared.AsyncDisposeCount);
+        await using AsyncOnlyDisposableCacheEntry rejected = new();
+        // an item the arguments rule out is discarded the same way, honoring asynchronous disposal
+        await cache.Store("Test2", rejected, true, TimeSpan.FromMinutes(-1));
+        Assert.AreEqual(1, rejected.AsyncDisposeCount);
+    }
+    /// <summary>
+    /// Performs tests on <see cref="IAmbientLocalCache"/> to be sure exactly one disposal runs for an entry that implements both disposal interfaces, and that it is the asynchronous one.
+    /// </summary>
+    [TestMethod]
+    public async Task LocalCacheDisposesAsynchronouslyWhenBothSupported()
+    {
+        BasicAmbientLocalCache cache = new();
+        using DualDisposableCacheEntry entry = new();
+        await cache.Store("Test1", entry, true);
+        await cache.Clear();
+        Assert.AreEqual(1, entry.AsyncDisposeCount);
+        Assert.AreEqual(0, entry.SyncDisposeCount);
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientLocalCache"/>.
@@ -508,6 +556,44 @@ class DisposableCacheEntry : IDisposable, IAsyncDisposable
     {
         await DisposeAsyncCore();
         Dispose(false);
+    }
+}
+/// <summary>
+/// A cache entry that implements only <see cref="IAsyncDisposable"/>, so only code paths that honor asynchronous disposal can dispose it.
+/// </summary>
+class AsyncOnlyDisposableCacheEntry : IAsyncDisposable
+{
+    private int _asyncDisposeCount;
+
+    public int AsyncDisposeCount => _asyncDisposeCount;
+
+    public ValueTask DisposeAsync()
+    {
+        _ = Interlocked.Increment(ref _asyncDisposeCount);
+        return default;
+    }
+}
+/// <summary>
+/// A cache entry that implements both disposal interfaces and counts each one separately, so tests can tell which one the cache invoked and how often.
+/// </summary>
+class DualDisposableCacheEntry : IDisposable, IAsyncDisposable
+{
+    private int _syncDisposeCount;
+    private int _asyncDisposeCount;
+
+    public int SyncDisposeCount => _syncDisposeCount;
+    public int AsyncDisposeCount => _asyncDisposeCount;
+
+    public void Dispose()
+    {
+        _ = Interlocked.Increment(ref _syncDisposeCount);
+        GC.SuppressFinalize(this);
+    }
+    public ValueTask DisposeAsync()
+    {
+        _ = Interlocked.Increment(ref _asyncDisposeCount);
+        GC.SuppressFinalize(this);
+        return default;
     }
 }
 

@@ -9,10 +9,11 @@ namespace AmbientServices;
 /// A class that provides caching using either a specified cache or the ambient shared cache (<see cref="IAmbientSharedCache"/>).
 /// </summary>
 /// <remarks>
-/// <pitch>The front door library code uses for shared caching of serializable values: it namespaces every key with an owner prefix so unrelated classes never collide, and it degrades to a no-op when no shared cache service is available, so callers need no null checks and no registration just to run.</pitch>
+/// <pitch>The front door library code uses for shared caching of serializable values: it namespaces every key with an owner prefix so unrelated classes never collide, and it degrades to a no-op when no shared cache service is available, so callers need no null checks and no registration just to run.  It inherits the shared cache's prohibition on disposable entries.</pitch>
 /// <pledge>
 /// Every operation delegates to the explicit cache supplied at construction or, when none was, to whatever <see cref="IAmbientSharedCache"/> is currently in effect (re-resolved on every call, so registration changes and local overrides take effect immediately).
 /// When neither exists the call quietly succeeds without caching: retrieval reports not-found and stores are discarded.
+/// Items must be serializable and must not be disposable, exactly as <see cref="IAmbientSharedCache"/> requires and for the same reason: this class adds no ownership of its own, so nothing here disposes anything, and a caller keeps and must dispose whatever it stored.
 /// All keys are prefixed with the owner type's name (or the supplied prefix) before reaching the underlying cache, so distinct owners occupy distinct key namespaces.
 /// Clearing clears the entire underlying cache, not merely this owner's entries.
 /// </pledge>

@@ -8,17 +8,21 @@ namespace AmbientServices;
 /// An interface that abstracts a local ambient caching service.
 /// </summary>
 /// <remarks>
-/// Note that a local cache differs from a shared/remote cache in that it can properly cache objects that contain pointers as well as disposable objects.
-/// For non-local cache, see <see cref="IAmbientSharedCache"/>.
+/// Note that a local cache differs from a shared/remote cache in that it can properly cache objects that contain pointers as well as disposable objects (<see cref="IDisposable"/> and <see cref="IAsyncDisposable"/> alike).
+/// For non-local cache, see <see cref="IAmbientSharedCache"/>, which prohibits disposable entries entirely.
 /// <pitch>
-/// An in-process cache that can safely hold anything — including objects with references and <see cref="IDisposable"/> items — because entries never leave the process.
+/// An in-process cache that can safely hold anything — including objects with references and disposable items, both <see cref="IDisposable"/> and <see cref="IAsyncDisposable"/> — because entries never leave the process.
 /// Disposable entries get single-consumer hand-off semantics so nothing is disposed while a caller is still using it.
 /// Entries are per-process: they vanish on restart and are never visible to other servers; for cross-process caching of serializable values, use <see cref="IAmbientSharedCache"/>.
 /// </pitch>
 /// <pledge>
-/// A string-keyed item store with the same replace-on-store, null-on-miss, evict-at-any-time, and earlier-expiration-wins rules as <see cref="IAmbientSharedCache"/>, plus ownership rules that only make sense in-process:
-/// an item stored with dispose-on-discard is disposed by the cache when it is discarded, and is therefore removed from the cache when it is retrieved so that exactly one client holds it at a time; removal returns the removed item, transferring dispose responsibility to the caller.
-/// Retrieval may return the very instance that was stored, so callers must treat cached objects as shared mutable state unless they use dispose-on-discard hand-off.
+/// A string-keyed item store with the same replace-on-store, null-on-miss, evict-at-any-time, and earlier-expiration-wins rules as <see cref="IAmbientSharedCache"/>, plus ownership rules that only make sense in-process.
+/// Disposable entries are explicitly allowed here — both <see cref="IDisposable"/> and <see cref="IAsyncDisposable"/> — because entries never leave the process: exactly one instance exists, it is the instance handed back, and so an owner can always be named.  Which side owns it is the caller's choice at store time, and there is no third state.
+/// With dispose-on-discard, the cache owns the entry and disposes it whenever it discards it — replaced by a later store under the same key, expired, evicted under cache limits, or cleared — and it is therefore removed from the cache when it is retrieved so that exactly one client holds it at a time; retrieval and removal both hand the item over without disposing it, transferring dispose responsibility to the caller.
+/// Without dispose-on-discard, the caller owns the entry for its whole life: retrieval is non-destructive and may return the very instance that was stored to any number of callers, and the cache never disposes it — an entry discarded while the caller holds no other reference is simply dropped, and whatever it wrapped leaks.  Callers must therefore treat such entries as shared mutable state.
+/// A removal that asks for a type the stored entry cannot be handed back as reports not-found and, because ownership cannot transfer, leaves the entry to be disposed as a discard.
+/// An item the arguments rule out caching at all — a negative maximum duration, or an expiration already in the past — is never retrievable, and a dispose-on-discard item is disposed rather than handed back, though not necessarily at the moment of the store.
+/// An entry that implements both disposal interfaces may be disposed through either one, so it must be safe to dispose either way.
 /// All operations are asynchronous and honor cooperative cancellation.  Clearing flushes every entry in the cache, not just the caller's.
 /// </pledge>
 /// <priority>
@@ -30,8 +34,9 @@ public interface IAmbientLocalCache
 {
     /// <summary>
     /// Retrieves the item with the specified key from the cache (if possible).
-    /// If the item is <see cref="IDisposable"/> and disposeWhenDiscarding was specified when the item was added to the cache, the item will be removed from the cache when retrieved.
+    /// If disposeWhenDiscarding was specified when the item was added to the cache, the item will be removed from the cache when retrieved (and not disposed, as ownership transfers to the caller).
     /// This ensures that retrieved items are not disposed while still in use by callers.
+    /// Otherwise retrieval is non-destructive and returns the shared instance, which the cache never disposes.
     /// </summary>
     /// <typeparam name="T">The type of the cached object.</typeparam>
     /// <param name="itemKey">The unique key used when the object was cached.</param>
@@ -45,16 +50,18 @@ public interface IAmbientLocalCache
     /// <typeparam name="T">The type of the item to be cached.</typeparam>
     /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>
     /// <param name="item">The item to be cached.</param>
-    /// <param name="disposeWhenDiscarding">Whether or not to dispose <see cref="IDisposable"/> items when discarding items from the cache.  If true, this will result in <see cref="ObjectDisposedException"/>s if the items are still in use when they get discarded, so when true, items will be automatically removed from the cache when they are retrieved.  This results in items only being available to one client at a time.</param>
+    /// <param name="disposeWhenDiscarding">Whether or not to dispose disposable items (<see cref="IDisposable"/> or <see cref="IAsyncDisposable"/>) when discarding items from the cache.  If true, this will result in <see cref="ObjectDisposedException"/>s if the items are still in use when they get discarded, so when true, items will be automatically removed from the cache when they are retrieved.  This results in items only being available to one client at a time.  If false, the cache never disposes the item, so the caller keeps that responsibility for the item's whole life, including after the cache has silently discarded its copy of the reference.</param>
     /// <param name="maxCacheDuration">An optional <see cref="TimeSpan"/> indicating the maximum amount of time to keep the item in the cache.</param>
     /// <param name="expiration">An optional <see cref="DateTime"/> indicating a fixed time for when the item should expire from the cache.</param>
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
     /// <remarks>
     /// If both <paramref name="expiration"/> and <paramref name="maxCacheDuration"/> are set, the earlier expiration will be used.
+    /// Disposable items are welcome here, unlike <see cref="IAmbientSharedCache"/>, which prohibits them, because the entry never leaves the process.  An item these arguments rule out caching at all is never retrievable, and is disposed rather than handed back when <paramref name="disposeWhenDiscarding"/> is true.
     /// </remarks>
     ValueTask Store<T>(string itemKey, T item, bool disposeWhenDiscarding = false, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default) where T : class;
     /// <summary>
     /// Removes the specified item from the cache and return it.  If disposable, ownership is transferred to the caller.
+    /// An entry that cannot be handed back as <typeparamref name="T"/> reports not-found and, since ownership cannot transfer, is disposed as a discard when it was stored with dispose-on-discard.
     /// </summary>
     /// <typeparam name="T">The type of the item to be cached.</typeparam>
     /// <param name="itemKey">A string that uniquely identifies the item being cached.</param>

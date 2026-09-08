@@ -450,6 +450,42 @@ public sealed class TestAtomicCache
     }
 
     [TestMethod]
+    public async Task AtomicCache_VersionedPut_RejectedAsyncOnlyDisposable_Disposes()
+    {
+        AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_VersionedPut_RejectedAsyncOnlyDisposable_Disposes));
+        using (AmbientClock.Pause())
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+        {
+            IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
+            await using AsyncOnlyDisposableCacheEntry negativeDuration = new();
+            long rev = await cache.VersionedPut(nameof(AtomicCache_VersionedPut_RejectedAsyncOnlyDisposable_Disposes) + "-duration", negativeDuration, maxCacheDuration: TimeSpan.FromSeconds(-1));
+            Assert.AreEqual(0, rev);
+            Assert.AreEqual(1, negativeDuration.AsyncDisposeCount);
+            await using AsyncOnlyDisposableCacheEntry pastExpiration = new();
+            rev = await cache.VersionedPut(nameof(AtomicCache_VersionedPut_RejectedAsyncOnlyDisposable_Disposes) + "-expiration", pastExpiration, expiration: AmbientClock.UtcNow.AddTicks(-1));
+            Assert.AreEqual(0, rev);
+            Assert.AreEqual(1, pastExpiration.AsyncDisposeCount);
+        }
+    }
+
+    [TestMethod]
+    public async Task AtomicCache_DiscardedEntry_DisposesAsynchronouslyWhenBothSupported()
+    {
+        AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_DiscardedEntry_DisposesAsynchronouslyWhenBothSupported));
+        using (new ScopedLocalServiceOverride<IAmbientSettingsSet>(settings))
+        {
+            IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
+            string key = nameof(AtomicCache_DiscardedEntry_DisposesAsynchronouslyWhenBothSupported);
+            using DualDisposableCacheEntry entry = new();
+            _ = await cache.GetOrAdd<DualDisposableCacheEntry>(key, async () => { await Task.Yield(); return (entry, null); });
+            // removing the entry discards it, and exactly one disposal runs: the asynchronous one
+            await cache.Remove<DualDisposableCacheEntry>(key);
+            Assert.AreEqual(1, entry.AsyncDisposeCount);
+            Assert.AreEqual(0, entry.SyncDisposeCount);
+        }
+    }
+
+    [TestMethod]
     public async Task AtomicCache_VersionedGet_ExpiredThenVersionedPutEarlierExpirationWins()
     {
         AmbientSettingsOverride settings = new(TestAtomicCacheSettingsDictionary, nameof(AtomicCache_VersionedGet_ExpiredThenVersionedPutEarlierExpirationWins));

@@ -8,10 +8,11 @@ namespace AmbientServices;
 /// A class that provides caching using the local cache, falling back to the shared cache if not found, and storing/deleting from both.
 /// </summary>
 /// <remarks>
-/// <pitch>Two-tier caching in one call: reads prefer the fast in-process tier while stores and removals are applied to both the local and shared tiers, so repeated nearby lookups stay cheap and other servers can still see the value.  Only serializable values belong here, since everything is also written to the shared tier.</pitch>
+/// <pitch>Two-tier caching in one call: reads prefer the fast in-process tier while stores and removals are applied to both the local and shared tiers, so repeated nearby lookups stay cheap and other servers can still see the value.  Only serializable, non-disposable values belong here, since everything is also written to the shared tier.</pitch>
 /// <pledge>
 /// Stores and removals are applied to the local tier and then the shared tier; the two writes are not transactional, so a failure partway can leave the tiers different.
 /// Retrieval prefers the local tier and falls back to the shared tier on a local miss (or when no local cache is in effect).
+/// Disposable items (<see cref="IDisposable"/> or <see cref="IAsyncDisposable"/>) must never be cached here, for the reason <see cref="IAmbientSharedCache"/> gives — every value also goes to the shared tier, where dispose ownership cannot be established — and for one more that belongs to this composition: the same key may hand back the very instance that was stored (a local hit) or a fresh deserialized copy (a shared hit), so a caller cannot even tell which instances exist, let alone own them.  The local tier is written without dispose-on-discard, so neither tier ever disposes an entry; a caller keeps and must dispose whatever it stored.  Items with real dispose responsibilities belong in <see cref="IAmbientLocalCache"/> alone.
 /// All keys are prefixed with the owner type's name (or the supplied prefix) before reaching either tier.
 /// When neither tier's service exists, every operation quietly succeeds without caching.
 /// Clearing clears both underlying caches in their entirety, not merely this owner's entries.
@@ -95,6 +96,7 @@ public class AmbientTwoStageCache
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
     /// <remarks>
     /// If both <paramref name="expiration"/> and <paramref name="maxCacheDuration"/> are set, the earlier expiration will be used.
+    /// <paramref name="item"/> must be serializable and must not be disposable: the local tier is written without dispose-on-discard and the shared tier cannot own an entry at all, so ownership never transfers and the caller remains responsible for disposing its instance.
     /// </remarks>
     public async ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default) where T : class
     {
