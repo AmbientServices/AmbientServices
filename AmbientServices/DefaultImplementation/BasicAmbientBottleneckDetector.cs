@@ -562,7 +562,7 @@ internal class ProcessBottleneckSurveyor : IAmbientBottleneckExitNotificationSin
 /// <remarks>
 /// <pitch>The per-thread analog of <see cref="CallContextSurveyManager"/>: one process-wide registration with the detector, from which each thread gets its own private distributor.</pitch>
 /// <pledge><see cref="IAmbientBottleneckExitNotificationSink"/></pledge>
-/// <plan>Registers itself with the detector once at construction and holds a <see cref="ThreadLocal{T}"/> of per-thread <see cref="ThreadAccessDistributor"/>s created lazily; exit notifications are forwarded to the notifying thread's distributor, so an access is attributed to whichever thread disposes the accessor.  Disposal deregisters and drops the thread-local storage.</plan>
+/// <plan>Registers itself with the detector once at construction and holds a <see cref="ThreadLocal{T}"/> of per-thread <see cref="ThreadAccessDistributor"/>s created lazily; exit notifications are forwarded to the notifying thread's distributor, so an access is attributed to whichever thread disposes the accessor.  Disposal deregisters and drops the thread-local storage, swapping the storage away before disposing it so a notification racing the disposal sees no distributor rather than a disposed one; because the detector's sink list is process-wide, that race is reached by any thread leaving a bottleneck while another disposes a surveyor, and a notification that loses it is dropped rather than faulting the thread disposing the accessor.</plan>
 /// </remarks>
 internal class ThreadSurveyManager : IAmbientBottleneckExitNotificationSink, IDisposable
 {
@@ -580,27 +580,52 @@ internal class ThreadSurveyManager : IAmbientBottleneckExitNotificationSink, IDi
         }
     }
 
-    private ThreadAccessDistributor ThreadDistributor
+    /// <summary>
+    /// Gets the calling thread's distributor, or null if this manager has been disposed.
+    /// </summary>
+    private ThreadAccessDistributor? ThreadDistributor
     {
         get
         {
-            ThreadAccessDistributor? threadDistributor = _threadDistributors?.Value;
-            if (threadDistributor == null)
+            // read the field once: Dispose swaps it out concurrently, so re-reading it could see the live instance and then null
+            ThreadLocal<ThreadAccessDistributor>? threadDistributors = _threadDistributors;
+            if (threadDistributors == null) return null;
+            try
             {
-                threadDistributor = new ThreadAccessDistributor();
-                if (_threadDistributors != null) _threadDistributors.Value = threadDistributor;
+                ThreadAccessDistributor? threadDistributor = threadDistributors.Value;
+                if (threadDistributor == null)
+                {
+                    threadDistributor = new ThreadAccessDistributor();
+                    threadDistributors.Value = threadDistributor;
+                }
+                return threadDistributor;
             }
-            return threadDistributor;
+            catch (ObjectDisposedException)
+            {
+                // Dispose reached the thread-local between the read above and this access.  ThreadLocal exposes no way to test for
+                // disposal that does not race it in exactly the same way, so the exception is the only signal available, and taking
+                // a lock here would put one on the hot path of every bottleneck exit.  There is no surveyor left to route to.
+                return null;
+            }
         }
     }
     void IAmbientBottleneckExitNotificationSink.BottleneckExited(AmbientBottleneckAccessor bottleneckAccessor)
     {
-        ThreadDistributor.BottleneckExited(bottleneckAccessor);
+        // a null distributor means this manager was disposed while the notification was in flight; dropping it is correct, and throwing
+        // would surface as an ObjectDisposedException inside an unrelated caller's accessor Dispose
+        ThreadDistributor?.BottleneckExited(bottleneckAccessor);
     }
 
     internal ThreadBottleneckSurveyor CreateThreadSurveyor(string? scopeName, Regex? allow, Regex? block)
     {
-        ThreadBottleneckSurveyor surveyor = new(scopeName, ThreadDistributor, allow, block);
+        ThreadAccessDistributor? threadDistributor = ThreadDistributor;
+        // unlike a notification, creating a surveyor from a disposed manager is a caller error rather than a lost race
+#if NET7_0_OR_GREATER
+        ObjectDisposedException.ThrowIf(threadDistributor == null, this);
+#else
+        if (threadDistributor == null) throw new ObjectDisposedException(nameof(ThreadSurveyManager));
+#endif
+        ThreadBottleneckSurveyor surveyor = new(scopeName, threadDistributor, allow, block);
         return surveyor;
     }
 
@@ -611,8 +636,10 @@ internal class ThreadSurveyManager : IAmbientBottleneckExitNotificationSink, IDi
             if (disposing)
             {
                 _bottleneckDetector?.DeregisterAccessNotificationSink(this);
-                _threadDistributors?.Dispose();
-                _threadDistributors = null;
+                // swap the storage away before disposing it: a notification that already passed the null check keeps a live reference,
+                // but every notification arriving after this point sees null and is dropped instead of faulting on a disposed thread-local
+                ThreadLocal<ThreadAccessDistributor>? threadDistributors = Interlocked.Exchange(ref _threadDistributors, null);
+                threadDistributors?.Dispose();
             }
 
             // TODO: free unmanaged resources (unmanaged objects) and override finalizer

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -72,6 +73,38 @@ public class TestBottleneckDetector
         Assert.StartsWith("Zero", collector.ThreadAnalyzer.ScopeName);
         Assert.StartsWith("Zero", collector.ScopeAnalyzer.ScopeName);
         Assert.StartsWith("TimeWindow", collector.Analyses.FirstOrDefault(kvp => kvp.Value.MostUtilizedBottleneck != null).Value.ScopeName);
+    }
+    /// <summary>
+    /// Covers a bottleneck exit notification arriving at a <see cref="ThreadSurveyManager"/> whose thread-local storage has already been disposed.
+    /// </summary>
+    /// <remarks>
+    /// The detector's notification sink list is shared by every surveyor registered with it, so a thread leaving a bottleneck
+    /// notifies managers it never created and may be the first to touch a given manager's thread-local storage.  Disposal used to
+    /// dispose that storage while the field still pointed at it, so a notification landing in that window faulted with an
+    /// <see cref="ObjectDisposedException"/> thrown out of the accessor <see cref="IDisposable.Dispose"/> call on the unrelated
+    /// exiting thread.  Reaching in to dispose the storage directly reproduces that window without having to race for it.
+    /// </remarks>
+    [TestMethod]
+    public void ThreadSurveyManagerNotifiedAfterThreadLocalDisposed()
+    {
+        // scope the detector to this test so the manager registered below never sees other tests' bottleneck traffic (and vice versa)
+        using ScopedLocalServiceOverride<IAmbientBottleneckDetector> o = new(new BasicAmbientBottleneckDetector());
+        IAmbientBottleneckDetector? detector = _BottleneckDetector.Local;
+        Assert.IsNotNull(detector);
+        AmbientBottleneck bottleneck = new(nameof(ThreadSurveyManagerNotifiedAfterThreadLocalDisposed) + "-Bottleneck", AmbientBottleneckUtilizationAlgorithm.Linear, true, nameof(ThreadSurveyManagerNotifiedAfterThreadLocalDisposed), AmbientStopwatch.Frequency / 10000, TimeSpan.FromSeconds(1));
+        using ThreadSurveyManager manager = new(detector);
+        AmbientBottleneckAccessor? accessor = bottleneck.EnterBottleneck();
+        Assert.IsNotNull(accessor);
+
+        FieldInfo? storageField = typeof(ThreadSurveyManager).GetField("_threadDistributors", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.IsNotNull(storageField);
+        IDisposable? storage = (IDisposable?)storageField.GetValue(manager);
+        Assert.IsNotNull(storage);
+        // put the manager into the state disposal passes through, with the storage dead but the field still referencing it
+        storage.Dispose();
+
+        // this thread has never read this manager's thread-local, so the notification takes the slow path that used to throw
+        accessor.Dispose();
     }
     [TestMethod]
     public void BottleneckDetectorExceptions()

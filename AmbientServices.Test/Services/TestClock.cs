@@ -526,6 +526,8 @@ public class TestClock
             // wait a random time to break any kind of resonant failure
             Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
         }
+        // every attempt recorded a failure, so this is a real misbehavior rather than timing noise
+        Assert.AreEqual(0, errorInfo.Length, errorInfo.ToString());
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1020,18 +1022,19 @@ public class TestClock
             Assert.IsTrue(timer.AutoReset);
             Assert.IsFalse(timer.Enabled);
             timer.AutoReset = false;
-            timer.Elapsed += (s, e) => { ++elapsed; ss.Release(); };
-            timer.Disposed += (s, e) => { ++disposed; };
+            timer.Elapsed += (s, e) => { Interlocked.Increment(ref elapsed); ss.Release(); };
+            timer.Disposed += (s, e) => { Interlocked.Increment(ref disposed); };
+            // check the count before starting the timer: once it is running, any sample races the callback thread and the timer may legitimately have fired already
+            Assert.AreEqual(0, Volatile.Read(ref elapsed));
             timer.Enabled = true;
             timer.Interval = 100;
             Assert.AreEqual(100.0, timer.Interval);
-            Assert.AreEqual(0, elapsed);
             // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
-            await ss.WaitAsync(5000);
-            Assert.IsLessThanOrEqualTo(1, elapsed);    // the event should *never* get raised more than once because AutoReset is false
-            Assert.AreEqual(0, disposed);
+            Assert.IsTrue(await ss.WaitAsync(5000), "the system timer did not raise Elapsed within five seconds");
+            Assert.IsLessThanOrEqualTo(1, Volatile.Read(ref elapsed));    // the event should *never* get raised more than once because AutoReset is false
+            Assert.AreEqual(0, Volatile.Read(ref disposed));
         }
-        Assert.AreEqual(1, disposed);
+        Assert.AreEqual(1, Volatile.Read(ref disposed));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1046,23 +1049,26 @@ public class TestClock
             using SemaphoreSlim ss = new(0);
             Assert.IsFalse(timer.Enabled);
             timer.AutoReset = true;
-            timer.Elapsed += (s, e) => { ++elapsed; ss.Release(); };
-            timer.Disposed += (s, e) => { ++disposed; };
+            timer.Elapsed += (s, e) => { Interlocked.Increment(ref elapsed); ss.Release(); };
+            timer.Disposed += (s, e) => { Interlocked.Increment(ref disposed); };
             timer.Interval = 100;
-            timer.Start();
             Assert.AreEqual(100.0, timer.Interval);
-            Assert.AreEqual(0, elapsed);
+            // check the count before starting the timer: once it is running, any sample races the callback thread and the timer may legitimately have fired already
+            Assert.AreEqual(0, Volatile.Read(ref elapsed));
+            timer.Start();
             // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
-            await ss.WaitAsync(5000);
-            Assert.IsGreaterThanOrEqualTo(1, elapsed);    // this could be more than one occasionally if the event gets raised again after being released and before we can stop it here
-            Assert.AreEqual(0, disposed);
-            timer.Stop();   // after this, the event should *not* be raised again, though a notification may already be in progress, so this could fail on rare occasions
-            int postStopElapsed = elapsed;
+            Assert.IsTrue(await ss.WaitAsync(5000), "the system timer did not raise Elapsed within five seconds");
+            Assert.IsGreaterThanOrEqualTo(1, Volatile.Read(ref elapsed));    // this could be more than one occasionally if the event gets raised again after being released and before we can stop it here
+            Assert.AreEqual(0, Volatile.Read(ref disposed));
+            timer.Stop();   // after this, the event should *not* be raised again, though a notification may already have been in progress when Stop was called
+            // let any callback that was already in flight when Stop returned finish before sampling, otherwise the baseline below races that callback rather than measuring a stopped timer
             await Task.Delay(300);
-            Assert.AreEqual(postStopElapsed, elapsed);
-            Assert.AreEqual(0, disposed);
+            int postStopElapsed = Volatile.Read(ref elapsed);
+            await Task.Delay(300);
+            Assert.AreEqual(postStopElapsed, Volatile.Read(ref elapsed));
+            Assert.AreEqual(0, Volatile.Read(ref disposed));
         }
-        Assert.AreEqual(1, disposed);
+        Assert.AreEqual(1, Volatile.Read(ref disposed));
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientClock"/>.
@@ -1083,20 +1089,30 @@ public class TestClock
                 Assert.IsTrue(timer.AutoReset);
                 Assert.IsFalse(timer.Enabled);
                 Assert.AreEqual(1000, timer.Interval);
-                timer.Elapsed += (s, e) => { ++elapsed; Assert.AreEqual(timer, s); };
-                timer.Disposed += (s, e) => { ++disposed; Assert.AreEqual(timer, s); };
-                Assert.AreEqual(0, elapsed);
+                timer.Elapsed += (s, e) => { Interlocked.Increment(ref elapsed); Assert.AreEqual(timer, s); };
+                timer.Disposed += (s, e) => { Interlocked.Increment(ref disposed); Assert.AreEqual(timer, s); };
+                Assert.AreEqual(0, Volatile.Read(ref elapsed));
                 timer.AutoReset = true;
+                // measure how much time really passes: Task.Delay only guarantees a lower bound, and on a loaded machine it can overshoot far enough to fit another tick in
+                Stopwatch actual = Stopwatch.StartNew();
                 timer.Enabled = true;
                 await Task.Delay(3750);
-                if (elapsed != 3) errorInfo.AppendLine($"elapsed is {elapsed} but should be 3!");
-                Assert.AreEqual(0, disposed);           // this assertion failed once, but is very intermittent, not sure how this is possible
+                timer.Enabled = false;
+                actual.Stop();
+                int ticks = Volatile.Read(ref elapsed);
+                // a 1000ms auto-reset timer should tick once per elapsed second, give or take one for where the start and stop fall between ticks
+                int minTicks = (int)(actual.Elapsed.TotalMilliseconds / 1000) - 1;
+                int maxTicks = (int)(actual.Elapsed.TotalMilliseconds / 1000) + 1;
+                if (ticks < minTicks || ticks > maxTicks) errorInfo.AppendLine(FormattableString.Invariant($"elapsed is {ticks} but should be between {minTicks} and {maxTicks} for the {actual.Elapsed.TotalMilliseconds}ms that actually passed!"));
+                Assert.AreEqual(0, Volatile.Read(ref disposed));
             }
-            Assert.AreEqual(1, disposed);
+            Assert.AreEqual(1, Volatile.Read(ref disposed));
             if (errorInfo.Length == 0) break;
             // wait a random time to break any kind of resonant failure
             Thread.Sleep(Pseudorandom.Next.NextInt32Ranged(1000));
         }
+        // every attempt recorded a failure, so this is a real misbehavior rather than timing noise
+        Assert.AreEqual(0, errorInfo.Length, errorInfo.ToString());
     }
     /// <summary>
     /// Performs tests on <see cref="IAmbientClock"/>.
