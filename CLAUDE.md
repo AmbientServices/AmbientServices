@@ -14,11 +14,28 @@ Each unit of code (class, module, subsystem, or system) carries up to five named
 5P sharing is per-layer, not a tree: realizations of one Pledge may still have different Pitches. Abstractions carry Pitch + Pledge (and may carry a Priority binding every realization); realizations carry a Pitch, one or more Pledges, and a Plan — a realization links the abstraction's Pledge and may add realization-specific extension Pledges. Pledges, Pins, and Priorities are **linked, never copied**.
 
 **Rules:**
+- 5P on test code is completely optional and should only be included if there are some unusual goals or strategy for the test suite such as multithreading or multiprocessing to verify safety or test contention, fuzzing to try to find obscure parsing issues, etc.
 - Before modifying a unit, check to see if its 5P are documented and **flag any drift** between them and the code. Treat a `<pin>` as read-only unless the change is explicitly a migration.
 - A significant code change updates the affected 5P **in the same change**.
 - A change to any of the 5P is **agreed in prose first**, then code and tests follow. Violating a `<pin>` is a **migration** decision, not a code decision: it invalidates data or peers that already exist, so the compatibility plan is agreed before the code changes.
 - Decide **fix / enhance / branch** using the constraints at *every* layer: code-vs-description mismatch → fix; within all layers → enhance; outside any layer → new unit, or a deliberate, agreed change to that layer.
 - Where several changes are all legal, the `<priority>` breaks the tie — follow it rather than re-deciding the fork. Inverting a ranking is a Priority change (prose first), and inverting a **public** one forces a Pitch review in the same change.
+
+### General Guidelines
+- Use common terse English of the style found in the project rather than verbose esoteric terminology, especially when more precise or project-specific terms are available; in code, comments, and responses
+- API changes must be backwards compatible unless explicitly approved, so changing the schema of existing inputs can only add parameters with defaults, changing the schema of outputs can't remove properties unless they've previously been marked as deprecated
+- When looping with retries or backup-and-restart logic, always bound the loops with a specific retry count (with exponential backoff where appropriate) or timeout
+- When looping over data structures that might be recursive, always bound the loops with a specific depth limit to avoid stack overflows and infinite loops
+- When designing algorithms that adjust their behavior based on inputs, and there is an option to do so, prefer algorithms that respond smoothly to inputs rather than abruptly changing behavior at certain thresholds
+- If there are other cases where we loop without a specific bound, add a bound if possible, or please let me know so I can decide how to handle those situations too
+- Never commit code with an established interface when you know that there are regressions in the implementation of that interface
+- For modules that are likely to access lots of data, never assume it can all fit in memory.  Always use streaming and/or paging when possible, and if not possible, document the reasons why
+- NEVER remove existing comments unless removing the code they apply to
+- Write all tests so they can be run more than once at the same time as well as concurrently with all other tests
+- New dependencies should *always* use the latest stable version of the dependency.  Outdated dependencies are a security incident waiting to happen
+- Do not use dependencies that are not actively maintained or have few downloads unless there is no alternative available
+- When mocks and emulators are available, the cheapest and most performant version should be used in tests instead of real dependencies, unless the test is specifically testing the dependency itself or a behavior or possible regression that is only observable with the real dependency
+- Unless specifically excluded, new features should work together with old features.  For example, if Multiple Desktops were an existing feature, and we add a new feature that allows users to change their desktop background, unless specifically excluded, that would imply that the user should be able to select a *separate* desktop background for each desktop when they are using multiple desktops.  "You can't do those two at the same time" should only be true if it's theoretically impossible, not just because someone didn't want to finish a feature
 
 ### C# Coding Standards
 - This is a warning-free project.  All warnings except for temporarily lingering Obsoletion warnings should be fixed before claiming completion
