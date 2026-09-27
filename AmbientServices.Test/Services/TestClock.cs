@@ -511,8 +511,11 @@ public class TestClock
                 timer.Elapsed += elapsedHandler;
                 timer.Disposed += disposedHandler;
                 // now try to get it to elapse again (this time with a subscriber)
-                Thread.Sleep(100);
-                if (!elapsed) errorInfo.AppendLine($"elapsed was false after waiting for ten intervals (100ms)!");
+                // Polled against a generous bound rather than slept for ten intervals: with 20 tests running in parallel on a small machine the thread pool can
+                // hold timer callbacks far past 100ms, which failed every attempt on a 2-core CI runner (2026-09-27) and reproduces with DOTNET_PROCESSOR_COUNT=2.
+                Stopwatch waiting = Stopwatch.StartNew();
+                while (!Volatile.Read(ref elapsed) && waiting.ElapsedMilliseconds < 5000) Thread.Sleep(10);
+                if (!Volatile.Read(ref elapsed)) errorInfo.AppendLine($"elapsed was false after waiting five seconds (500 intervals)!");
                 if (disposed) errorInfo.AppendLine($"dispose was set prematurely!");
                 timer.Elapsed -= elapsedHandler;
                 timer.Disposed -= disposedHandler;
@@ -1029,8 +1032,8 @@ public class TestClock
             timer.Enabled = true;
             timer.Interval = 100;
             Assert.AreEqual(100.0, timer.Interval);
-            // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
-            Assert.IsTrue(await ss.WaitAsync(5000), "the system timer did not raise Elapsed within five seconds");
+            // wait up to 30 seconds to get raised (it should have happened hundreds of times by then, so if it doesn't there must be a bug; five seconds was not enough on a 2-core machine running tests in parallel, 2026-09-27)
+            Assert.IsTrue(await ss.WaitAsync(30_000), "the system timer did not raise Elapsed within thirty seconds");
             Assert.IsLessThanOrEqualTo(1, Volatile.Read(ref elapsed));    // the event should *never* get raised more than once because AutoReset is false
             Assert.AreEqual(0, Volatile.Read(ref disposed));
         }
@@ -1056,8 +1059,8 @@ public class TestClock
             // check the count before starting the timer: once it is running, any sample races the callback thread and the timer may legitimately have fired already
             Assert.AreEqual(0, Volatile.Read(ref elapsed));
             timer.Start();
-            // wait up to 5 seconds to get raised (it should have happened 50 times by then, so if it doesn't there must be a bug, or the CPU must be horribly overloaded)
-            Assert.IsTrue(await ss.WaitAsync(5000), "the system timer did not raise Elapsed within five seconds");
+            // wait up to 30 seconds to get raised (it should have happened hundreds of times by then, so if it doesn't there must be a bug; five seconds was not enough on a 2-core machine running tests in parallel, 2026-09-27)
+            Assert.IsTrue(await ss.WaitAsync(30_000), "the system timer did not raise Elapsed within thirty seconds");
             Assert.IsGreaterThanOrEqualTo(1, Volatile.Read(ref elapsed));    // this could be more than one occasionally if the event gets raised again after being released and before we can stop it here
             Assert.AreEqual(0, Volatile.Read(ref disposed));
             timer.Stop();   // after this, the event should *not* be raised again, though a notification may already have been in progress when Stop was called
