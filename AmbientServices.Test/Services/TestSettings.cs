@@ -458,14 +458,17 @@ public class TestSettings
     /// <summary>
     /// Covers the rare <see cref="SettingsRegistry.Register"/> path where <see cref="ConcurrentDictionary{TKey,TValue}.TryUpdate"/> loses a race replacing a dead weak reference, then times out when the retry limit is zero.
     /// </summary>
+    /// <remarks>
+    /// DETERMINISTIC rather than a thread race: <see cref="SettingsRegistry.Register"/> reads the setting's key once for GetOrAdd and again for TryUpdate,
+    /// and the second read here replaces the entry, which is exactly what a racing registrar does between those two calls.  The 96-thread race this
+    /// replaced only usually lost, took a minute waiting for the thread pool to supply its threads, and failed whenever nobody lost (2026-09-27).
+    /// </remarks>
     [TestMethod]
-    [DoNotParallelize]
     public void SettingsRegistry_Register_ContentionOnDeadWeakReference_CanTimeOut()
     {
-        const int registerThreads = 96;
         SettingsRegistry registry = new(0);
         FieldInfo? fi = typeof(SettingsRegistry).GetField("_settings", BindingFlags.NonPublic | BindingFlags.Instance);
-        var dict = (ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>>)fi!.GetValue(registry)!;
+        ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> dict = (ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>>)fi!.GetValue(registry)!;   // null-forgiving: _settings is a readonly field initialized at construction, so both the field and its value exist; a rename fails this test loudly
         string key = nameof(SettingsRegistry_Register_ContentionOnDeadWeakReference_CanTimeOut) + Guid.NewGuid().ToString("N");
         WeakReference<IAmbientSettingInfo> wr = AddDeadWeakSettingEntry(dict, key);
         for (int g = 0; g < 5; g++)
@@ -475,34 +478,51 @@ public class TestSettings
         }
         Assert.IsFalse(wr.TryGetTarget(out _), "Weak reference should be collectible so Register uses the dead-entry path.");
 
-        using Barrier alignedStart = new(registerThreads + 1);
-        int timeouts = 0;
-        Action[] actions = new Action[registerThreads + 1];
-        for (int i = 0; i < registerThreads; i++)
-        {
-            actions[i] = () =>
-            {
-                alignedStart.SignalAndWait();
-                try
-                {
-                    registry.Register(new TestSettingsSetSetting(key, "dv", "sameDesc"));
-                }
-                catch (TimeoutException)
-                {
-                    Interlocked.Increment(ref timeouts);
-                }
-            };
-        }
-        actions[registerThreads] = () => alignedStart.SignalAndWait();
-        Parallel.Invoke(actions);
+        RacingSetting racer = new(key, dict);
+        Assert.ThrowsExactly<TimeoutException>(() => registry.Register(racer));
+        Assert.IsTrue(racer.Replaced, "the entry must have been replaced between GetOrAdd and TryUpdate for this to test the contention path");
+    }
 
-        Assert.IsTrue(timeouts > 0);
+    /// <summary>A setting whose second key read replaces the registry's entry for that key, as a registrar racing between GetOrAdd and TryUpdate would.</summary>
+    private sealed class RacingSetting : IAmbientSettingInfo
+    {
+        private readonly string _key;
+        private readonly ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> _registry;
+        private int _keyReads;
+
+        public RacingSetting(string key, ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> registry)
+        {
+            _key = key;
+            _registry = registry;
+        }
+
+        public bool Replaced => _keyReads >= 2;
+
+        public string Key
+        {
+            get
+            {
+                // the first read is GetOrAdd's; before the second (TryUpdate's) another registrar gets there first
+                if (++_keyReads == 2) _registry[_key] = new WeakReference<IAmbientSettingInfo>(new TestSettingsSetSetting(_key, "dv", "sameDesc"));
+                return _key;
+            }
+        }
+
+        public object DefaultValue => DefaultValueString;
+
+        public string DefaultValueString => "dv";
+
+        public string Description => "sameDesc";
+
+        public DateTime LastUsed => DateTime.MinValue;
+
+        public object Convert(IAmbientSettingsSet settingsSet, string value) => DefaultValueString;
     }
 
     private static WeakReference<IAmbientSettingInfo> AddDeadWeakSettingEntry(ConcurrentDictionary<string, WeakReference<IAmbientSettingInfo>> dict, string key)
     {
         // Allocate inline so no local strongly roots the setting after this method returns.
-        var wr = new WeakReference<IAmbientSettingInfo>(new TestSettingsSetSetting(key, "dv", "sameDesc"));
+        WeakReference<IAmbientSettingInfo> wr = new(new TestSettingsSetSetting(key, "dv", "sameDesc"));
         Assert.IsTrue(dict.TryAdd(key, wr));
         return wr;
     }
