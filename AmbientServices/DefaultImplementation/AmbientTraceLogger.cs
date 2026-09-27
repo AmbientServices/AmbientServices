@@ -94,7 +94,7 @@ public class AmbientTraceLogger : IAmbientLogger, IAmbientStructuredLogger
 /// When the in-memory buffer is at capacity, additional lines spill to the ambient <see cref="IAmbientLogOverflowWriter"/> instead of growing the queue.
 /// </pledge>
 /// <plan>
-/// A static <see cref="ConcurrentQueue{T}"/> drained by one dedicated below-normal-priority background thread that batches up to ten lines per <see cref="Trace.Write(string)"/> call and sleeps on a <see cref="SemaphoreSlim"/> when idle.  Flush works by enqueueing a GUID sentinel string and waiting on a second semaphore that the drainer releases when it dequeues the sentinel; during an explicit flush the drainer thread's priority is temporarily boosted.  Overflow beyond the buffer cap is delegated to <see cref="AmbientLogBufferLimits"/>.
+/// A static <see cref="ConcurrentQueue{T}"/> drained by one dedicated below-normal-priority background thread that batches up to ten lines per <see cref="Trace.Write(string)"/> call and sleeps on a <see cref="SemaphoreSlim"/> when idle.  The semaphore only wakes the drainer, which drains by the queue rather than by the count: a buffering call whose release fails (the count is capped at <see cref="short.MaxValue"/>, below the queue's own cap) returns at once, because a saturated count means the drainer is already awake.  Flush works by registering a per-flush completion and then enqueueing a GUID sentinel string; since waiters and sentinels are queued in the same order, the k-th sentinel the drainer reaches completes the k-th waiter, whose earlier lines are necessarily ahead of it, and the drainer writes the lines it has batched ahead of a sentinel before completing it.  (Until 2026-09-26 the flush waited on one shared semaphore and a buffering call whose release failed waited on it too, for a flush nobody had asked for: that caller hung for good, and the release it eventually took belonged to some other flush.)  During an explicit flush the drainer thread's priority is temporarily boosted.  Overflow beyond the buffer cap is delegated to <see cref="AmbientLogBufferLimits"/>.
 /// Trade-off profile: minimal per-line cost and no lock contention on the logging path, at the price of a dedicated thread and delivery that lags by the batching latency.
 /// </plan>
 /// </remarks>
@@ -105,9 +105,10 @@ public static class TraceBuffer
 {
     private static readonly string _FlushString = Guid.NewGuid().ToString();
     private static readonly ConcurrentQueue<string> _Queue = new();
+    // One per flush in progress, in the order their sentinels were queued: the k-th sentinel the drainer reaches completes the k-th waiter.
+    private static readonly ConcurrentQueue<TaskCompletionSource<bool>> _FlushWaiters = new();
     private static readonly SemaphoreSlim _Semaphore = new(0, short.MaxValue);
     private static readonly Thread _FlusherThread = FlusherThread();
-    private static readonly SemaphoreSlim _FlusherSemaphore = new(0, short.MaxValue);
 
     private static Thread FlusherThread()
     {
@@ -132,8 +133,9 @@ public static class TraceBuffer
     {
         // enqueue the string given to us (or spill to the standard local overflow log when the buffer is full)
         AmbientLogBufferLimits.EnqueueOrOverflow(_Queue, s);
-        // release the semaphore so the data gets processed
-        Release(false).Wait();
+        // release the semaphore so the data gets processed.  A release that fails means the wake-up count is saturated, so the drainer is already awake
+        // and will reach this line: there is nothing to wait for.  (Waiting here once hung the caller for good: it waited for a flush nobody had asked for.)
+        _ = Release();
     }
     [DebuggerStepThrough]
     private static bool Release()
@@ -149,39 +151,34 @@ public static class TraceBuffer
             return false;
         }
     }
-    private static async Task Release(bool flush, CancellationToken cancel = default)
-    {
-        try
-        {
-            // if the release fails, flush the queue
-            if (!Release()) flush = true;
-            cancel.ThrowIfCancellationRequested();
-            // are we flushing?
-            if (flush)
-            {
-                // boost the priority of the flusher thread for a bit
-                _FlusherThread.Priority = ThreadPriority.AboveNormal;
-                cancel.ThrowIfCancellationRequested();
-                // wait for the flush to happen
-                await _FlusherSemaphore.WaitAsync(cancel);
-            }
-        }
-        finally
-        {
-            // restore the thread priority
-            if (flush) _FlusherThread.Priority = ThreadPriority.BelowNormal;
-        }
-    }
     /// <summary>
     /// Asynchronously flushes any queued trace lines.
     /// </summary>
     /// <param name="cancel">A <see cref="CancellationToken"/> that the caller can use to interrupt the operation before completion.</param>
     public static async ValueTask Flush(CancellationToken cancel = default)
     {
+        cancel.ThrowIfCancellationRequested();
+        // register the waiter BEFORE queueing its sentinel, so the k-th sentinel always has a k-th waiter to complete (see _FlushWaiters)
+        TaskCompletionSource<bool> flushed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        _FlushWaiters.Enqueue(flushed);
         // queue a flush command
         _Queue.Enqueue(_FlushString);
-        // release the semaphore so the data gets processed
-        await Release(true, cancel);
+        // release the semaphore so the data gets processed (a saturated count means the drainer is already awake)
+        _ = Release();
+        try
+        {
+            // boost the priority of the flusher thread for a bit
+            _FlusherThread.Priority = ThreadPriority.AboveNormal;
+            // cancelling abandons only this caller's wait: the drainer still completes (harmlessly) the waiter that belongs to this flush's sentinel
+            using CancellationTokenRegistration registration = cancel.Register(() => flushed.TrySetCanceled(cancel));
+            // wait for the flush to happen
+            await flushed.Task;
+        }
+        finally
+        {
+            // restore the thread priority
+            _FlusherThread.Priority = ThreadPriority.BelowNormal;
+        }
     }
     /// <summary>
     /// Peeks at all unflushed messages synchronously (for diagnostic purposes only).
@@ -219,8 +216,17 @@ public static class TraceBuffer
                     {
                         if (s == _FlushString)
                         {
-                            // release the flusher that told us to flush
-                            _FlusherSemaphore.Release();
+                            // the lines batched ahead of the sentinel were enqueued before the flush was asked for, so they go out BEFORE it is released
+                            try
+                            {
+                                if (traceData.Length > 0) Trace.Write(traceData.ToString());
+                            }
+                            finally
+                            {
+                                traceData.Clear();
+                                // release the flusher that told us to flush, even when a listener threw: a flush that never returns is worse than one that returns early
+                                if (_FlushWaiters.TryDequeue(out TaskCompletionSource<bool>? waiter)) waiter.TrySetResult(true);
+                            }
                         }
                         else
                         {
