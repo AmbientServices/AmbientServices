@@ -12,7 +12,7 @@ namespace AmbientServices;
 /// <remarks>
 /// <pitch>The zero-configuration atomic cache used unless overridden: a single-process realization (<see cref="IsShared"/> is false) with lock-free steady-state reads and optimistic writes, cheap enough to sit in front of any expensive computation.  Because entries are per-process, callers must bound cross-server staleness with time limits or another mechanism.</pitch>
 /// <pledge><see cref="IAmbientAtomicCache"/></pledge>
-/// <pledge>Optimistic add/update retries are capped at thirty seconds of <see cref="AmbientClock"/> time, shortened further by any caller-supplied timeout; exhausting that budget throws <see cref="InvalidOperationException"/> even when no cancellation token fired.</pledge>
+/// <pledge>Optimistic add/update retries are capped at thirty seconds of <see cref="AmbientClock"/> time, shortened further by any caller-supplied timeout; exhausting that budget throws <see cref="TimeoutException"/> even when no cancellation token fired.</pledge>
 /// <pledge>Because <see cref="IsShared"/> is false, disposable values are permitted, and dispose responsibility is inferred from the value's type rather than requested by the caller: any value implementing a disposal interface is disposed whenever this cache discards it, through <see cref="IAsyncDisposable"/> when the value implements that interface and through <see cref="IDisposable"/> otherwise — exactly one of the two, on every discard path and every target framework.</pledge>
 /// <plan>
 /// One <see cref="ConcurrentDictionary{TKey,TValue}"/> holds both operation families, with single-character storage-key prefixes keeping unversioned and versioned entries in disjoint slots.
@@ -228,12 +228,12 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
     private static void ThrowIfOptimisticRetryDeadlineExceeded(DateTime deadlineUtc)
     {
         if (AmbientClock.UtcNow >= deadlineUtc)
-            throw new InvalidOperationException(OptimisticRetryBudgetExceededMessage);
+            throw new TimeoutException(OptimisticRetryBudgetExceededMessage);
     }
 
     /// <summary>
     /// If the token is already canceled only because the optimistic-retry window elapsed (ambient clock),
-    /// throw <see cref="InvalidOperationException"/> instead of <see cref="OperationCanceledException"/> so callers
+    /// throw <see cref="TimeoutException"/> instead of <see cref="OperationCanceledException"/> so callers
     /// do not treat policy timeout as cooperative cancellation.
     /// </summary>
     private static void ThrowIfCancellationUnlessRetryDeadlineExceeded(DateTime optimisticRetryDeadlineUtc, CancellationToken effectiveCancel)
@@ -324,7 +324,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
             await DisposeDiscardedValue(created);
         }
 
-        throw new InvalidOperationException(OptimisticRetryBudgetExceededMessage);
+        throw new TimeoutException(OptimisticRetryBudgetExceededMessage);
     }
 
     /// <inheritdoc/>
@@ -397,7 +397,7 @@ internal class BasicAmbientAtomicCache : IAmbientAtomicCache
             await DisposeDiscardedValue(created);
         }
 
-        throw new InvalidOperationException(OptimisticRetryBudgetExceededMessage);
+        throw new TimeoutException(OptimisticRetryBudgetExceededMessage);
     }
 
     /// <inheritdoc/>

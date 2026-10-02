@@ -202,7 +202,7 @@ public sealed class TestAtomicCache
         {
             IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
             string key = nameof(AtomicCache_GetOrAdd_NegativeTimeout_UnderPausedClock_ExhaustsOptimisticRetryImmediately);
-            InvalidOperationException ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () =>
+            TimeoutException ex = await Assert.ThrowsExactlyAsync<TimeoutException>(async () =>
                 await cache.GetOrAdd<string>(key, async () =>
                 {
                     Assert.Fail("create should not run when the ambient-clock retry deadline is already in the past");
@@ -221,7 +221,7 @@ public sealed class TestAtomicCache
         {
             IAmbientAtomicCache cache = new BasicAmbientAtomicCache(settings);
             string key = nameof(AtomicCache_AddOrUpdate_NegativeTimeout_UnderPausedClock_ExhaustsOptimisticRetryImmediately);
-            InvalidOperationException ex = await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () =>
+            TimeoutException ex = await Assert.ThrowsExactlyAsync<TimeoutException>(async () =>
                 await cache.AddOrUpdate<AtomicRefBox>(key,
                     async () =>
                     {
@@ -764,7 +764,7 @@ public sealed class TestAtomicCache
             await Task.Yield();
             await Task.Delay(1);
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-            await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () => await task);
+            await Assert.ThrowsExactlyAsync<TimeoutException>(async () => await task);
             Assert.IsTrue(expiredCreates >= 2);
         }
     }
@@ -790,7 +790,7 @@ public sealed class TestAtomicCache
             await Task.Yield();
             await Task.Delay(1);
             AmbientClock.SkipAhead(TimeSpan.FromSeconds(10));
-            await Assert.ThrowsExactlyAsync<InvalidOperationException>(async () => await task);
+            await Assert.ThrowsExactlyAsync<TimeoutException>(async () => await task);
             Assert.IsTrue(expiredCreates >= 2);
         }
     }

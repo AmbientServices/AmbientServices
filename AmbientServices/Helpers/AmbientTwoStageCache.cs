@@ -8,7 +8,7 @@ namespace AmbientServices;
 /// A class that provides caching using the local cache, falling back to the shared cache if not found, and storing/deleting from both.
 /// </summary>
 /// <remarks>
-/// <pitch>Two-tier caching in one call: reads prefer the fast in-process tier while stores and removals are applied to both the local and shared tiers, so repeated nearby lookups stay cheap and other servers can still see the value.  Only serializable, non-disposable values belong here, since everything is also written to the shared tier.</pitch>
+/// <pitch>Two-tier caching in one call: reads prefer the fast in-process tier while stores and removals are applied to both the local and shared tiers, so repeated nearby lookups stay cheap and other servers can still see the value.  Only plain-data, non-disposable values belong here, since everything is also written to the shared tier — and a value that is not plain data fails here more quietly than anywhere else, because local hits hand back the original instance and only the occasional shared hit comes back damaged.</pitch>
 /// <pledge>
 /// Stores and removals are applied to the local tier and then the shared tier; the two writes are not transactional, so a failure partway can leave the tiers different.
 /// Retrieval prefers the local tier and falls back to the shared tier on a local miss (or when no local cache is in effect).
@@ -96,7 +96,7 @@ public class AmbientTwoStageCache
     /// <param name="cancel">The optional <see cref="CancellationToken"/>.</param>
     /// <remarks>
     /// If both <paramref name="expiration"/> and <paramref name="maxCacheDuration"/> are set, the earlier expiration will be used.
-    /// <paramref name="item"/> must be serializable and must not be disposable: the local tier is written without dispose-on-discard and the shared tier cannot own an entry at all, so ownership never transfers and the caller remains responsible for disposing its instance.
+    /// <paramref name="item"/> must be plain data (see <see cref="IAmbientSharedCache"/>) and must not be disposable: the local tier is written without dispose-on-discard and the shared tier cannot own an entry at all, so ownership never transfers and the caller remains responsible for disposing its instance.
     /// </remarks>
     public async ValueTask Store<T>(string itemKey, T item, TimeSpan? maxCacheDuration = null, DateTime? expiration = null, CancellationToken cancel = default) where T : class
     {

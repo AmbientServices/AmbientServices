@@ -13,7 +13,7 @@ namespace AmbientServices;
 /// <pitch>
 /// An in-process cache that can safely hold anything — including objects with references and disposable items, both <see cref="IDisposable"/> and <see cref="IAsyncDisposable"/> — because entries never leave the process.
 /// Disposable entries get single-consumer hand-off semantics so nothing is disposed while a caller is still using it.
-/// Entries are per-process: they vanish on restart and are never visible to other servers; for cross-process caching of serializable values, use <see cref="IAmbientSharedCache"/>.
+/// Entries are per-process: they vanish on restart and are never visible to other servers; for cross-process caching of plain-data values, use <see cref="IAmbientSharedCache"/>.
 /// </pitch>
 /// <pledge>
 /// A string-keyed item store with the same replace-on-store, null-on-miss, evict-at-any-time, and earlier-expiration-wins rules as <see cref="IAmbientSharedCache"/>, plus ownership rules that only make sense in-process.
