@@ -14,8 +14,6 @@ We use **unit** to mean the thing being described, at any level of abstraction: 
 
 With the formal interface, the code, the tests, and the call sites, the layers are independent expressions of the same intent; that redundancy is what lets collaborators coordinate, choose tools, and find bugs.
 
-*(This was the 3P Protocol until Pin was added, and the 4P Protocol until Priority was added; in each case the earlier layers were left unchanged.)*
-
 ## Why these exist
 
 - **Triage.** Read the **Pitch** to decide, problem-to-problem, whether a unit is relevant — usually without reading code.
