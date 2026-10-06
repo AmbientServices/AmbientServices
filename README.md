@@ -13,6 +13,7 @@ This project describes each unit of code — from a single class up to the whole
 - [**Pledge**](docs/PLEDGE.md) — the behavioral contract shared by every ambient service.
 - [**Plan**](docs/PLAN.md) — how the ambient-service mechanism is built and the trade-offs it strikes.
 - [**Priority**](docs/PRIORITY.md) — the rankings behind those trade-offs, and which way the library bends next time.
+- [**Pin**] — none at the library level for this library.  Types that freeze something (e.g. the status system's cross-server conventions in `StatusResults`) carry their own Pin.
 
 The methodology itself is defined in [docs/MODULE_DESCRIPTIONS.md](docs/MODULE_DESCRIPTIONS.md) (with a C#-specific companion, [docs/MODULE_DESCRIPTIONS.AmbientServices.md](docs/MODULE_DESCRIPTIONS.AmbientServices.md)) and draws on a shared [glossary](docs/GLOSSARY.md).
 

@@ -24,7 +24,7 @@ With the formal interface, the code, the tests, and the call sites, the layers a
 
 ## The five layers
 
-The first three form a **constraint cascade** — each removes degrees of freedom the previous left open. Sharing is **per-layer and independent**, not a strict tree: two units can share a Pledge yet have different Pitches, or share a Pitch with unrelated Pledges.  The Plan is generally unique because it's much longer and more descriptive than the other two.
+The first three form a **constraint cascade** — each removes degrees of freedom the previous left open. Sharing is **per-layer and independent**, not a strict tree: two units can share a Pledge yet have different Pitches, or share a Pitch with unrelated Pledges.  The Plan is generally unique because it's much longer and more descriptive than the Pitch and the Pledge.
 
 **Pin and Priority each sit on their own axis.** Pitch, Pledge, and Plan describe the unit as it is now, at three altitudes. Pin describes what is *frozen* — and it is frozen with respect to **time**, not altitude: the obligation is to versions and data that already exist and to peers already deployed, not to the caller in front of you. Priority describes what is *preferred*, and it is the only layer that looks forward: the other four say what the unit is, and it says which way to move. Most units have neither, and that is normal.
 
@@ -40,7 +40,7 @@ Each layer attaches independently to an **abstraction** (e.g., an interface) or 
 
 ### Pitch — *short; for the caller's decision*
 
-The problem the unit solves, or the benefit it gives the caller, written so a reader can quickly decide **"is this what I need?"** Naturally **much shorter** than the other two layers. It *may* state limits — what it doesn't try to do — but only insofar as that aids the decision; at a high enough altitude it may state none. Its constraints may flow down into the Pledge and definitely flow down to the Plan, but their **purpose here is the caller's decision, not the specification of behavior** (that is the Pledge's job). It deliberately under-determines the unit: many units can share one.
+The problem the unit solves, or the benefit it gives the caller, written so a reader can quickly decide **"is this what I need?"** Naturally **much shorter** than the Pledge and the Plan. It *may* state limits — what it doesn't try to do — but only insofar as that aids the decision; at a high enough altitude it may state none. Its constraints may flow down into the Pledge and definitely flow down to the Plan, but their **purpose here is the caller's decision, not the specification of behavior** (that is the Pledge's job). It deliberately under-determines the unit: many units can share one.
 
 Two realizations that share one Pledge may still have **different** Pitches. Consider an interface for a key-value store with two implementations: one in-memory (fast and local, but lost on restart) and one backed by cloud storage (durable and shared). They obey the identical Pledge, yet one's Pitch sells speed without persistence and the other sells shared durability. A realization's Pitch is the caller-facing distillation of its Plan's trade-offs — it states, briefly, which trade-off profile you get, without getting into the implementation details, so you can choose among siblings.
 
@@ -48,9 +48,9 @@ Two realizations that share one Pledge may still have **different** Pitches. Con
 
 High-level interaction rules that cannot be explicitly expressed in the method signatures: how data flows through the interface, which call sequences are expected and which are never valid, ordering/protocol/state constraints, behavioral guarantees. It adds constraints to the paired Pitch in the same way the formal interface does, but without naming methods, parameters, or types. Usually **larger** than the Pitch. The formal interface (the signatures) is its concrete, machine-checked tail.
 
-A unit may have multiple pledges, but will usually only have one, with possible implementation-specific extensions to that.
+A unit may have multiple Pledges, but will usually only have one, with possible implementation-specific extensions to that.
 
-A unit may link to a pledge defined by another unit, as it would when it implements an abstraction. In that case, the unit promises to fulfill the terms of the linked pledge, and the content of that pledge applies to this unit as well. When a unit both links a pledge and adds its own, its full set of promises is the linked pledge together with those extensions.
+A unit may link to a Pledge defined by another unit, as it would when it implements an abstraction. In that case, the unit promises to fulfill the terms of the linked Pledge, and the content of that Pledge applies to this unit as well. When a unit both links a Pledge and adds its own, its full set of promises is the linked Pledge together with those extensions.
 
 ### Plan — *the concrete realization and its trade-offs*
 
@@ -112,7 +112,7 @@ A few recurring kinds of content have natural homes; put them there rather than 
 - **Invariants.** Conditions that always hold. Caller-facing invariants ("reads always return the latest write") belong in the **Pledge**; internal-consistency invariants ("a node is never simultaneously locked for both splitting and merging") belong in the **Plan**; invariants that outlive the code ("an id, once issued, is never reused") belong in the **Pin**. State them explicitly — they are the most bug-dense, checkable lines, and the easiest place for code and prose to disagree.
 - **Failure modes and non-goals.** What the unit refuses to do belongs in the **Pitch**'s limits; how it behaves under error or contention belongs in the **Pledge**; how it degrades under certain types of load belongs in the **Plan**; what happens when a peer or an older version disagrees about a format belongs in the **Pin**; and which way it gives when it cannot satisfy everything at once belongs in the **Priority**.
 - **Trade-offs.** The trade-off *struck* belongs in the **Plan** — this is what we chose and how we achieve it. The rule that *produced* it belongs in the **Priority** — this is what we will choose, every time it comes up again. Only lift a Priority out of a Plan when the same ranking would govern a decision that hasn't been made yet; otherwise the Plan already says everything there is to say.
-- **Canonical usage.** Depending on the language conventions, optionally point to a representative test, sometimes *by name* rather than inlining example code. Keep it prose — don't formally link from the code into its test project, since tests depend on the code, not the other way around. Treat the pointer as an optional, judgment-call aid: it is an ongoing maintenance chore, so skip it where the Pledge already makes usage clear. Where the investment is justified.  At the project-level, consider build-time sample extraction (e.g., https://github.com/jamesivie/dotnet-markdown-sample-code) can pull build-verified samples from real code or tests outside the implementation into the rendered project-level documentation.
+- **Canonical usage.** Depending on the language conventions, optionally point to a representative test, sometimes *by name* rather than inlining example code. Keep it prose — don't formally link from the code into its test project, since tests depend on the code, not the other way around. Treat the pointer as an optional, judgment-call aid: it is an ongoing maintenance chore, so skip it where the Pledge already makes usage clear. At the project level, where the investment is justified, build-time sample extraction (e.g., https://github.com/jamesivie/dotnet-markdown-sample-code) can pull build-verified samples from real code or tests outside the implementation into the rendered project-level documentation.
 
 ## Regeneration as a completeness test
 
@@ -166,7 +166,7 @@ Because the boundaries are written down, crossing one is **visible**: it forces 
 
 ## AI-oriented notes (optional)
 
-For complex units, a sidecar `*.ai.md` beside the code can speed an AI assistant's re-acquisition — content tuned for an LLM rather than a human reader: the minimal mental model, precise invariants, gotchas, source pointers to the subtle parts, cross-links to related units, known failure modes, and which tests prove what. A shared section serves any LLM; an assistant-specific section (e.g., `## Claude`) holds notes for one assistant. May use LLM-specific language as long as they don't break the ability to parse one LLMs data from another.  These stay out of the published documentation to keep it clean. Keeping them current whenever the unit is modified is part of the same maintenance duty. Start only where re-acquisition is genuinely slow.
+For complex units, a sidecar `*.ai.md` beside the code can speed an AI assistant's re-acquisition — content tuned for an LLM rather than a human reader: the minimal mental model, precise invariants, gotchas, source pointers to the subtle parts, cross-links to related units, known failure modes, and which tests prove what. A shared section serves any LLM; an assistant-specific section (e.g., `## Claude`) holds notes for one assistant. Notes may use LLM-specific language, as long as one LLM's section doesn't keep another LLM from parsing its own.  These stay out of the published documentation to keep it clean. Keeping them current whenever the unit is modified is part of the same maintenance duty. Start only where re-acquisition is genuinely slow.
 
 ## This document is itself layered
 
