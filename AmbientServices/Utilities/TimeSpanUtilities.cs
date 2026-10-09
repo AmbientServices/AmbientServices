@@ -9,8 +9,8 @@ namespace AmbientServices.Utilities;
 /// </summary>
 /// <remarks>
 /// <pitch>Precise conversion between the library's three time representations — <see cref="TimeSpan"/> ticks, <see cref="Stopwatch"/> ticks, and UTC <see cref="DateTime"/> ticks — used wherever stopwatch timestamps must be reported as wall-clock times or durations.</pitch>
-/// <pledge>Tick-rate conversions are exact whenever the integer math fits in a <see cref="long"/> and lose at most double-precision rounding otherwise.  Stopwatch-to-DateTime conversions are anchored to a baseline pair captured once at type initialization, so they are internally consistent and immune to later wall-clock adjustments, but they extrapolate from that baseline rather than re-reading the system clock.</pledge>
-/// <plan>The static initializer reduces the <see cref="TimeSpan"/> and <see cref="Stopwatch.Frequency"/> tick rates by their GCD to get the smallest multiplier/divisor pair (maximizing the overflow-free range), precomputes double ratios as the fallback, and captures a (stopwatch timestamp, <see cref="DateTime.UtcNow"/>) baseline behind a memory barrier; conversions use checked integer multiply/divide and fall back to double multiplication on <see cref="OverflowException"/>.</plan>
+/// <pledge>Tick-rate conversions are exact whenever the integer math fits in a <see cref="long"/> and lose at most double-precision rounding otherwise.  Stopwatch-to-DateTime conversions are anchored to a baseline pair captured once at type initialization, so they are internally consistent and immune to later wall-clock adjustments, but they extrapolate from that baseline rather than re-reading the system clock.  Those timestamp conversions round toward negative infinity, so the distance between two converted timestamps depends only on the distance between the originals, never on which side of the baseline they fall (a timestamp taken before type initialization lands before the baseline).</pledge>
+/// <plan>The static initializer reduces the <see cref="TimeSpan"/> and <see cref="Stopwatch.Frequency"/> tick rates by their GCD to get the smallest multiplier/divisor pair (maximizing the overflow-free range), precomputes double ratios as the fallback, and captures a (stopwatch timestamp, <see cref="DateTime.UtcNow"/>) baseline behind a memory barrier; conversions use checked integer multiply/divide and fall back to double multiplication on <see cref="OverflowException"/>; the timestamp conversions use a floored divide (and <see cref="Math.Floor(double)"/> in the fallback) where the duration conversions truncate.</plan>
 /// </remarks>
 internal static class TimeSpanUtilities
 {
@@ -106,7 +106,7 @@ internal static class TimeSpanUtilities
     public static long StopwatchTimestampToDateTime(long stopwatchTimestamp)
     {
         long stopwatchTicksAgo = stopwatchTimestamp - BaselineStopwatchTimestamp;
-        long dateTimeTicksAgo = StopwatchTicksToTimeSpanTicks(stopwatchTicksAgo);
+        long dateTimeTicksAgo = FlooredConvert(stopwatchTicksAgo, StopwatchToTimeSpanMultiplier, StopwatchToTimeSpanDivisor, StopwatchToTimeSpanRatio);
         return BaselineDateTimeTicks + dateTimeTicksAgo;
     }
     /// <summary>
@@ -117,7 +117,31 @@ internal static class TimeSpanUtilities
     public static long DateTimeToStopwatchTimestamp(long dateTimeTicks)
     {
         long dateTimeTicksAgo = dateTimeTicks - BaselineDateTimeTicks;
-        long stopwatchTicksAgo = TimeSpanTicksToStopwatchTicks(dateTimeTicksAgo);
+        long stopwatchTicksAgo = FlooredConvert(dateTimeTicksAgo, TimeSpanToStopwatchMultiplier, TimeSpanToStopwatchDivisor, TimeSpanToStopwatchRatio);
         return BaselineStopwatchTimestamp + stopwatchTicksAgo;
+    }
+    /// <summary>
+    /// Converts ticks at one rate to ticks at another, rounding toward negative infinity.
+    /// </summary>
+    /// <remarks>
+    /// FLOORED, NOT TRUNCATED, because the timestamp conversions are offsets from a baseline: truncation rounds an offset below the baseline up and one above
+    /// it down, so a clock started before the baseline (a <c>PausedAmbientClock</c> created before this type was first used, say) measured five seconds as
+    /// 4.9999999 wherever the conversion divides (a 1 GHz <see cref="Stopwatch.Frequency"/>, as on Linux).
+    /// </remarks>
+    private static long FlooredConvert(long ticks, long multiplier, long divisor, double ratio)
+    {
+        try
+        {
+            checked
+            {
+                long quotient = Math.DivRem(ticks * multiplier, divisor, out long remainder);
+                return remainder < 0 ? quotient - 1 : quotient;
+            }
+        }
+        // Coverage note: the testability of this code depends on the values of system constants which cannot be altered by the test code
+        catch (OverflowException)
+        {
+            return (long)Math.Floor(ticks * ratio);
+        }
     }
 }

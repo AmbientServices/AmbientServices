@@ -82,6 +82,36 @@ public class TestTimeSpanUtilities
         diff = DateTimeTicksDifference(baseTicks + TimeSpanUtilities.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000, TimeSpanUtilities.StopwatchTimestampToDateTime(TimeSpanUtilities.DateTimeToStopwatchTimestamp(baseTicks + TimeSpanUtilities.TimeSpanStopwatchConversionLeastCommonMultiple * 100000000000000)));
         Assert.IsLessThan(TimeSpanUtilities.TimeSpanStopwatchConversionLeastCommonMultiple, diff);
     }
+    /// <summary>
+    /// Five seconds between two timestamps is five seconds between the converted times on EITHER side of the baseline: a clock started before the baseline
+    /// (a paused clock created before <see cref="TimeSpanUtilities"/> was first used) once measured 4.9999999 s wherever the conversion divides (Linux's 1 GHz stopwatch).
+    /// </summary>
+    [TestMethod]
+    public void TimestampDistancesSurviveConversionOnEitherSideOfTheBaseline()
+    {
+        long fiveSecondsOfStopwatchTicks = 5 * Stopwatch.Frequency;
+        long fiveSecondsOfDateTimeTicks = TimeSpan.FromSeconds(5).Ticks;
+        long now = Stopwatch.GetTimestamp();
+        long beforeBaseline = now - 3600 * Stopwatch.Frequency;    // the baseline was captured when this process first used the type, well within the last hour
+        for (long offset = 0; offset < 1000; ++offset)
+        {
+            foreach (long start in new[] { beforeBaseline - offset, now + offset })
+            {
+                long elapsed = TimeSpanUtilities.StopwatchTimestampToDateTime(start + fiveSecondsOfStopwatchTicks) - TimeSpanUtilities.StopwatchTimestampToDateTime(start);
+                Assert.AreEqual(fiveSecondsOfDateTimeTicks, elapsed, $"start={start}, now={now}, Stopwatch.Frequency={Stopwatch.Frequency}");
+            }
+        }
+        long utcNow = DateTime.UtcNow.Ticks;
+        long beforeBaselineTicks = utcNow - TimeSpan.FromHours(1).Ticks;
+        for (long offset = 0; offset < 1000; ++offset)
+        {
+            foreach (long start in new[] { beforeBaselineTicks - offset, utcNow + offset })
+            {
+                long elapsed = TimeSpanUtilities.DateTimeToStopwatchTimestamp(start + fiveSecondsOfDateTimeTicks) - TimeSpanUtilities.DateTimeToStopwatchTimestamp(start);
+                Assert.AreEqual(fiveSecondsOfStopwatchTicks, elapsed, $"start={start}, utcNow={utcNow}, Stopwatch.Frequency={Stopwatch.Frequency}");
+            }
+        }
+    }
     private static long DateTimeTicksDifference(long ticksA, long ticksB)
     {
         return Math.Abs(ticksA - ticksB);
