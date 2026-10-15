@@ -538,7 +538,7 @@ internal class SettingInfo<T> : IAmbientSettingInfo
 /// <remarks>
 /// <pitch>The realization of <see cref="IAmbientSetting{T}"/> for settings pinned to one specific settings set at declaration time, without the override/suppression handling of <see cref="AmbientSetting{T}"/>.</pitch>
 /// <pledge><see cref="IAmbientSetting{T}"/></pledge>
-/// <plan>Holds a <see cref="SettingInfo{T}"/> (created — and therefore registered — at construction) plus the pinned set reference.  Each read resolves the effective set (a test-injected ambient service, the pinned set, or the ambient local set when no set was pinned), asks it for the typed value, and falls back to the <see cref="SettingInfo{T}"/> default when the set has no value; when no set resolves at all, the value cached from the global set (or the default) is used.</plan>
+/// <plan>Holds a <see cref="SettingInfo{T}"/> (created — and therefore registered — at construction) plus the pinned set reference.  Each read resolves the effective set (a test-injected ambient service, the pinned set, or the ambient local set when no set was pinned), asks it for the typed value, and falls back to the <see cref="SettingInfo{T}"/> default when the set has no value.  A typed value that is not a <typeparamref name="T"/> is the raw string of a value the set typed before this setting was registered, so it is converted through the <see cref="SettingInfo{T}"/> on each such read rather than cast (the only read path that re-parses, and only for sets that missed the registration); when no set resolves at all, the value cached from the global set (or the default) is used.</plan>
 /// </remarks>
 /// <typeparam name="T">The type for the setting.</typeparam>
 internal class SettingsSetSetting<T> : IAmbientSetting<T>
@@ -592,12 +592,19 @@ internal class SettingsSetSetting<T> : IAmbientSetting<T>
     protected T GetValueFromSet(IAmbientSettingsSet set)
     {
         object? value = set.GetTypedValue(_settingInfo.Key);
-        return (value == null) ? _settingInfo.DefaultValue : (T)value;
+        return (value == null) ? _settingInfo.DefaultValue : AsTyped(set, value);
     }
     protected (T, string) GetValueAndSet(IAmbientSettingsSet set)
     {
         object? value = set.GetTypedValue(_settingInfo.Key);
-        return (value == null) ? (_settingInfo.DefaultValue, DefaultSettingsSet.Instance.SetName) : ((T)value, set.SetName);
+        return (value == null) ? (_settingInfo.DefaultValue, DefaultSettingsSet.Instance.SetName) : (AsTyped(set, value), set.SetName);
+    }
+    private T AsTyped(IAmbientSettingsSet set, object value)
+    {
+        if (value is T typed) return typed;
+        // the set typed this value before the setting was registered (an immutable set does so by design, and any set may through a registration race), so it still holds the raw string: convert it rather than cast
+        string? raw = (value as string) ?? set.GetRawValue(_settingInfo.Key);
+        return (raw == null) ? _settingInfo.DefaultValue : (T)_settingInfo.Convert(set, raw);
     }
     /// <summary>
     /// Gets the key of the setting, which may be useful in providing an override without having to match the name with a magic value.

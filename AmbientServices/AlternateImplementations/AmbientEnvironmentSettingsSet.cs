@@ -15,7 +15,7 @@ namespace AmbientServices;
 /// Keys registered in <see cref="SettingsRegistry"/> (at construction or later) are snapshotted into memory; all other keys are read live from the environment on each get, so unregistered reads always see the current environment while snapshotted keys keep their cached value until changed through this set or refreshed.  Changing a setting writes through to the process environment — visible to child processes and to any code reading environment variables directly — before updating the snapshot.  A manual <see cref="Refresh"/> re-reads the environment for every registered, previously-observed, or previously-changed key; concurrent refreshes serialize rather than interleave.
 /// </pledge>
 /// <plan>
-/// Two <see cref="ConcurrentDictionary{TKey,TValue}"/> caches (raw and typed) hold only registered or explicitly-changed keys — deliberately not the whole environment, so unrelated secrets are not retained for the process lifetime — and a third records every key a getter has observed so <see cref="Refresh"/> knows what to re-read.  Late setting registrations arrive via <see cref="SettingsRegistry.SettingRegistered"/> through a <see cref="LazyUnsubscribeWeakEventListenerProxy{TTYPETOWEAKEN,TEVENTARG1,TEVENTARG2}"/>.  <see cref="Refresh"/> holds a monitor lock while diffing the environment against the cache (ordinal comparison) and funnels each difference through the same internal change path used by <see cref="ChangeSetting(string, string?)"/>.  Trade-off: minimal retained environment data and cheap registered-key reads, at the cost of staleness for snapshotted keys changed behind its back.
+/// Two <see cref="ConcurrentDictionary{TKey,TValue}"/> caches (raw and typed) hold only registered or explicitly-changed keys — deliberately not the whole environment, so unrelated secrets are not retained for the process lifetime — and a third records every key a getter has observed so <see cref="Refresh"/> knows what to re-read.  Late setting registrations arrive via <see cref="SettingsRegistry.SettingRegistered"/> through a <see cref="LazyUnsubscribeWeakEventListenerProxy{TTYPETOWEAKEN,TEVENTARG1,TEVENTARG2}"/>, subscribed before the initial import so a registration racing construction is never missed by both.  <see cref="Refresh"/> holds a monitor lock while diffing the environment against the cache (ordinal comparison) and funnels each difference through the same internal change path used by <see cref="ChangeSetting(string, string?)"/>.  Trade-off: minimal retained environment data and cheap registered-key reads, at the cost of staleness for snapshotted keys changed behind its back.
 /// </plan>
 /// <para><b>Security:</b> At construction time, only environment variables whose keys are already registered in <see cref="SettingsRegistry"/> are copied into memory.
 /// Settings registered later are imported when <see cref="SettingsRegistry.SettingRegistered"/> fires (see <c>NewSettingRegistered</c>).
@@ -45,10 +45,11 @@ public class AmbientEnvironmentSettingsSet : IAmbientSettingsSet
     {
         _rawValues = new ConcurrentDictionary<string, string>();
         _typedValues = new ConcurrentDictionary<string, object>();
-        ImportRegisteredEnvironmentVariables();
+        // subscribe BEFORE importing: a setting registered after the import's enumeration then always reaches NewSettingRegistered instead of being missed by both
         _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<AmbientEnvironmentSettingsSet, object?, IAmbientSettingInfo>(
                 this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
         SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
+        ImportRegisteredEnvironmentVariables();
     }
 
     private void ImportRegisteredEnvironmentVariables()
@@ -191,6 +192,12 @@ public class AmbientEnvironmentSettingsSet : IAmbientSettingsSet
             }
             IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
             _typedValues[key] = (ps != null) ? ps.Convert(this, value) : value;
+            // a setting registered after the lookup above may have had its handler finish before the raw string landed, so look again
+            if (ps == null)
+            {
+                ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                if (ps != null) _typedValues[key] = ps.Convert(this, value);
+            }
         }
         return true;
     }
