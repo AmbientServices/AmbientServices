@@ -11,7 +11,7 @@ namespace AmbientServices;
 /// <pitch>The zero-configuration, in-memory mutable settings set used unless overridden — well suited to unit-test dependency injection and programmatic configuration.  Values live only as long as the process; nothing is persisted.</pitch>
 /// <pledge><see cref="IAmbientSettingsSet"/></pledge>
 /// <plan>
-/// Keeps raw values in one <see cref="ConcurrentDictionary{TKey,TValue}"/> and eagerly-converted typed values in a second, so both getters are single lock-free lookups.  Typed values are computed at construction and on every change using the conversion registered in <see cref="SettingsRegistry.DefaultRegistry"/>; to type values whose settings are declared later, it subscribes to <see cref="SettingsRegistry.SettingRegistered"/> through a <see cref="LazyUnsubscribeWeakEventListenerProxy{TTYPETOWEAKEN,TEVENTARG1,TEVENTARG2}"/> so the registry never keeps a discarded set alive.  Change detection compares ordinally so a same-value write reports no change.
+/// Keeps raw values in one <see cref="ConcurrentDictionary{TKey,TValue}"/> and eagerly-converted typed values in a second, so both getters are single lock-free lookups.  Typed values are computed at construction and on every change using the conversion registered in <see cref="SettingsRegistry.DefaultRegistry"/>; to type values whose settings are declared later, it subscribes to <see cref="SettingsRegistry.SettingRegistered"/> through a <see cref="LazyUnsubscribeWeakEventListenerProxy{TTYPETOWEAKEN,TEVENTARG1,TEVENTARG2}"/> so the registry never keeps a discarded set alive.  It subscribes before typing its initial values, and stores a value typed at construction only where the handler has not already stored one, so a registration that races construction is always converted exactly as if it had come first or last; a change that finds no setting registered looks again after storing the raw string, for the same reason.  Change detection compares ordinally so a same-value write reports no change.
 /// </plan>
 /// </remarks>
 [DefaultAmbientService(typeof(IAmbientSettingsSet))]
@@ -55,17 +55,18 @@ public class BasicAmbientSettingsSet : IAmbientSettingsSet
         SetName = name;
         _rawValues = new ConcurrentDictionary<string, string>(values);
         _typedValues = new ConcurrentDictionary<string, object>();
-        if (values != null)
-        {
-            foreach (string key in values.Keys)
-            {
-                IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
-                _typedValues[key] = (ps != null) ? ps.Convert(this, values[key]) : values[key];
-            }
-        }
+        // subscribe BEFORE typing the initial values: a setting registered after a key's lookup below then always reaches NewSettingRegistered, which reads the raw value already stored above
         _weakSettingRegistered = new LazyUnsubscribeWeakEventListenerProxy<BasicAmbientSettingsSet, object?, IAmbientSettingInfo>(
                 this, NewSettingRegistered, wvc => SettingsRegistry.DefaultRegistry.SettingRegistered -= wvc.WeakEventHandler);
         SettingsRegistry.DefaultRegistry.SettingRegistered += _weakSettingRegistered.WeakEventHandler;
+        foreach (KeyValuePair<string, string> pair in _rawValues)
+        {
+            // the registration handler already typed this one?
+            if (_typedValues.ContainsKey(pair.Key)) continue;
+            IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(pair.Key);
+            // TryAdd, never overwrite: a value the handler stored meanwhile is already converted, and a raw string stored here is overwritten by the handler of any registration this lookup missed
+            _ = _typedValues.TryAdd(pair.Key, (ps != null) ? ps.Convert(this, pair.Value) : pair.Value);
+        }
     }
 
     private static void NewSettingRegistered(BasicAmbientSettingsSet settingsSet, object? sender, IAmbientSettingInfo setting)
@@ -133,6 +134,12 @@ public class BasicAmbientSettingsSet : IAmbientSettingsSet
             if (string.Equals(value, oldValue, StringComparison.Ordinal)) return false;
             IAmbientSettingInfo? ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
             _typedValues[key] = (ps != null) ? ps.Convert(this, value) : value;
+            // a setting registered after the lookup above may have had its handler finish before the raw string landed, so look again
+            if (ps == null)
+            {
+                ps = SettingsRegistry.DefaultRegistry.TryGetSetting(key);
+                if (ps != null) _typedValues[key] = ps.Convert(this, value);
+            }
         }
         return true;
     }
