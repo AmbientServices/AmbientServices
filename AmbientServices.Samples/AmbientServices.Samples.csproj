@@ -17,7 +17,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="4.5.1" />
     <PackageReference Include="MSTest.TestFramework" Version="4.5.1" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.12" Condition="!$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.13" Condition="!$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.9" Condition="$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" Condition="!$(SqlLegacyFrameworks.Contains('$(TargetFramework)'))" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" Condition="$(SqlLegacyFrameworks.Contains('$(TargetFramework)'))" />
