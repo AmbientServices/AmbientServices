@@ -35,7 +35,9 @@
     <ProjectReference Include="..\AmbientServices\AmbientServices.csproj" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <!-- LOCALLY, so the regenerated README.md is committed: CI commits nothing, so it only checks that the committed one is current (Build.yml) -->
+  <!-- ONCE, not per target framework: the frameworks build in parallel, and two rewrites of README.md at once can leave it empty, which fails the pack -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(CI)' != 'true' And '$(TargetFramework)' == 'net10.0'">
     <Exec Command="dotnet-markdown-sample-code -- Samples.cs ../README.md" />
   </Target>
 
