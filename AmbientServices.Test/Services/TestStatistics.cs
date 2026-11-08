@@ -208,10 +208,69 @@ public class TestStatistics
         Assert.AreEqual(AggregationTypes.Average, ((AmbientStatisticType)(-1)).DefaultTemporalAggregation());
 
         Assert.AreEqual(AggregationTypes.Average, AmbientStatisticType.Raw.DefaultSpatialAggregation());
-        Assert.AreEqual(AggregationTypes.Average, AmbientStatisticType.Cumulative.DefaultSpatialAggregation());
+        Assert.AreEqual(AggregationTypes.Sum, AmbientStatisticType.Cumulative.DefaultSpatialAggregation());
         Assert.AreEqual(AggregationTypes.Min, AmbientStatisticType.Min.DefaultSpatialAggregation());
         Assert.AreEqual(AggregationTypes.Max, AmbientStatisticType.Max.DefaultSpatialAggregation());
         Assert.AreEqual(AggregationTypes.Average, ((AmbientStatisticType)(-1)).DefaultSpatialAggregation());
+    }
+    [TestMethod]
+    public void EachProfile_ReportsOnePairForEachTypeItAllows_AndThePairNamesItBack()
+    {
+        foreach (AmbientStatisticType type in new[] { AmbientStatisticType.Raw, AmbientStatisticType.Cumulative, AmbientStatisticType.Min, AmbientStatisticType.Max })
+        {
+            HashSet<(AggregationTypes, AggregationTypes)> pairs = [];
+            foreach (AggregationProfile profile in AggregationProfiles.All)
+            {
+                if (!AggregationProfiles.Allows(type, profile))
+                {
+                    Assert.Throws<ArgumentOutOfRangeException>(() => AggregationProfiles.ReportedFor(type, profile));
+                    continue;
+                }
+                (AggregationTypes preferredTemporal, AggregationTypes preferredSpatial, AggregationTypes temporal, AggregationTypes spatial) = AggregationProfiles.ReportedFor(type, profile);
+                Assert.IsTrue(pairs.Add((preferredTemporal, preferredSpatial)), $"{type} {profile} reports a pair another profile reports");
+                Assert.AreEqual(profile, AggregationProfiles.Of(type, preferredTemporal, preferredSpatial));
+                Assert.AreEqual(preferredTemporal, temporal & preferredTemporal, "the preferred aggregation over time is allowed");
+                Assert.AreEqual(preferredSpatial, spatial & preferredSpatial, "the preferred aggregation across systems is allowed");
+            }
+            Assert.AreEqual(AggregationProfiles.DefaultFor(type), AggregationProfiles.Of(type, type.DefaultTemporalAggregation(), type.DefaultSpatialAggregation()), "the type's default aggregations are its default profile");
+        }
+        Assert.AreEqual(AggregationProfile.None, AggregationProfiles.Of(AmbientStatisticType.Cumulative, AggregationTypes.Average, AggregationTypes.Sum), "a counter declared with a level's aggregations has no profile");
+        Assert.Throws<ArgumentOutOfRangeException>(() => AggregationProfiles.Describe(AggregationProfile.None));
+    }
+    [TestMethod]
+    public void EveryView_IsEitherOrderOnlyWhenBothAggregationsAreTheSameCombinableOne()
+    {
+        foreach (AggregationProfile profile in AggregationProfiles.All)
+        {
+            AggregationProfileDescription description = AggregationProfiles.Describe(profile);
+            Assert.AreEqual(profile, description.Profile);
+            Assert.AreEqual(description.Views.Count(), description.Views.Select(view => view.Name).Distinct(StringComparer.Ordinal).Count(), $"{profile}'s view names are unique");
+            foreach (AggregationView view in description.Views)
+            {
+                bool same = view.Temporal == view.Spatial && view.Temporal != AggregationTypes.Average;
+                Assert.AreEqual(same, view.Order == AggregationOrder.Either, $"{profile} {view.Name}");
+            }
+        }
+        Assert.AreEqual(AggregationOrder.OverTimeFirst, AggregationProfiles.Describe(AggregationProfile.Total).Preferred.Order, "a latest reading is each system's own");
+        Assert.AreEqual(AggregationOrder.AcrossSystemsFirst, AggregationProfiles.Describe(AggregationProfile.Level).Preferred.Order, "a total at a moment combines simultaneous values");
+    }
+    [TestMethod]
+    public void AStatisticAddedWithAProfile_ReportsIt()
+    {
+        IAmbientStatistics stats = new BasicAmbientStatistics();
+        using IAmbientStatistic pending = stats.GetOrAddStatistic(AmbientStatisticType.Raw, nameof(pending), nameof(pending), "pending requests", AggregationProfile.Level);
+        Assert.AreEqual(AggregationTypes.Average, pending.PreferredTemporalAggregationType);
+        Assert.AreEqual(AggregationTypes.Sum, pending.PreferredSpatialAggregationType);
+        Assert.AreEqual(AggregationProfile.Level, AggregationProfiles.Of(pending));
+#if !NETSTANDARD2_0
+        Assert.AreEqual(AggregationProfile.Level, ((IAmbientStatisticReader)pending).AggregationProfile);
+#endif
+        using IAmbientStatistic requests = stats.GetOrAddStatistic(AmbientStatisticType.Cumulative, nameof(requests), nameof(requests), "requests");
+        Assert.AreEqual(AggregationProfile.Count, AggregationProfiles.Of(requests), "a cumulative statistic declared the older way, with no aggregations, is a count");
+        using IAmbientStatistic seconds = stats.GetOrAddTimeBasedStatistic(AmbientStatisticType.Max, nameof(seconds), nameof(seconds), "slowest", AggregationProfile.Peak);
+        Assert.AreEqual(AggregationProfile.Peak, AggregationProfiles.Of(seconds));
+        Assert.Throws<ArgumentOutOfRangeException>(() => stats.GetOrAddStatistic(AmbientStatisticType.Cumulative, "refused", "refused", "refused", AggregationProfile.Level));
+        Assert.AreEqual(AggregationProfile.None, AggregationProfiles.Of(stats.ExecutionTime), "the rate denominator is averaged across systems, which no profile does to a running total");
     }
     [TestMethod]
     public void StatisticsMissingSamples()
@@ -252,6 +311,12 @@ public class TestStatistics
         AssertArraysEqualByValue(samples, new long?[] { 10, 15, 20, 30, 40 });
         samples = MissingSampleHandling.LinearEstimation.HandleMissingSamples(new long?[] { 10, 20, 30, 40 }).ToArray();
         AssertArraysEqualByValue(samples, new long?[] { 10, 20, 30, 40 });
+        // ONE SAMPLE FIRST, then only missing ones: nothing to extrapolate from, so it is repeated (this threw before)
+        foreach (MissingSampleHandling estimation in new[] { MissingSampleHandling.LinearEstimation, MissingSampleHandling.ExponentialEstimation, MissingSampleHandling.LogarithmicEstimation })
+        {
+            AssertArraysEqualByValue(estimation.HandleMissingSamples(new long?[] { 5, null }).ToArray(), new long?[] { 5, 5 });
+            AssertArraysEqualByValue(estimation.HandleMissingSamples(new long?[] { 5, null, null }).ToArray(), new long?[] { 5, 5, 5 });
+        }
 
         samples = MissingSampleHandling.ExponentialEstimation.HandleMissingSamples(new long?[] { null, null, null, null, null }).ToArray();
         AssertArraysEqualByValue(samples, new long?[] { null, null, null, null, null });
