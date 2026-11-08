@@ -34,6 +34,11 @@ jobs:
       run: dotnet build AmbientServices -c Release
     - name: Build AmbientServices.Samples
       run: dotnet build AmbientServices.Samples -c Release
+    - name: Check README.md is current with Samples.cs
+      run: |
+        cd AmbientServices.Samples
+        dotnet-markdown-sample-code -- Samples.cs ../README.md
+        git diff --exit-code --ignore-cr-at-eol -- ../README.md || { echo "::error file=README.md::README.md is not current with AmbientServices.Samples/Samples.cs: build AmbientServices.Samples locally and commit the README.md it writes"; exit 1; }
     - name: Build AmbientServices.Test.DelayedLoad
       run: dotnet build AmbientServices.Test.DelayedLoad -c Release
     - name: Build AmbientServices.Test
