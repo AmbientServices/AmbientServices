@@ -165,7 +165,7 @@ public enum AggregationTypes
     /// </summary>
     /// <remarks>
     /// For <see cref="AmbientStatisticType.Raw"/>, temporal aggregation is <see cref="Average"/> and spatial aggregation is <see cref="Average"/>.
-    /// For <see cref="AmbientStatisticType.Cumulative"/>, temporal aggregation is <see cref="MostRecent"/> and spatial aggregation is <see cref="Average"/>.
+    /// For <see cref="AmbientStatisticType.Cumulative"/>, temporal aggregation is <see cref="MostRecent"/> and spatial aggregation is <see cref="Sum"/> (the <see cref="AggregationProfile.Count"/> profile; before profiles it was <see cref="Average"/>).
     /// For <see cref="AmbientStatisticType.Min"/>, temporal aggregation is <see cref="Min"/> and spatial aggregation is <see cref="Min"/>.
     /// For <see cref="AmbientStatisticType.Max"/>, temporal aggregation is <see cref="Max"/> and spatial aggregation is <see cref="Max"/>.
     /// </remarks>
@@ -228,6 +228,7 @@ public enum MissingSampleHandling
 /// <pledge>
 /// Everything except <see cref="CurrentRawValue"/> is immutable for the life of the statistic.  <see cref="CurrentRawValue"/> is a thread-safe point-in-time snapshot of the raw integer sample; readers convert raw samples to display values by dividing by <see cref="FixedFloatingPointAdjustment"/>, and the name, description, and units all describe the adjusted value, not the raw one.
 /// The aggregation-type and missing-sample-handling properties are advice to consumers, not behavior of this object — the statistic itself never aggregates or interpolates.
+/// The preferred pair names at most one <see cref="AggregationProfile"/> for the statistic's type (see <see cref="AggregationProfiles"/>), which consumers should prefer to the separate preferences, since it also fixes the order the two aggregations are applied in.
 /// </pledge>
 /// </remarks>
 public interface IAmbientStatisticReader
@@ -301,6 +302,13 @@ public interface IAmbientStatisticReader
     /// Immutable.
     /// </summary>
     MissingSampleHandling MissingSampleHandling { get; }
+#if !NETSTANDARD2_0
+    /// <summary>
+    /// The predefined combination of aggregations this statistic's preferences report (see <see cref="AggregationProfiles"/>), or <see cref="AggregationProfile.None"/> when they report none.
+    /// Immutable.  On .NET Standard 2.0, which has no default interface members, use <see cref="AggregationProfiles.Of(IAmbientStatisticReader)"/>.
+    /// </summary>
+    AggregationProfile AggregationProfile => AggregationProfiles.Of(this);
+#endif
 }
 /// <summary>
 /// An interface that gives write access to a single statistic.
@@ -417,6 +425,8 @@ public interface IAmbientRatioStatistic : IDisposable
 /// <pledge>
 /// Adjusted-value setters convert display units to raw samples using the statistic's own adjustment factor and are as thread-safe as the underlying raw setter.
 /// Aggregation treats a <see cref="AggregationTypes.None"/> preference as "use the default for the statistic's type"; Sum clips at <see cref="long.MaxValue"/> rather than overflowing, Average rounds to the nearest integer, Sum/Average/Min/Max skip null samples (aggregating to null only when every sample is null), and MostRecent takes the literal last sample, null or not.  Callers wanting missing samples filled in should apply <see cref="MissingSampleHandlingExtensions.HandleMissingSamples"/> first.  Only a single aggregation flag is honored per call.
+/// A statistic added with an <see cref="AggregationProfile"/> gets the aggregation sets and preferences <see cref="AggregationProfiles.ReportedFor"/> gives, so its preferences report that profile; a profile its type may not have is refused.
+/// A cumulative statistic's default spatial aggregation is <see cref="AggregationTypes.Sum"/> (its <see cref="AggregationProfile.Count"/> profile), changed from <see cref="AggregationTypes.Average"/>, so a fleet's running totals add up.
 /// </pledge>
 /// </remarks>
 public static class IAmbientStatisticsExtensions
@@ -527,6 +537,52 @@ public static class IAmbientStatisticsExtensions
         };
     }
     /// <summary>
+    /// Adds or updates a statistic whose aggregations are those of <paramref name="profile"/> (see <see cref="AggregationProfiles"/>), in place of separate aggregation sets and preferences.
+    /// </summary>
+    /// <param name="statistics">The <see cref="IAmbientStatistics"/> to add the statistic to.</param>
+    /// <param name="type">The <see cref="AmbientStatisticType"/> for the statistic.</param>
+    /// <param name="id">A dash-delimited identifier for the statistic.</param>
+    /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
+    /// <param name="description">A human-readable description for the statistic.</param>
+    /// <param name="profile">The <see cref="AggregationProfile"/> saying how the statistic's values combine over time and across systems.</param>
+    /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
+    /// <param name="initialValue">The initial value for the statistic, if it is created.</param>
+    /// <param name="minimumValue">An optional value indicating the minimum possible value, if applicable.</param>
+    /// <param name="maximumValue">An optional value indicating the maximum possible value, if applicable.</param>
+    /// <param name="units">An optional string describing the units of the statistic (after the decimal point is adjusted by <paramref name="fixedFloatingPointAdjustment"/>).  Lower-cased, not an abbreviation.</param>
+    /// <param name="fixedFloatingPointAdjustment">An optional value to divide raw samples by to get the floating-point display value in the units specified by <paramref name="units"/>.  Defaults to 1.0.</param>
+    /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
+    /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="profile"/> is not one a statistic of <paramref name="type"/> may have (a cumulative statistic may only be a <see cref="AggregationProfile.Count"/>).</exception>
+    public static IAmbientStatistic GetOrAddStatistic(this IAmbientStatistics statistics, AmbientStatisticType type, string id, string name, string description, AggregationProfile profile, bool replaceIfAlreadyExists = false, long initialValue = 0, long? minimumValue = null, long? maximumValue = null, string? units = null, double fixedFloatingPointAdjustment = 1.0, MissingSampleHandling missingSampleHandling = MissingSampleHandling.LinearEstimation)
+    {
+        if (statistics == null) throw new ArgumentNullException(nameof(statistics));
+        (AggregationTypes preferredTemporal, AggregationTypes preferredSpatial, AggregationTypes temporal, AggregationTypes spatial) = AggregationProfiles.ReportedFor(type, profile);
+        return statistics.GetOrAddStatistic(type, id, name, description, replaceIfAlreadyExists, initialValue, minimumValue, maximumValue, units, fixedFloatingPointAdjustment, temporal, spatial, preferredTemporal, preferredSpatial, missingSampleHandling);
+    }
+    /// <summary>
+    /// Adds or updates a time-based statistic (in seconds) whose aggregations are those of <paramref name="profile"/> (see <see cref="AggregationProfiles"/>).
+    /// </summary>
+    /// <param name="statistics">The <see cref="IAmbientStatistics"/> to add the statistic to.</param>
+    /// <param name="type">The <see cref="AmbientStatisticType"/> for the statistic.</param>
+    /// <param name="id">A dash-delimited identifier for the statistic.</param>
+    /// <param name="name">A name for the statistic, presumably to use as a chart title.</param>
+    /// <param name="description">A human-readable description for the statistic.</param>
+    /// <param name="profile">The <see cref="AggregationProfile"/> saying how the statistic's values combine over time and across systems.</param>
+    /// <param name="replaceIfAlreadyExists">true to use a new statistic even if one already exists, false to return an existing statistic if one already exists.  Default is false.</param>
+    /// <param name="initialValue">The initial value for the statistic, if it is created.</param>
+    /// <param name="minimumValue">An optional value indicating the minimum possible value, if applicable.</param>
+    /// <param name="maximumValue">An optional value indicating the maximum possible value, if applicable.</param>
+    /// <param name="missingSampleHandling">A <see cref="MissingSampleHandling"/> indicating how clients should treat missing samples from this statistic.</param>
+    /// <returns>An <see cref="IAmbientStatistic"/> the caller can use to update the statistic samples.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="profile"/> is not one a statistic of <paramref name="type"/> may have (a cumulative statistic may only be a <see cref="AggregationProfile.Count"/>).</exception>
+    public static IAmbientStatistic GetOrAddTimeBasedStatistic(this IAmbientStatistics statistics, AmbientStatisticType type, string id, string name, string description, AggregationProfile profile, bool replaceIfAlreadyExists = false, long initialValue = 0, long? minimumValue = null, long? maximumValue = null, MissingSampleHandling missingSampleHandling = MissingSampleHandling.LinearEstimation)
+    {
+        if (statistics == null) throw new ArgumentNullException(nameof(statistics));
+        (AggregationTypes preferredTemporal, AggregationTypes preferredSpatial, AggregationTypes temporal, AggregationTypes spatial) = AggregationProfiles.ReportedFor(type, profile);
+        return statistics.GetOrAddTimeBasedStatistic(type, id, name, description, replaceIfAlreadyExists, initialValue, minimumValue, maximumValue, temporal, spatial, preferredTemporal, preferredSpatial, missingSampleHandling);
+    }
+    /// <summary>
     /// Gets the default spatial (cross-system) aggregation type for the specified statistic type.
     /// </summary>
     /// <param name="statisicType">The <see cref="AmbientStatisticType"/> for the statistic.</param>
@@ -536,7 +592,7 @@ public static class IAmbientStatisticsExtensions
         return statisicType switch
         {
             AmbientStatisticType.Raw => AggregationTypes.Average,
-            AmbientStatisticType.Cumulative => AggregationTypes.Average,
+            AmbientStatisticType.Cumulative => AggregationTypes.Sum,   // the Count profile: running totals are summed across systems
             AmbientStatisticType.Min => AggregationTypes.Min,
             AmbientStatisticType.Max => AggregationTypes.Max,
             _ => AggregationTypes.Average,

@@ -833,6 +833,23 @@ Ticks are in terms of the standard system Stopwatch.Frequency.  All operations a
 The `IAmbientStatisticReader` interface provides read access to an individual statistic.
 The `IAmbientStatistic` interface extends `IAmbientStatisticReader` interface and adds functions to update the value for the statistic.
 
+### Aggregation profiles
+A statistic's values are combined over time and across systems, and which aggregations make sense, and in which order, depends on what the statistic is.
+An `AggregationProfile` names one of a few predefined combinations, so a statistic declares what it is rather than four flag sets and two preferences:
+
+| Profile | Over time | Across systems | Applied first | For |
+|---|---|---|---|---|
+| `Count` | sum | sum | either | events or work counted (every cumulative statistic) |
+| `Total` | most recent | sum | over time | a level read as its latest value, such as a queue depth now |
+| `Level` | average | sum | across systems | a level each system holds, such as pending requests |
+| `Mean` | average | average | across systems | a per-system rate, ratio or pressure |
+| `Peak` | max | max | either | a high-water mark |
+| `Floor` | min | min | either | a low-water mark |
+| `Latest` | most recent | most recent | either | a value every system reports the same way |
+
+`GetOrAddStatistic(type, id, name, description, AggregationProfile.Level, ...)` sets the aggregation preferences from the profile; `AggregationProfiles.Describe` gives each profile's alternative views (a "worst system" of a mean, say), and `AggregationProfiles.Of(reader)` (or `reader.AggregationProfile` outside .NET Standard 2.0) recovers a statistic's profile from its preferences, however it was declared.
+For a cumulative statistic the profile is over its change per period: its running totals are reported as most recent over time and summed across systems.
+
 ### Sample
 [//]: # (AmbientStatisticsSample)
 ```csharp

@@ -242,6 +242,15 @@ public static class MissingSampleHandlingExtensions
                 }
             }
         }
+        // were there trailing missing samples after the only non-null sample, which came first?  then there is nothing to extrapolate from, so use it for everything
+        else if (missingSamplesAfterLastNonNullSample > 0 && previousNonNullSample == null)
+        {
+            for (int offset = 0; offset < missingSamplesAfterLastNonNullSample; ++offset)
+            {
+                yield return lastNonNullSample!.Value;  // a non-null sample was output, or missingSamplesAfterLastNonNullSample could not have been counted
+                ++samplesOutput;
+            }
+        }
         // were there trailing missing samples?
         else if (missingSamplesAfterLastNonNullSample > 0)
         {
