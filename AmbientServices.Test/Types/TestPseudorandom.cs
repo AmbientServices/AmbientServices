@@ -26,7 +26,7 @@ public class TestPseudorandom
             }
         );
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation);
 
         double df = AverageFrequencyDecreaseFactor(distribution);
@@ -43,7 +43,7 @@ public class TestPseudorandom
             ++distribution[rand.NextUInt32 >> 16];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation);
 
         Assert.IsLessThan(UniformFactorBound64K, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -56,7 +56,7 @@ public class TestPseudorandom
             ++distribution[(int)(rand.NextUInt32 & 0xffff)];
         }
         // compute the standard deviation
-        standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation);
 
         Assert.IsLessThan(UniformFactorBound64K, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -72,7 +72,7 @@ public class TestPseudorandom
             ++distribution[rand.NextInt32 >> 16];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
         Assert.IsLessThan(UniformFactorBound32K, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -85,7 +85,7 @@ public class TestPseudorandom
             ++distribution[rand.NextInt32 & 0xffff];
         }
         // compute the standard deviation
-        standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
         Assert.IsLessThan(UniformFactorBound64K, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -102,7 +102,7 @@ public class TestPseudorandom
             }
         );
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
         Assert.IsLessThan(200, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -118,7 +118,7 @@ public class TestPseudorandom
             ++distribution[(int)(rand.NextUInt64 >> 48)];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
         Assert.IsLessThan(UniformFactorBound64K, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -131,7 +131,7 @@ public class TestPseudorandom
             ++distribution[(int)(rand.NextUInt64 & 0xffff)];
         }
         // compute the standard deviation
-        standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
         Assert.IsLessThan(UniformFactorBound64K, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -147,7 +147,7 @@ public class TestPseudorandom
             ++distribution[(int)(rand.NextInt64 >> 48)];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
         Assert.IsLessThan(UniformFactorBound32K, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -160,7 +160,7 @@ public class TestPseudorandom
             ++distribution[(int)(rand.NextUInt64 & 0xffff)];
         }
         // compute the standard deviation
-        standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsLessThan(25.0, standardDeviation, standardDeviation.ToString());
 
         Assert.IsLessThan(UniformFactorBound64K, AverageFrequencyDecreaseFactor(distribution), AverageFrequencyDecreaseFactor(distribution).ToString());
@@ -201,7 +201,7 @@ public class TestPseudorandom
             ++distribution[rand.NextUInt32UsuallySmall >> 16];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsGreaterThan(200.0, standardDeviation);
 
         Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
@@ -218,7 +218,7 @@ public class TestPseudorandom
             ++distribution[rand.NextUInt64UsuallySmall >> 48];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsGreaterThan(200.0, standardDeviation);
 
         Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
@@ -235,7 +235,7 @@ public class TestPseudorandom
             ++distribution[rand.NextInt32UsuallySmall >> 16];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsGreaterThan(5.0, standardDeviation);
 
         Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
@@ -252,7 +252,7 @@ public class TestPseudorandom
             ++distribution[rand.NextInt32UsuallySmall >> 16];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsGreaterThan(200.0, standardDeviation);
 
         Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
@@ -269,7 +269,7 @@ public class TestPseudorandom
             ++distribution[rand.NextInt64UsuallySmall >> 48];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsGreaterThan(5.0, standardDeviation);
 
         Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
@@ -286,7 +286,7 @@ public class TestPseudorandom
             ++distribution[rand.NextInt64UsuallySmall >> 48];
         }
         // compute the standard deviation
-        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)distribution.Length / count);
+        double standardDeviation = StandardDeviation(distribution, distribution.Length, (double)count / distribution.Length);
         Assert.IsGreaterThan(200.0, standardDeviation);
 
         Assert.IsGreaterThan(1000, AverageFrequencyDecreaseFactor(distribution));
