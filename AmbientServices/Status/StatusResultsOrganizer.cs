@@ -131,7 +131,7 @@ internal class StatusResultsOrganizer
             StatusResultsOrganizer parent = this;
             string? localtarget = results.TargetSystem;
             // a child of the root?
-            if (localtarget?.StartsWith('/') ?? false)
+            if (localtarget is { Length: > 0 } && localtarget[0] == '/')
             {
                 parent = root;
                 localtarget = localtarget.Substring(1);
@@ -155,7 +155,7 @@ internal class StatusResultsOrganizer
                     StatusResultsOrganizer parent = this;
                     string? localTarget = results.TargetSystem;
                     // a child of the root?
-                    if (localTarget.StartsWith('/'))
+                    if (localTarget.Length > 0 && localTarget[0] == '/')
                     {
                         parent = root;
                         localTarget = localTarget.Substring(1);
@@ -415,8 +415,8 @@ internal class StatusResultsOrganizer
 
     private static string ComputeTarget(string parentTargetSystem, string childTarget)
     {
-        if (childTarget.StartsWith('/') || string.IsNullOrEmpty(parentTargetSystem)) return childTarget;
-        if (parentTargetSystem.EndsWith('/')) return parentTargetSystem + childTarget.TrimStart('.');
+        if ((childTarget.Length > 0 && childTarget[0] == '/') || string.IsNullOrEmpty(parentTargetSystem)) return childTarget;
+        if (parentTargetSystem[parentTargetSystem.Length - 1] == '/') return parentTargetSystem + childTarget.TrimStart('.');
         return parentTargetSystem.TrimEnd('.') + "." + childTarget.TrimStart('.');
     }
 

@@ -65,7 +65,7 @@ internal class StatusNotificationWriter
     {
         if (terse != null)
         {
-            terse.Append(new string(' ', tabLevel - 1));
+            terse.Append(' ', tabLevel - 1);
             if (range != (StatusRatingRange)(-1))
             {
                 string symbolPrefix = StatusRating.GetRangeSymbol(range) + " ";

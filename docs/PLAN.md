@@ -30,7 +30,7 @@ These constraints are not incidental style; they shape every realization in the 
 
 ## Targeting and packaging
 
-The library targets **.NET Standard 2.0 and 2.1** plus **.NET 8.0, 9.0, and 10.0**, shipped as a single NuGet package (`AmbientServices`); the test suite runs on .NET 10.0. Broad target coverage keeps it usable from legacy hosts up through current runtimes without the consumer choosing a variant.
+The library targets **.NET Standard 2.0 and 2.1** plus **.NET 8.0, 9.0, 10.0, and 11.0**, shipped as a single NuGet package (`AmbientServices`); the test suite builds for .NET 8.0 through 11.0, and CI runs it on .NET 10.0 (with coverage) and 11.0. Broad target coverage keeps it usable from legacy hosts up through current runtimes without the consumer choosing a variant.
 
 ## System-wide trade-offs
 

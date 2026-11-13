@@ -20,10 +20,12 @@ jobs:
     - uses: actions/checkout@v7
       with:
         fetch-depth: 0
-    - name: Setup .NET 10.0
+    - name: Setup .NET 10.0 and 11.0
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: 10.0.x
+        dotnet-version: |
+          10.0.x
+          11.0.x
     - name: Install dotnet-set-version
       run: dotnet tool install --global dotnet-set-version
     - name: Run dotnet-set-version
@@ -47,6 +49,8 @@ jobs:
       run: dotnet pack AmbientServices -c Release
     - name: Test .NET 10 with coverage
       run: dotnet test -c Release -f net10.0 --collect:"Code Coverage" --settings CodeCoverage.runsettings --logger:"trx;LogFileName=unit.testresults.trx" --blame-hang-timeout 120s
+    - name: Test .NET 11
+      run: dotnet test -c Release -f net11.0 --blame-hang-timeout 120s
     - name: ReportGenerator
       uses: danielpalme/ReportGenerator-GitHub-Action@5.5.12
       with:
