@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
     <LangVersion>12.0</LangVersion>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -19,7 +19,7 @@
     <PackageReference Include="MSTest.TestFramework" Version="4.5.2" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.14" Condition="!$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.14" Condition="$(CfmLegacyFrameworks.Contains('$(TargetFramework)'))" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" Condition="!$(SqlLegacyFrameworks.Contains('$(TargetFramework)'))" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.2" Condition="!$(SqlLegacyFrameworks.Contains('$(TargetFramework)'))" />
     <PackageReference Include="System.Data.SqlClient" Version="4.9.0" Condition="$(SqlLegacyFrameworks.Contains('$(TargetFramework)'))" />
   </ItemGroup>
   <ItemGroup>

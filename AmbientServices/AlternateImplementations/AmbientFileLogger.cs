@@ -435,7 +435,12 @@ internal class RotatingFileBuffer : IDisposable
                 }
                 else // this is just a regular log string
                 {
+#if NET11_0_OR_GREATER
+                    // deliberately not cancelled mid-line: a line is written whole, and cancellation is checked between lines below
+                    await _currentFileWriter.WriteLineAsync(logString, CancellationToken.None);
+#else
                     await _currentFileWriter.WriteLineAsync(logString);
+#endif
                 }
                 cancel.ThrowIfCancellationRequested();
             }

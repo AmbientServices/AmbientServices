@@ -1738,7 +1738,7 @@ AmbientServices is written and maintained by James Ivie.
 AmbientServices is licensed under [MIT](https://opensource.org/licenses/MIT).
 
 ## Language and Tools
-AmbientServices is written in C#, using .NET Standard 2.0, .NET 8.0-10.0.  Unit tests are written in .NET 10.0.
+AmbientServices is written in C#, using .NET Standard 2.0, .NET 8.0-11.0.  Unit tests are written in .NET 8.0-11.0.
 The code can be built using either Microsoft Visual Studio 2026+, Microsoft Visual Studio Code, or .NET Core command-line utilities.
 
 Binaries are available at https://www.nuget.org/packages/AmbientServices.
