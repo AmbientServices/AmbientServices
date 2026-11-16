@@ -34,7 +34,7 @@ Time, cancellation, and every service reach the code through an indirection that
 
 ## 5. Host compatibility over implementation convenience *(public)*
 
-The package has to be safe to drop into an arbitrary host, so it takes **no third-party dependencies** — only Microsoft-published .NET packages — targets .NET Standard 2.0 and 2.1 alongside .NET 8/9/10, and stays warning-free. Where a mature third-party library would do the job, the library writes its own instead (`RotatingFileBuffer`, the lock-free collections, the statistics accumulators).
+The package has to be safe to drop into an arbitrary host, so it takes **no third-party dependencies** — only Microsoft-published .NET packages — targets .NET Standard 2.0 and 2.1 alongside .NET 10/11, and stays warning-free. Where a mature third-party library would do the job, the library writes its own instead (`RotatingFileBuffer`, the lock-free collections, the statistics accumulators).
 
 *What this costs:* re-implementation of solved problems, less feature depth than a dedicated library would have, conditional compilation and polyfills for the older targets, and the ongoing cost of not being able to reach for a package.
 
