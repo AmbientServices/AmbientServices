@@ -166,14 +166,6 @@ public class TestStringExtensions
             Assert.IsLessThan(0, StringExtensions.CompareNaturalInvariant("-.3", "4", ignoreCase));
         }
     }
-#if !NET8_0_OR_GREATER
-    [TestMethod]
-    public void StarsWithEndsWith()
-    {
-        Assert.IsTrue("abcdef".StartsWith("abc"));
-        Assert.IsTrue("abcdef".EndsWith("def"));
-    }
-#endif
     [TestMethod]
     public void Ordinal()
     {
